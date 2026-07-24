@@ -1,0 +1,8 @@
+{
+  "name": "@cak/slide-renderer",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "원자 #2 — 초경량 슬라이드 렌더러 (Node Canvas/FFmpeg). 입력은 자체촬영/라이선스 소스만. [미착수]",
+  "scripts": {}
+}

@@ -1,0 +1,21 @@
+{
+  "name": "commerce-automation-kit",
+  "version": "0.1.0",
+  "private": true,
+  "description": "합법 커머스 자동화 원자(독립 모듈)들의 모노레포. 각 원자는 packages/ 아래 독립 관리되고, @cak/contracts 계약으로만 조합된다.",
+  "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "build": "npm run build --workspaces --if-present"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.0"
+  }
+}

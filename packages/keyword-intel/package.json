@@ -1,0 +1,35 @@
+{
+  "name": "@cak/keyword-intel",
+  "version": "0.1.0",
+  "private": true,
+  "description": "원자 #1 — 네이버 공식 API 기반 커머스 키워드·트렌드·경쟁 인텔리전스. 스크래핑 없음.",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "collect": "tsx src/cli/index.ts collect",
+    "analyze": "tsx src/cli/index.ts analyze",
+    "dlq": "tsx src/cli/index.ts dlq",
+    "report": "tsx src/cli/index.ts report",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src"
+  },
+  "dependencies": {
+    "@cak/contracts": "*",
+    "undici": "^6.19.0",
+    "zod": "^3.23.0",
+    "better-sqlite3": "^11.0.0",
+    "p-limit": "^5.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.0",
+    "tsx": "^4.16.0",
+    "vitest": "^2.0.0",
+    "@types/node": "^20.14.0",
+    "@types/better-sqlite3": "^7.6.0",
+    "eslint": "^9.0.0"
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "name": "@cak/manychat-reply",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "원자 #4 — Manychat 공식 comment→단일 Private Reply (opt-in 문의응대). 대량 DM/팔로우게이트 없음. [미착수]",
+  "scripts": {}
+}

@@ -1,0 +1,8 @@
+{
+  "name": "@cak/coupang-connector",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "원자 #3 — 쿠팡 Open API 상품·주문·정산 자동화. WING 승인 셀러 전제. [미착수]",
+  "scripts": {}
+}

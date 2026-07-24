@@ -1,0 +1,211 @@
+# PROGRESS — 작업 진행 기록 & 세션 인계
+
+> **이 파일의 목적:** 새 IDE/새 Claude 세션이 이 문서 하나만 읽고 곧바로 이어서 작업할 수 있게 한다.
+> 설계 근거는 각 문서에, **"지금 어디까지 왔고 다음에 뭘 하나"는 여기에** 기록한다.
+> 최종 갱신: **2026-07-24**
+
+---
+
+## 0. 새 세션 시작하기 (먼저 이것부터)
+
+```bash
+cd ~/workSpace/commerce-automation-kit   # ⚠️ 경로 변경됨 (아래 §6 참조)
+npm install                              # 최초 1회
+cd packages/keyword-intel && npm test     # 71개 통과하면 정상
+```
+
+읽는 순서: `CLAUDE.md`(금지선·규칙) → **이 파일**(현황) → 작업할 원자의 `docs/`.
+작업 종류별 킥오프 프롬프트는 `docs/SESSION-PROMPTS.md`.
+
+> ⚠️ **이 프로젝트는 여러 Claude 세션이 병렬로 작업해 왔다.** 아래 §9에 다른 세션 산출물을
+> 정리해 뒀다. 착수 전 반드시 훑을 것 — 이미 내려진 설계 결정(ADR)과 기각된 선택지가 있다.
+
+---
+
+## 1. 현재 상태 한눈에
+
+| 원자 | 상태 |
+|---|---|
+| **contracts** | `KeywordSignal` / `IntelBatch` 계약 확정. append-only 유지 중 |
+| **keyword-intel (#1)** | ✅ **Phase 1·2 완료 + G1·G2 실호출 통과 + 일일 자동화 가동 중**. 남은 것: Phase 3(사람 판단) |
+| slide-renderer (#2) | 미착수 스캐폴드 |
+| coupang-connector (#3) | 미착수 스캐폴드 |
+| manychat-reply (#4) | 미착수 스캐폴드 |
+
+**keyword-intel 게이트 현황**
+
+| 게이트 | 상태 | 근거 |
+|---|---|---|
+| D1 (스펙 실측) | ✅ D1-1~4·D1-6 확정 / ❌ **D1-5(약관)·D1-7~10 대기** | `packages/keyword-intel/docs/IMPLEMENTATION.md` §0, `.claude/agents/d1-researcher.md` |
+| G1 (10키워드 E2E) | ✅ 실호출 통과 (2026-07-23) | 10/10 신호, 원장 정확, zod 실응답 일치 |
+| G2 (무누락 대량수집) | ✅ 실수집 통과 (2026-07-23) | 시드 182개 커버리지 100%, 실패 0 |
+| G3 (유용성 판정) | ⬜ **다음 작업 — 사람 게이트** | 아래 §5 |
+
+---
+
+## 2. 무엇이 돌아가고 있나 (운영 중)
+
+```
+launchd  com.cak.keyword-intel-daily   매일 09:30 KST
+  └─ packages/keyword-intel/scripts/daily-collect.sh
+       ├─ 네트워크 준비 대기(최대 5분)          ← wake 직후 DNS 미준비 대응
+       ├─ collect --file seeds/g2-seeds.txt     ← 182키워드, 예산게이트·재시도·DLQ 보호
+       └─ report                                ← 텔레그램 다이제스트 전송
+```
+
+- **로그**: `packages/keyword-intel/data/daily.log` (5MB 로테이션)
+- **DB**: `packages/keyword-intel/data/intel.db` (schema v3)
+- **텔레그램**: 봇 `@cak_keyword_intel_bot` — 토큰·chat_id 는 `.env` (gitignore 됨)
+- **끄기**: `launchctl unload ~/Library/LaunchAgents/com.cak.keyword-intel-daily.plist`
+- **수동 실행**: `bash scripts/daily-collect.sh` 또는 개별 `npm run collect/report`
+
+### CLI 명령
+
+```bash
+npm run collect -- "루테인,콜라겐"          # 키워드 직접 지정
+npm run collect -- --file seeds/g2-seeds.txt # 시드 파일(줄당 1개, # 주석 허용)
+npm run analyze -- --top 20                  # opportunity 상위 N (참고 지표)
+npm run dlq                                  # 반복실패 격리 현황
+npm run dlq -- clear [키워드]                # 격리 즉시 해제
+npm run report -- --dry-run                  # 다이제스트 미리보기(전송 안 함)
+npm run report -- --setup                    # 텔레그램 chat_id 탐색
+```
+
+---
+
+## 3. 코드 지도 (keyword-intel)
+
+```
+src/
+├── adapters/     naver-client.ts(NAVER_LIMITS 상수 단일소스) · schemas.ts(zod) · telegram.ts
+├── core/         analyzer.ts(순수 스코어 로직) · time.ts(KST 날짜 단일 정의)
+├── store/        db.ts(마이그레이션) · signals.ts(영속화·TTL·조회) · dlq.ts
+├── budget/       ledger.ts(일일 예산 영속 원장 — 한도 우회 방지의 핵심)
+├── obs/          logger.ts(stderr JSON) · retry.ts(백오프) · alerts.ts
+└── cli/          collect.ts(오케스트레이션) · report.ts(다이제스트) · index.ts(진입점)
+```
+
+**DB 스키마 (v3)** — `runs` / `signals` / `call_ledger` / `dlq` / `signal_history`
+
+> ⚠️ **`signals` vs `signal_history` 구분이 중요하다.**
+> `signals` = 원본성 데이터(시계열·가격분포) → 약관 TTL(`compliance.cacheTtlHours`)로 만료·삭제.
+> `signal_history` = **자체 가공 지표만**(스코어·집계 수치) → TTL 무관 장기 보관.
+> 이 분리가 없으면 TTL 24h × 일일 수집에서 전일 스냅샷이 항상 purge 되어
+> Δ(전일 대비)와 G3 캘리브레이션 근거가 구조적으로 소멸한다. LEGAL-BOUNDARY 경계 2의
+> "원본 재판매 vs 자체 가공 인사이트" 구분을 저장 구조에 반영한 것이기도 하다.
+
+---
+
+## 4. 실전에서 배운 것 (재발 방지 — 코드에 박혀 있음)
+
+목킹 테스트로는 안 잡히고 **실호출에서만 드러난** 것들. 회귀 테스트로 고정돼 있으니 되돌리지 말 것.
+
+| 발견 | 대응 |
+|---|---|
+| 초당 429 스로틀 빈발(errorCode 012) | 백오프 재시도. **일일 429와 상태코드가 같아** 구분 불가 → 예산 원장으로 판별 |
+| datalab **ECONNRESET 38건** — 죽은 keep-alive 소켓 재사용 | `tunedNaverAgent`(유휴 1초 + 타임아웃) + 네트워크 오류 재시도 |
+| **ENOTFOUND 182건 전량 실패** (wake 직후 DNS 미준비, 2026-07-24) | ①DNS 코드 재시도 추가 ②**서버 미도달 실패는 예산 환불**(`ledger.release`) ③스크립트 네트워크 대기 |
+| 타임아웃 15초가 과도 → datalab 24건 즉시 실패 (2026-07-24) | 30초로 완화 + **`UND_ERR_HEADERS_TIMEOUT`을 재시도 목록에 추가**(누락돼 있어 재시도가 안 됐음) |
+| `EHOSTUNREACH`/`ENETUNREACH` 누락 (수정 리뷰에서 발견) | ENOTFOUND의 wake-time 형제 코드인데 재시도·환불 집합 양쪽에 없었음 → `UNREACHABLE_NET_CODES`에 추가 |
+| 실패 호출도 쿼터를 소비 | callsSpent 는 **"시도 시점" 계상**. 단 서버 미도달은 환불(위) |
+| 401/5xx 같은 전역 오류가 키워드별 DLQ로 오귀속 | DLQ는 **키워드 귀속 실패(HTTP 400)만** 계상 |
+| DLQ 격리가 영구화(리셋 경로 도달 불가) | 쿨다운(24h) 후 자동 재시도 + `dlq clear` 명령 |
+| 상대 `DB_PATH`가 cwd 기준 → 원장 분열 → 한도 초과 위험 | 패키지 루트 기준 해석 |
+
+**리뷰 방식:** 각 단계마다 3렌즈(정확성·금지선·테스트공백) 리뷰 → 발견별 반증 검증 워크플로를 돌렸다.
+누적 31건+ 확정 수정. 새 기능 추가 시 같은 방식 권장.
+
+---
+
+## 5. 다음 작업 — Phase 3 (G3, 사람 게이트)
+
+**코드 작업이 아니라 사람 판단이 필요한 단계다.** 통과 조건: "스코어가 사람 판단과 일치".
+
+1. 매일 아침 텔레그램 리포트(또는 `npm run analyze -- --top 20`)를 보고
+   상위 키워드에 **"실제로 해볼 만한가"** 판정을 기록
+2. 상위권 키워드를 쿠팡에서 검색해 **실판매 깊이**(리뷰 수·로켓 여부)와 대조
+3. 결과로 스코어 가중치·`confidence` 상한(현재 v0 0.7 고정) 캘리브레이션
+4. **G3 분기**: 일치 → 원자 #1 완성(다음 원자/조합으로) / 괴리 → 스코어 재설계 또는 목적 축소
+
+> 며칠치 `signal_history` 가 쌓여야 Δ·모멘텀이 의미를 갖는다. 첫 데이터: 2026-07-23.
+> 관측된 계절성 주의: 7월 수집에서 건기식 트렌드 전반이 음수 모멘텀(비수기),
+> "각질 필링" 트렌드 100(여름 피크) — 캘리브레이션 시 계절 보정 검토 대상.
+
+### 논의된 확장 후보 (미착수)
+
+- **블로그 축 추가**: 현재 지표는 "상품 판매 기회"에 최적화돼 있고 **블로그/콘텐츠 최적화가 아니다**.
+  같은 검색 API의 `/v1/search/blog.json`으로 문서 경쟁도를 얹으면 "콘텐츠 기회" 스코어 산출 가능.
+  🚨 **선행 필수**: 검색 API 25,000/일은 쇼핑·블로그·지식iN **공유 쿼터**다. 현재 `BudgetLedger`는
+  소스별 독립 clamp라 shop 20,000 + blog 20,000 = 40,000 > 25,000 이 통과해버린다.
+  **`BudgetLedger` 쿼터 그룹 + 그룹 합산 clamp를 먼저 구현할 것**
+  (`packages/keyword-intel/docs/QUESTION-MINING.md` §6·§10에 "다른 무엇보다 먼저"로 명시됨).
+- **지식iN 질문 마이닝**: 설계 완료·구현 0 → `docs/QUESTION-MINING.md`. **착수 조건: G3 통과 후**
+  (지금 병목은 소재가 아니라 검증이라는 판단). 채널별/마켓별 모듈 분리는 **ADR로 기각**돼 있으니
+  분리를 다시 제안하기 전에 그 문서의 재검토 트리거를 확인할 것.
+- **데이터랩 쇼핑인사이트**(D1-4 스펙 확정 완료, 어댑터 미구현) — 별도 1,000/일 예산 분리 필요.
+- 그 외 통합 후보는 `docs/BACKLOG.md`.
+
+---
+
+## 6. 함정 & 주의사항
+
+1. **경로가 바뀌었다**: `~/Desktop/workSpace/...` → **`~/workSpace/commerce-automation-kit`**.
+   이유: macOS TCC 정책이 launchd 백그라운드 작업의 Desktop 접근을 차단해 자동수집이 불가능했다
+   (`Operation not permitted`, exit 126). Desktop 아래로 되돌리면 자동화가 다시 깨진다.
+   `docs/BACKLOG.md` 등 일부 문서에 남은 옛 경로 표기는 참고용.
+2. **비밀정보**: `.env`(퍼미션 600, gitignore)에 네이버 키·텔레그램 토큰이 있다.
+   `.env.example` 에는 절대 실값을 넣지 말 것(과거 1회 유입 → 스크럽함).
+   토큰이 노출됐다고 판단되면 네이버 개발자센터 "재발급" / BotFather `/revoke` 로 교체.
+3. **한도 우회 금지**: 다중 계정·프록시로 일일 한도를 넘기지 않는다(LEGAL-BOUNDARY 경계 4).
+   예산은 env·생성자 **양쪽에서** 공식 한도(25,000/1,000)로 clamp 된다 — 이 방어를 풀지 말 것.
+4. **스코어는 참고 지표**: opportunity 로 제조·발주·광고를 **자동 실행하지 않는다**(경계 5).
+   `analyze`·리포트 출력에 이 문구가 박혀 있다.
+5. **⚠️ 플래그 키워드**: `seeds/g2-seeds.txt` 주석에 표시된 10개는 수집은 합법이나
+   **콘텐츠·광고화 시 사람 게이트 필수**(식품표시광고법 §8 / 화장품법 표현 / NMN 원료적법성).
+6. **git**: 아직 **커밋이 하나도 없다**(`main` 브랜치에 초기 커밋 없음). 첫 커밋 전 `.gitignore`
+   (`.env`, `data/`, `*.db`, `node_modules/` 포함됨) 확인할 것.
+
+---
+
+## 7. 미해결 항목
+
+| # | 항목 | 성격 | 비고 |
+|---|---|---|---|
+| 1 | **D1-5 약관 실측** | 사람 작업 | `developers.naver.com/products/terms` 자동 접근 전 경로 차단. 로그인 브라우저로 제7·8·11조 + 검색 특약 2.1 확인 필요. **비차단**: 확정 전까지 보수적 기본값(`resaleRestricted=true`, TTL 24h)이 안전한 쪽이라 Phase 1~3 진행에 지장 없음. 데이터 판매/SaaS를 검토할 때 반드시 선행 |
+| 2 | 한도 리셋 시각 | TODO(D1) | 공식 미명시 → KST 자정 가정. `core/time.ts` |
+| 3 | 트렌드 미확보 2건 | 정상 | "비타민C 발포정"·"유산균 분말 스틱" — 데이터랩에 데이터 자체가 없는 롱테일. 계약대로 `latest:null` 투명 표현 |
+| 4 | 머신 종료 시 그날 수집 누락 | 구조적 한계 | launchd `StartCalendarInterval` 특성. 잠자기는 wake 시 실행됨. 다이제스트가 "오늘 수집 없음" 경고 표시 |
+| 5 | **git 커밋 0개** | 최우선 | `main` 브랜치에 초기 커밋이 없다. 전체 미추적 상태 |
+| 6 | 루트 `README.md` §1·§5 stale | 문서 | keyword-intel을 아직 "스캐폴드/D1 대기"로 표기 — 실제(G1·G2 통과)와 불일치 |
+| 7 | `.idea/` 가 `.gitignore` 에 없음 | 결정 필요 | 첫 커밋에 IDE 설정 7파일이 딸려간다 |
+| 8 | `BudgetLedger` 쿼터 그룹 미구현 | 확장 선행조건 | 검색 API 공유 쿼터(25,000) 합산 clamp 부재 → 블로그·지식iN 소스 추가 전 필수 (§5) |
+| 9 | D1-7~10 실측 대기 | 사람/조사 | Reddit 상업승인 · 네이버 검색광고 API · YouTube Data API · Google Ads Keyword Planner. 해외 소스 착수 시 선행 |
+
+---
+
+## 9. 다른 세션이 남긴 산출물 (착수 전 필독)
+
+이 저장소는 최소 3개 Claude 세션이 병렬로 작업했다. **아래는 이번 세션이 만들지 않은 것들**이며,
+이미 내려진 결정·제약이 들어 있다.
+
+| 파일 | 무엇 | 새 세션이 알아야 할 핵심 |
+|---|---|---|
+| `.claude/agents/d1-researcher.md` | **커스텀 서브에이전트**(D1 실측 전담) | 새 API·약관 확인이 필요하면 이 에이전트를 쓴다. 규율: 공식 1차 원문+원어 인용 있을 때만 ✅, **2패스 독립 재확인** 필수, 미확인 값은 코드 상수로 커밋 금지(`TODO(D1-n)`). D1-1~10 현황표가 여기 있다 |
+| `docs/ARCHITECTURE.md` | **모노레포 전체** 조합 원리 | 의존 규칙(원자끼리 직접 import 금지, 계약 append-only), **사람 게이트 표**(규제상 자동화 불가 지점), 절대 금지선 6개, "MSA 아닌 모놀리식+큐/크론" 결정. 설계 원칙은 무인화가 아니라 **"저관여 + 사람 감시"** |
+| `packages/keyword-intel/docs/QUESTION-MINING.md` | 지식iN 질문 마이닝 **설계(구현 0)** | **ADR 주의**: 채널별(광고/블로그/쇼츠)·마켓별 모듈 분리는 **기각**됨(재검토 트리거 명시). Google PAA/SerpAPI는 **금지·재론 불가**. 착수 조건 = **G3 통과 후**. 선행 = BudgetLedger 쿼터 그룹. wp-auto-blog 브릿지는 단방향 JSON export만, **D1-5 확정 전 질문 원문 verbatim 게시 금지**(재표현 게이트) |
+| `docs/BACKLOG.md` | 통합 후보 기록 | ai-video-agency/website 통합 — 방식 미정(`packages/` vs `apps/`, 대용량 asset git 정책) |
+| `packages/{slide-renderer,coupang-connector,manychat-reply}/README.md` | 미착수 3원자의 **유지조건·금지선** | 코드는 0, 제약만 박혀 있다. 착수 전 반드시 읽을 것 — 예: slide-renderer는 **입력이 자체촬영·라이선스 소스여야** 원자로 성립(스크래핑 입력이면 위법 스크래퍼), coupang-connector는 **파트너스/셀러 모드 혼용 금지**, manychat-reply는 **팔로우 게이팅 금지**(Meta Spam) |
+| `tsconfig.base.json` | 매우 엄격한 TS 설정 | `noUncheckedIndexedAccess`·`exactOptionalPropertyTypes`·`verbatimModuleSyntax` 켜짐. 새 패키지는 이걸 extends |
+| `~/.claude/projects/.../memory/` | 프로젝트 메모리 | `naver-devcenter-access.md`(접근 기법), `ai-video-agency-website-integration.md`. **경로 이중화로 옛 경로 키에도 중복 존재** |
+
+> **병렬 세션 주의**: 다른 세션이 같은 파일을 동시에 수정할 수 있다. 큰 변경 전 `git status`
+> (커밋이 생긴 뒤에는 `git diff`)로 예상 밖 변경이 없는지 확인할 것.
+
+---
+
+## 8. 변경 이력
+
+| 날짜 | 내용 |
+|---|---|
+| 2026-07-23 | D1 실측(D1-1~4 확정) · Phase 1(zod 검증·상수 확정) · Phase 2(store/budget/obs·analyze/dlq CLI) · G1·G2 실호출 통과 · 시드 182개 확정 · 일일 자동화+텔레그램 리포트 구축 · 리뷰 3회 31건 수정 |
+| 2026-07-24 | 저장소 경로 이동(TCC 대응) · 첫 자동실행 DNS 실패 진단 → 결함 4건 수정(DNS 재시도·**예산 환불**·네트워크 대기·타임아웃 완화+재시도코드 보강) · 다른 세션 산출물 조사·통합 · 이 문서 작성 |
