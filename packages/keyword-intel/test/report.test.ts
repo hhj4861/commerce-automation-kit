@@ -170,6 +170,25 @@ describe('buildDigest', () => {
     expect(text).toContain('오늘 수집 없음(마지막: 2026-07-22)');
   });
 
+  it('오늘 run 이 전량 실패(신호 0 + 실패 다수)면 🚨 배너로 크게 알린다 (2026-07-24 회귀)', () => {
+    // 09:37 사고 재현: 오늘 실행됐으나(exit 0으로 보임) 신호 0 · 전량 ENOTFOUND.
+    saveBatch(
+      db,
+      batch('r1', T2, [], [
+        { keyword: '루테인', reason: 'getaddrinfo ENOTFOUND openapi.naver.com' },
+        { keyword: '콜라겐', reason: 'getaddrinfo ENOTFOUND openapi.naver.com' },
+      ]),
+    );
+    const text = buildDigest(db, 10, new Date(T2));
+    expect(text).toContain('🚨 오늘 수집 전량 실패 (2건)');
+  });
+
+  it('정상 수집(신호>0)에는 전량실패 배너를 붙이지 않는다', () => {
+    saveBatch(db, batch('r1', T2, [['크레아틴', 60]], [{ keyword: '불량', reason: 'HTTP 500' }]));
+    const text = buildDigest(db, 10, new Date(T2));
+    expect(text).not.toContain('전량 실패');
+  });
+
   it('예산 0(의도적 차단) 구성에서 NaN% 대신 명시 문구 (리뷰 확정 회귀)', () => {
     process.env.DAILY_CALL_BUDGET_SEARCH = '0';
     saveBatch(db, batch('r1', T2, [['크레아틴', 60]]));

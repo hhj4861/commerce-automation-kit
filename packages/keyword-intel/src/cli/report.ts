@@ -83,6 +83,14 @@ export function buildDigest(db: Db, topN = 10, now: Date = new Date()): string {
     lines.push(
       `수집: ${run.requested}키워드 → 신호 ${run.signalCount} · 실패 ${run.failures.length}${stale}`,
     );
+    // 오늘 실행인데 신호 0 + 실패 다수 = 전량 실패(예: wake 직후 DNS). 크론은 exit 0 으로 보일 수
+    // 있어 "신호 0" 한 줄은 놓치기 쉽다 → 배너로 크게 알린다. 스크립트 재시도까지 실패했을 때의
+    // 최종 사람-감시 백스톱("저관여 + 사람 감시").
+    if (runDay === day && run.signalCount === 0 && run.failures.length > 0) {
+      lines.push(
+        `🚨 오늘 수집 전량 실패 (${run.failures.length}건) — data/daily.log 확인 후 \`npm run collect -- --file seeds/g2-seeds.txt\` 수동 재실행`,
+      );
+    }
   } else {
     lines.push('수집 이력 없음 — collect 를 먼저 실행하세요.');
   }

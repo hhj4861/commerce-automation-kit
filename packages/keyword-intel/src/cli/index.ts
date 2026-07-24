@@ -17,7 +17,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { collectSignals } from './collect.js';
+import { collectSignals, isWholesaleUnreachable } from './collect.js';
 import { openDb } from '../store/db.js';
 
 // .env 자동 로드(CLI 전용, Node 20.12+ 내장) — cwd 가 아닌 "패키지 루트" 기준(DB_PATH 와 동일 원칙).
@@ -76,6 +76,17 @@ async function main(): Promise<void> {
       if (batch.failures.length) {
         console.error(`\n⚠️ 실패/스킵 ${batch.failures.length}건:`);
         for (const f of batch.failures) console.error(`  - ${f.keyword}: ${f.reason}`);
+      }
+      // 전량이 "서버 미도달"로 실패했는가 → 전용 종료코드 75(EX_TEMPFAIL)로 끝낸다. wake 직후
+      // DNS/네트워크 미준비가 대표 사례(실측 2026-07-24 09:37). 크론 래퍼는 **75일 때만** 대기 후
+      // 재시도(자가 복구)하고, 다른 비정상 종료(1=사용법 오류·예상외 크래시/DB 실패)는 재시도하지
+      // 않는다 — 그래야 성공 후 저장 실패 같은 케이스에서 쿼터를 헛되이 재소비하지 않는다(적대적 리뷰
+      // 확정). 부분 실패·예산 스킵은 정상 결과라 exit 0 유지(위에서 이미 투명화).
+      if (isWholesaleUnreachable(batch)) {
+        console.error(
+          `\n🚨 전량 미도달 실패 ${batch.failures.length}건 — 네트워크(DNS) 미준비 추정. exit 75 로 종료(래퍼가 재시도).`,
+        );
+        process.exit(75);
       }
       break;
     }

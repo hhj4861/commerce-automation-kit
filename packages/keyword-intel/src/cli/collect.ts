@@ -31,8 +31,11 @@ import { createAlerter } from '../obs/alerts.js';
 /**
  * 서버에 **도달하지 못한** 오류 — 연결 자체가 성립 안 됨 → 네이버 쿼터 미소비 → 예산 환불 대상.
  * (실측: launchd 가 머신 wake 직후 실행돼 DNS 미준비 상태에서 182건 전량 ENOTFOUND)
+ *
+ * export: CLI(cli/index.ts)가 "배치 전량이 미도달로 실패했는가"를 판정해 exit code 를 내리는 데
+ * 재사용한다(코드 집합 단일 소스 — 두 곳이 어긋나지 않게).
  */
-const UNREACHABLE_NET_CODES = new Set([
+export const UNREACHABLE_NET_CODES = new Set([
   'ENOTFOUND', // DNS 해석 실패
   'EAI_AGAIN', // DNS 일시 실패
   'ECONNREFUSED', // TCP 거부(연결 성립 전)
@@ -40,6 +43,31 @@ const UNREACHABLE_NET_CODES = new Set([
   'EHOSTUNREACH', // no route to host — wake 직후 라우팅 미준비(ENOTFOUND 의 형제)
   'ENETUNREACH', // network unreachable — 위와 동일 부류
 ]);
+
+/** 재시도해도 회복 불가한 "스킵"(시도조차 안 한 실패) — 미도달 판정에서 제외한다. */
+const SKIP_REASON_PREFIXES = ['skippedByBudget:', 'dlq_isolated:'];
+
+/**
+ * 배치 전체가 "서버 미도달"로 실패했는가 — 신호 0 · (예산·DLQ 스킵 제외한) 시도 실패가 전부 미도달.
+ * true 면 재시도가 의미 있는 일시적 장애(wake 직후 DNS·네트워크 미준비)이므로 CLI 가 전용
+ * 종료코드로 끝나 크론 래퍼의 자가 복구를 유발한다.
+ *
+ * 판정은 실패 reason 에 구조적으로 박힌 `[코드]` 태그로 한다(사람 메시지 부분매칭 아님).
+ * 이유: undici 연결타임아웃(UND_ERR_CONNECT_TIMEOUT)은 message 에 코드 문자열이 없고 err.code
+ * 에만 있어, 메시지 부분매칭이면 놓쳐 자가복구가 안 된다(적대적 리뷰 확정). 태그는 환불 경로
+ * (spend 의 netCode=err.code)와 동일한 소스를 읽어 두 판정이 어긋나지 않게 한다.
+ * 스킵(예산·DLQ)은 제외 — 하나 섞였다고 나머지 전량 미도달의 자가복구를 막지 않는다.
+ * 신호>0(부분 성공)이거나 시도 실패가 하나라도 비(非)미도달이면 false.
+ */
+export function isWholesaleUnreachable(batch: IntelBatch): boolean {
+  if (batch.signals.length > 0) return false;
+  const attempts = batch.failures.filter(
+    (f) => !SKIP_REASON_PREFIXES.some((p) => f.reason.startsWith(p)),
+  );
+  if (attempts.length === 0) return false; // 전량 스킵(예산·DLQ) — 재시도 무의미
+  const codes = [...UNREACHABLE_NET_CODES];
+  return attempts.every((f) => codes.some((c) => f.reason.includes(`[${c}]`)));
+}
 
 /**
  * 일시적 네트워크 오류 코드 — 백오프 재시도 대상(실측: datalab ECONNRESET·wake 직후 ENOTFOUND).
@@ -251,7 +279,12 @@ export async function collectSignals(
           if (err instanceof NaverSchemaError) {
             alerter.alert('SCHEMA_MISMATCH', 'shop 응답 스키마 불일치', { keyword: kw });
           }
-          const reason = err instanceof Error ? err.message : String(err);
+          // 네트워크 코드가 있으면 `[코드] 메시지` 로 구조화한다. undici 연결타임아웃처럼 message
+          // 에 코드가 없는 오류도 자가복구·환불 판정이 동일한 err.code 를 읽게 하기 위함. NaverApiError/
+          // SchemaError 는 code 가 없어 태그 없이 원문 유지(400 DLQ 사유·리포트 표시 그대로).
+          const code = netCode(err);
+          const msg = err instanceof Error ? err.message : String(err);
+          const reason = code ? `[${code}] ${msg}` : msg;
           failures.push({ keyword: kw, reason });
           // DLQ 는 "키워드 자체에 귀속되는" 실패(400 = 잘못된 쿼리 등)만 계상한다.
           // 401/403(자격·권한)·429(한도)·5xx(네이버 장애)·스키마 변경·네트워크 오류는 시스템 전역

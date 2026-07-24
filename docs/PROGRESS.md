@@ -11,7 +11,7 @@
 ```bash
 cd ~/workSpace/commerce-automation-kit   # ⚠️ 경로 변경됨 (아래 §6 참조)
 npm install                              # 최초 1회
-cd packages/keyword-intel && npm test     # 71개 통과하면 정상
+cd packages/keyword-intel && npm test     # 81개 통과하면 정상
 ```
 
 읽는 순서: `CLAUDE.md`(금지선·규칙) → **이 파일**(현황) → 작업할 원자의 `docs/`.
@@ -48,9 +48,10 @@ cd packages/keyword-intel && npm test     # 71개 통과하면 정상
 ```
 launchd  com.cak.keyword-intel-daily   매일 09:30 KST
   └─ packages/keyword-intel/scripts/daily-collect.sh
-       ├─ 네트워크 준비 대기(최대 5분)          ← wake 직후 DNS 미준비 대응
+       ├─ DNS 준비 대기(getaddrinfo 연속2회+3초타임아웃, 최대~5분)  ← wake 직후 미준비 대응
        ├─ collect --file seeds/g2-seeds.txt     ← 182키워드, 예산게이트·재시도·DLQ 보호
-       └─ report                                ← 텔레그램 다이제스트 전송
+       │    └ 전량 미도달이면 CLI exit 75 → 60초 후 최대 3회 재수집(자가복구)
+       └─ report                                ← 텔레그램 다이제스트(전량실패 시 🚨 배너)
 ```
 
 - **로그**: `packages/keyword-intel/data/daily.log` (5MB 로테이션)
@@ -111,6 +112,8 @@ src/
 | 401/5xx 같은 전역 오류가 키워드별 DLQ로 오귀속 | DLQ는 **키워드 귀속 실패(HTTP 400)만** 계상 |
 | DLQ 격리가 영구화(리셋 경로 도달 불가) | 쿨다운(24h) 후 자동 재시도 + `dlq clear` 명령 |
 | 상대 `DB_PATH`가 cwd 기준 → 원장 분열 → 한도 초과 위험 | 패키지 루트 기준 해석 |
+| **예약 실행이 09:37 wake DNS 로 182건 전량 실패했는데 CLI 가 exit 0** → 스크립트가 재시도 못함(하루 유실, 사람 수동복구). 2026-07-24 재발 | ①준비 프로브 nc→**Node getaddrinfo 연속2회+타임아웃**(nc 도 getaddrinfo라 경로차이 아님, 단발 타이밍이 문제였음) ②전량 미도달 시 CLI **exit 75(EX_TEMPFAIL)** ③스크립트가 **75일 때만** 60초 후 최대 3회 재수집(exit 1 크래시·저장실패는 재시도 안 함=쿼터 보호) ④다이제스트 🚨 전량실패 배너 |
+| 미도달 판정을 사람 메시지 부분매칭으로 하면 **연결타임아웃을 놓친다**(undici `UND_ERR_CONNECT_TIMEOUT` 은 message 에 코드가 없고 err.code 에만 있음, 적대적 리뷰 발견) | 실패 reason 을 **`[코드] 메시지`** 로 태깅 — 환불(spend 의 err.code)과 자가복구 판정이 동일 소스를 읽게. 스킵(예산·DLQ)은 판정에서 제외(격리 1건이 전체 자가복구를 막지 않게) |
 
 **리뷰 방식:** 각 단계마다 3렌즈(정확성·금지선·테스트공백) 리뷰 → 발견별 반증 검증 워크플로를 돌렸다.
 누적 31건+ 확정 수정. 새 기능 추가 시 같은 방식 권장.
@@ -162,8 +165,9 @@ src/
    `analyze`·리포트 출력에 이 문구가 박혀 있다.
 5. **⚠️ 플래그 키워드**: `seeds/g2-seeds.txt` 주석에 표시된 10개는 수집은 합법이나
    **콘텐츠·광고화 시 사람 게이트 필수**(식품표시광고법 §8 / 화장품법 표현 / NMN 원료적법성).
-6. **git**: 아직 **커밋이 하나도 없다**(`main` 브랜치에 초기 커밋 없음). 첫 커밋 전 `.gitignore`
-   (`.env`, `data/`, `*.db`, `node_modules/` 포함됨) 확인할 것.
+6. **git**: 초기 커밋 존재(`820af63`, 2026-07-24 14:44 KST). 워킹트리 clean. `.gitignore` 는
+   `.env`·`data/`·`*.db`·`node_modules/`·`.idea/` 를 무시한다(2026-07-24 검증). ⚠️ 이후 이 세션이
+   자가복구 수정으로 6개 파일을 변경했다(미커밋). 다음 커밋 대상.
 
 ---
 
@@ -175,9 +179,9 @@ src/
 | 2 | 한도 리셋 시각 | TODO(D1) | 공식 미명시 → KST 자정 가정. `core/time.ts` |
 | 3 | 트렌드 미확보 2건 | 정상 | "비타민C 발포정"·"유산균 분말 스틱" — 데이터랩에 데이터 자체가 없는 롱테일. 계약대로 `latest:null` 투명 표현 |
 | 4 | 머신 종료 시 그날 수집 누락 | 구조적 한계 | launchd `StartCalendarInterval` 특성. 잠자기는 wake 시 실행됨. 다이제스트가 "오늘 수집 없음" 경고 표시 |
-| 5 | **git 커밋 0개** | 최우선 | `main` 브랜치에 초기 커밋이 없다. 전체 미추적 상태 |
-| 6 | 루트 `README.md` §1·§5 stale | 문서 | keyword-intel을 아직 "스캐폴드/D1 대기"로 표기 — 실제(G1·G2 통과)와 불일치 |
-| 7 | `.idea/` 가 `.gitignore` 에 없음 | 결정 필요 | 첫 커밋에 IDE 설정 7파일이 딸려간다 |
+| 5 | ~~git 커밋 0개~~ ✅해결(2026-07-24) | — | 초기 커밋 `820af63` 존재, 워킹트리 clean. (단 이 세션 자가복구 수정 6파일 미커밋 — 다음 커밋 대상) |
+| 6 | ~~README §1·§5 stale~~ ✅오정정(2026-07-24) | — | 재검증 결과 README 는 이미 "Phase 1·2 완료·G1·G2 통과·다음 Phase 3" 로 최신. 이 stale 지적 자체가 낡았던 것 |
+| 7 | ~~`.idea/` 미ignore~~ ✅해결(2026-07-24) | — | `.idea/` 는 .gitignore 14줄에 있음, 커밋에 IDE 파일 0개 |
 | 8 | `BudgetLedger` 쿼터 그룹 미구현 | 확장 선행조건 | 검색 API 공유 쿼터(25,000) 합산 clamp 부재 → 블로그·지식iN 소스 추가 전 필수 (§5) |
 | 9 | D1-7~10 실측 대기 | 사람/조사 | Reddit 상업승인 · 네이버 검색광고 API · YouTube Data API · Google Ads Keyword Planner. 해외 소스 착수 시 선행 |
 
@@ -209,3 +213,4 @@ src/
 |---|---|
 | 2026-07-23 | D1 실측(D1-1~4 확정) · Phase 1(zod 검증·상수 확정) · Phase 2(store/budget/obs·analyze/dlq CLI) · G1·G2 실호출 통과 · 시드 182개 확정 · 일일 자동화+텔레그램 리포트 구축 · 리뷰 3회 31건 수정 |
 | 2026-07-24 | 저장소 경로 이동(TCC 대응) · 첫 자동실행 DNS 실패 진단 → 결함 4건 수정(DNS 재시도·**예산 환불**·네트워크 대기·타임아웃 완화+재시도코드 보강) · 다른 세션 산출물 조사·통합 · 이 문서 작성 |
+| 2026-07-24 (2세션) | PROGRESS 실측 검증(테스트·git·자동화·문서 드리프트) → **09:37 예약 실행 재발** 분석: 분류 결함은 이미 커밋돼 있었고 남은 갭 = **자가복구 부재**. 준비 프로브 getaddrinfo 연속2회+타임아웃, 전량 미도달 CLI **exit 75**, 스크립트 75-한정 3회 재수집, 다이제스트 🚨 배너, 실패 reason `[코드]` 태그화(연결타임아웃 누락 수정). 적대적 검증 2회로 자체 수정의 오탐 2건 발견·수정. 회귀 테스트 +10(71→81). 문서 드리프트 정정(git 커밋·`.idea`·README·테스트수) |

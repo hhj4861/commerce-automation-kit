@@ -43,7 +43,7 @@
 | 원자 | 상태 |
 |---|---|
 | contracts | KeywordSignal 계약 존재 |
-| keyword-intel (#1) | **G1·G2 실호출 통과(2026-07-23)** — 시드 182개(seeds/g2-seeds.txt) 커버리지 100%. 리뷰 3회(31건 수정), 테스트 64개. **매일 09:30 KST 자동수집+텔레그램 리포트**(launchd `com.cak.keyword-intel-daily`, scripts/daily-collect.sh). 가공지표 히스토리는 signal_history(TTL 무관, 캘리브레이션 근거). D1-5 약관만 사람 확인 대기. **다음 작업 = Phase 3: 상위 20개 사람 눈검증 + 쿠팡 실판매 대조 → G3 분기**. 질문 마이닝(지식iN 검색 API) 설계 문서 존재 — 구현은 착수 조건 충족 후, 채널별 검색 분리는 기각(ADR): `packages/keyword-intel/docs/QUESTION-MINING.md` |
+| keyword-intel (#1) | **G1·G2 실호출 통과(2026-07-23)** — 시드 182개(seeds/g2-seeds.txt) 커버리지 100%. 리뷰 3회(31건 수정), 테스트 81개. **매일 09:30 KST 자동수집+텔레그램 리포트**(launchd `com.cak.keyword-intel-daily`, scripts/daily-collect.sh). 예약 실행은 wake 직후 DNS 미준비 시 **자가복구**(전량 미도달→CLI exit 75→스크립트 3회 재수집, 2026-07-24). 가공지표 히스토리는 signal_history(TTL 무관, 캘리브레이션 근거). D1-5 약관만 사람 확인 대기. **다음 작업 = Phase 3: 상위 20개 사람 눈검증 + 쿠팡 실판매 대조 → G3 분기**. 질문 마이닝(지식iN 검색 API) 설계 문서 존재 — 구현은 착수 조건 충족 후, 채널별 검색 분리는 기각(ADR): `packages/keyword-intel/docs/QUESTION-MINING.md` |
 | slide-renderer (#2) / coupang-connector (#3) / manychat-reply (#4) | 미착수 스캐폴드 |
 
 ## 세션 시작 시

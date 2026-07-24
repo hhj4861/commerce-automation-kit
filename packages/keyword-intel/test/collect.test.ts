@@ -13,7 +13,8 @@ vi.mock('../src/adapters/naver-client.js', async (importOriginal) => {
   return { ...actual, searchShop: vi.fn(), searchTrend: vi.fn() };
 });
 
-import { collectSignals, type CollectDeps } from '../src/cli/collect.js';
+import { collectSignals, isWholesaleUnreachable, type CollectDeps } from '../src/cli/collect.js';
+import type { IntelBatch } from '@cak/contracts';
 import {
   searchShop,
   searchTrend,
@@ -441,5 +442,100 @@ describe('collectSignals — G2: 예산 게이트·DLQ·영속화', () => {
     expect(rows).toHaveLength(1);
     expect(rows[0]!.keyword).toBe('루테인');
     expect(rows[0]!.capturedAt).toBe(t2.toISOString());
+  });
+});
+
+/**
+ * isWholesaleUnreachable — 크론 자가 복구(스크립트 재시도)의 트리거 판정. 2026-07-24 회귀:
+ * 09:37 예약 실행이 182건 전량 ENOTFOUND 로 죽었는데 CLI 가 exit 0 이라 스크립트가 재시도하지 못했다.
+ * 이 판정이 true 일 때만 CLI 가 exit≠0 → 래퍼가 대기 후 재수집한다.
+ */
+describe('isWholesaleUnreachable — 전량 미도달 판정(크론 재시도 트리거)', () => {
+  const batchWith = (
+    signalCount: number,
+    failures: Array<{ keyword: string; reason: string }>,
+  ): IntelBatch => ({
+    runId: 'r',
+    requestedKeywords: failures.map((f) => f.keyword),
+    signals: Array.from({ length: signalCount }, () => ({})) as unknown as IntelBatch['signals'],
+    failures,
+    callsSpent: { naver_search_shop: 0, naver_datalab_search: 0, naver_datalab_shopping: 0 },
+    startedAt: 's',
+    finishedAt: 'f',
+  });
+
+  it('신호 0 + 모든 실패가 [미도달코드] 태그 → true (wake 직후 DNS 전량 실패)', () => {
+    const batch = batchWith(0, [
+      { keyword: '루테인', reason: '[ENOTFOUND] getaddrinfo ENOTFOUND openapi.naver.com' },
+      { keyword: '콜라겐', reason: '[ENOTFOUND] getaddrinfo ENOTFOUND openapi.naver.com' },
+    ]);
+    expect(isWholesaleUnreachable(batch)).toBe(true);
+  });
+
+  it('신호가 하나라도 있으면 → false (부분 성공은 정상 결과, 재시도 금지)', () => {
+    const batch = batchWith(1, [{ keyword: '콜라겐', reason: '[ENOTFOUND] getaddrinfo ENOTFOUND openapi.naver.com' }]);
+    expect(isWholesaleUnreachable(batch)).toBe(false);
+  });
+
+  it('예산 소진 전량 스킵 → false (재시도해도 회복 불가 — 미도달 아님)', () => {
+    const batch = batchWith(0, [
+      { keyword: '루테인', reason: 'skippedByBudget: naver_search_shop (일일 예산 소진)' },
+      { keyword: '콜라겐', reason: 'skippedByBudget: naver_search_shop (일일 예산 소진)' },
+    ]);
+    expect(isWholesaleUnreachable(batch)).toBe(false);
+  });
+
+  it('미도달 + 키워드 귀속(400) 혼재 → false (스킵 아닌 실패 전부가 미도달이어야 함)', () => {
+    const batch = batchWith(0, [
+      { keyword: '루테인', reason: '[ENOTFOUND] getaddrinfo ENOTFOUND openapi.naver.com' },
+      { keyword: '@@@', reason: '[naver:search_shop] HTTP 400 — 잘못된 쿼리' }, // code 없음 → 태그 없음
+    ]);
+    expect(isWholesaleUnreachable(batch)).toBe(false);
+  });
+
+  // 적대적 리뷰 회귀 ①: DLQ 격리 키워드가 섞여도 나머지 전량 미도달이면 자가복구해야 한다.
+  // (스킵을 제외하지 않으면 격리 1건 때문에 ~180 키워드가 하루 통째로 유실됐다)
+  it('미도달 다수 + DLQ 격리 1건 → true (스킵은 제외하고 판정)', () => {
+    const batch = batchWith(0, [
+      { keyword: '루테인', reason: '[ENOTFOUND] getaddrinfo ENOTFOUND openapi.naver.com' },
+      { keyword: '콜라겐', reason: '[ENOTFOUND] getaddrinfo ENOTFOUND openapi.naver.com' },
+      { keyword: '격리자', reason: 'dlq_isolated: 연속 3회 실패(...) — 쿨다운 후 자동 재시도' },
+    ]);
+    expect(isWholesaleUnreachable(batch)).toBe(true);
+  });
+
+  it('실패 0건(요청 없음/전량 성공) → false', () => {
+    expect(isWholesaleUnreachable(batchWith(0, []))).toBe(false);
+  });
+
+  it('실제 collectSignals 전량 ENOTFOUND 배치도 true 로 판정된다(배치 shape 회귀)', async () => {
+    const err = Object.assign(new Error('getaddrinfo ENOTFOUND openapi.naver.com'), { code: 'ENOTFOUND' });
+    const ledger = new BudgetLedger(db, { naver_search_shop: 100, naver_datalab_search: 0 });
+    vi.mocked(searchShop).mockRejectedValue(err);
+    vi.mocked(searchTrend).mockResolvedValue(trendOk());
+
+    const batch = await collectSignals(['a', 'b'], deps({ ledger }));
+
+    expect(batch.signals).toHaveLength(0);
+    expect(isWholesaleUnreachable(batch)).toBe(true);
+  });
+
+  // 적대적 리뷰 회귀 ②: undici 연결타임아웃은 message 에 코드가 없고 err.code 에만 있다
+  // (message="Connect Timeout Error (...)"). reason 을 [코드] 로 태깅했으므로 이제 잡힌다.
+  // 메시지 부분매칭이던 이전 구현은 이 전량 실패를 놓쳐 자가복구가 안 됐다.
+  it('전량 UND_ERR_CONNECT_TIMEOUT(메시지에 코드 없음)도 true 로 판정된다', async () => {
+    const err = Object.assign(
+      new Error('Connect Timeout Error (attempted address: openapi.naver.com:443, timeout: 10000ms)'),
+      { code: 'UND_ERR_CONNECT_TIMEOUT' },
+    );
+    const ledger = new BudgetLedger(db, { naver_search_shop: 100, naver_datalab_search: 0 });
+    vi.mocked(searchShop).mockRejectedValue(err);
+    vi.mocked(searchTrend).mockResolvedValue(trendOk());
+
+    const batch = await collectSignals(['a', 'b'], deps({ ledger }));
+
+    // 실제 collect 가 만든 reason 에 [코드] 태그가 붙어 있어야 판정이 성립한다.
+    expect(batch.failures.every((f) => f.reason.includes('[UND_ERR_CONNECT_TIMEOUT]'))).toBe(true);
+    expect(isWholesaleUnreachable(batch)).toBe(true);
   });
 });
