@@ -1,0 +1,28 @@
+name: keyword-intel self-heal check
+
+# 로컬 launchd 수집(09:30 KST, macOS wake 이슈로 로컬 실행)이 status/daily-status.json 을 레포에
+# 커밋·푸시하면, 그 결과를 클라우드에서 검증한다. GHA 러너는 로컬 파일(data/daily.log·intel.db,
+# gitignore)을 못 보므로 "레포에 커밋된 상태 요약"만 읽는다 — wp-auto-blog 의 data/*.json 방식과 동일.
+# 판정이 실패(오늘 것 아님·최종 실패·파일 없음)면 잡이 red 가 되어 소유자에게 실패 메일이 간다(= 리마인더).
+
+on:
+  schedule:
+    - cron: '13 1 * * *' # 10:13 KST (=01:13 UTC) — 로컬 09:30 수집+상태푸시 이후 여유를 둔다
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Evaluate keyword-intel daily self-heal status
+        run: node packages/keyword-intel/scripts/check-status.cjs

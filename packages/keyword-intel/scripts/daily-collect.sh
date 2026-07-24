@@ -45,7 +45,10 @@ fi
   # 성공한 호출의 쿼터를 헛되이 재소비하기 때문(적대적 리뷰 확정). 미도달은 코드가 예산을 환불하므로
   # 재시도는 쿼터 무손실.
   collect_ok=0
+  collect_attempts=0
+  self_heal_triggered=0
   for attempt in 1 2 3; do
+    collect_attempts=$attempt
     npm run -s collect -- --file seeds/g2-seeds.txt > /dev/null
     rc=$?
     if [ "$rc" -eq 0 ]; then collect_ok=1; break; fi
@@ -53,11 +56,31 @@ fi
       echo "[daily] collect exit=$rc (전량 미도달 아님 — 재시도 안 함, 리포트가 상태 표시)"
       break
     fi
+    self_heal_triggered=1
     echo "[daily] collect 시도 ${attempt} 전량 미도달(exit 75)"
     [ "$attempt" -lt 3 ] && { echo "[daily] 60초 후 재시도"; sleep 60; }
   done
   [ "$collect_ok" -eq 0 ] && echo "[daily] collect 자가복구 실패 — 리포트가 '전량 실패' 배너로 알림"
 
   npm run -s report || echo "[daily] report 실패 exit=$?"
+
+  # 상태파일 발행(비밀정보 없음) → 레포에 커밋·푸시 → 클라우드 GHA 가 읽어 검증(wp-auto-blog data/*.json 방식).
+  # 수집 자체엔 영향 없게 전 과정 비치명적. push 는 SSH 키 비대화형 접근에 의존(실패 시 GHA 가 stale 로 감지).
+  ST_DAY="$(date '+%Y-%m-%d')" \
+  ST_DNS="$([ "$dns_ready" -eq 1 ] && echo true || echo false)" \
+  ST_ATTEMPTS="$collect_attempts" \
+  ST_SELFHEAL="$([ "$self_heal_triggered" -eq 1 ] && echo true || echo false)" \
+  ST_OK="$([ "$collect_ok" -eq 1 ] && echo true || echo false)" \
+    node scripts/emit-status.cjs || echo "[daily] status 발행 실패(비치명적)"
+  ROOT="$(git rev-parse --show-toplevel 2>/dev/null || true)"
+  if [ -n "$ROOT" ]; then
+    ( cd "$ROOT" \
+      && git add packages/keyword-intel/status/daily-status.json 2>/dev/null \
+      && ! git diff --cached --quiet \
+      && git commit -q -m "chore(keyword-intel): daily status $(date '+%Y-%m-%d') [skip ci]" \
+      && GIT_SSH_COMMAND="ssh -o BatchMode=yes -o ConnectTimeout=15" git push -q origin HEAD:main ) \
+      2>&1 || echo "[daily] status 커밋/푸시 생략·실패(비치명적)"
+  fi
+
   echo "=== 완료 $(date '+%H:%M:%S') ==="
 } >> data/daily.log 2>&1
