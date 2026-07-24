@@ -39,6 +39,20 @@
    제8조(결과데이터 권리 귀속) · 제11조(로그 보관) · **검색 API 특약 2.1**(독립 노출·삽입/왜곡/변조 금지) 원문 확인
 3. `LEGAL-BOUNDARY.md` §2·§4 와 계약 `compliance` 기본값(resaleRestricted / cacheTtlHours)을 원문 근거로 갱신
 
+### 신규 소스 실측 (2026-07-25) — D1-8(검색광고)·D1-11(쿠팡 파트너스)
+
+수요 검증 축(상대 트렌드 → 절대 검색량 보정) 및 판매 검증 축(쿠팡) 편입 검토. `d1-researcher` 2패스 실측.
+
+| # | 소스 | 상태 | 확정값 / 게이트 |
+|---|---|---|---|
+| **D1-8** | 네이버 **검색광고** 키워드도구 | 🟡 **조건부 GO** | `GET https://api.searchad.naver.com/keywordstool` · HMAC-SHA256(메시지 `ts.METHOD.path`, 헤더 `X-Timestamp/X-API-KEY/X-Customer/X-Signature`) · hintKeywords ≤5 · 반환 `monthlyPcQcCnt`/`monthlyMobileQcCnt`(30일 **절대 검색수**, `<10` 마스킹)·compIdx. 키발급 self-serve(단 광고주 계정 필요). **한도 수치 비공개**(계정+IP 유연제한, 키워드도구 타 API 1/5~1/6)→429 적응형 백오프. **약관: 내부이용 허용 취지 / 제3자제공·재판매 금지(검색광고 제16조8항)/ 순수 비광고목적 적법성=법해석 사람게이트**. 근거: naver.github.io/searchad-apidoc(공개), ads.naver.com/adguide/terms(로그인 불필요) |
+| **D1-11** | 쿠팡 **파트너스** 오픈API | ❌ **차단(조건부)** | Search **시간당 10회**(위반 24h차단·3회 전체밴)·키발급 파트너스 **최종승인** 후만 = ✅확정. 엔드포인트·HMAC·응답필드·**★약관(데이터 내부이용 허용여부)** = 로그인/Cloudflare 뒤 미확인 → 금지선 #7 보수적 차단. 근거: partners.coupangcdn.com/partners-guide/*.pdf(자사 CDN, 인증 불필요) |
+
+**D1-8 사람 게이트:** ① 검색광고 광고주 계정+API 라이선스 발급 ② "광고 미집행 순수 내부이용"의 약관 제7조10항④("광고집행 이외의 다른 목적") 적법성 법해석 ③ 광고운영정책(로그인 뒤) API/데이터 세부제한 확인.
+**D1-11 사람 게이트:** ① 파트너스 최종승인 계정 ② 로그인 뒤 이용약관·운영정책에서 데이터 내부이용 허용여부 ③ Cloudflare 뒤 기술문서로 스펙 확정. → **대안 권장: D1-4 데이터랩 쇼핑인사이트**(이미 확정·별도 1,000/일)로 커머스 수요 프록시.
+
+> **계약 반영 완료(2026-07-25):** `KeywordSignal.absoluteVolume?`(D1-8) 옵셔널 필드 추가(append-only, 무파손). 어댑터·`IntelSource` 배선·budget 은 위 D1-8 사람게이트 통과 후.
+
 ---
 
 ## 1. Phase 1 — 최소 동작 (Walking Skeleton) · W1 · **구현 완료(2026-07-23)**

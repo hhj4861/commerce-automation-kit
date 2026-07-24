@@ -55,6 +55,29 @@ export interface KeywordSignal {
     series: ReadonlyArray<{ period: string; ratio: RelativeIndex }>;
   };
 
+  /**
+   * 절대 검색 수요 — 네이버 검색광고 키워드도구(D1-8, 조건부 GO 2026-07-25).
+   * `trend`(상대 0~100, 자기정규화)와 달리 최근 30일 **실제 검색수(절대값)** 라,
+   * 데이터랩 상대 트렌드를 실수요 크기로 보정하는 근거다(RelativeIndex 의 대칭 개념).
+   * 옵셔널: 이 소스(별도 검색광고 계정 필요)를 미수집한 신호는 undefined — 기존 신호와 하위호환.
+   *
+   * ⚠️ 이 데이터는 검색광고 약관상 **제3자 제공·재판매 금지**(제16조8항, D1-8 실측 인용).
+   *    이 필드가 채워지면 `compliance.resaleRestricted` 는 반드시 true 로 전파한다.
+   * TODO(D1-8): 어댑터 착수 시 `IntelSource` 에 'naver_searchad_keywordtool' 추가 +
+   *    coverage/callsSpent 배선. 호출 한도는 수치 비공개(계정+IP 유연제한)라 429 적응형 백오프로 처리.
+   *    사람게이트: 실광고주 계정 발급 + "비광고 목적 이용" 적법성 법해석(약관 제7조10항④).
+   */
+  absoluteVolume?: {
+    /** 최근 30일 PC 검색수. "<10"(월 10회 미만) 마스킹 시 null (+ masked=true) */
+    monthlyPc: number | null;
+    /** 최근 30일 모바일 검색수. 마스킹 규칙 동일 */
+    monthlyMobile: number | null;
+    /** PC 또는 모바일이 "<10" 으로 마스킹됐는지 — 진짜 0 과 구분(파싱 분기 필수) */
+    masked: boolean;
+    /** 검색광고 경쟁정도(compIdx). 검색 트렌드가 아니라 광고 경쟁 밀도 */
+    compIdx: 'low' | 'mid' | 'high' | null;
+  };
+
   /** 파생 스코어 (core/analyzer 산출). 정의는 ARCHITECTURE.md §4 참조 */
   scores: {
     /** 수요 대비 경쟁 매력도 (0~100). 높을수록 "수요 있고 경쟁 덜함" */
