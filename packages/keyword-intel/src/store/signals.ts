@@ -121,3 +121,49 @@ export function topOpportunities(db: Db, limitN = 20, now: Date = new Date()): T
     capturedAt: r.capturedAt,
   }));
 }
+
+/** export 뷰용 행 — topOpportunities 에 compliance 를 추가한 읽기 전용 스냅샷. */
+export interface ExportRow {
+  keyword: string;
+  opportunity: number;
+  confidence: number;
+  compliance: { resaleRestricted: boolean; cacheTtlHours: number };
+  capturedAt: string;
+}
+
+/**
+ * 블로그 export(§8)용 조회 — 키워드별 최신·미만료 신호 + compliance 전파.
+ * topOpportunities 와 동일한 ROW_NUMBER 패턴(키워드당 1행)이며 읽기 전용 뷰다.
+ */
+export function signalsForExport(db: Db, limitN = 50, now: Date = new Date()): ExportRow[] {
+  const rows = db
+    .prepare(
+      `SELECT keyword, opportunity, confidence, compliance, capturedAt
+       FROM (
+         SELECT s.keyword, s.opportunity, s.confidence, s.compliance,
+                s.captured_at AS capturedAt,
+                ROW_NUMBER() OVER (
+                  PARTITION BY s.keyword ORDER BY s.captured_at DESC, s.id DESC
+                ) AS rn
+         FROM signals s
+         WHERE s.expires_at > @now
+       )
+       WHERE rn = 1
+       ORDER BY opportunity DESC, confidence DESC
+       LIMIT @limitN`,
+    )
+    .all({ now: now.toISOString(), limitN }) as Array<{
+    keyword: string;
+    opportunity: number;
+    confidence: number;
+    compliance: string;
+    capturedAt: string;
+  }>;
+  return rows.map((r) => ({
+    keyword: r.keyword,
+    opportunity: r.opportunity,
+    confidence: r.confidence,
+    compliance: JSON.parse(r.compliance) as { resaleRestricted: boolean; cacheTtlHours: number },
+    capturedAt: r.capturedAt,
+  }));
+}

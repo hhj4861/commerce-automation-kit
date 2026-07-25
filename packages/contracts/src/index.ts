@@ -9,6 +9,7 @@ export * from './ad-video-job.js';     // ad-video-gen ↔ 소비자 (원자 #5)
 export * from './showcase-entry.js';   // showcase-site ↔ 소비자 (원자 #6)
 export * from './shorts-job.js';       // shorts-publish ↔ 소비자 (원자 #7)
 export * from './music-job.js';        // ai-music ↔ 소비자 (원자 #8)
+export * from './blog-export.js';      // keyword-intel → wp-auto-blog 브릿지 (§8 단방향 JSON)
 // 다음 원자 착수 시 계약 추가:
 //   export * from './render-job.js';       // slide-renderer ↔ 소비자
 //   export * from './coupang-listing.js';  // coupang-connector ↔ 소비자

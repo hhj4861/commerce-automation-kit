@@ -328,7 +328,7 @@ D1-9(YouTube)·D1-10(Keyword Planner) 약관·쿼터 실측 + Reddit 상업 승�
 - [ ] `core/question-miner.ts` normalizeQuestions (순수함수: `<b>` 스트립, 의문문 필터, YMYL·질병효능(식품표시광고법 §8) 사전 필터 정규식)
 - [ ] store v4 마이그레이션: questions(TTL 24h 물리삭제) + question_history(가공지표만, TTL 면제)
 - [ ] collect `--with-questions` (선택적 소스 패턴 — 실패 시 신호 비차단) + report 질문 섹션
-- [ ] `analyze --profile` 채널 뷰 (§7)
-- [ ] (브릿지 개통 시) `--json` export + schemaVersion + **compliance 필드 필수 포함** + wp-auto-blog 측 pull 스크립트(TTL 경과 시 source_questions purge 의무 — §8)
+- [x] `analyze --profile` 채널 뷰 (§7) — **구현(2026-07-25)**: `analyze --profile blog-kr|blog-global --json`, 읽기 전용 뷰(추가 API 0), `src/cli/export.ts` 순수 빌더 + `signalsForExport` 조회. 프로파일 로직은 수집기 밖(§7 준수).
+- [x] (브릿지 개통 시) `--json` export + schemaVersion + **compliance 필드 필수 포함** + wp-auto-blog 측 pull 스크립트(TTL 경과 시 source_questions purge 의무 — §8) — **구현(2026-07-25, 사람 게이트로 브릿지 개통 결정)**: 계약 `@cak/contracts` `BlogExport`(append-only, blog-export.ts). schemaVersion=1 + compliance(strictest) 봉투. wp-auto-blog 측 소비자 `scripts/ingest_keyword_intel.py`는 **보수모드 상시(질문원문 never-persist)** + 항목삭제 없는 field-level TTL. 양쪽 종단 실연결 검증(kit analyze --json → Py 소비자 → 큐 pending). ⚠️ 현재 topic=정규화 키워드(재표현·제목화·질문마이닝은 미구현 → 지어내지 않음), monthly_search 는 D1-8 후.
 - [ ] 가드레일 유닛 테스트: 답변 본문·description 미저장(title만), sourceUrl 미fetch, YMYL 필터, kin sub-budget, 그룹 합산 clamp, **일일 유입 건수 상한**, **그룹 합산의 다중 프로세스 동시성**(launchd × CLI), **게시 텍스트 재표현 게이트**(원문 verbatim 차단)
 - [ ] 문서 갱신: `IMPLEMENTATION.md` §0 에 **D1-6(지식iN 검색, 사전 실측 완료)** 편입, `LEGAL-BOUNDARY.md` 에 지식iN 항목(title만 저장·description 미저장·집계만·원문 재게시는 재표현 게이트 필수) 추가

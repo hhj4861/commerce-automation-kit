@@ -27,7 +27,8 @@ try {
 } catch {
   /* .env 없음 — 환경변수 직접 주입 경로 그대로 동작 */
 }
-import { purgeExpired, topOpportunities } from '../store/signals.js';
+import { purgeExpired, topOpportunities, signalsForExport } from '../store/signals.js';
+import { buildBlogExport, resolveProfile } from './export.js';
 import { clearAll, clearFailure, dlqReport, dlqThresholdFromEnv } from '../store/dlq.js';
 import { buildDigest } from './report.js';
 import {
@@ -94,6 +95,34 @@ async function main(): Promise<void> {
       const topIdx = rest.indexOf('--top');
       const topRaw = topIdx >= 0 ? Number(rest[topIdx + 1]) : 20;
       const top = Number.isInteger(topRaw) && topRaw > 0 ? topRaw : 20;
+
+      // --json [--profile blog-kr|blog-global] : wp-auto-blog 브릿지 export(§8, 단방향).
+      // 읽기 전용 뷰 — 추가 API 호출 0. stdout=JSON 데이터, stderr=경고.
+      if (rest.includes('--json')) {
+        const profIdx = rest.indexOf('--profile');
+        const profileArg = profIdx >= 0 ? rest[profIdx + 1] : 'blog-kr';
+        let profile;
+        try {
+          profile = resolveProfile(profileArg ?? 'blog-kr');
+        } catch (e) {
+          console.error(`(거부) ${(e as Error).message}`);
+          process.exitCode = 2;
+          break;
+        }
+        const db = openDb();
+        const purgedJ = purgeExpired(db);
+        if (purgedJ > 0) console.error(`(약관 TTL 만료 캐시 ${purgedJ}건 무효화)`);
+        const exportRows = signalsForExport(db, top);
+        if (exportRows.length === 0) {
+          console.error('경고: 저장된 신호가 없습니다(먼저 collect 실행). 빈 export 를 출력합니다.');
+        }
+        const payload = buildBlogExport(exportRows, {
+          profile,
+          now: new Date().toISOString(),
+        });
+        console.log(JSON.stringify(payload, null, 2));
+        break;
+      }
 
       const db = openDb();
       const purged = purgeExpired(db);
