@@ -6,7 +6,7 @@
  * 스코어는 "참고 지표"이며 매수/제조 결정의 자동 트리거로 쓰지 않는다.
  */
 import type { KeywordSignal, RelativeIndex } from '@cak/contracts';
-import type { ShopSearchResult, DatalabResult } from '../adapters/naver-client.js';
+import type { ShopSearchResult, DatalabResult, ShoppingInsightResult } from '../adapters/naver-client.js';
 
 const asRel = (n: number): RelativeIndex => n as RelativeIndex;
 
@@ -42,6 +42,31 @@ export function summarizeTrend(datalab: DatalabResult | null): KeywordSignal['tr
       ? pctChange(avg(series.slice(0, half).map((s) => s.ratio)), avg(series.slice(half).map((s) => s.ratio)))
       : null;
   return { latest, momentumPct, series };
+}
+
+/**
+ * 쇼핑인사이트 응답(단일 그룹) → shoppingTrend 블록.
+ * category 는 응답이 아니라 조회 스코프(요청 파라미터)라 인자로 받아 계약에 실어준다.
+ * 모멘텀 정의는 summarizeTrend 와 동일(최근 절반 vs 직전 절반 평균).
+ *
+ * ⚠️ **results[0] 만** 읽는다 = 키워드당 1그룹 호출 전제. 배선 시 여러 키워드를 한 호출의
+ *    다중 그룹(param 1개씩 최대 5)으로 배치하면 results[1..4] 가 조용히 유실된다(silent drop 금지 위반).
+ *    → 호출부는 키워드당 1그룹으로 부르거나, 다중 그룹이면 요청·응답 그룹 수 불일치를 failures 로 표면화할 것.
+ */
+export function summarizeShoppingTrend(
+  insight: ShoppingInsightResult | null,
+  category: string,
+): NonNullable<KeywordSignal['shoppingTrend']> {
+  const series =
+    insight?.results[0]?.data.map((d) => ({ period: d.period, ratio: asRel(d.ratio) })) ?? [];
+  if (series.length === 0) return { category, latest: null, momentumPct: null, series: [] };
+  const latest = series.at(-1)!.ratio;
+  const half = Math.floor(series.length / 2);
+  const momentumPct =
+    half > 0
+      ? pctChange(avg(series.slice(0, half).map((s) => s.ratio)), avg(series.slice(half).map((s) => s.ratio)))
+      : null;
+  return { category, latest, momentumPct, series };
 }
 
 /**

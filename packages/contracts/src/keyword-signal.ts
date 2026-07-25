@@ -78,6 +78,23 @@ export interface KeywordSignal {
     compIdx: 'low' | 'mid' | 'high' | null;
   };
 
+  /**
+   * 쇼핑 클릭 추이 — 데이터랩 쇼핑인사이트 category/keywords(D1-4).
+   * `trend`(네이버 통합검색의 상대 트렌드)와 달리 **네이버쇼핑/쇼핑영역의 검색 클릭** 상대추이(0~100)라,
+   * "일반 검색 수요"가 아니라 **커머스 맥락 수요** 축이다(별개 신호로 병렬 참조 — 점수 대체 아님).
+   * 카테고리(cat_id) 스코프가 필수라, cat_id 미상 키워드는 undefined 로 둔다(coverage 로 투명화).
+   * 옵셔널: 미수집 신호는 undefined — 하위호환. source: `naver_datalab_shopping`(별도 1,000/일 예산).
+   */
+  shoppingTrend?: {
+    /** 조회에 사용한 cat_id (어떤 쇼핑 분야 맥락에서의 추이인지 — 스코프 불투명 방지) */
+    category: string;
+    /** 최근 기간 쇼핑 클릭 상대추이 (0~100). 데이터 없으면 null */
+    latest: RelativeIndex | null;
+    /** 최근 절반 vs 직전 절반 평균 변화율 (%) — 양수=상승. null=계산 불가 */
+    momentumPct: number | null;
+    series: ReadonlyArray<{ period: string; ratio: RelativeIndex }>;
+  };
+
   /** 파생 스코어 (core/analyzer 산출). 정의는 ARCHITECTURE.md §4 참조 */
   scores: {
     /** 수요 대비 경쟁 매력도 (0~100). 높을수록 "수요 있고 경쟁 덜함" */

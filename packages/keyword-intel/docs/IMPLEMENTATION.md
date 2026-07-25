@@ -53,6 +53,19 @@
 
 > **계약 반영 완료(2026-07-25):** `KeywordSignal.absoluteVolume?`(D1-8) 옵셔널 필드 추가(append-only, 무파손). 어댑터·`IntelSource` 배선·budget 은 위 D1-8 사람게이트 통과 후.
 
+#### 쇼핑인사이트(D1-4) 어댑터 착수 (2026-07-25) — 커머스 수요축
+
+D1-4는 이미 확정·기존 네이버 크레덴셜 사용이라 게이트 없이 착수. 공식 문서 스키마 재실측(adversarial 검증 통과):
+- **어댑터**: `shoppingCategoryKeywords()` (`POST /v1/datalab/shopping/category/keywords`) — category(cat_id) 필수·keyword 1~5그룹·param 그룹당 1개·startDate≥2017-08-01·ages 10~60. 응답 `results[].keyword`(⚠️**단수**, 검색트렌드는 복수). zod: `shoppingInsightResultSchema`.
+- **계약**: `KeywordSignal.shoppingTrend?{category,latest,momentumPct,series}` (append-only). budget source `naver_datalab_shopping`(별도 1,000/일, 이미 존재).
+- **analyzer**: `summarizeShoppingTrend(insight, category)` — summarizeTrend와 동일 모멘텀.
+
+**⚠️ collect 배선 시 필수(미이행 시 rule 위반):**
+1. **store 마이그레이션 v4** — `signals` 테이블/`saveBatch`/`topOpportunities`에 `shoppingTrend`(및 `absoluteVolume`) 영속 컬럼 추가. **현재는 persist 안 돼 배선하면 저장→재로드에서 silent drop**(적대적 리뷰 지적, "silent drop 금지" 위반).
+2. **cat_id 매핑** — 키워드→cat_id 결정(전체목록/조회 API 없음, 수동 확인). 시드 그룹(건기식/뷰티)별 매핑, 확정 못한 값은 `TODO(D1)`. 미상 키워드는 shoppingTrend undefined + coverage 투명화.
+3. **키워드당 1그룹 호출** — summarizeShoppingTrend는 results[0]만 읽음(다중그룹 배치 시 results[1..] 유실).
+4. `coverage.sources`/`skippedByBudget`에 `naver_datalab_shopping` 반영 + 예산 소비 배선(현재 dead: 초기화만 되고 안 늘어남).
+
 ---
 
 ## 1. Phase 1 — 최소 동작 (Walking Skeleton) · W1 · **구현 완료(2026-07-23)**

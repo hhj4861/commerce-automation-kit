@@ -56,7 +56,29 @@ export const datalabResultSchema = z
   })
   .passthrough();
 
+/**
+ * 쇼핑인사이트 category/keywords 응답 (D1-4 공식 문서 실측 2026-07-25).
+ * ⚠️ 검색 트렌드(datalabResultSchema)는 `results[].keywords`(복수)이지만, 쇼핑인사이트는
+ *    `results[].keyword`(단수, 문자열 배열)다 — 공식 문서 원문 기준. 혼동 주의.
+ * ratio 는 구간 최대=100 상대값(절대 클릭량 아님).
+ */
+export const shoppingInsightResultSchema = z
+  .object({
+    startDate: z.string(),
+    endDate: z.string(),
+    timeUnit: z.enum(['date', 'week', 'month']),
+    results: z.array(
+      z.object({
+        title: z.string(),
+        keyword: z.array(z.string()), // ⚠️ 단수 keyword (검색 트렌드의 keywords 와 다름)
+        data: z.array(z.object({ period: z.string(), ratio: z.number() })),
+      }),
+    ),
+  })
+  .passthrough();
+
 /** 응답 타입은 스키마에서 파생한다(타입과 런타임 검증의 단일 소스). */
 export type ShopItem = z.infer<typeof shopItemSchema>;
 export type ShopSearchResult = z.infer<typeof shopSearchResultSchema>;
 export type DatalabResult = z.infer<typeof datalabResultSchema>;
+export type ShoppingInsightResult = z.infer<typeof shoppingInsightResultSchema>;

@@ -33,15 +33,18 @@ export const tunedNaverAgent = new Agent({
 import {
   shopSearchResultSchema,
   datalabResultSchema,
+  shoppingInsightResultSchema,
   type ShopSearchResult,
   type DatalabResult,
+  type ShoppingInsightResult,
 } from './schemas.js';
 
 // 응답 타입은 zod 스키마에서 파생(단일 소스). 소비 모듈(core/test)은 계속 이 파일에서 import 한다.
-export type { ShopItem, ShopSearchResult, DatalabResult } from './schemas.js';
+export type { ShopItem, ShopSearchResult, DatalabResult, ShoppingInsightResult } from './schemas.js';
 
 const SEARCH_SHOP_URL = 'https://openapi.naver.com/v1/search/shop.json'; // D1-1 (GET)
 const DATALAB_SEARCH_URL = 'https://openapi.naver.com/v1/datalab/search'; // D1-3 (POST, application/json)
+const DATALAB_SHOPPING_KEYWORDS_URL = 'https://openapi.naver.com/v1/datalab/shopping/category/keywords'; // D1-4 (POST)
 // 데이터랩 쇼핑인사이트(D1-4, 각 POST): /v1/datalab/shopping/{categories | category/device | category/gender
 //   | category/age | category/keywords | category/keyword/device | category/keyword/gender | category/keyword/age}
 //   category 코드 = 네이버쇼핑 URL 의 cat_id (예: 패션의류 50000000, 화장품/미용 50000002). Phase 2+ 에서 추가.
@@ -60,7 +63,11 @@ export const NAVER_LIMITS = {
   DATALAB_MAX_KEYWORDS_PER_GROUP: 20,
   DATALAB_DAILY_CALL_LIMIT: 1000, // 트렌드·쇼핑인사이트 각각 1,000/일 (별도 카운터)
   DATALAB_SEARCH_START_MIN: '2016-01-01', // 트렌드 조회 가능 최초일
+  DATALAB_SHOPPING_START_MIN: '2017-08-01', // 쇼핑인사이트 조회 가능 최초일 (D1-4, 트렌드와 다름)
 } as const;
+
+/** 쇼핑인사이트 ages 허용 코드 (D1-4: 10~60 10단위, 트렌드의 1~11 과 코드 체계가 다름). */
+const SHOPPING_AGE_CODES: readonly string[] = ['10', '20', '30', '40', '50', '60'];
 
 export interface NaverCredentials {
   clientId: string;
@@ -151,6 +158,63 @@ export async function searchTrend(
     throw new NaverApiError('datalab_search', res.statusCode, text);
   }
   return parseResponse('datalab_search', datalabResultSchema, await res.body.json());
+}
+
+export interface ShoppingKeywordGroup {
+  name: string; // 그룹 이름(우리는 키워드 자체를 넣음)
+  param: string[]; // D1-4 확정: 그룹당 정확히 1개(비교 검색어) — 요청 가드로 강제
+}
+
+/**
+ * 쇼핑인사이트 분야별 키워드 트렌드 (D1-4 실측). POST application/json.
+ * 일반 검색 트렌드(searchTrend)와 달리 **네이버쇼핑/쇼핑영역의 검색 클릭 추이**를 준다
+ * → "커머스 맥락 수요" 축. category(cat_id) 스코프 필수(전체 목록/조회 API 없음 — 수동 확인, D1-4).
+ * keyword 그룹 최대 5, 그룹당 param 정확히 1개, startDate ≥ 2017-08-01, ratio 는 상대값(0~100).
+ * 별도 1,000/일 카운터(source: naver_datalab_shopping).
+ */
+export async function shoppingCategoryKeywords(
+  cred: NaverCredentials,
+  body: {
+    startDate: string;
+    endDate: string;
+    timeUnit: 'date' | 'week' | 'month';
+    category: string; // cat_id
+    keyword: ShoppingKeywordGroup[];
+    device?: 'pc' | 'mo';
+    gender?: 'm' | 'f';
+    ages?: string[]; // D1-4: 10~60 (트렌드의 1~11 과 코드 체계가 다름)
+  },
+): Promise<ShoppingInsightResult> {
+  if (!body.category) throw new Error('category(cat_id) 는 필수다 (D1-4)');
+  if (
+    body.keyword.length === 0 ||
+    body.keyword.length > NAVER_LIMITS.DATALAB_MAX_KEYWORD_GROUPS
+  ) {
+    throw new Error(`keyword 는 1~${NAVER_LIMITS.DATALAB_MAX_KEYWORD_GROUPS}개여야 한다 (D1-4)`);
+  }
+  for (const g of body.keyword) {
+    if (g.param.length !== 1) {
+      throw new Error(`param 은 그룹당 정확히 1개여야 한다 (D1-4, group=${g.name})`);
+    }
+  }
+  // ages 코드 검증 — 쇼핑인사이트는 10~60(10 단위), 트렌드의 1~11 과 다르다(D1-4). 잘못된 코드를
+  // 넘기면 라이브 API 400 으로만 드러나므로(쿼터 소비) 호출 전 차단한다.
+  if (body.ages && body.ages.some((a) => !SHOPPING_AGE_CODES.includes(a))) {
+    throw new Error(`ages 코드는 ${SHOPPING_AGE_CODES.join('/')} 만 허용된다 (D1-4, 트렌드의 1~11 과 다름)`);
+  }
+  if (body.startDate < NAVER_LIMITS.DATALAB_SHOPPING_START_MIN) {
+    throw new Error(`startDate 는 ${NAVER_LIMITS.DATALAB_SHOPPING_START_MIN} 이후여야 한다 (D1-4)`);
+  }
+  const res = await request(DATALAB_SHOPPING_KEYWORDS_URL, {
+    method: 'POST',
+    headers: { ...authHeaders(cred), 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (res.statusCode !== 200) {
+    const text = await res.body.text();
+    throw new NaverApiError('datalab_shopping', res.statusCode, text);
+  }
+  return parseResponse('datalab_shopping', shoppingInsightResultSchema, await res.body.json());
 }
 
 export class NaverApiError extends Error {

@@ -1,6 +1,15 @@
 import { describe, it, expect } from 'vitest';
-import { summarizeCompetition, summarizeTrend, scoreOpportunity } from '../src/core/analyzer.js';
-import type { ShopSearchResult, DatalabResult } from '../src/adapters/naver-client.js';
+import {
+  summarizeCompetition,
+  summarizeTrend,
+  summarizeShoppingTrend,
+  scoreOpportunity,
+} from '../src/core/analyzer.js';
+import type {
+  ShopSearchResult,
+  DatalabResult,
+  ShoppingInsightResult,
+} from '../src/adapters/naver-client.js';
 
 const shopFixture: ShopSearchResult = {
   total: 12345,
@@ -45,6 +54,32 @@ describe('summarizeTrend', () => {
     expect(t.latest).toBe(90);
     expect(t.momentumPct).not.toBeNull();
     expect(t.momentumPct!).toBeGreaterThan(0); // 상승 추세
+  });
+});
+
+describe('summarizeShoppingTrend', () => {
+  it('데이터 없으면 null 안전 처리하되 category 스코프는 유지', () => {
+    const s = summarizeShoppingTrend(null, '50000002');
+    expect(s.category).toBe('50000002');
+    expect(s.latest).toBeNull();
+    expect(s.series).toHaveLength(0);
+  });
+
+  it('쇼핑 클릭 시계열에서 latest·momentum을 뽑고 category를 실어준다', () => {
+    const si: ShoppingInsightResult = {
+      startDate: '2026-04-01', endDate: '2026-07-01', timeUnit: 'week',
+      results: [{ title: '크레아틴', keyword: ['크레아틴'], data: [
+        { period: '2026-04-01', ratio: 30 },
+        { period: '2026-05-01', ratio: 45 },
+        { period: '2026-06-01', ratio: 80 },
+        { period: '2026-07-01', ratio: 100 },
+      ] }],
+    };
+    const s = summarizeShoppingTrend(si, '50000006');
+    expect(s.category).toBe('50000006');
+    expect(s.latest).toBe(100);
+    expect(s.momentumPct!).toBeGreaterThan(0); // 상승
+    expect(s.series).toHaveLength(4);
   });
 });
 
