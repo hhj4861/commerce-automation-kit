@@ -31,6 +31,10 @@ cd packages/keyword-intel && npm test     # 81개 통과하면 정상
 | slide-renderer (#2) | 미착수 스캐폴드 |
 | coupang-connector (#3) | 미착수 스캐폴드 |
 | manychat-reply (#4) | 미착수 스캐폴드 |
+| ad-video-gen (#5) | ✅ 착수(07-24) — 컨셉 게이트·프롬프트·비용·ffmpeg 후반. 실제 생성은 `.claude/skills/ad-video` 스킬 |
+| showcase-site (#6) | ✅ 착수(07-24) — works.json 단일소스·CRUD·CF Pages 배포. `apps/firstframe` 관리 |
+| shorts-publish (#7) | ✅ **착수(07-25)** — 광고영상(16:9)→쇼츠(9:16) 로컬 ffmpeg 렌더(기본 blur-brand)→upload-post 통합 업로드. 테스트 40·타입체크·적대적리뷰(6건 수정). 실업로드는 사용자 upload-post 계정 필요(전엔 `--dry-run`) |
+| ai-music (#8) | ✅ **착수(07-25)** — 컨셉→음악 브리프→프롬프트→트랙을 광고에 믹스(더킹·-14 LUFS). 백엔드 교체형: elevenlabs(공식 API·광고 clear), suno-manual(사람 게이트), suno-auto(가드 스텁—공식 API 부재, 비공식 미지원). 테스트 24·타입체크. 실생성은 ElevenLabs 키/Suno 유료 필요 |
 
 **keyword-intel 게이트 현황**
 
@@ -197,7 +201,7 @@ src/
 | `.claude/agents/d1-researcher.md` | **커스텀 서브에이전트**(D1 실측 전담) | 새 API·약관 확인이 필요하면 이 에이전트를 쓴다. 규율: 공식 1차 원문+원어 인용 있을 때만 ✅, **2패스 독립 재확인** 필수, 미확인 값은 코드 상수로 커밋 금지(`TODO(D1-n)`). D1-1~10 현황표가 여기 있다 |
 | `docs/ARCHITECTURE.md` | **모노레포 전체** 조합 원리 | 의존 규칙(원자끼리 직접 import 금지, 계약 append-only), **사람 게이트 표**(규제상 자동화 불가 지점), 절대 금지선 6개, "MSA 아닌 모놀리식+큐/크론" 결정. 설계 원칙은 무인화가 아니라 **"저관여 + 사람 감시"** |
 | `packages/keyword-intel/docs/QUESTION-MINING.md` | 지식iN 질문 마이닝 **설계(구현 0)** | **ADR 주의**: 채널별(광고/블로그/쇼츠)·마켓별 모듈 분리는 **기각**됨(재검토 트리거 명시). Google PAA/SerpAPI는 **금지·재론 불가**. 착수 조건 = **G3 통과 후**. 선행 = BudgetLedger 쿼터 그룹. wp-auto-blog 브릿지는 단방향 JSON export만, **D1-5 확정 전 질문 원문 verbatim 게시 금지**(재표현 게이트) |
-| `docs/BACKLOG.md` | 통합 후보 기록 | ai-video-agency/website 통합 — 방식 미정(`packages/` vs `apps/`, 대용량 asset git 정책) |
+| `docs/BACKLOG.md` | 통합 후보 기록 | ai-video-agency/website 통합 — **착수됨(2026-07-24)**: 원자 #5/#6 + `apps/firstframe`. 결정사항(구조·media git 포함·이관 정책)은 BACKLOG 항목 참조 |
 | `packages/{slide-renderer,coupang-connector,manychat-reply}/README.md` | 미착수 3원자의 **유지조건·금지선** | 코드는 0, 제약만 박혀 있다. 착수 전 반드시 읽을 것 — 예: slide-renderer는 **입력이 자체촬영·라이선스 소스여야** 원자로 성립(스크래핑 입력이면 위법 스크래퍼), coupang-connector는 **파트너스/셀러 모드 혼용 금지**, manychat-reply는 **팔로우 게이팅 금지**(Meta Spam) |
 | `tsconfig.base.json` | 매우 엄격한 TS 설정 | `noUncheckedIndexedAccess`·`exactOptionalPropertyTypes`·`verbatimModuleSyntax` 켜짐. 새 패키지는 이걸 extends |
 | `~/.claude/projects/.../memory/` | 프로젝트 메모리 | `naver-devcenter-access.md`(접근 기법), `ai-video-agency-website-integration.md`. **경로 이중화로 옛 경로 키에도 중복 존재** |
@@ -214,3 +218,4 @@ src/
 | 2026-07-23 | D1 실측(D1-1~4 확정) · Phase 1(zod 검증·상수 확정) · Phase 2(store/budget/obs·analyze/dlq CLI) · G1·G2 실호출 통과 · 시드 182개 확정 · 일일 자동화+텔레그램 리포트 구축 · 리뷰 3회 31건 수정 |
 | 2026-07-24 | 저장소 경로 이동(TCC 대응) · 첫 자동실행 DNS 실패 진단 → 결함 4건 수정(DNS 재시도·**예산 환불**·네트워크 대기·타임아웃 완화+재시도코드 보강) · 다른 세션 산출물 조사·통합 · 이 문서 작성 |
 | 2026-07-24 (2세션) | PROGRESS 실측 검증(테스트·git·자동화·문서 드리프트) → **09:37 예약 실행 재발** 분석: 분류 결함은 이미 커밋돼 있었고 남은 갭 = **자가복구 부재**. 준비 프로브 getaddrinfo 연속2회+타임아웃, 전량 미도달 CLI **exit 75**, 스크립트 75-한정 3회 재수집, 다이제스트 🚨 배너, 실패 reason `[코드]` 태그화(연결타임아웃 누락 수정). 적대적 검증 2회로 자체 수정의 오탐 2건 발견·수정. 회귀 테스트 +10(71→81). 문서 드리프트 정정(git 커밋·`.idea`·README·테스트수) |
+| 2026-07-24 (3세션) | **원자 #5/#6 착수** — ai-video-agency/website 통합(BACKLOG 항목 해소). 계약 `AdConcept`/`AdVideoJob`(ad-video-job.ts)·`ShowcaseEntry`/`ShowcaseSiteConfig`/`ShowcaseDeployReport`(showcase-entry.ts) append. workspaces에 `apps/*` 추가, `apps/firstframe`(쇼케이스 실체+media 58MB git 포함, `.cf-token` gitignore) 이관. `@cak/ad-video-gen`(컨셉 게이트·프롬프트·비용·ffmpeg 후반) + `@cak/showcase-site`(works.json 단일소스·works.js 생성·빌드·CF Pages 배포) 구현. 이관 기간 venture-studio 사이트와 양쪽 동일 기능(`--site`), 최종 venture-studio 삭제 예정. 힉스필드 MCP 생성 호출은 venture-studio의 `ad-video` 스킬이 오케스트레이션(스킬↔원자 CLI 연동) |

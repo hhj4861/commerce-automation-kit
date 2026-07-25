@@ -5,7 +5,8 @@
   "description": "합법 커머스 자동화 원자(독립 모듈)들의 모노레포. 각 원자는 packages/ 아래 독립 관리되고, @cak/contracts 계약으로만 조합된다.",
   "type": "module",
   "workspaces": [
-    "packages/*"
+    "packages/*",
+    "apps/*"
   ],
   "engines": {
     "node": ">=20"

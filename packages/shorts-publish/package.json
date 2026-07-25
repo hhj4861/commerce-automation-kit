@@ -1,0 +1,26 @@
+{
+  "name": "@cak/shorts-publish",
+  "version": "0.1.0",
+  "private": true,
+  "description": "원자 #7 — 완성 광고영상(16:9) → 쇼츠/릴스(9:16) 재구성(로컬 ffmpeg, 최소개입 5모드) → YouTube/Instagram/TikTok 통합 업로드(upload-post). AI 생성 정직 표기, 실패 투명화.",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "cli": "tsx src/cli/index.ts"
+  },
+  "dependencies": {
+    "@cak/contracts": "*",
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.0",
+    "tsx": "^4.16.0",
+    "vitest": "^2.0.0",
+    "@types/node": "^20.14.0"
+  }
+}

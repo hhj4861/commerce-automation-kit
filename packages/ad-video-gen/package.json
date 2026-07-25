@@ -1,0 +1,26 @@
+{
+  "name": "@cak/ad-video-gen",
+  "version": "0.1.0",
+  "private": true,
+  "description": "원자 #5 — 광고영상 생성 지원: 컨셉 3중 게이트(소구점·고유성·서사), TV급 프롬프트 조립, 비용 견적, ffmpeg 후반작업(타이틀/합성/스플라이스/포스터). 실제 생성 호출(힉스필드 MCP)은 오케스트레이터가 수행한다.",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "cli": "tsx src/cli/index.ts"
+  },
+  "dependencies": {
+    "@cak/contracts": "*",
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.0",
+    "tsx": "^4.16.0",
+    "vitest": "^2.0.0",
+    "@types/node": "^20.14.0"
+  }
+}

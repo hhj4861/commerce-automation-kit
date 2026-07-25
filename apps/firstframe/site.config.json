@@ -1,0 +1,15 @@
+{
+  "name": "firstframe",
+  "deploy": {
+    "provider": "cloudflare-pages",
+    "projectName": "firstframe-showcase",
+    "branch": "main"
+  },
+  "paths": {
+    "html": "showcase.html",
+    "worksJson": "works.json",
+    "worksJs": "works.js",
+    "media": "media",
+    "dist": "dist"
+  }
+}

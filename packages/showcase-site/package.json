@@ -1,0 +1,26 @@
+{
+  "name": "@cak/showcase-site",
+  "version": "0.1.0",
+  "private": true,
+  "description": "원자 #6 — 쇼케이스 사이트 관리: works.json(단일 진실 소스) 검증·works.js 생성·엔트리 CRUD·미디어 등록(포스터 추출)·dist 빌드·Cloudflare Pages 배포. 배포는 명시적 명령으로만.",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "cli": "tsx src/cli/index.ts"
+  },
+  "dependencies": {
+    "@cak/contracts": "*",
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.0",
+    "tsx": "^4.16.0",
+    "vitest": "^2.0.0",
+    "@types/node": "^20.14.0"
+  }
+}

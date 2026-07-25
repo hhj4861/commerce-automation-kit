@@ -83,3 +83,5 @@ blueprint-review DO-NOT-BUILD의 원인들. 어느 원자에도 재유입 금지
 | `RenderJob` | slide-renderer 입력 | ⚪ 원자 #2 착수 시 |
 | `CoupangListing`, `OrderRecord` | coupang-connector | ⚪ 원자 #3 착수 시 |
 | `ReplyEvent`, `OptInRecord` | manychat-reply | ⚪ 원자 #4 착수 시 |
+| `AdConcept`, `AdVideoJob` | ad-video-gen 입출력 (생성 호출은 외부 오케스트레이터=MCP) | 🟢 존재 (2026-07-24) |
+| `ShowcaseEntry`, `ShowcaseSiteConfig`, `ShowcaseDeployReport` | showcase-site ↔ 사이트 앱(apps/firstframe) | 🟢 존재 (2026-07-24) |

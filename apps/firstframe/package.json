@@ -1,0 +1,17 @@
+{
+  "name": "firstframe",
+  "version": "0.1.0",
+  "private": true,
+  "description": "FIRSTFRAME 광고 쇼케이스 사이트 실체(HTML·works 데이터·미디어). 로직은 @cak/showcase-site 원자가 담당하고, 이 앱은 콘텐츠+설정만 가진다.",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "validate": "tsx ../../packages/showcase-site/src/cli/index.ts validate --site .",
+    "gen": "tsx ../../packages/showcase-site/src/cli/index.ts gen --site .",
+    "build": "tsx ../../packages/showcase-site/src/cli/index.ts build --site .",
+    "deploy": "tsx ../../packages/showcase-site/src/cli/index.ts deploy --site .",
+    "sync": "tsx ../../packages/showcase-site/src/cli/index.ts sync --site ."
+  }
+}

@@ -5,6 +5,7 @@ data/
 *.db-journal
 .env
 .env.local
+.cf-token
 *.log
 .DS_Store
 coverage/

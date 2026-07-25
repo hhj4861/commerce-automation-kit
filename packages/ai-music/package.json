@@ -1,0 +1,26 @@
+{
+  "name": "@cak/ai-music",
+  "version": "0.1.0",
+  "private": true,
+  "description": "원자 #8 — 광고 컨셉→음악 브리프→백엔드별 프롬프트, 생성/라이선스한 트랙을 광고영상에 자동 믹스(ffmpeg 더킹·-14 LUFS·길이맞춤). Suno는 수동(공식 API 부재→비공식 금지), ElevenLabs는 공식 API 무인.",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "cli": "tsx src/cli/index.ts"
+  },
+  "dependencies": {
+    "@cak/contracts": "*",
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.0",
+    "tsx": "^4.16.0",
+    "vitest": "^2.0.0",
+    "@types/node": "^20.14.0"
+  }
+}
