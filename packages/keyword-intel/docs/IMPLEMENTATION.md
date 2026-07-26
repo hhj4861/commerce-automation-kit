@@ -62,7 +62,7 @@ D1-4는 이미 확정·기존 네이버 크레덴셜 사용이라 게이트 없�
 
 **⚠️ collect 배선 시 필수(미이행 시 rule 위반):**
 1. **store 마이그레이션 v4** — `signals` 테이블/`saveBatch`/`topOpportunities`에 `shoppingTrend`(및 `absoluteVolume`) 영속 컬럼 추가. **현재는 persist 안 돼 배선하면 저장→재로드에서 silent drop**(적대적 리뷰 지적, "silent drop 금지" 위반).
-2. **cat_id 매핑** — 키워드→cat_id 결정(전체목록/조회 API 없음, 수동 확인). 시드 그룹(건기식/뷰티)별 매핑, 확정 못한 값은 `TODO(D1)`. 미상 키워드는 shoppingTrend undefined + coverage 투명화.
+2. **cat_id 매핑** ✅ (2026-07-27) — D1-4 가 "조회 API 없음·수동 확인"이라 했으나, **네이버 데이터랩 공식 카테고리 엔드포인트** `POST https://datalab.naver.com/shoppingInsight/getCategory.naver` (`cid=<부모>`, 로그인 불필요)로 **권위 있는 카테고리 트리 확보**. 검증값: 화장품/미용=50000002, 식품=50000006 > **건강식품=50000023**(건기식·영양제), 다이어트식품=50000024. `seeds/shopping-categories.json` 에 뷰티 72→50000002·건기식 102→50000023 매핑. 실호출 확인(루테인@50000023 실데이터 반환). 음료·식품형 이너뷰티 8종(석류즙·콤부차 등)은 건강식품 아님 → 지어내지 않고 TODO. 미상 키워드는 shoppingTrend undefined + coverage 투명화.
 3. **키워드당 1그룹 호출** — summarizeShoppingTrend는 results[0]만 읽음(다중그룹 배치 시 results[1..] 유실).
 4. `coverage.sources`/`skippedByBudget`에 `naver_datalab_shopping` 반영 + 예산 소비 배선(현재 dead: 초기화만 되고 안 늘어남).
 
