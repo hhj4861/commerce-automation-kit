@@ -51,6 +51,8 @@
 | ai-music (#8) | **착수(2026-07-25)** — 광고 컨셉→MusicBrief→백엔드별 프롬프트 → 생성/라이선스 트랙을 광고에 자동 믹스(ffmpeg VO더킹·-14 LUFS·길이맞춤). **백엔드 교체형+우선순위**: elevenlabs(공식 API·라이선스 학습·광고 clear·무인), suno-manual(사람 게이트, Suno 최고품질), **suno-auto=가드 스텁**(공식 Suno API 부재→비공식 래퍼는 **금지선 #2 위반이라 미지원**, 예약 슬롯만). 테스트 36, 타입체크 통과, 적대적 리뷰 5건 수정. 계약 MusicBrief/MusicPromptPlan/MusicTrack/MusicBackendId append. 파이프라인: ad-video-gen→**ai-music(스코어링)**→shorts-publish. **실제 생성은 사용자 ElevenLabs 키/Suno 유료플랜 필요** |
 | apps/firstframe | FIRSTFRAME 쇼케이스 사이트 실체(HTML·works 데이터·media 58MB, **media는 git 포함** — 단일 소스 보존, 커지면 R2/LFS 검토). 공개 URL: firstframe-showcase.pages.dev |
 | product-page-gen (#10) | **착수(2026-07-26)** — 큐텐재팬 K뷰티 역직구용 상세페이지 생성 원자. 약기법/화장품법 표현 lint(block=렌더 거부), Qxpress 물류 게이트, 마진 시뮬, 톤 3종 HTML 렌더. 오케스트레이션은 `.claude/skills/product-page`(`/product-page 나이아신 화장품`). 이미지 입력은 사용권 있는 실사/그 기반 AI 생성(aiLabeled 필수)만 — 타사 이미지 재사용 금지(금지선 #1). 테스트 49 |
+| longform-mix (#9) | **착수(2026-07-26)** — 여러 트랙→롱폼 음악 믹스 영상 조립(전부 로컬 ffmpeg, 무료). 오디오 concat + 배경 3종(무료 비주얼라이저 파형/Pexels footage 루프/이미지 루프) + 유튜브 챕터 + 썸네일 2종(감성 플레이리스트/클릭베이트) + **Pexels 공식 API 어댑터**(상업 무료 스톡, 스크래핑 아님). 계약 LongformTrack/ChapterMark/LongformSpec append. 테스트 19. 파이프라인: ai-music(N곡)→**longform-mix(조립)**→youtube-upload. gym mix Vol.1 산출(`~/workSpace/shorts-publish-poc/out/ai-music-demo`) |
+| youtube-upload (#11) | **착수(2026-07-27)** — 롱폼 영상 YouTube Data API v3 업로드(videos.insert)+커스텀 썸네일(thumbnails.set)+챕터 설명. OAuth 리프레시 토큰 1회 인증 후 무인. 공식 API만. 계약 YoutubeUploadJob/YoutubeUploadResult append. 테스트 5. **사용자 설정 필요**: Google Cloud OAuth 데스크톱 클라이언트(YOUTUBE_CLIENT_SECRET) + `cli auth` 1회. 쿼터 videos.insert≈1600유닛(일~6개). 6개월 전 scene-image-generator-new 업로드 코드 적응 |
 
 ## 세션 시작 시
 

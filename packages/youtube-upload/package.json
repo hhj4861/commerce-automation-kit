@@ -1,0 +1,27 @@
+{
+  "name": "@cak/youtube-upload",
+  "version": "0.1.0",
+  "private": true,
+  "description": "원자 #11 — 롱폼 영상을 YouTube Data API v3로 업로드(videos.insert) + 커스텀 썸네일(thumbnails.set) + 챕터 설명. OAuth 리프레시 토큰 1회 인증 후 무인. 공식 API만.",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "cli": "tsx src/cli/index.ts"
+  },
+  "dependencies": {
+    "@cak/contracts": "*",
+    "googleapis": "^166.0.0",
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.0",
+    "tsx": "^4.16.0",
+    "vitest": "^2.0.0",
+    "@types/node": "^20.14.0"
+  }
+}
