@@ -16,8 +16,8 @@ export function saveBatch(db: Db, batch: IntelBatch): void {
   );
   const insSig = db.prepare(
     `INSERT INTO signals(keyword, captured_at, run_id, competition, trend, scores, coverage,
-                         compliance, opportunity, confidence, expires_at)
-     VALUES(?,?,?,?,?,?,?,?,?,?,?)`,
+                         compliance, opportunity, confidence, expires_at, shopping_trend)
+     VALUES(?,?,?,?,?,?,?,?,?,?,?,?)`,
   );
   // 가공 지표 히스토리(마이그레이션 v3 근거 주석 참조) — TTL purge 와 무관하게 Δ·캘리브레이션 유지
   const insHist = db.prepare(
@@ -53,6 +53,7 @@ export function saveBatch(db: Db, batch: IntelBatch): void {
         s.scores.opportunity,
         s.scores.confidence,
         expiresAt,
+        s.shoppingTrend ? JSON.stringify(s.shoppingTrend) : null, // D1-4: 옵셔널 → 미수집이면 NULL
       );
       insHist.run(
         s.keyword,
@@ -78,6 +79,8 @@ export interface TopOpportunityRow {
   confidence: number;
   totalProducts: number;
   trendLatest: number | null;
+  /** 쇼핑인사이트 커머스 수요 최신값(0~100 상대). cat_id 미상·미수집이면 null (D1-4) */
+  shoppingTrendLatest: number | null;
   capturedAt: string;
 }
 
@@ -90,9 +93,10 @@ export function topOpportunities(db: Db, limitN = 20, now: Date = new Date()): T
   // MAX JOIN 이 중복 매칭돼 LIMIT 슬롯을 잠식하는 결함의 수정(리뷰 확정). id 가 tiebreak.
   const rows = db
     .prepare(
-      `SELECT keyword, opportunity, confidence, competition, trend, capturedAt
+      `SELECT keyword, opportunity, confidence, competition, trend, shoppingTrend, capturedAt
        FROM (
          SELECT s.keyword, s.opportunity, s.confidence, s.competition, s.trend,
+                s.shopping_trend AS shoppingTrend,
                 s.captured_at AS capturedAt,
                 ROW_NUMBER() OVER (
                   PARTITION BY s.keyword ORDER BY s.captured_at DESC, s.id DESC
@@ -110,6 +114,7 @@ export function topOpportunities(db: Db, limitN = 20, now: Date = new Date()): T
     confidence: number;
     competition: string;
     trend: string;
+    shoppingTrend: string | null;
     capturedAt: string;
   }>;
   return rows.map((r) => ({
@@ -118,6 +123,9 @@ export function topOpportunities(db: Db, limitN = 20, now: Date = new Date()): T
     confidence: r.confidence,
     totalProducts: (JSON.parse(r.competition) as { totalProducts: number }).totalProducts,
     trendLatest: (JSON.parse(r.trend) as { latest: number | null }).latest,
+    shoppingTrendLatest: r.shoppingTrend
+      ? ((JSON.parse(r.shoppingTrend) as { latest: number | null }).latest)
+      : null,
     capturedAt: r.capturedAt,
   }));
 }

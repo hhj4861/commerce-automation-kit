@@ -91,6 +91,12 @@ const MIGRATIONS: readonly string[] = [
     PRIMARY KEY (keyword, day)
   );
   `,
+  // v4 — 쇼핑인사이트(D1-4) 커머스 수요축. shoppingTrend 옵셔널 블록을 영속한다.
+  // 이 컬럼이 없으면 collect 배선 시 저장→재로드에서 shoppingTrend 가 조용히 유실된다
+  // (적대적 리뷰 지적, "silent drop 금지" 위반). NULL 허용(cat_id 미상·미수집 키워드).
+  `
+  ALTER TABLE signals ADD COLUMN shopping_trend TEXT; -- JSON KeywordSignal.shoppingTrend | NULL (D1-4)
+  `,
 ];
 
 /** DB 를 열고 미적용 마이그레이션을 실행한다. 테스트는 ':memory:' 를 넘긴다. */

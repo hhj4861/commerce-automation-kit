@@ -10,7 +10,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 // 어댑터 모듈을 목킹하되 NaverApiError/NaverSchemaError/NAVER_LIMITS 등 실제 export 는 유지한다.
 vi.mock('../src/adapters/naver-client.js', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../src/adapters/naver-client.js')>();
-  return { ...actual, searchShop: vi.fn(), searchTrend: vi.fn() };
+  return { ...actual, searchShop: vi.fn(), searchTrend: vi.fn(), shoppingCategoryKeywords: vi.fn() };
 });
 
 import { collectSignals, isWholesaleUnreachable, type CollectDeps } from '../src/cli/collect.js';
@@ -18,10 +18,12 @@ import type { IntelBatch } from '@cak/contracts';
 import {
   searchShop,
   searchTrend,
+  shoppingCategoryKeywords,
   NaverApiError,
   NaverSchemaError,
   type ShopSearchResult,
   type DatalabResult,
+  type ShoppingInsightResult,
 } from '../src/adapters/naver-client.js';
 import { openDb, type Db } from '../src/store/db.js';
 import { topOpportunities } from '../src/store/signals.js';
@@ -57,6 +59,22 @@ const trendOk = (): DatalabResult => ({
   ],
 });
 
+const shoppingOk = (): ShoppingInsightResult => ({
+  startDate: '2026-04-01',
+  endDate: '2026-07-01',
+  timeUnit: 'week',
+  results: [
+    {
+      title: 'kw',
+      keyword: ['kw'], // ⚠️ 단수 keyword (쇼핑인사이트)
+      data: [
+        { period: '2026-06-01', ratio: 40 },
+        { period: '2026-07-01', ratio: 95 },
+      ],
+    },
+  ],
+});
+
 let db: Db;
 /** 공통 주입: in-memory DB + 무대기 재시도. 예산은 테스트별로 재정의. */
 const deps = (extra: Partial<CollectDeps> = {}): CollectDeps => ({
@@ -68,6 +86,7 @@ const deps = (extra: Partial<CollectDeps> = {}): CollectDeps => ({
 beforeEach(() => {
   vi.mocked(searchShop).mockReset();
   vi.mocked(searchTrend).mockReset();
+  vi.mocked(shoppingCategoryKeywords).mockReset();
   db = openDb(':memory:');
   process.env.NAVER_CLIENT_ID = 'test-id';
   process.env.NAVER_CLIENT_SECRET = 'test-secret';
@@ -442,6 +461,68 @@ describe('collectSignals — G2: 예산 게이트·DLQ·영속화', () => {
     expect(rows).toHaveLength(1);
     expect(rows[0]!.keyword).toBe('루테인');
     expect(rows[0]!.capturedAt).toBe(t2.toISOString());
+  });
+});
+
+describe('collectSignals — 쇼핑인사이트(D1-4) 배선', () => {
+  it('cat_id resolver 가 있으면 shoppingTrend 수집 + coverage·callsSpent 반영 (키워드당 1그룹)', async () => {
+    vi.mocked(searchShop).mockResolvedValue(shopOk(100));
+    vi.mocked(searchTrend).mockResolvedValue(trendOk());
+    vi.mocked(shoppingCategoryKeywords).mockResolvedValue(shoppingOk());
+
+    const b = await collectSignals(['크레아틴'], deps({ shoppingCategory: () => '50000002' }));
+
+    const sig = b.signals[0]!;
+    expect(sig.shoppingTrend?.category).toBe('50000002');
+    expect(sig.shoppingTrend?.latest).toBe(95);
+    expect(sig.coverage.sources).toContain('naver_datalab_shopping');
+    expect(sig.coverage.ok.naver_datalab_shopping).toBe(true);
+    expect(b.callsSpent.naver_datalab_shopping).toBe(1);
+    // 요청은 키워드당 1그룹·param 1개 (analyzer results[0] 전제와 정합)
+    expect(vi.mocked(shoppingCategoryKeywords).mock.calls[0]![1].keyword).toEqual([
+      { name: '크레아틴', param: ['크레아틴'] },
+    ]);
+  });
+
+  it('cat_id 미상(resolver null)이면 미수집 — 조용히 빠지지 않고 coverage 로 투명화', async () => {
+    vi.mocked(searchShop).mockResolvedValue(shopOk(100));
+    vi.mocked(searchTrend).mockResolvedValue(trendOk());
+    vi.mocked(shoppingCategoryKeywords).mockResolvedValue(shoppingOk());
+
+    const b = await collectSignals(['밀크씨슬'], deps({ shoppingCategory: () => null }));
+
+    const sig = b.signals[0]!;
+    expect(sig.shoppingTrend).toBeUndefined();
+    expect(sig.coverage.sources).not.toContain('naver_datalab_shopping');
+    expect(sig.coverage.ok.naver_datalab_shopping).toBeUndefined();
+    expect(b.callsSpent.naver_datalab_shopping).toBe(0);
+    expect(vi.mocked(shoppingCategoryKeywords)).not.toHaveBeenCalled();
+  });
+
+  it('resolver 미지정이면 쇼핑인사이트 아예 미수집 (하위호환)', async () => {
+    vi.mocked(searchShop).mockResolvedValue(shopOk(100));
+    vi.mocked(searchTrend).mockResolvedValue(trendOk());
+
+    const b = await collectSignals(['루테인'], deps());
+
+    expect(b.signals[0]!.shoppingTrend).toBeUndefined();
+    expect(b.callsSpent.naver_datalab_shopping).toBe(0);
+    expect(vi.mocked(shoppingCategoryKeywords)).not.toHaveBeenCalled();
+  });
+
+  it('쇼핑 예산 소진 → skippedByBudget + shoppingTrend latest null(시도는 기록)', async () => {
+    vi.mocked(searchShop).mockResolvedValue(shopOk(100));
+    vi.mocked(searchTrend).mockResolvedValue(trendOk());
+    vi.mocked(shoppingCategoryKeywords).mockResolvedValue(shoppingOk());
+    const ledger = new BudgetLedger(db, { naver_datalab_shopping: 0 }); // 쇼핑 예산 0
+
+    const b = await collectSignals(['크레아틴'], deps({ ledger, shoppingCategory: () => '50000002' }));
+
+    const sig = b.signals[0]!;
+    expect(sig.coverage.skippedByBudget).toContain('naver_datalab_shopping');
+    expect(sig.shoppingTrend?.latest).toBeNull(); // 블록은 존재(시도), 데이터 없음
+    expect(sig.coverage.sources).not.toContain('naver_datalab_shopping'); // 성공 아님
+    expect(vi.mocked(shoppingCategoryKeywords)).not.toHaveBeenCalled(); // 예산 게이트에서 막힘
   });
 });
 

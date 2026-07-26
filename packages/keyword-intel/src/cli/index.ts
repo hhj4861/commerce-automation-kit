@@ -44,6 +44,23 @@ import { tunedNaverAgent } from '../adapters/naver-client.js';
 // 죽은 keep-alive 소켓 재사용으로 인한 60초 행+ECONNRESET 방지(G2 실측 관측) — 어댑터 주석 참조.
 setGlobalDispatcher(tunedNaverAgent);
 
+/**
+ * seeds/shopping-categories.json 의 keyword→cat_id 맵을 로드해 collect 용 resolver 를 만든다.
+ * cat_id 전체목록/조회 API 가 없어(수동 확인, D1-4) 정적 맵으로 둔다. 파일 없음/빈 맵/파싱 실패면
+ * undefined → 쇼핑인사이트 아예 미수집(기존 동작 하위호환). 맵에 없는 키워드는 null(그 키워드만 미수집).
+ */
+function loadShoppingCategoryResolver(): ((kw: string) => string | null) | undefined {
+  try {
+    const p = resolve(fileURLToPath(new URL('../..', import.meta.url)), 'seeds/shopping-categories.json');
+    const raw = JSON.parse(readFileSync(p, 'utf8')) as { map?: Record<string, string> };
+    const map = raw.map ?? {};
+    if (Object.keys(map).length === 0) return undefined;
+    return (kw: string) => map[kw] ?? null;
+  } catch {
+    return undefined;
+  }
+}
+
 async function main(): Promise<void> {
   const [cmd, ...rest] = process.argv.slice(2);
 
@@ -72,7 +89,12 @@ async function main(): Promise<void> {
         console.error('사용법: npm run collect -- "키워드1,키워드2" 또는 --file <경로>');
         process.exit(1);
       }
-      const batch = await collectSignals(keywords);
+      // exactOptionalPropertyTypes: resolver 미존재 시 키를 아예 넘기지 않는다(undefined 명시 금지).
+      const shoppingResolver = loadShoppingCategoryResolver();
+      const batch = await collectSignals(
+        keywords,
+        shoppingResolver ? { shoppingCategory: shoppingResolver } : {},
+      );
       console.log(JSON.stringify(batch, null, 2));
       if (batch.failures.length) {
         console.error(`\n⚠️ 실패/스킵 ${batch.failures.length}건:`);

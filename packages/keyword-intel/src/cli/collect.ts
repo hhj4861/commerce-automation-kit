@@ -15,11 +15,18 @@ import type { IntelBatch, KeywordSignal, IntelSource } from '@cak/contracts';
 import {
   searchShop,
   searchTrend,
+  shoppingCategoryKeywords,
   NaverApiError,
   NaverSchemaError,
   type NaverCredentials,
+  type ShoppingInsightResult,
 } from '../adapters/naver-client.js';
-import { summarizeCompetition, summarizeTrend, scoreOpportunity } from '../core/analyzer.js';
+import {
+  summarizeCompetition,
+  summarizeTrend,
+  summarizeShoppingTrend,
+  scoreOpportunity,
+} from '../core/analyzer.js';
 import { openDb, type Db } from '../store/db.js';
 import { saveBatch, purgeExpired } from '../store/signals.js';
 import { recordFailure, clearFailure, isolationInfo, dlqThresholdFromEnv } from '../store/dlq.js';
@@ -109,6 +116,13 @@ export interface CollectDeps {
   now?: () => Date;
   /** 재시도 정책 재정의(테스트: sleep 무력화 등). shouldRetry 는 내부 정책 고정. */
   retry?: Pick<RetryOpts, 'maxAttempts' | 'baseDelayMs' | 'sleep'>;
+  /**
+   * 키워드 → 네이버쇼핑 cat_id 해석기(쇼핑인사이트 D1-4). cat_id 를 주면 그 키워드에 대해
+   * 커머스 수요(shoppingTrend)를 수집하고, null/undefined 면 미수집(coverage 로 투명화 — 조용히
+   * 빠지지 않는다). cat_id 전체목록/조회 API 가 없어(수동 확인, D1-4) 주입식으로 둔다.
+   * 미지정 시 쇼핑인사이트는 아예 수집하지 않는다(기존 동작과 하위호환).
+   */
+  shoppingCategory?: (keyword: string) => string | null | undefined;
 }
 
 export async function collectSignals(
@@ -244,9 +258,50 @@ export async function collectSignals(
             }
           }
 
+          // 쇼핑인사이트(커머스 맥락 수요, D1-4) — cat_id 가 해석되는 키워드만 수집. 별도 1,000/일 예산
+          // (naver_datalab_shopping). trend 와 동일하게 실패는 신호를 죽이지 않고 coverage 로 투명화한다.
+          // 키워드당 1그룹으로만 호출(summarizeShoppingTrend 는 results[0] 전제 — analyzer 주석 참조).
+          const catId = deps.shoppingCategory?.(kw) ?? null;
+          let shoppingRaw: ShoppingInsightResult | null = null;
+          let shoppingSkippedByBudget = false;
+          if (catId) {
+            try {
+              shoppingRaw = await withRetry(
+                () =>
+                  spend('naver_datalab_shopping', () =>
+                    shoppingCategoryKeywords(cred, {
+                      startDate: start.toISOString().slice(0, 10),
+                      endDate: end.toISOString().slice(0, 10),
+                      timeUnit: 'week',
+                      category: catId,
+                      keyword: [{ name: kw, param: [kw] }],
+                    }),
+                  ),
+                { ...deps.retry, shouldRetry: retryable, onRetry: onRetry('datalab_shopping', kw) },
+              );
+            } catch (err) {
+              if (err instanceof BudgetExhausted) {
+                shoppingSkippedByBudget = true;
+              } else {
+                const label =
+                  err instanceof NaverSchemaError ? 'SHOPPING_SCHEMA_MISMATCH' : 'SHOPPING_UNAVAILABLE';
+                if (err instanceof NaverSchemaError) {
+                  alerter.alert('SCHEMA_MISMATCH', `쇼핑인사이트 응답 스키마 불일치`, { keyword: kw });
+                }
+                if (err instanceof NaverApiError && err.status === 401) {
+                  alerter.alert('AUTH_401', '네이버 인증 실패(쇼핑인사이트) — 키·데이터랩 사용설정 확인', {});
+                }
+                log.warn(label, { keyword: kw, reason: err instanceof Error ? err.message : String(err) });
+              }
+            }
+          }
+
           const competition = summarizeCompetition(shop);
           const trend = summarizeTrend(trendRaw);
           const scores = scoreOpportunity(competition, trend);
+          // catId 가 있으면(수집 시도했으면) shoppingTrend 를 실어 성패를 투명화(실패 시 latest=null).
+          // catId 없으면 undefined(해당 소스 스코프 아님).
+          const shoppingTrend = catId ? summarizeShoppingTrend(shoppingRaw, catId) : undefined;
 
           signals.push({
             keyword: kw,
@@ -254,10 +309,22 @@ export async function collectSignals(
             competition,
             trend,
             scores,
+            ...(shoppingTrend ? { shoppingTrend } : {}),
             coverage: {
-              sources: ['naver_search_shop', ...(trendRaw ? (['naver_datalab_search'] as const) : [])],
-              ok: { naver_search_shop: true, naver_datalab_search: Boolean(trendRaw) },
-              skippedByBudget: trendSkippedByBudget ? ['naver_datalab_search'] : [],
+              sources: [
+                'naver_search_shop',
+                ...(trendRaw ? (['naver_datalab_search'] as const) : []),
+                ...(shoppingRaw ? (['naver_datalab_shopping'] as const) : []),
+              ],
+              ok: {
+                naver_search_shop: true,
+                naver_datalab_search: Boolean(trendRaw),
+                ...(catId ? { naver_datalab_shopping: Boolean(shoppingRaw) } : {}),
+              },
+              skippedByBudget: [
+                ...(trendSkippedByBudget ? (['naver_datalab_search'] as const) : []),
+                ...(shoppingSkippedByBudget ? (['naver_datalab_shopping'] as const) : []),
+              ],
             },
             compliance: {
               // TODO(D1-5): 약관 원문 확정 대기(사람 게이트 — IMPLEMENTATION.md §0).

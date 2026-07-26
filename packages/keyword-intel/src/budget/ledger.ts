@@ -31,12 +31,17 @@ function intEnv(name: string, fallback: number, hardMax: number): number {
 export function defaultBudgets(): Record<IntelSource, number> {
   const search = intEnv('DAILY_CALL_BUDGET_SEARCH', 20000, NAVER_LIMITS.SEARCH_DAILY_CALL_LIMIT);
   const datalab = intEnv('DAILY_CALL_BUDGET_DATALAB', 800, NAVER_LIMITS.DATALAB_DAILY_CALL_LIMIT);
+  // 쇼핑인사이트는 트렌드와 별도 1,000/일(D1-4). call_ledger 가 source 별로 분리돼 카운터는 독립이므로
+  // 예산도 전용 env 로 분리한다(어댑터 배선, 2026-07-26). 미설정 시 datalab 과 동일 기본값(800).
+  const datalabShopping = intEnv(
+    'DAILY_CALL_BUDGET_DATALAB_SHOPPING',
+    datalab,
+    NAVER_LIMITS.DATALAB_DAILY_CALL_LIMIT,
+  );
   return {
     naver_search_shop: search,
     naver_datalab_search: datalab,
-    // 쇼핑인사이트는 별도 1,000/일(D1-4) — 원장(call_ledger)이 source 별로 분리돼 있어 카운터는 독립.
-    // 어댑터 추가 시 전용 env(DAILY_CALL_BUDGET_DATALAB_SHOPPING)로 분리한다.
-    naver_datalab_shopping: datalab,
+    naver_datalab_shopping: datalabShopping,
   };
 }
 

@@ -4,7 +4,7 @@
  */
 import { describe, it, expect, beforeEach } from 'vitest';
 import { isAbsolute } from 'node:path';
-import type { IntelBatch } from '@cak/contracts';
+import type { IntelBatch, RelativeIndex } from '@cak/contracts';
 import { openDb, resolveDbPath, type Db } from '../src/store/db.js';
 import { saveBatch, purgeExpired, topOpportunities } from '../src/store/signals.js';
 import { recordFailure, isolationInfo, dlqThresholdFromEnv } from '../src/store/dlq.js';
@@ -25,6 +25,7 @@ function mkBatch(opts: {
     capturedAt: string;
     ttlHours?: number;
     confidence?: number;
+    shoppingLatest?: number; // 지정 시 shoppingTrend 블록을 실어 round-trip 검증
   }>;
 }): IntelBatch {
   return {
@@ -38,6 +39,16 @@ function mkBatch(opts: {
         distinctSellers: 5, brandedRatio: 0.5,
       },
       trend: { latest: null, momentumPct: null, series: [] },
+      ...(s.shoppingLatest !== undefined
+        ? {
+            shoppingTrend: {
+              category: '50000002',
+              latest: s.shoppingLatest as RelativeIndex,
+              momentumPct: null,
+              series: [],
+            },
+          }
+        : {}),
       scores: { opportunity: s.opportunity, confidence: s.confidence ?? 0.5 },
       coverage: { sources: ['naver_search_shop'], ok: { naver_search_shop: true }, skippedByBudget: [] },
       compliance: { resaleRestricted: true, cacheTtlHours: s.ttlHours ?? 24 },
@@ -67,6 +78,26 @@ describe('store — 마이그레이션/영속화/TTL', () => {
     saveBatch(db, mkBatch({ runId: 'r2', signals: [{ keyword: '루테인', opportunity: 80, capturedAt: T1 }] }));
     expect((db.prepare('SELECT COUNT(*) AS c FROM signals').get() as { c: number }).c).toBe(2);
     expect((db.prepare('SELECT COUNT(*) AS c FROM runs').get() as { c: number }).c).toBe(2);
+  });
+
+  it('shoppingTrend(D1-4)가 저장→재로드로 유실되지 않는다 (마이그레이션 v4, silent drop 방지)', () => {
+    saveBatch(
+      db,
+      mkBatch({
+        runId: 'r1',
+        signals: [
+          { keyword: '레티놀 크림', opportunity: 70, capturedAt: T0, shoppingLatest: 88 },
+          { keyword: '밀크씨슬', opportunity: 60, capturedAt: T0 }, // shoppingTrend 없음
+        ],
+      }),
+    );
+    const rows = topOpportunities(db, 10, new Date(T0));
+    expect(rows.find((r) => r.keyword === '레티놀 크림')!.shoppingTrendLatest).toBe(88); // 복원
+    expect(rows.find((r) => r.keyword === '밀크씨슬')!.shoppingTrendLatest).toBeNull(); // 미수집=null
+    const raw = db
+      .prepare(`SELECT shopping_trend FROM signals WHERE keyword='레티놀 크림'`)
+      .get() as { shopping_trend: string };
+    expect((JSON.parse(raw.shopping_trend) as { category: string }).category).toBe('50000002');
   });
 
   it('topOpportunities: 키워드별 최신 스냅샷만, opportunity 내림차순', () => {
