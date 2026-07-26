@@ -32,6 +32,8 @@ export interface MusicBrief {
   instrumental: boolean;
   /** 광고 길이에 맞춘 트랙 길이(초) */
   durationSec: number;
+  /** 명시 BPM(있으면 tempo 기본값 대신 프롬프트에 사용). AI는 근사만 보장. */
+  bpm?: number;
   /** 구조 힌트 예: 'slow build to a triumphant swell' */
   arc?: string;
 }

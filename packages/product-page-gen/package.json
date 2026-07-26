@@ -1,0 +1,26 @@
+{
+  "name": "@cak/product-page-gen",
+  "version": "0.1.0",
+  "private": true,
+  "description": "원자 #10 — 키워드/상품 브리프를 받아 큐텐재팬 등록용 상세페이지 산출물(일본어 HTML+텍스트+근거/컴플라이언스 리포트)을 만든다. 결정적 파트 전담: 약기법/화장품법 표현 lint · Qxpress 물류 게이트 · 마진 시뮬레이션 · 톤 3종 HTML 렌더. 카피 생성·리서치는 .claude/skills/product-page 스킬이 오케스트레이션.",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "cli": "tsx src/cli/index.ts"
+  },
+  "dependencies": {
+    "@cak/contracts": "*",
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.0",
+    "tsx": "^4.16.0",
+    "vitest": "^2.0.0",
+    "@types/node": "^20.14.0"
+  }
+}

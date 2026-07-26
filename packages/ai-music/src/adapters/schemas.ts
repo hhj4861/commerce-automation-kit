@@ -15,6 +15,7 @@ export const musicBriefSchema = z.object({
   genres: z.array(z.string()).default([]),
   instrumental: z.boolean().default(true),
   durationSec: z.number().positive(),
+  bpm: z.number().positive().optional(),
   arc: z.string().optional(),
 });
 
@@ -29,6 +30,7 @@ export function parseMusicBrief(input: unknown): MusicBrief {
     instrumental: b.instrumental,
     durationSec: b.durationSec,
   };
+  if (b.bpm !== undefined) brief.bpm = b.bpm;
   if (b.arc !== undefined) brief.arc = b.arc;
   return brief;
 }

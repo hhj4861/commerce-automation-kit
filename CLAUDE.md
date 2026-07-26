@@ -50,6 +50,7 @@
 | shorts-publish (#7) | **착수(2026-07-25)** — 완성 광고영상(16:9) → 쇼츠/릴스(9:16) 로컬 ffmpeg 렌더(5모드, 기본 blur-brand=블러필+세이프존 워드마크·끝3초 원본엔딩 양보 페이드아웃) → upload-post 통합 API로 YT/IG/TikTok 업로드. 6개월 전 GCP FFmpeg VM(scene-image-generator-new) 을 VM 없이 로컬화. AI 표기(containsSyntheticMedia/is_aigc) 기본 전송, 실패 투명화. 테스트 40, 타입체크 통과, 적대적 리뷰 6건 수정. 계약 ShortsJob/PublishTarget/PublishResult append. **실제 업로드는 사용자 upload-post 가입·계정 OAuth 필요**(코드 대행 불가) — 전엔 `--dry-run`. POC 출신: `~/workSpace/shorts-publish-poc` |
 | ai-music (#8) | **착수(2026-07-25)** — 광고 컨셉→MusicBrief→백엔드별 프롬프트 → 생성/라이선스 트랙을 광고에 자동 믹스(ffmpeg VO더킹·-14 LUFS·길이맞춤). **백엔드 교체형+우선순위**: elevenlabs(공식 API·라이선스 학습·광고 clear·무인), suno-manual(사람 게이트, Suno 최고품질), **suno-auto=가드 스텁**(공식 Suno API 부재→비공식 래퍼는 **금지선 #2 위반이라 미지원**, 예약 슬롯만). 테스트 36, 타입체크 통과, 적대적 리뷰 5건 수정. 계약 MusicBrief/MusicPromptPlan/MusicTrack/MusicBackendId append. 파이프라인: ad-video-gen→**ai-music(스코어링)**→shorts-publish. **실제 생성은 사용자 ElevenLabs 키/Suno 유료플랜 필요** |
 | apps/firstframe | FIRSTFRAME 쇼케이스 사이트 실체(HTML·works 데이터·media 58MB, **media는 git 포함** — 단일 소스 보존, 커지면 R2/LFS 검토). 공개 URL: firstframe-showcase.pages.dev |
+| product-page-gen (#10) | **착수(2026-07-26)** — 큐텐재팬 K뷰티 역직구용 상세페이지 생성 원자. 약기법/화장품법 표현 lint(block=렌더 거부), Qxpress 물류 게이트, 마진 시뮬, 톤 3종 HTML 렌더. 오케스트레이션은 `.claude/skills/product-page`(`/product-page 나이아신 화장품`). 이미지 입력은 사용권 있는 실사/그 기반 AI 생성(aiLabeled 필수)만 — 타사 이미지 재사용 금지(금지선 #1). 테스트 49 |
 
 ## 세션 시작 시
 

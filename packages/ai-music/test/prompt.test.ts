@@ -67,4 +67,16 @@ describe('briefToPrompt — elevenlabs', () => {
     const p = briefToPrompt({ ...brief, tempo: 'up' }, 'elevenlabs');
     expect(p.prompt).toContain('around 120 BPM');
   });
+  it('bpm 지정 시 tempo 기본값 대신 명시 BPM 사용', () => {
+    const p = briefToPrompt({ ...brief, bpm: 135 }, 'elevenlabs'); // brief.tempo=slow(기본 70)
+    expect(p.prompt).toContain('135 BPM');
+    expect(p.prompt).not.toContain('around 70 BPM');
+  });
+});
+
+describe('briefToPrompt — bpm (suno)', () => {
+  it('bpm 지정 시 suno style 에 포함', () => {
+    const p = briefToPrompt({ ...brief, bpm: 140 }, 'suno-manual');
+    expect(p.style).toContain('140 BPM');
+  });
 });

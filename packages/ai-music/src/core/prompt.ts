@@ -45,8 +45,9 @@ export function briefToPrompt(brief: MusicBrief, backend: MusicBackendId): Music
   const instrumental = brief.instrumental;
 
   // Suno 계열(수동/예약된 자동)은 동일한 Suno 스타일 프롬프트를 쓴다.
+  const bpmTag = brief.bpm !== undefined ? `, ${brief.bpm} BPM` : '';
   if (backend === 'suno-manual' || backend === 'suno-auto') {
-    const styleField = instrumental ? `${style}, instrumental` : style;
+    const styleField = `${style}${bpmTag}${instrumental ? ', instrumental' : ''}`;
     const prompt =
       brief.arc !== undefined && brief.arc.length > 0
         ? brief.arc
@@ -62,7 +63,8 @@ export function briefToPrompt(brief: MusicBrief, backend: MusicBackendId): Music
   }
 
   // elevenlabs (공식 API 무인) — 자연어 프롬프트 + 길이는 별도 파라미터
-  const parts = [style, `${TEMPO_BPM[brief.tempo]}`];
+  const bpmText = brief.bpm !== undefined ? `${brief.bpm} BPM` : TEMPO_BPM[brief.tempo];
+  const parts = [style, bpmText];
   if (instrumental) parts.push('instrumental, no vocals');
   if (brief.arc !== undefined && brief.arc.length > 0) parts.push(brief.arc);
   const prompt = parts.filter((p) => p.length > 0).join('. ');

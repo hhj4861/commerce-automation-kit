@@ -35,6 +35,7 @@ cd packages/keyword-intel && npm test     # 81개 통과하면 정상
 | showcase-site (#6) | ✅ 착수(07-24) — works.json 단일소스·CRUD·CF Pages 배포. `apps/firstframe` 관리 |
 | shorts-publish (#7) | ✅ **착수(07-25)** — 광고영상(16:9)→쇼츠(9:16) 로컬 ffmpeg 렌더(기본 blur-brand)→upload-post 통합 업로드. 테스트 40·타입체크·적대적리뷰(6건 수정). 실업로드는 사용자 upload-post 계정 필요(전엔 `--dry-run`) |
 | ai-music (#8) | ✅ **착수(07-25)** — 컨셉→음악 브리프→프롬프트→트랙을 광고에 믹스(더킹·-14 LUFS). 백엔드 교체형: elevenlabs(공식 API·광고 clear), suno-manual(사람 게이트), suno-auto(가드 스텁—공식 API 부재, 비공식 미지원). 테스트 24·타입체크. 실생성은 ElevenLabs 키/Suno 유료 필요 |
+| product-page-gen (#10) | ✅ **착수(07-26) + 적대적 리뷰 3렌즈 반영 완료** — 키워드→큐텐재팬 상세페이지(일본어 HTML+텍스트+컴플라이언스 리포트). 결정적 파트: 약기법 23규칙+화장품법 14규칙 lint(NFKC 정규화·면책문구 프리패스·혼합스크립트 방어, block 시 렌더 거부), Qxpress 물류 게이트(인화성·Economy 규격 회전 판정·부피무게 하한 추정·2023-08 요율 TODO(D1)), 마진 시뮬(평시 12%/메가와리 27.5%, 음수·enum 검증, 표시-판정 일치), 톤 3종 렌더(src escape·locale 무결성). **리뷰 실측 결함 24건 수정**(critical 2: gauges lint 우회·img src 주입 / major 8 / minor 14) — 게이트 우회 경로 전부 폐쇄, render 게이트가 brief.productName·전성분까지 lint. 테스트 67·타입체크·E2E 스모크 통과. 카피·리서치·사람 게이트는 `.claude/skills/product-page` 스킬. 근거: venture-studio `shopee-yeokjikgu/platform-selection-2026-07-26.md`. J'QSM 등록 자동화는 의도적 미구현(사람 게이트) |
 
 **keyword-intel 게이트 현황**
 
