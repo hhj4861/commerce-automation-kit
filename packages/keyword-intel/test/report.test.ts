@@ -3,7 +3,7 @@
  */
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { MockAgent, setGlobalDispatcher, getGlobalDispatcher, type Dispatcher } from 'undici';
-import type { IntelBatch } from '@cak/contracts';
+import type { IntelBatch, RelativeIndex } from '@cak/contracts';
 import { openDb, type Db } from '../src/store/db.js';
 import { saveBatch } from '../src/store/signals.js';
 import { recordFailure } from '../src/store/dlq.js';
@@ -101,15 +101,19 @@ describe('buildDigest', () => {
   const T1 = '2026-07-22T01:00:00.000Z';
   const T2 = '2026-07-23T01:00:00.000Z';
 
-  function batch(runId: string, capturedAt: string, sig: Array<[string, number]>, failures: IntelBatch['failures'] = []): IntelBatch {
+  // sig 튜플 3번째(옵셔널)=쇼핑 수요(shoppingTrend.latest). 지정 시 shoppingTrend 블록을 실어 노출 검증.
+  function batch(runId: string, capturedAt: string, sig: Array<[string, number] | [string, number, number]>, failures: IntelBatch['failures'] = []): IntelBatch {
     return {
       runId,
       requestedKeywords: [...sig.map(([k]) => k), ...failures.map((f) => f.keyword)],
-      signals: sig.map(([keyword, opportunity]) => ({
+      signals: sig.map(([keyword, opportunity, shoppingLatest]) => ({
         keyword,
         capturedAt,
         competition: { totalProducts: 1000, priceLow: 1, priceHigh: 2, priceMedian: 1, distinctSellers: 3, brandedRatio: 0.5 },
         trend: { latest: null, momentumPct: null, series: [] },
+        ...(shoppingLatest !== undefined
+          ? { shoppingTrend: { category: '50000023', latest: shoppingLatest as RelativeIndex, momentumPct: null, series: [] } }
+          : {}),
         scores: { opportunity, confidence: 0.7 },
         coverage: { sources: ['naver_search_shop'], ok: { naver_search_shop: true }, skippedByBudget: [] },
         compliance: { resaleRestricted: true, cacheTtlHours: 48 },
@@ -140,6 +144,14 @@ describe('buildDigest', () => {
     expect(text).toContain('불량: HTTP 500');
     expect(text).toContain('DLQ 격리 1건: 격리자');
     expect(text).toContain('참고 지표'); // 자동 트리거 금지 문구
+  });
+
+  it('쇼핑 수요(shoppingTrend)를 Top N 에 노출 — 검색 옆에 쇼핑, cat_id 미상은 -', () => {
+    saveBatch(db, batch('r1', T2, [['크레아틴', 66, 59], ['밀크씨슬', 50]])); // 크레아틴만 쇼핑 수요
+    const text = buildDigest(db, 10, new Date(T2));
+    expect(text).toMatch(/크레아틴 66.*·\s*쇼핑 59/); // 커머스 수요 값 노출
+    expect(text).toMatch(/밀크씨슬 50.*·\s*쇼핑 -/); // cat_id 미상 → -
+    expect(text).toContain('· 검색 '); // 검색 트렌드 축도 유지
   });
 
   it('첫 수집(전일 없음)은 new 로 표시', () => {

@@ -122,8 +122,10 @@ export function buildDigest(db: Db, topN = 10, now: Date = new Date()): string {
       prev === null ? 'new' : r.opportunity === prev ? '=' : r.opportunity > prev ? `+${r.opportunity - prev}` : `${r.opportunity - prev}`;
     const flag = flags.get(r.keyword) ? ` ${flags.get(r.keyword)}` : '';
     const trend = r.trendLatest === null ? '-' : String(Math.round(r.trendLatest));
+    // 커머스 수요(쇼핑인사이트, D1-4). cat_id 미상 키워드는 '-'(미수집 투명화). 검색 트렌드와 나란히.
+    const shop = r.shoppingTrendLatest === null ? '-' : String(Math.round(r.shoppingTrendLatest));
     lines.push(
-      `${String(i + 1).padStart(2)}. ${r.keyword} ${r.opportunity} (${delta}) · 상품 ${r.totalProducts.toLocaleString()} · 트렌드 ${trend}${flag}`,
+      `${String(i + 1).padStart(2)}. ${r.keyword} ${r.opportunity} (${delta}) · 상품 ${r.totalProducts.toLocaleString()} · 검색 ${trend} · 쇼핑 ${shop}${flag}`,
     );
   });
 

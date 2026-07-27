@@ -163,7 +163,8 @@ async function main(): Promise<void> {
           opportunity: r.opportunity,
           confidence: r.confidence,
           '상품수(total)': r.totalProducts,
-          '트렌드(0~100)': r.trendLatest ?? '-',
+          '검색트렌드(0~100)': r.trendLatest ?? '-',
+          '쇼핑수요(0~100)': r.shoppingTrendLatest ?? '-', // 커머스 맥락 수요(D1-4). cat_id 미상은 '-'
           수집시각: r.capturedAt,
         })),
       );
