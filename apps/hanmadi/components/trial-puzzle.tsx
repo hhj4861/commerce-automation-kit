@@ -19,7 +19,7 @@
  * 막히지 않도록 힌트·Show me·Skip을 항상 제공한다.
  */
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 /* ─────────────────────────── 한글 조합 (공용) ─────────────────────────── */
 
@@ -106,11 +106,38 @@ function primeVoices(): void {
 
 /**
  * 발음 듣기 — /api/tts(ElevenLabs mp3)를 우선 재생하고, 실패하면(오프라인·
- * 상한 초과·미설정) 아래 브라우저 Web Speech로 폴백한다. mp3 URL은 탭 수명
- * 동안 메모리에 캐시해 같은 문구의 재요청을 없앤다 ("failed"는 재시도 방지 표식).
+ * 상한 초과·미설정) 아래 브라우저 Web Speech로 폴백한다. mp3는 탭 수명 동안
+ * 프라미스째 캐시한다 — 같은 문구의 중복 요청이 겹쳐도 fetch는 한 번만 나간다.
+ *
+ * 첫 재생 지연(생성 1~2초)이 거슬리는 곳은 prefetchSpeak()으로 미리 받아둔다
+ * (자모 조합기처럼 "탭 → 즉시 소리"가 기대되는 인터랙션).
  */
-const mp3Cache = new Map<string, string>();
+const mp3Cache = new Map<string, Promise<string | null>>();
 let currentAudio: HTMLAudioElement | null = null;
+
+function loadMp3(text: string): Promise<string | null> {
+  let pending = mp3Cache.get(text);
+  if (!pending) {
+    pending = (async () => {
+      try {
+        const res = await fetch(`/api/tts?text=${encodeURIComponent(text)}`);
+        if (!res.ok || !res.headers.get("content-type")?.includes("audio")) {
+          return null;
+        }
+        return URL.createObjectURL(await res.blob());
+      } catch {
+        return null;
+      }
+    })();
+    mp3Cache.set(text, pending);
+  }
+  return pending;
+}
+
+/** 곧 재생될 문구의 mp3를 미리 받아둔다 — 재생은 하지 않는다 */
+export function prefetchSpeak(text: string): void {
+  void loadMp3(text);
+}
 
 export function speak(text: string): void {
   void speakViaApi(text);
@@ -121,17 +148,8 @@ async function speakViaApi(text: string): Promise<void> {
     currentAudio?.pause();
     window.speechSynthesis?.cancel();
 
-    let url = mp3Cache.get(text);
-    if (url === "failed") return speakWithBrowserVoice(text);
-    if (!url) {
-      const res = await fetch(`/api/tts?text=${encodeURIComponent(text)}`);
-      if (!res.ok || !res.headers.get("content-type")?.includes("audio")) {
-        mp3Cache.set(text, "failed");
-        return speakWithBrowserVoice(text);
-      }
-      url = URL.createObjectURL(await res.blob());
-      mp3Cache.set(text, url);
-    }
+    const url = await loadMp3(text);
+    if (!url) return speakWithBrowserVoice(text);
 
     currentAudio = new Audio(url);
     await currentAudio.play();
@@ -365,6 +383,8 @@ function JamoBoard({
   onSkip: () => void;
 }) {
   const targetKo = composeSyllable(round.cho.idx, round.jung.idx);
+  // 정답 발음을 미리 받아둔다 — 정답 순간 🔊이 즉시 울리도록
+  useEffect(() => prefetchSpeak(targetKo), [targetKo]);
   // 학생이 이 스텝으로 넘어온 뒤에만 마운트되므로 지연초기화 셔플이 SSR과 충돌하지 않는다
   const [tray, setTray] = useState<JamoChip[]>(() => buildJamoChips(round));
   const [choSlot, setChoSlot] = useState<JamoChip | null>(null);
@@ -603,6 +623,8 @@ function WordBoard({
   onNext: () => void;
   onSkip: () => void;
 }) {
+  // 정답 문장 발음을 미리 받아둔다 — 정답 순간 🔊이 즉시 울리도록
+  useEffect(() => prefetchSpeak(round.ko), [round.ko]);
   const [pool, setPool] = useState<WordChip[]>(() => shuffleWords(round.words));
   const [picked, setPicked] = useState<WordChip[]>([]);
   const [wrong, setWrong] = useState(false);

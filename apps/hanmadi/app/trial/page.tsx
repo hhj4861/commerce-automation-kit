@@ -22,6 +22,7 @@ import {
   JUNG,
   TrialPuzzle,
   composeSyllable,
+  prefetchSpeak,
   speak,
   type TrialCollected,
 } from "@/components/trial-puzzle";
@@ -137,6 +138,18 @@ export default function TrialPage() {
   const [mood, setMood] = useState<number | null>(null);
   const [cho, setCho] = useState(0);
   const [jung, setJung] = useState(0);
+
+  // 발음 mp3 선행 프리페치 — 소리 나는 스텝에 "들어서기 한 스텝 전"에 받아둬
+  // 첫 탭이 즉시 재생되게 한다. 조합기는 16개 전부(글자당 수 KB)라 다 받아둔다.
+  useEffect(() => {
+    if (step === 0) prefetchSpeak("안녕하세요");
+    if (step === 1 || step === 2) for (const m of MOODS) prefetchSpeak(m.ko);
+    if (step === 2 || step === 3) {
+      for (const c of CHO) {
+        for (const j of JUNG) prefetchSpeak(composeSyllable(c.idx, j.idx));
+      }
+    }
+  }, [step]);
   // 퍼즐이 만든 글자·문장 수집함 → 마지막 요약의 재료
   const [collected, setCollected] = useState<TrialCollected[]>([]);
   // 직접 해본(완료한) 게이트 스텝
@@ -632,6 +645,11 @@ function RevealCards({
   onAllOpened: () => void;
 }) {
   const [opened, setOpened] = useState<Set<number>>(() => new Set());
+
+  // 카드를 열기 전에 세 표현의 발음을 받아둔다 — 첫 열기부터 즉시 재생
+  useEffect(() => {
+    for (const p of phrases) prefetchSpeak(p.ko);
+  }, [phrases]);
 
   function open(i: number) {
     speak(phrases[i].ko);
