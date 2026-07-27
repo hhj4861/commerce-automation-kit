@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import type { HomeworkItem } from "@/data/types";
+import { SpeakableKo } from "@/components/speak-button";
 
 /**
  * 숙제 슬라이드 — 숙제 항목을 한 번에 하나씩 카드로 넘겨 보는 형태.
@@ -283,9 +284,10 @@ function HomeworkCard({
                 key={pi}
                 className="rounded-xl border border-ink-faint bg-paper px-4 py-3"
               >
-                <p lang="ko" className="font-display text-2xl leading-snug">
-                  {phrase.ko}
-                </p>
+                <SpeakableKo
+                  ko={phrase.ko}
+                  className="block font-display text-2xl leading-snug"
+                />
                 {phrase.rr && (
                   <p className="mt-1 font-mono text-[13px] text-ink-soft">
                     {phrase.rr}

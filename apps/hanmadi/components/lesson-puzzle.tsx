@@ -11,6 +11,8 @@ import {
 } from "react";
 import type { LessonPuzzle } from "@/data/types";
 import type { PuzzleGroup } from "@/lib/puzzles";
+import { prefetchSpeak } from "@/components/speak";
+import { SpeakableKo } from "@/components/speak-button";
 
 /**
  * 학생 포털(/s/[slug])의 복습 퍼즐 엔진.
@@ -1065,6 +1067,9 @@ function PuzzleBoard({
   const label = sourceLabel(puzzle.source);
   const complete = pool.length === 0;
 
+  // 정답 문장 발음을 미리 받아둔다 — 정답 공개 🔊 탭 즉시 재생
+  useEffect(() => prefetchSpeak(puzzle.words.join(" ")), [puzzle.words]);
+
   function pick(chip: Chip) {
     if (solved) return;
     setPool((prev) => prev.filter((c) => c.idx !== chip.idx));
@@ -1199,9 +1204,10 @@ function PuzzleBoard({
             </span>
             Perfect! 완벽해요!
           </p>
-          <p lang="ko" className="mt-3 font-display text-3xl leading-snug">
-            {puzzle.words.join(" ")}
-          </p>
+          <SpeakableKo
+            ko={puzzle.words.join(" ")}
+            className="mt-3 block font-display text-3xl leading-snug"
+          />
           <p className="mt-1.5 font-mono text-[14px] text-ink-soft">{puzzle.rr}</p>
           <p className="mt-1 text-[16px]">{puzzle.en}</p>
           {puzzle.note && (

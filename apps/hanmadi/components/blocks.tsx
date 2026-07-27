@@ -23,6 +23,8 @@ import type {
   TipBlock,
 } from "@/data/types";
 import { Markdown } from "@/components/markdown";
+import { SpeakableKo } from "@/components/speak-button";
+import { prefetchSpeak } from "@/components/speak";
 import { headingId } from "@/components/toc";
 
 /* ───────────────────────────── 블록 리스트 ───────────────────────────── */
@@ -149,15 +151,13 @@ export function PhraseCards({
       <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {block.cards.map((card, i) => (
           <li key={i} className="soft-card flex flex-col p-6">
-            {/* 3단 위계: 한국어 초대형 → RR 뮤티드 → 영어 */}
-            <p
-              lang="ko"
-              className={`font-display leading-snug ${
+            {/* 3단 위계: 한국어 초대형(탭하면 발음) → RR 뮤티드 → 영어 */}
+            <SpeakableKo
+              ko={card.ko}
+              className={`block font-display leading-snug ${
                 teaching ? "text-5xl sm:text-[3.4rem]" : "text-4xl"
               }`}
-            >
-              {card.ko}
-            </p>
+            />
             <p className="mt-2 font-mono text-sm text-ink-soft">{card.rr}</p>
             <p className={`mt-1.5 font-medium ${teaching ? "text-xl" : "text-lg"}`}>
               {card.en}
@@ -193,14 +193,12 @@ function Dialogue({ block, teaching }: { block: DialogueBlock; teaching: boolean
               <p className="font-mono text-[11px] tracking-[0.15em] text-ink-soft">
                 {isA ? block.speakers.a : block.speakers.b}
               </p>
-              <p
-                lang="ko"
-                className={`mt-1 font-display leading-snug ${
+              <SpeakableKo
+                ko={line.ko}
+                className={`mt-1 block font-display leading-snug ${
                   teaching ? "text-4xl sm:text-5xl" : "text-2xl sm:text-3xl"
                 }`}
-              >
-                {line.ko}
-              </p>
+              />
               <p className="mt-1.5 font-mono text-[13px] text-ink-soft">{line.rr}</p>
               <p className="mt-0.5 text-[15px] text-ink-soft">{line.en}</p>
             </div>
@@ -219,6 +217,12 @@ function Dialogue({ block, teaching }: { block: DialogueBlock; teaching: boolean
 export function Drill({ block, teaching }: { block: DrillBlock; teaching: boolean }) {
   const [i, setI] = useState(0);
   const item = block.items[i];
+
+  // 현재·다음 문장의 발음을 받아둔다 — Next로 넘겨도 탭 즉시 재생
+  useEffect(() => {
+    for (const it of block.items.slice(i, i + 2)) prefetchSpeak(it.ko);
+  }, [block.items, i]);
+
   if (!item) return null;
 
   return (
@@ -227,18 +231,16 @@ export function Drill({ block, teaching }: { block: DrillBlock; teaching: boolea
         <p className="mb-6 text-center text-[15px] text-ink-soft">{block.instruction}</p>
       )}
 
-      {/* 한 번에 한 문장 — 초대형 집중 모드 */}
+      {/* 한 번에 한 문장 — 초대형 집중 모드, 탭하면 발음 */}
       <div className="flex min-h-[13rem] flex-col items-center justify-center text-center">
-        <p
-          lang="ko"
-          className={`font-display leading-tight ${
+        <SpeakableKo
+          ko={item.ko}
+          className={`block text-center font-display leading-tight ${
             teaching
               ? "text-6xl sm:text-[4.5rem]"
               : "text-5xl sm:text-6xl"
           }`}
-        >
-          {item.ko}
-        </p>
+        />
         <p className="mt-4 font-mono text-lg text-ink-soft">{item.rr}</p>
         {item.en && <p className="mt-1.5 text-xl font-medium">{item.en}</p>}
       </div>

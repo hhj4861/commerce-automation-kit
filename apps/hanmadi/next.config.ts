@@ -1,6 +1,6 @@
 import type { NextConfig } from "next";
 import { fileURLToPath } from "node:url";
-import { dirname } from "node:path";
+import { dirname, join } from "node:path";
 
 const nextConfig: NextConfig = {
   /*
@@ -17,6 +17,11 @@ const nextConfig: NextConfig = {
   // lockfile이 있으면 Next가 루트를 위로 잡아 server.js가 깊이 중첩되는데,
   // 그러면 Dockerfile의 COPY 경로가 어긋난다. 프로젝트 루트로 고정해 방지.
   outputFileTracingRoot: dirname(fileURLToPath(import.meta.url)),
+
+  // 모노레포(kit) 루트에도 lockfile이 있어 워크스페이스 루트 추론이 흔들린다.
+  // 이 앱은 자체 lockfile·자체 node_modules로 독립 운영한다
+  // (로컬 재설치: npm install --workspaces=false). 컴파일 범위도 앱 폴더로 고정.
+  turbopack: { root: dirname(fileURLToPath(import.meta.url)) },
 };
 
 export default nextConfig;

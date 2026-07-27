@@ -6,6 +6,7 @@ import type { LessonLog, Student } from "@/data/types";
 import { puzzleGroupsForStudent, countPuzzles } from "@/lib/puzzles";
 import { getStudentBySlug } from "@/lib/students";
 import { enrichHomework } from "@/lib/homework-display";
+import { SpeakableKo } from "@/components/speak-button";
 import { HomeworkSlides } from "@/components/homework-slides";
 import { LessonPuzzleButton, PuzzleProvider } from "@/components/lesson-puzzle";
 import { Chip, Section, formatLessonDate } from "@/components/student-ui";
@@ -147,9 +148,10 @@ export default async function LessonDetailPage(props: LessonPageProps) {
           <ul className="grid gap-3 sm:grid-cols-2">
             {lesson.phrases.map((phrase, i) => (
               <li key={i} className="soft-card flex flex-col p-5">
-                <p lang="ko" className="font-display text-3xl leading-snug">
-                  {phrase.ko}
-                </p>
+                <SpeakableKo
+                  ko={phrase.ko}
+                  className="block font-display text-3xl leading-snug"
+                />
                 <p className="mt-1.5 font-mono text-[13px] text-ink-soft">
                   {phrase.rr}
                 </p>
@@ -183,15 +185,15 @@ export default async function LessonDetailPage(props: LessonPageProps) {
                   </span>
                   <span className="line-through">{correction.said}</span>
                 </p>
-                <p
-                  lang="ko"
+                <SpeakableKo
+                  ko={correction.fixed}
                   className="fixed-line mt-2 flex w-fit items-baseline gap-2 text-2xl leading-relaxed font-medium"
                 >
                   <span aria-hidden="true" className="text-[15px] text-good">
                     ✓
                   </span>
                   {correction.fixed}
-                </p>
+                </SpeakableKo>
                 <p className="mt-1 pl-6 font-mono text-[13px] text-ink-soft">
                   {correction.rr}
                 </p>
