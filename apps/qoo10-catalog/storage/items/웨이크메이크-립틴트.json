@@ -1,0 +1,30 @@
+{
+ "id": "웨이크메이크-립틴트",
+ "name": "웨이크메이크 립틴트",
+ "brand": "WAKEMAKE",
+ "volume": null,
+ "weightG": null,
+ "dims": null,
+ "wholesaleKrw": null,
+ "category": null,
+ "personalImportNote": "화장품 개인수입 24개/품목 한도(일본) — 대량 구매 유도 금지",
+ "imageRights": "none",
+ "status": "screened",
+ "source": {
+  "kind": "manual",
+  "importedAt": "2026-07-27T04:44:55.264Z"
+ },
+ "notes": [],
+ "updatedAt": "2026-07-27T04:44:55.298Z",
+ "screen": {
+  "at": "2026-07-27T04:44:55.297Z",
+  "notes": [
+   "물류 미검증 — weightG 없음",
+   "마진 미검증 — wholesaleKrw/--sale-jpy/--rate 중 누락"
+  ],
+  "brandRisk": [
+   "올리브영 PB(CJ) — 상표권자 신고 리스크",
+   "올리브영 PB(CJ) — 상표권자 신고 리스크"
+  ]
+ }
+}

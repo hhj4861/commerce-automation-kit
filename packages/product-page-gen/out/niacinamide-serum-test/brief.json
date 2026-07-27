@@ -1,0 +1,49 @@
+{
+ "id": "niacinamide-serum-test",
+ "keyword": "나이아신아마이드 세럼",
+ "productName": "ナイアシンアミド セラム",
+ "brand": "CAK TEST",
+ "market": "qoo10-jp",
+ "tone": "clean-derma",
+ "locale": "ja",
+ "volume": "30ml",
+ "ingredients": [
+  "水",
+  "BG",
+  "グリセリン",
+  "ナイアシンアミド",
+  "パンテノール",
+  "ヒアルロン酸Na",
+  "カルボマー",
+  "アルギニン",
+  "エチルヘキシルグリセリン",
+  "フェノキシエタノール"
+ ],
+ "claims": [
+  {
+   "text": "ナイアシンアミドは保湿・肌荒れ防止目的でスキンケアに広く配合される成分",
+   "sourceUrl": "https://cosmetic-ingredients.org/skin-barrier-repairing-agents/1710/",
+   "verified": true
+  },
+  {
+   "text": "医薬部外品ではシワ改善・美白の有効成分として承認例がある(本品は化粧品につき効能標榜不可 — 카피 사용 금지, 참고용)",
+   "sourceUrl": "https://www.hibiya-skin.com/column/202407_01.html",
+   "verified": true
+  },
+  {
+   "text": "即効性ではなく継続使用が推奨される",
+   "sourceUrl": "https://www.fancl.co.jp/clip/beauty/tips/2502-1k/index.html",
+   "verified": true
+  }
+ ],
+ "images": [
+  {
+   "slot": "hero",
+   "path": "images/hero.png",
+   "origin": "ai-generated",
+   "licenseNote": "힉스필드 nano_banana 생성(가공 테스트 제품 — 실판매 시 실제 제품 사진으로 교체 필수)",
+   "aiLabeled": true
+  }
+ ],
+ "weightG": 120
+}

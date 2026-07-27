@@ -1,0 +1,15 @@
+{
+ "id": "pdrn-앰플",
+ "name": "PDRN 앰플",
+ "brand": null,
+ "status": "candidate",
+ "source": {
+  "kind": "keyword-intel",
+  "opportunity": 76,
+  "importedAt": "2026-07-27T04:44:54.141Z"
+ },
+ "notes": [
+  "keyword-intel 후보 — 스코어는 참고 지표(자동 선정 아님). 브랜드·공급처는 사람이 특정"
+ ],
+ "updatedAt": "2026-07-27T04:44:54.141Z"
+}

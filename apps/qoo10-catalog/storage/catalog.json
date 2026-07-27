@@ -1,0 +1,110 @@
+[
+ {
+  "id": "바쿠치올-세럼",
+  "name": "바쿠치올 세럼",
+  "brand": null,
+  "status": "candidate",
+  "opportunity": 80,
+  "brandRisk": false,
+  "updatedAt": "2026-07-27T04:44:54.140Z"
+ },
+ {
+  "id": "pdrn-앰플",
+  "name": "PDRN 앰플",
+  "brand": null,
+  "status": "candidate",
+  "opportunity": 76,
+  "brandRisk": false,
+  "updatedAt": "2026-07-27T04:44:54.141Z"
+ },
+ {
+  "id": "튼살-크림",
+  "name": "튼살 크림",
+  "brand": null,
+  "status": "candidate",
+  "opportunity": 75,
+  "brandRisk": false,
+  "updatedAt": "2026-07-27T04:44:54.141Z"
+ },
+ {
+  "id": "다이어트-도시락",
+  "name": "다이어트 도시락",
+  "brand": null,
+  "status": "candidate",
+  "opportunity": 74,
+  "brandRisk": false,
+  "updatedAt": "2026-07-27T04:44:54.142Z"
+ },
+ {
+  "id": "이너뷰티",
+  "name": "이너뷰티",
+  "brand": null,
+  "status": "candidate",
+  "opportunity": 74,
+  "brandRisk": false,
+  "updatedAt": "2026-07-27T04:44:54.142Z"
+ },
+ {
+  "id": "콜라겐-앰플",
+  "name": "콜라겐 앰플",
+  "brand": null,
+  "status": "candidate",
+  "opportunity": 74,
+  "brandRisk": false,
+  "updatedAt": "2026-07-27T04:44:54.143Z"
+ },
+ {
+  "id": "크레아틴",
+  "name": "크레아틴",
+  "brand": null,
+  "status": "candidate",
+  "opportunity": 74,
+  "brandRisk": false,
+  "updatedAt": "2026-07-27T04:44:54.143Z"
+ },
+ {
+  "id": "히알루론산-세럼",
+  "name": "히알루론산 세럼",
+  "brand": null,
+  "status": "candidate",
+  "opportunity": 74,
+  "brandRisk": false,
+  "updatedAt": "2026-07-27T04:44:54.144Z"
+ },
+ {
+  "id": "bcaa",
+  "name": "BCAA",
+  "brand": null,
+  "status": "candidate",
+  "opportunity": 73,
+  "brandRisk": false,
+  "updatedAt": "2026-07-27T04:44:54.146Z"
+ },
+ {
+  "id": "nmn",
+  "name": "NMN",
+  "brand": null,
+  "status": "candidate",
+  "opportunity": 73,
+  "brandRisk": false,
+  "updatedAt": "2026-07-27T04:44:54.147Z"
+ },
+ {
+  "id": "나이아신아마이드-세럼",
+  "name": "나이아신아마이드 세럼",
+  "brand": "테스트공급사",
+  "status": "cleared",
+  "opportunity": null,
+  "brandRisk": false,
+  "updatedAt": "2026-07-27T04:44:55.192Z"
+ },
+ {
+  "id": "웨이크메이크-립틴트",
+  "name": "웨이크메이크 립틴트",
+  "brand": "WAKEMAKE",
+  "status": "screened",
+  "opportunity": null,
+  "brandRisk": true,
+  "updatedAt": "2026-07-27T04:44:55.298Z"
+ }
+]

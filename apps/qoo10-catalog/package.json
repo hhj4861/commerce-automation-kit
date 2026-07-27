@@ -1,0 +1,13 @@
+{
+  "name": "@cak/app-qoo10-catalog",
+  "version": "0.1.0",
+  "private": true,
+  "description": "큐텐재팬 등록 후보 상품 카탈로그(파일 스토리지) — keyword-intel 후보 유입 → 자동 스크리닝(물류·마진·브랜드 리스크) → 사람 확인(cleared) → product-page 생성 → 등록 기록. '문제없음' 최종 판정은 사람 게이트.",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "cli": "node cli.mjs"
+  }
+}

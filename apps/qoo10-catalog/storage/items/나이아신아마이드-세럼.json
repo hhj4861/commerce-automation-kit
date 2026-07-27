@@ -1,0 +1,52 @@
+{
+ "id": "나이아신아마이드-세럼",
+ "name": "나이아신아마이드 세럼",
+ "brand": "테스트공급사",
+ "volume": null,
+ "weightG": 120,
+ "dims": "12x4x4",
+ "wholesaleKrw": 4500,
+ "category": null,
+ "personalImportNote": "화장품 개인수입 24개/품목 한도(일본) — 대량 구매 유도 금지",
+ "imageRights": "none",
+ "status": "cleared",
+ "source": {
+  "kind": "manual",
+  "importedAt": "2026-07-27T04:44:54.183Z"
+ },
+ "notes": [],
+ "updatedAt": "2026-07-27T04:44:55.192Z",
+ "screen": {
+  "at": "2026-07-27T04:44:54.219Z",
+  "notes": [],
+  "brandRisk": [],
+  "logistics": {
+   "flammable": false,
+   "flammableMatches": [],
+   "economyEligible": false,
+   "estimatedJpy": 648,
+   "notes": [
+    "요율 2023-08-01판 추정치 — TODO(D1): J'QSM 현행 요율 재확인 전 판매가 확정 금지",
+    "오키나와·낙도 +500엔, 통관 관세·세금 발생 시 판매자 부담(미반영)"
+   ]
+  },
+  "margin": {
+   "revenueKrw": 19530.42,
+   "platformFeeKrw": 5370.87,
+   "shippingKrw": 5778.86,
+   "cogsKrw": 4390.91,
+   "fxCostKrw": 195.3,
+   "netKrw": 3794.48,
+   "netMarginPct": 19.43,
+   "pass": true,
+   "appliedFeePct": 27.5,
+   "passThresholdPct": 15
+  }
+ },
+ "humanCheck": {
+  "supplier": "테스트 도매처(샘플)",
+  "brandPolicy": "테스트 — 실판매 전 재확인",
+  "imageRights": "none",
+  "clearedAt": "2026-07-27T04:44:55.191Z"
+ }
+}

@@ -1,0 +1,18 @@
+{
+  "_comment": "브랜드 리스크 참고 목록 — 사람이 관리한다(자동 수집 아님). match 는 부분 문자열(공백 제거·소문자 비교). 여기 걸리면 screen 이 brand-risk 로 표시하지만, 최종 판단(cleared)은 사람 몫.",
+  "updatedAt": "2026-07-27",
+  "entries": [
+    { "match": "웨이크메이크", "reason": "올리브영 PB(CJ) — 상표권자 신고 리스크" },
+    { "match": "wakemake", "reason": "올리브영 PB(CJ) — 상표권자 신고 리스크" },
+    { "match": "바이오힐보", "reason": "올리브영 PB(CJ) — 상표권자 신고 리스크" },
+    { "match": "biohealboh", "reason": "올리브영 PB(CJ) — 상표권자 신고 리스크" },
+    { "match": "브링그린", "reason": "올리브영 PB(CJ) — 상표권자 신고 리스크" },
+    { "match": "bringgreen", "reason": "올리브영 PB(CJ) — 상표권자 신고 리스크" },
+    { "match": "컬러그램", "reason": "올리브영 PB(CJ) — 상표권자 신고 리스크" },
+    { "match": "colorgram", "reason": "올리브영 PB(CJ) — 상표권자 신고 리스크" },
+    { "match": "필리밀리", "reason": "올리브영 PB(CJ) — 상표권자 신고 리스크" },
+    { "match": "fillimilli", "reason": "올리브영 PB(CJ) — 상표권자 신고 리스크" },
+    { "match": "라운드어라운드", "reason": "올리브영 PB(CJ) — 상표권자 신고 리스크" },
+    { "match": "딜라이트프로젝트", "reason": "올리브영 PB(CJ) — 상표권자 신고 리스크" }
+  ]
+}
