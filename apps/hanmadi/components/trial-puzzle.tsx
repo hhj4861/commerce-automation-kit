@@ -104,7 +104,44 @@ function primeVoices(): void {
   }
 }
 
+/**
+ * 발음 듣기 — /api/tts(ElevenLabs mp3)를 우선 재생하고, 실패하면(오프라인·
+ * 상한 초과·미설정) 아래 브라우저 Web Speech로 폴백한다. mp3 URL은 탭 수명
+ * 동안 메모리에 캐시해 같은 문구의 재요청을 없앤다 ("failed"는 재시도 방지 표식).
+ */
+const mp3Cache = new Map<string, string>();
+let currentAudio: HTMLAudioElement | null = null;
+
 export function speak(text: string): void {
+  void speakViaApi(text);
+}
+
+async function speakViaApi(text: string): Promise<void> {
+  try {
+    currentAudio?.pause();
+    window.speechSynthesis?.cancel();
+
+    let url = mp3Cache.get(text);
+    if (url === "failed") return speakWithBrowserVoice(text);
+    if (!url) {
+      const res = await fetch(`/api/tts?text=${encodeURIComponent(text)}`);
+      if (!res.ok || !res.headers.get("content-type")?.includes("audio")) {
+        mp3Cache.set(text, "failed");
+        return speakWithBrowserVoice(text);
+      }
+      url = URL.createObjectURL(await res.blob());
+      mp3Cache.set(text, url);
+    }
+
+    currentAudio = new Audio(url);
+    await currentAudio.play();
+  } catch {
+    // 자동재생 차단·네트워크 오류 등 — 브라우저 음성으로라도 들려준다
+    speakWithBrowserVoice(text);
+  }
+}
+
+function speakWithBrowserVoice(text: string): void {
   try {
     const synth = window.speechSynthesis;
     if (!synth) return;

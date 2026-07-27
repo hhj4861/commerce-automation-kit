@@ -56,14 +56,17 @@ const TUTORS_KEY = "hanmadi:tutors";
 const INVITES_KEY = "hanmadi:invites";
 const STUDENTS_KEY = "hanmadi:students";
 const PROGRESS_KEY = "hanmadi:progress";
+const TTS_KEY = "hanmadi:tts";
 
 /* ────────────────────────────── 드라이버 ────────────────────────────── */
 
 type Driver = {
   readonly kind: "redis" | "file";
   hgetall(key: string): Promise<Record<string, string>>;
+  hget(key: string, field: string): Promise<string | null>;
   hset(key: string, field: string, value: string): Promise<void>;
   hdel(key: string, field: string): Promise<void>;
+  hincrby(key: string, field: string, by: number): Promise<number>;
 };
 
 function redisConfig(): { url: string; token: string } | null {
@@ -130,6 +133,10 @@ function createRedisDriver(config: { url: string; token: string }): Driver {
       }
       return out;
     },
+    async hget(key, field) {
+      const result = await command(["HGET", key, field]);
+      return result == null ? null : String(result);
+    },
     async hset(key, field, value) {
       // HSET은 원래 TTL을 만들지 않지만, 어떤 경로로도 만료가 붙지 않도록
       // PERSIST를 같은 요청에 실어 보낸다 (데이터는 영구 보관).
@@ -140,6 +147,9 @@ function createRedisDriver(config: { url: string; token: string }): Driver {
     },
     async hdel(key, field) {
       await command(["HDEL", key, field]);
+    },
+    async hincrby(key, field, by) {
+      return Number(await command(["HINCRBY", key, field, by]));
     },
   };
 }
@@ -168,6 +178,9 @@ function createFileDriver(): Driver {
     async hgetall(key) {
       return read()[key] ?? {};
     },
+    async hget(key, field) {
+      return read()[key]?.[field] ?? null;
+    },
     async hset(key, field, value) {
       const data = read();
       data[key] = { ...(data[key] ?? {}), [field]: value };
@@ -178,6 +191,13 @@ function createFileDriver(): Driver {
       if (!data[key]) return;
       delete data[key][field];
       write(data);
+    },
+    async hincrby(key, field, by) {
+      const data = read();
+      const next = Number(data[key]?.[field] ?? 0) + by;
+      data[key] = { ...(data[key] ?? {}), [field]: String(next) };
+      write(data);
+      return next;
     },
   };
 }
@@ -446,6 +466,31 @@ export async function mergeProgress(
 
 export async function removeProgress(slug: string): Promise<void> {
   await driver().hdel(PROGRESS_KEY, slug);
+}
+
+/* ────────────────────────────── TTS 오디오 캐시 ────────────────────────────── */
+
+/**
+ * 발음 mp3 캐시 — 같은 문구는 ElevenLabs를 한 번만 호출하고 영구 재사용한다.
+ *   field a:{해시}          → mp3 base64 (짧은 문구라 개당 ~20-40KB)
+ *   field gen:{YYYY-MM-DD}  → 그날 신규 생성 횟수 (크레딧 소진 공격 방어용 카운터)
+ */
+
+export async function getTtsAudio(cacheField: string): Promise<Buffer | null> {
+  const b64 = await driver().hget(TTS_KEY, `a:${cacheField}`);
+  return b64 ? Buffer.from(b64, "base64") : null;
+}
+
+export async function setTtsAudio(
+  cacheField: string,
+  mp3: Buffer,
+): Promise<void> {
+  await driver().hset(TTS_KEY, `a:${cacheField}`, mp3.toString("base64"));
+}
+
+/** 오늘 신규 생성 횟수를 1 올리고 누적값을 돌려준다 (일일 상한 검사용) */
+export async function bumpTtsDailyCount(dateKey: string): Promise<number> {
+  return driver().hincrby(TTS_KEY, `gen:${dateKey}`, 1);
 }
 
 /** 수업 기록 1건 추가 — /live에서 저장 시 사용. id가 같으면 덮어쓴다. */
