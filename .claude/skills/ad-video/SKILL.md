@@ -127,6 +127,12 @@ mcp__claude_ai__generate_video {model:"marketing_studio_video", mode:"tv_spot",
 ## 3. (선택) 멘트/VO 추가
 
 TV 광고 멘트가 필요하면 — marketing_studio_video의 `generate_audio`는 **음악/SFX만** 만들고 멘트는 안 넣는다(힉스필드는 음악 생성 불가, 음성 TTS만 됨):
+
+**한국어 멘트는 tts-narration 원자(#13)** — kit 전체 목소리 통일(Claire, 원어민·STT 검증):
+```bash
+npm run --silent cli -w @cak/tts-narration -- generate --text "<VO 스크립트>" --out vo.mp3
+```
+비한국어 멘트나 특수 톤이 필요할 때만 힉스필드 경로:
 1. 보이스 선택: `mcp__claude_ai__list_voices` (예: Maya=b0f766b7-8703-4bd1-b973-f857c36837b6, 따뜻한 여성)
 2. `mcp__claude_ai__generate_audio {model:"seed_audio", voice_type:"preset", voice_id:"<id>", prompt:"<VO 스크립트>"}`
 3. 합성: `ffmpeg -i video.mp4 -i vo.wav -filter_complex "[0:a]volume=0.32[bg];[1:a]adelay=900|900,volume=1.5[vo];[bg][vo]amix=inputs=2:duration=first:dropout_transition=2[a]" -map 0:v -map "[a]" -c:v copy -c:a aac out.mp4`

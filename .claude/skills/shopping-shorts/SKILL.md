@@ -67,7 +67,16 @@ curl -s -X POST http://127.0.0.1:5178/api/jobs -H 'content-type: application/jso
 
 ## 6. TTS 내레이션 (기본 포함)
 
-비트 내레이션을 이어붙여 `generate_audio {model:"seed_audio", voice_type:"preset", voice_id:<list_voices>}` (~1.1cr).
+한국어 내레이션은 **tts-narration 원자(#13)** 로 생성한다 — hanmadi 튜터 앱과 동일한
+검증 음성(Claire, 한국어 원어민·STT 전수검증). 힉스필드 `generate_audio(seed_audio)`는
+쓰지 않는다(목소리 통일).
+
+```bash
+npm run --silent cli -w @cak/tts-narration -- script --script script.json --outdir vo/ --join vo/full.mp3
+```
+
+비트별 mp3 + 단일 트랙(vo/full.mp3)이 나온다 — §7 assemble 의 `--narration vo/full.mp3` 로 그대로.
+키: `ELEVENLABS_API_KEY`(kit `.env`). 음성/모델 재정의: `ELEVENLABS_VOICE_ID` / `ELEVENLABS_TTS_MODEL`.
 BGM 이 필요하면 사용자 라이선스 트랙 또는 ai-music 원자 산출물 사용(힉스필드는 음악 생성 불가).
 
 ## 7. 조립 (원자가 게이트)

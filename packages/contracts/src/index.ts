@@ -14,6 +14,7 @@ export * from './blog-export.js';      // keyword-intel → wp-auto-blog 브릿�
 export * from './product-page.js';     // product-page-gen ↔ 소비자 (원자 #10)
 export * from './youtube-upload.js';   // youtube-upload ↔ 소비자 (원자 #11)
 export * from './shopping-shorts.js';  // shopping-shorts ↔ 소비자 (원자 #12)
+export * from './tts-narration.js';    // tts-narration ↔ 소비자 (원자 #13)
 // 다음 원자 착수 시 계약 추가:
 //   export * from './render-job.js';       // slide-renderer ↔ 소비자
 //   export * from './coupang-listing.js';  // coupang-connector ↔ 소비자
