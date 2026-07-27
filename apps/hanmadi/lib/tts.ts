@@ -19,6 +19,19 @@ const DAILY_NEW_GENERATION_LIMIT = 400;
 const DEFAULT_VOICE_ID = "21m00Tcm4TlvDq8ikWAM"; // ElevenLabs 기본 제공 "Rachel"
 const DEFAULT_MODEL_ID = "eleven_multilingual_v2"; // 한국어 최고 품질 (flash보다 자연스러움)
 
+/**
+ * 한두 글자는 multilingual v2의 언어 자동감지 신호가 너무 약해 엉뚱한 발음이
+ * 나온다 (실제 사례: "누"가 "수"로). 언어를 강제(language_code: ko)할 수 있는
+ * turbo v2.5로 생성한다 — 긴 문장은 프로소디가 더 좋은 multilingual v2 유지.
+ */
+const SHORT_TEXT_MODEL_ID = "eleven_turbo_v2_5";
+const SHORT_TEXT_MAX_LEN = 3;
+
+/** language_code 파라미터는 v2.5 계열(turbo/flash)에서만 허용된다 */
+function supportsLanguageCode(modelId: string): boolean {
+  return /_v2_5$/.test(modelId);
+}
+
 export type TtsResult =
   | { ok: true; mp3: Buffer; cached: boolean }
   | { ok: false; status: number; reason: string };
@@ -45,7 +58,11 @@ export async function synthesizeKorean(rawText: string): Promise<TtsResult> {
   }
 
   const voiceId = process.env.ELEVENLABS_VOICE_ID || DEFAULT_VOICE_ID;
-  const modelId = process.env.ELEVENLABS_TTS_MODEL || DEFAULT_MODEL_ID;
+  const modelId =
+    process.env.ELEVENLABS_TTS_MODEL ||
+    ([...text].length <= SHORT_TEXT_MAX_LEN
+      ? SHORT_TEXT_MODEL_ID
+      : DEFAULT_MODEL_ID);
 
   // 음성/모델이 바뀌면 캐시도 자연히 갈라지도록 키에 함께 섞는다
   const cacheField = createHash("sha256")
@@ -67,7 +84,11 @@ export async function synthesizeKorean(rawText: string): Promise<TtsResult> {
     {
       method: "POST",
       headers: { "xi-api-key": apiKey, "Content-Type": "application/json" },
-      body: JSON.stringify({ text, model_id: modelId }),
+      body: JSON.stringify({
+        text,
+        model_id: modelId,
+        ...(supportsLanguageCode(modelId) ? { language_code: "ko" } : {}),
+      }),
     },
   );
   if (!res.ok) {

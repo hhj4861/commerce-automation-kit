@@ -25,8 +25,9 @@ export async function GET(req: Request) {
   return new Response(new Uint8Array(result.mp3), {
     headers: {
       "Content-Type": "audio/mpeg",
-      // 문구가 URL 키라 내용이 변하지 않는다 — CDN·브라우저에서 1년 캐시
-      "Cache-Control": "public, max-age=31536000, s-maxage=31536000, immutable",
+      // CDN(s-maxage)은 새 배포마다 비워지니 길게, 브라우저(max-age)는 발음
+      // 수정이 배포 없이 도달할 수 있도록 1일로 짧게 잡는다
+      "Cache-Control": "public, max-age=86400, s-maxage=31536000",
     },
   });
 }

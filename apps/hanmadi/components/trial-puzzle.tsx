@@ -115,12 +115,17 @@ function primeVoices(): void {
 const mp3Cache = new Map<string, Promise<string | null>>();
 let currentAudio: HTMLAudioElement | null = null;
 
+/** 발음 생성 방식이 바뀌면 올린다 — 브라우저/CDN에 캐시된 옛 mp3를 무효화 */
+const TTS_VERSION = 3;
+
 function loadMp3(text: string): Promise<string | null> {
   let pending = mp3Cache.get(text);
   if (!pending) {
     pending = (async () => {
       try {
-        const res = await fetch(`/api/tts?text=${encodeURIComponent(text)}`);
+        const res = await fetch(
+          `/api/tts?text=${encodeURIComponent(text)}&v=${TTS_VERSION}`,
+        );
         if (!res.ok || !res.headers.get("content-type")?.includes("audio")) {
           return null;
         }
