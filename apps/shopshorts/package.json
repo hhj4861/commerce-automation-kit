@@ -1,0 +1,13 @@
+{
+  "name": "@cak/app-shopshorts",
+  "version": "0.1.0",
+  "private": true,
+  "description": "쇼핑쇼츠 운영 대시보드 — 원자 조합 서비스(로컬). 잡 큐(jobs.json 단일소스) + 사람 게이트 2개(기획 승인·발행 검수) + 원자 CLI 트리거(lint/estimate/assemble). 무인 발행 경로 없음(금지선 #3·#8).",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node server.mjs"
+  }
+}

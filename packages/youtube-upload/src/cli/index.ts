@@ -30,6 +30,8 @@ import {
   exchangeCode,
   listChannels,
   uploadVideo,
+  updateVideoMeta,
+  setPrivacy,
   setThumbnail,
   type OAuthClient,
 } from '../adapters/youtube.js';
@@ -113,8 +115,22 @@ async function main(): Promise<void> {
 
   switch (cmd) {
     case 'auth': {
+      const o = parse(rest, { code: STR });
       const client = createOAuthClient(clientSecretPath());
+      // --code 제공 시(또는 비대화형에서 받은 코드) 바로 교환
+      const codeArg = optStr(o, 'code');
+      if (codeArg !== undefined) {
+        await exchangeCode(client, codeArg, tokenPath());
+        const channels = await listChannels(client);
+        out({ ok: true, tokenPath: tokenPath(), channels });
+        break;
+      }
       const url = authUrl(client);
+      if (!process.stdin.isTTY) {
+        // 비대화형: URL 만 내주고, 승인 후 `auth --code <코드>` 로 교환
+        out({ ok: true, action: 'authorize', authUrl: url, next: 'auth --code <붙여넣은 code>' });
+        break;
+      }
       console.error('\n🔐 아래 URL을 브라우저에서 열고 채널을 승인하세요:\n');
       console.error(url);
       console.error('\n승인 후 리다이렉트된 localhost URL의 code 파라미터 값을 붙여넣으세요.');
@@ -141,7 +157,7 @@ async function main(): Promise<void> {
     case 'upload': {
       const o = parse(rest, {
         video: STR, title: STR, description: STR, 'description-file': STR,
-        tags: STR, category: STR, privacy: STR, thumbnail: STR,
+        tags: STR, hashtags: STR, category: STR, privacy: STR, thumbnail: STR,
         chapters: STR, 'chapters-file': STR, 'made-for-kids': BOOL,
       });
       const privacyRaw = optStr(o, 'privacy') ?? 'private';
@@ -156,16 +172,18 @@ async function main(): Promise<void> {
         madeForKids: flag(o, 'made-for-kids'),
       };
       const tags = optStr(o, 'tags');
+      const hashtags = optStr(o, 'hashtags');
       const category = optStr(o, 'category');
       const thumbnail = optStr(o, 'thumbnail');
       const chapters = strOrFile(o, 'chapters');
       if (tags !== undefined) job.tags = tags.split(',').map((s) => s.trim()).filter(Boolean);
+      if (hashtags !== undefined) job.hashtags = hashtags.split(',').map((s) => s.trim()).filter(Boolean);
       if (category !== undefined) job.categoryId = category;
       if (thumbnail !== undefined) job.thumbnail = resolvePath(thumbnail);
       if (chapters !== undefined) job.chapters = chapters;
 
       const client = authedClient();
-      const description = buildDescription(job.description, job.chapters);
+      const description = buildDescription(job.description, job.chapters, job.hashtags);
       const requestBody = buildVideoRequestBody(job, description);
 
       const result: YoutubeUploadResult = { ok: false };
@@ -192,8 +210,50 @@ async function main(): Promise<void> {
       break;
     }
 
+    case 'update-meta': {
+      // 재업로드 없이 기존 영상의 제목·설명(챕터·해시태그)·태그 수정. --category 필수(videos.update 요구).
+      const o = parse(rest, {
+        'video-id': STR, title: STR, description: STR, 'description-file': STR,
+        tags: STR, hashtags: STR, category: STR, chapters: STR, 'chapters-file': STR,
+      });
+      const videoId = reqStr(o, 'video-id');
+      const category = reqStr(o, 'category');
+      const baseDesc = strOrFile(o, 'description') ?? '';
+      const chapters = strOrFile(o, 'chapters');
+      const hashtags = optStr(o, 'hashtags');
+      const tags = optStr(o, 'tags');
+      const description = buildDescription(baseDesc, chapters, hashtags ? hashtags.split(',').map((s) => s.trim()).filter(Boolean) : undefined);
+      const snippet: { title: string; description: string; categoryId: string; tags?: string[] } = {
+        title: reqStr(o, 'title'),
+        description,
+        categoryId: category,
+      };
+      if (tags !== undefined) snippet.tags = tags.split(',').map((s) => s.trim()).filter(Boolean);
+      try {
+        await updateVideoMeta(authedClient(), videoId, snippet);
+        out({ ok: true, videoId, url: `https://youtu.be/${videoId}` });
+      } catch (e) {
+        exitTransientOrThrow(e);
+      }
+      break;
+    }
+
+    case 'set-privacy': {
+      const o = parse(rest, { 'video-id': STR, privacy: STR });
+      const videoId = reqStr(o, 'video-id');
+      const priv = youtubePrivacySchema.safeParse(reqStr(o, 'privacy'));
+      if (!priv.success) throw new UsageError('--privacy 무효 — private|unlisted|public');
+      try {
+        await setPrivacy(authedClient(), videoId, priv.data);
+        out({ ok: true, videoId, privacy: priv.data, url: `https://youtu.be/${videoId}` });
+      } catch (e) {
+        exitTransientOrThrow(e);
+      }
+      break;
+    }
+
     default:
-      console.error('명령: auth | channels | upload');
+      console.error('명령: auth | channels | upload | update-meta | set-privacy');
       process.exit(1);
   }
 }

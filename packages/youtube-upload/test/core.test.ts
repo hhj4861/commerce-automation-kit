@@ -3,8 +3,17 @@
  */
 import { describe, it, expect } from 'vitest';
 import type { YoutubeUploadJob } from '@cak/contracts';
-import { buildDescription } from '../src/core/description.js';
+import { buildDescription, formatHashtags } from '../src/core/description.js';
 import { buildVideoRequestBody } from '../src/core/video-resource.js';
+
+describe('formatHashtags', () => {
+  it('선행 #·공백 제거하고 #a #b 로', () => {
+    expect(formatHashtags(['gym', '#workout', 'gym mix'])).toBe('#gym #workout #gymmix');
+  });
+  it('빈 것 제외', () => {
+    expect(formatHashtags(['', '  ', '#'])).toBe('');
+  });
+});
 
 describe('buildDescription', () => {
   it('챕터 있으면 설명 뒤에 붙인다', () => {
@@ -16,6 +25,12 @@ describe('buildDescription', () => {
   });
   it('설명 비어있으면 챕터만', () => {
     expect(buildDescription('', '0:00 A')).toBe('0:00 A');
+  });
+  it('해시태그는 맨 아래(설명+챕터+해시태그)', () => {
+    expect(buildDescription('설명', '0:00 A', ['gym', 'workout'])).toBe('설명\n\n0:00 A\n\n#gym #workout');
+  });
+  it('설명만 + 해시태그', () => {
+    expect(buildDescription('설명', undefined, ['phonk'])).toBe('설명\n\n#phonk');
   });
 });
 

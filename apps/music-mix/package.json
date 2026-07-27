@@ -1,0 +1,10 @@
+{
+  "name": "music-mix-app",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "롱폼 음악 믹스 채널 서비스 — @cak 원자(ai-music·longform-mix·youtube-upload)를 조립한다. packages=독립 원자, apps=조립 서비스.",
+  "scripts": {
+    "compose": "node compose.mjs"
+  }
+}

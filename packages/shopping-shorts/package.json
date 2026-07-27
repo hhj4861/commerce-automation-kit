@@ -1,0 +1,26 @@
+{
+  "name": "@cak/shopping-shorts",
+  "version": "0.1.0",
+  "private": true,
+  "description": "원자 #12 — 쇼핑쇼츠(상품 소개 세로영상+제휴 링크) 결정적 파트: 대본 표현 lint(효능단정·가짜경험담 차단), 대가성 고지 강제, 9:16 조립 렌더(TTS+자막 번인+BGM 더킹), 실측 비용 견적. 소재는 전량 자체 생성(타인 콘텐츠 입력 계약 밖).",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "cli": "tsx src/cli/index.ts"
+  },
+  "dependencies": {
+    "@cak/contracts": "*",
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.0",
+    "tsx": "^4.16.0",
+    "vitest": "^2.0.0",
+    "@types/node": "^20.14.0"
+  }
+}

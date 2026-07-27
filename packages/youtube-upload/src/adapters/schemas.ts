@@ -11,6 +11,7 @@ export const youtubeUploadJobSchema = z.object({
   title: z.string().min(1),
   description: z.string().default(''),
   tags: z.array(z.string()).optional(),
+  hashtags: z.array(z.string()).optional(),
   categoryId: z.string().optional(),
   privacyStatus: youtubePrivacySchema.default('private'),
   thumbnail: z.string().optional(),
@@ -28,6 +29,7 @@ export function parseYoutubeUploadJob(input: unknown): YoutubeUploadJob {
     madeForKids: j.madeForKids,
   };
   if (j.tags !== undefined) job.tags = j.tags;
+  if (j.hashtags !== undefined) job.hashtags = j.hashtags;
   if (j.categoryId !== undefined) job.categoryId = j.categoryId;
   if (j.thumbnail !== undefined) job.thumbnail = j.thumbnail;
   if (j.chapters !== undefined) job.chapters = j.chapters;

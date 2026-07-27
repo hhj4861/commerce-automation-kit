@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>쇼핑쇼츠 큐 — shopshorts</title>
+<style>
+  :root {
+    --bg: #101214; --panel: #191d21; --card: #21262b; --line: #2e343a;
+    --text: #e8eaec; --dim: #9aa3ab; --accent: #5cc8a5; --warn: #e0b453; --block: #e06c6c;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  body { background: var(--bg); color: var(--text); font: 14px/1.5 -apple-system, "Apple SD Gothic Neo", sans-serif; padding: 20px; }
+  header { display: flex; align-items: baseline; gap: 12px; margin-bottom: 6px; }
+  h1 { font-size: 18px; letter-spacing: .04em; }
+  header .sub { color: var(--dim); font-size: 12px; }
+  .gate-note { color: var(--dim); font-size: 12px; margin-bottom: 16px; }
+  .board { display: grid; grid-template-columns: repeat(7, minmax(180px, 1fr)); gap: 10px; overflow-x: auto; }
+  .col { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 10px; min-height: 220px; }
+  .col h2 { font-size: 12px; color: var(--dim); text-transform: uppercase; letter-spacing: .08em; margin-bottom: 8px; display: flex; justify-content: space-between; }
+  .col h2 .n { color: var(--text); }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 10px; margin-bottom: 8px; }
+  .card .name { font-weight: 600; margin-bottom: 2px; }
+  .card .meta { color: var(--dim); font-size: 12px; margin-bottom: 6px; }
+  .badges { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
+  .badge { font-size: 11px; padding: 1px 7px; border-radius: 999px; border: 1px solid var(--line); color: var(--dim); }
+  .badge.ok { color: var(--accent); border-color: var(--accent); }
+  .badge.warn { color: var(--warn); border-color: var(--warn); }
+  .badge.block { color: var(--block); border-color: var(--block); }
+  .badge.link { color: var(--accent); }
+  .findings { font-size: 11px; color: var(--dim); margin: 4px 0 8px; padding-left: 14px; }
+  .findings .b { color: var(--block); }
+  .findings .w { color: var(--warn); }
+  .actions { display: flex; flex-wrap: wrap; gap: 5px; }
+  button { background: transparent; color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 4px 9px; font-size: 12px; cursor: pointer; }
+  button:hover { border-color: var(--accent); color: var(--accent); }
+  button.danger:hover { border-color: var(--block); color: var(--block); }
+  button.primary { border-color: var(--accent); color: var(--accent); }
+  .empty { color: var(--dim); font-size: 12px; text-align: center; padding: 20px 0; }
+  #msg { position: fixed; bottom: 16px; right: 16px; background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 10px 14px; font-size: 13px; display: none; max-width: 420px; white-space: pre-wrap; }
+</style>
+</head>
+<body>
+<header>
+  <h1>쇼핑쇼츠 큐</h1>
+  <span class="sub">jobs.json 단일소스 · 원자 @cak/shopping-shorts 게이트</span>
+  <span class="sub" id="count"></span>
+</header>
+<p class="gate-note">사람 게이트: <b>기획 승인</b>(draft→approved, lint 재검증) · <b>발행 검수</b>(review→published, lint 재검증). 업로드 자체는 shorts-publish CLI로 사람이 실행 — 이 보드는 무인 발행 경로가 없습니다.</p>
+<div class="board" id="board"></div>
+<div id="msg"></div>
+
+<script>
+const STATUS_LABEL = {
+  'draft': '초안', 'script-approved': '기획 승인됨', 'generated': '클립 생성됨',
+  'assembled': '조립됨', 'review': '발행 검수', 'published': '발행됨', 'rejected': '반려'
+};
+const NEXT_ACTIONS = {
+  'draft': [['script-approved', '기획 승인 ✓', 'primary'], ['rejected', '반려', 'danger']],
+  'script-approved': [['generated', '클립 생성됨으로', ''], ['rejected', '반려', 'danger']],
+  'generated': [['assembled', '조립됨으로', ''], ['rejected', '반려', 'danger']],
+  'assembled': [['review', '검수 요청', 'primary'], ['rejected', '반려', 'danger']],
+  'review': [['published', '발행 확인 ✓', 'primary'], ['rejected', '반려', 'danger']],
+  'rejected': [['draft', '초안으로 복귀', '']],
+  'published': []
+};
+
+function el(tag, cls, text) {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (text !== undefined) e.textContent = text;
+  return e;
+}
+
+function msg(text) {
+  const m = document.getElementById('msg');
+  m.textContent = text;
+  m.style.display = 'block';
+  clearTimeout(m._t);
+  m._t = setTimeout(() => (m.style.display = 'none'), 6000);
+}
+
+async function api(path, opts) {
+  const r = await fetch(path, opts);
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.error ? data.error + (data.report ? '\n' + summarizeReport(data.report) : '') : r.status);
+  return data;
+}
+
+function summarizeReport(rep) {
+  if (!rep || !rep.findings) return '';
+  return rep.findings.map(f => `[${f.severity}] ${f.rule} @${f.field}`).join('\n');
+}
+
+async function transition(id, to) {
+  let body = { to };
+  if (to === 'rejected') {
+    const note = prompt('반려 사유');
+    if (note === null) return;
+    body.note = note;
+  }
+  if (to === 'review') {
+    const out = prompt('조립 산출물 경로(outputVideo)', '');
+    if (out === null) return;
+    if (out) body.outputVideo = out;
+  }
+  if (to === 'published') {
+    if (!confirm('발행 검수 완료로 표시할까요?\n(실제 업로드는 shorts-publish CLI로 실행 — 고지문구·상품일치 확인 필수)')) return;
+    const ref = prompt('업로드 requestId/URL (선택)', '');
+    if (ref) body.publishRef = ref;
+  }
+  try {
+    await api(`/api/jobs/${id}/transition`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+    load();
+  } catch (e) { msg('전이 실패: ' + e.message); }
+}
+
+async function relint(id) {
+  try { const r = await api(`/api/jobs/${id}/lint`, { method: 'POST' }); msg('lint: ' + (r.ok ? '통과' : 'BLOCK') + '\n' + summarizeReport(r)); load(); }
+  catch (e) { msg('lint 실패: ' + e.message); }
+}
+
+async function estimate(id) {
+  try { const r = await api(`/api/jobs/${id}/estimate?model=kling3_0-pro`, { method: 'POST' }); msg(`견적(kling3_0-pro): 클립 ${r.clipsTotal}cr + TTS ${r.ttsCredits}cr = ${r.grandTotal}cr`); }
+  catch (e) { msg('견적 실패: ' + e.message); }
+}
+
+function card(job) {
+  const c = el('div', 'card');
+  c.appendChild(el('div', 'name', job.brief.productName));
+  c.appendChild(el('div', 'meta', `${job.brief.id} · ${job.script.hookType} · ${job.script.beats.length}비트`));
+
+  const badges = el('div', 'badges');
+  const rep = job.lintReport;
+  if (rep) {
+    const blocks = (rep.findings || []).filter(f => f.severity === 'block').length;
+    const warns = (rep.findings || []).filter(f => f.severity === 'warn').length;
+    badges.appendChild(el('span', 'badge ' + (rep.ok ? 'ok' : 'block'), rep.ok ? 'lint 통과' : `block ${blocks}`));
+    if (warns) badges.appendChild(el('span', 'badge warn', `warn ${warns}`));
+  } else {
+    badges.appendChild(el('span', 'badge', 'lint 미실행'));
+  }
+  badges.appendChild(el('span', 'badge ' + (job.brief.affiliateUrl ? 'link' : ''), job.brief.affiliateUrl ? '제휴링크 ○' : '제휴링크 ×'));
+  if (job.outputVideo) badges.appendChild(el('span', 'badge ok', 'mp4'));
+  c.appendChild(badges);
+
+  if (rep && rep.findings && rep.findings.length) {
+    const ul = el('ul', 'findings');
+    rep.findings.slice(0, 4).forEach(f => {
+      const li = el('li', f.severity === 'block' ? 'b' : 'w', `${f.rule}: ${f.matched}`);
+      ul.appendChild(li);
+    });
+    c.appendChild(ul);
+  }
+  if (job.note) c.appendChild(el('div', 'meta', '노트: ' + job.note));
+
+  const actions = el('div', 'actions');
+  (NEXT_ACTIONS[job.status] || []).forEach(([to, label, cls]) => {
+    const b = el('button', cls, label);
+    b.onclick = () => transition(job.brief.id, to);
+    actions.appendChild(b);
+  });
+  const lintBtn = el('button', '', 'lint');
+  lintBtn.onclick = () => relint(job.brief.id);
+  actions.appendChild(lintBtn);
+  const estBtn = el('button', '', '견적');
+  estBtn.onclick = () => estimate(job.brief.id);
+  actions.appendChild(estBtn);
+  c.appendChild(actions);
+  return c;
+}
+
+async function load() {
+  const { jobs, statuses } = await api('/api/jobs');
+  document.getElementById('count').textContent = `총 ${jobs.length}건`;
+  const board = document.getElementById('board');
+  board.innerHTML = '';
+  for (const st of statuses) {
+    const col = el('div', 'col');
+    const inCol = jobs.filter(j => j.status === st);
+    const h = el('h2');
+    h.appendChild(el('span', '', STATUS_LABEL[st] || st));
+    h.appendChild(el('span', 'n', String(inCol.length)));
+    col.appendChild(h);
+    if (!inCol.length) col.appendChild(el('div', 'empty', '—'));
+    inCol.forEach(j => col.appendChild(card(j)));
+    board.appendChild(col);
+  }
+}
+load().catch(e => msg('로드 실패: ' + e.message));
+setInterval(() => load().catch(() => {}), 15000);
+</script>
+</body>
+</html>

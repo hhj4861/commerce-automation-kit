@@ -1,0 +1,47 @@
+{
+  "title": "【Playlist】 헬스장 각성 브금 🔥 Gym Hype Workout Mix | Phonk·Trap·Hardstyle·DnB Vol.1",
+  "durationSec": 240,
+  "tracks": [
+    {
+      "id": "trap-1", "title": "Trap Anthem",
+      "brief": { "energy": "high", "tempo": "up", "bpm": 140, "instrumental": false,
+        "moods": ["powerful","anthemic","catchy","motivational"], "genres": ["hybrid trap","hip-hop"],
+        "durationSec": 240, "arc": "explosive gym-anthem trap, English male vocal hook from the very first second, hype workout energy, no long intro" }
+    },
+    {
+      "id": "phonk-vocal-1", "title": "Phonk (Vocal)",
+      "brief": { "energy": "high", "tempo": "up", "bpm": 145, "instrumental": false,
+        "moods": ["dark","aggressive","hypnotic","gritty"], "genres": ["phonk","drift phonk"],
+        "durationSec": 240, "arc": "dark drift phonk with an aggressive English vocal hook, distorted 808 cowbell, gym energy, no long intro" }
+    },
+    {
+      "id": "hardstyle-1", "title": "Hardstyle",
+      "brief": { "energy": "high", "tempo": "up", "bpm": 150, "instrumental": false,
+        "moods": ["euphoric","powerful","anthemic","hard"], "genres": ["hardstyle","rawstyle"],
+        "durationSec": 240, "arc": "hard-hitting hardstyle with a euphoric anthemic vocal hook, festival energy, English vocals, immediate hook" }
+    },
+    {
+      "id": "phonk-1", "title": "Phonk",
+      "brief": { "energy": "high", "tempo": "up", "bpm": 145, "instrumental": true,
+        "moods": ["dark","aggressive","hypnotic","gritty"], "genres": ["phonk","drift phonk"],
+        "durationSec": 240, "arc": "dark drift phonk, distorted 808 cowbell, hypnotic driving groove, no long intro" }
+    },
+    {
+      "id": "dnb-1", "title": "Drum & Bass",
+      "brief": { "energy": "high", "tempo": "up", "bpm": 174, "instrumental": true,
+        "moods": ["energetic","driving","uplifting","intense"], "genres": ["drum and bass","neurofunk"],
+        "durationSec": 240, "arc": "high-energy drum and bass, fast breakbeat, rolling bassline, no long intro" }
+    }
+  ],
+  "background": { "kind": "video", "query": "gym workout", "orientation": "landscape" },
+  "thumbnail": {
+    "query": "fitness woman gym", "orientation": "landscape", "index": 1, "aesthetic": true,
+    "tag": "PLAYLIST", "title": "GYM HYPE", "subtitle": "WORKOUT MIX · VOL.1"
+  },
+  "description": "운동할 때 미쳐버리는 헬스장 각성 브금 20분 — Phonk · Trap · Hardstyle · Drum & Bass.\n\n1시간 몰입 운동, 데드리프트·스쿼트·러닝에 최적.\n\nFootage & images from Pexels.",
+  "hashtags": ["플레이리스트", "운동브금", "헬스음악", "운동음악", "gymmusic", "workoutmusic", "playlist", "phonk", "trap", "믹스", "gym", "헬스브금", "workout"],
+  "tags": ["gym music", "workout music", "phonk", "trap", "hardstyle", "drum and bass", "운동 브금", "헬스 브금"],
+  "category": "10",
+  "privacy": "private",
+  "upload": false
+}

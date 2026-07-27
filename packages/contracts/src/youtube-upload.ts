@@ -12,7 +12,10 @@ export interface YoutubeUploadJob {
   title: string;
   /** 설명(챕터는 chapters 로 별도 전달하면 자동 삽입) */
   description: string;
+  /** 비노출 SEO 태그(YouTube tags) */
   tags?: string[];
+  /** 설명란 하단에 붙는 해시태그(#a #b, 제목 위 노출). tags 와 별개. */
+  hashtags?: string[];
   /** YouTube 카테고리 ID (예: '10' Music, '24' Entertainment) */
   categoryId?: string;
   privacyStatus: YoutubePrivacy;

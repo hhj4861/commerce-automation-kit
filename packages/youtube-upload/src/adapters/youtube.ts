@@ -84,6 +84,25 @@ export async function uploadVideo(
   return id;
 }
 
+/** 기존 영상의 메타데이터(제목·설명·태그) 수정 — 재업로드 없이. snippet.categoryId 필수. */
+export async function updateVideoMeta(
+  client: OAuthClient,
+  videoId: string,
+  snippet: { title: string; description: string; categoryId: string; tags?: string[] },
+): Promise<void> {
+  const youtube = google.youtube({ version: 'v3', auth: client });
+  await youtube.videos.update({ part: ['snippet'], requestBody: { id: videoId, snippet } });
+}
+
+/** 공개범위 변경(private/unlisted/public) — 재업로드 없이. */
+export async function setPrivacy(client: OAuthClient, videoId: string, privacyStatus: string): Promise<void> {
+  const youtube = google.youtube({ version: 'v3', auth: client });
+  await youtube.videos.update({
+    part: ['status'],
+    requestBody: { id: videoId, status: { privacyStatus, selfDeclaredMadeForKids: false } },
+  });
+}
+
 /** 커스텀 썸네일 세팅. */
 export async function setThumbnail(client: OAuthClient, videoId: string, thumbnailPath: string): Promise<void> {
   const youtube = google.youtube({ version: 'v3', auth: client });
