@@ -76,10 +76,15 @@ const shoppingOk = (): ShoppingInsightResult => ({
 });
 
 let db: Db;
-/** 공통 주입: in-memory DB + 무대기 재시도. 예산은 테스트별로 재정의. */
+/**
+ * 공통 주입: in-memory DB + 무대기 재시도. 예산은 테스트별로 재정의.
+ * 재수집(recover)은 기본 off(passes:0) — 메인 패스의 재시도/환불 횟수를 단위로 검증하는
+ * 기존 테스트의 호출수 단언을 흔들지 않기 위함. 재수집 검증은 해당 테스트가 명시적으로 켠다.
+ */
 const deps = (extra: Partial<CollectDeps> = {}): CollectDeps => ({
   db,
   retry: { sleep: async () => {} },
+  recover: { passes: 0, delayMs: 0, sleep: async () => {} },
   ...extra,
 });
 
@@ -433,6 +438,63 @@ describe('collectSignals — G2: 예산 게이트·DLQ·영속화', () => {
 
     expect(batch.callsSpent.naver_search_shop).toBe(3); // 3시도 전부 계상 유지
     expect(ledger.spentToday('naver_search_shop')).toBe(3);
+  });
+
+  // ── 부분 미도달 타깃 재수집(A) ──
+  // 부분 실패(신호>0)는 self-heal(exit 75) 사각지대라 그동안 하루치 일부가 누락됐다(실측 2026-07-28: 28/182).
+  // 배치 내부에서 환불된 미도달 키워드만 재수집해 복구하되, 성공분 쿼터는 재소비하지 않는다.
+  describe('부분 미도달 재수집(recover)', () => {
+    const enotfound = (): Error =>
+      Object.assign(new Error('getaddrinfo ENOTFOUND openapi.naver.com'), { code: 'ENOTFOUND' });
+    const fastRecover = { passes: 2, delayMs: 0, sleep: async (): Promise<void> => {} };
+
+    it('일부만 ENOTFOUND면 그 키워드만 재수집해 복구, 성공분은 재소비 안 함', async () => {
+      let flaky = 0;
+      vi.mocked(searchShop).mockImplementation(async (_c, kw) => {
+        if (kw === 'flaky') {
+          flaky += 1;
+          if (flaky <= 3) throw enotfound(); // 메인 패스 3시도 전량 미도달
+          return shopOk(300); // 재수집 패스에서 회복
+        }
+        return shopOk(100);
+      });
+      vi.mocked(searchTrend).mockResolvedValue(trendOk());
+
+      const batch = await collectSignals(['ok', 'flaky'], deps({ recover: fastRecover }));
+
+      expect(batch.signals.map((s) => s.keyword).sort()).toEqual(['flaky', 'ok']);
+      expect(batch.failures).toHaveLength(0); // 부분 실패가 리포트에 남지 않는다
+      // 미도달 3시도는 환불(net 0) → 성공 계상만: ok 1 + flaky 1(복구) = 2
+      expect(batch.callsSpent.naver_search_shop).toBe(2);
+    });
+
+    it('재수집 대상은 미도달(환불)뿐 — 5xx 실패는 재수집하지 않는다', async () => {
+      vi.mocked(searchShop).mockImplementation(async (_c, kw) => {
+        if (kw === 'bad') throw new NaverApiError('search_shop', 500, 'boom');
+        return shopOk(100);
+      });
+      vi.mocked(searchTrend).mockResolvedValue(trendOk());
+
+      const batch = await collectSignals(['good', 'bad'], deps({ recover: fastRecover }));
+
+      expect(batch.failures.map((f) => f.keyword)).toEqual(['bad']);
+      // good 1 + bad 3(5xx 재시도) = 4, 재수집 없음(미도달 아님)
+      expect(vi.mocked(searchShop)).toHaveBeenCalledTimes(4);
+      expect(batch.callsSpent.naver_search_shop).toBe(4); // 5xx는 환불 안 됨
+    });
+
+    it('재수집 패스가 모두 미도달이면 실패로 남고(투명) 전량 환불 — wholesale 자가복구로 승계', async () => {
+      vi.mocked(searchShop).mockRejectedValue(enotfound());
+
+      const batch = await collectSignals(['x'], deps({ recover: fastRecover }));
+
+      expect(batch.signals).toHaveLength(0);
+      expect(batch.failures).toHaveLength(1);
+      expect(batch.failures[0]!.reason).toContain('[ENOTFOUND]');
+      expect(batch.callsSpent.naver_search_shop).toBe(0); // 메인+2패스 전량 환불(예산 증발 없음)
+      expect(isWholesaleUnreachable(batch)).toBe(true); // 신호 0 + 전량 미도달 → 크론 재시도로 승계
+      expect(vi.mocked(searchShop)).toHaveBeenCalledTimes(9); // (메인1 + 재수집2) × 3시도
+    });
   });
 
   it('중복 키워드는 진입점에서 제거 — 예산 이중 소비·동률 스냅샷 방지', async () => {

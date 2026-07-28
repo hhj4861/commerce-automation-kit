@@ -117,6 +117,13 @@ export interface CollectDeps {
   /** 재시도 정책 재정의(테스트: sleep 무력화 등). shouldRetry 는 내부 정책 고정. */
   retry?: Pick<RetryOpts, 'maxAttempts' | 'baseDelayMs' | 'sleep'>;
   /**
+   * 부분 미도달 재수집(A): 메인 패스 후 ENOTFOUND 등 **예산이 환불된 미도달 실패만** 골라
+   * delay 후 재수집한다. passes=재시도 패스 수(기본 2), delayMs=패스 간 대기(기본 15s — wake
+   * 직후 DNS flap 안정화 여유), sleep=테스트 주입. 미도달만 대상이라 성공분 쿼터 재소비 없음
+   * (quota-safe). self-heal(exit 75)이 "전량 미도달"만 커버하던 사각지대(부분 실패)를 메운다.
+   */
+  recover?: { passes?: number; delayMs?: number; sleep?: (ms: number) => Promise<void> };
+  /**
    * 키워드 → 네이버쇼핑 cat_id 해석기(쇼핑인사이트 D1-4). cat_id 를 주면 그 키워드에 대해
    * 커머스 수요(shoppingTrend)를 수집하고, null/undefined 면 미수집(coverage 로 투명화 — 조용히
    * 빠지지 않는다). cat_id 전체목록/조회 API 가 없어(수동 확인, D1-4) 주입식으로 둔다.
@@ -200,8 +207,7 @@ export async function collectSignals(
       reason: err instanceof Error ? err.message : String(err),
     });
 
-  await Promise.all(
-    uniq.map((kw) =>
+  const processKeyword = (kw: string): Promise<void> =>
       limit(async () => {
         // DLQ 격리: 연속 실패 임계 초과 키워드는 예산을 더 태우지 않되, 반드시 설명한다.
         // 쿨다운 경과 시 isolationInfo 가 null 을 줘 자동 재시도(자가 회복) 경로가 열린다.
@@ -360,9 +366,32 @@ export async function collectSignals(
             recordFailure(db, kw, reason, runId, now());
           }
         }
-      }),
-    ),
-  );
+      });
+
+  await Promise.all(uniq.map(processKeyword));
+
+  // ── 부분 미도달 타깃 재수집(A) ──
+  // wake 직후 DNS flap 등으로 일부만 ENOTFOUND(예산 환불됨)이면 그 키워드만 골라 짧은 대기 후
+  // 재수집한다. 대상은 UNREACHABLE 코드(=환불된 미도달)뿐 → 성공 키워드의 쿼터를 재소비하지 않는다
+  // (quota-safe). 저장 전에 같은 run 으로 병합하므로 리포트/히스토리는 단일 배치로 정합.
+  const recoverPasses = deps.recover?.passes ?? 2;
+  const recoverDelayMs = deps.recover?.delayMs ?? 15_000;
+  const recoverSleep =
+    deps.recover?.sleep ?? ((ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms)));
+  const unreachableCodes = [...UNREACHABLE_NET_CODES];
+  const isUnreachableFailure = (reason: string): boolean =>
+    unreachableCodes.some((c) => reason.includes(`[${c}]`));
+  for (let pass = 1; pass <= recoverPasses; pass++) {
+    const toRetry = failures.filter((f) => isUnreachableFailure(f.reason)).map((f) => f.keyword);
+    if (toRetry.length === 0) break;
+    // 대상의 기존 실패기록 제거 — 성공하면 signals 로, 다시 미도달이면 failures 로 재기록된다.
+    for (let i = failures.length - 1; i >= 0; i--) {
+      if (isUnreachableFailure(failures[i]!.reason)) failures.splice(i, 1);
+    }
+    log.info('recover_pass', { pass, keywords: toRetry.length, delayMs: recoverDelayMs });
+    await recoverSleep(recoverDelayMs);
+    await Promise.all(toRetry.map(processKeyword));
+  }
 
   const batch: IntelBatch = {
     runId,
