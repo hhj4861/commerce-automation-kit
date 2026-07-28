@@ -58,6 +58,8 @@ export function isOpenPath(pathname: string): boolean {
     // 레벨 진단 — 학생이 공개 링크로 스스로 응시한다.
     // 저장하는 값(레벨 제안)은 민감하지 않고 level을 자동 변경하지 않는다.
     pathname === "/level-test" ||
+    // link-in-bio 착지 페이지 — 숏폼 프로필 링크가 여기로 온다 (틱톡 퍼널)
+    pathname === "/meet" ||
     pathname.startsWith("/api/placement") ||
     // 발음 듣기 — /trial·학생 포털이 로그인 없이 호출한다.
     // 라우트가 길이·한글·일일 생성 상한으로 남용을 막고, 캐시 적중은 무료다.
