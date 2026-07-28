@@ -1,7 +1,7 @@
 /**
  * 필러1 "하루 한 표현" 숏폼 생성기 (9:16, 무자본 — ffmpeg + 배포된 TTS 재사용)
  *
- * 발음은 배포된 hanmadi /api/tts(ElevenLabs Claire, 영구 캐시)에서 받아온다 —
+ * 발음은 배포된 hanmadi /api/tts(ElevenLabs, 영구 캐시 — 현재 음성 Yooni)에서 받아온다 —
  * 로컬 회사망이 ElevenLabs 직접 호출을 막아도 이 경로는 뚫려 있고, 캐시 덕에
  * 같은 문구는 크레딧을 다시 쓰지 않는다.
  *
@@ -46,7 +46,7 @@ const wav = join(outdir, `${slug}-track.wav`);
 const mp4 = join(outdir, `${slug}.mp4`);
 
 // 1) 발음 mp3 (배포 TTS — 캐시 적중 시 무료)
-const res = await fetch(`${TTS_BASE}?text=${encodeURIComponent(v.ko)}&v=3`);
+const res = await fetch(`${TTS_BASE}?text=${encodeURIComponent(v.ko)}&v=4`);
 if (!res.ok || !res.headers.get("content-type")?.includes("audio")) {
   console.error(`TTS 실패 (HTTP ${res.status}) — 배포 상태를 확인하세요`);
   process.exit(1);
