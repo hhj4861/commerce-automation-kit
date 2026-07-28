@@ -6,6 +6,8 @@
  *   generate --file script.txt --out vo.mp3            # 파일 전체를 한 트랙으로
  *   script --script shorts-script.json --outdir vo/     # ShortsScript.beats[].narration
  *          [--join vo/full.mp3]                          # 비트 mp3를 순서대로 이어붙임(ffmpeg)
+ *          [--align]                                     # join 시 각 비트를 durationSec 시작점에 정렬
+ *                                                        # (영상 비트와 타이밍 일치 — 조립 --narration 용)
  *
  * 키: ELEVENLABS_API_KEY (음성/모델 재정의: ELEVENLABS_VOICE_ID / ELEVENLABS_TTS_MODEL)
  * script 결과는 manifest(NarrationBatchResult)를 outdir/narration.json 에 남긴다.
@@ -50,6 +52,7 @@ async function cmdScript(args: string[]): Promise<void> {
       script: { type: 'string' },
       outdir: { type: 'string' },
       join: { type: 'string' },
+      align: { type: 'boolean' },
     },
   });
   if (!values.script || !values.outdir) {
@@ -76,12 +79,31 @@ async function cmdScript(args: string[]): Promise<void> {
   const result: NarrationBatchResult = { clips };
   if (values.join) {
     const joined = resolve(values.join);
-    // ffmpeg concat demuxer — 경로에 공백이 있어도 안전하게 단일 트랙으로
-    const listPath = join(outdir, 'concat.txt');
-    await writeFile(listPath, clips.map((c) => `file '${c.file.replaceAll("'", "'\\''")}'`).join('\n'));
-    await run('ffmpeg', ['-y', '-f', 'concat', '-safe', '0', '-i', listPath, '-c:a', 'libmp3lame', '-q:a', '2', joined]);
-    result.joinedFile = joined;
-    console.error(`✓ joined → ${joined}`);
+    if (values.align === true) {
+      // 비트 정렬 join — 각 비트 mp3 를 해당 비트의 영상 시작 시각(durationSec 누적)에 배치.
+      // 조립(shopping-shorts assemble --narration)에서 영상 비트와 내레이션 타이밍이 일치한다.
+      // amix normalize=0: 트랙 수로 볼륨을 나누지 않음(비트는 시간상 겹치지 않는 전제).
+      let offsetMs = 0;
+      const inputs: string[] = [];
+      const filters: string[] = [];
+      beats.forEach((beat, i) => {
+        inputs.push('-i', clips[i]!.file);
+        filters.push(`[${i}:a]adelay=${offsetMs}|${offsetMs}[a${i}]`);
+        offsetMs += Math.round(beat.durationSec * 1000);
+      });
+      const mixIn = beats.map((_, i) => `[a${i}]`).join('');
+      const filter = `${filters.join(';')};${mixIn}amix=inputs=${beats.length}:duration=longest:normalize=0[out]`;
+      await run('ffmpeg', ['-y', ...inputs, '-filter_complex', filter, '-map', '[out]', '-c:a', 'libmp3lame', '-q:a', '2', joined]);
+      result.joinedFile = joined;
+      console.error(`✓ aligned join → ${joined}`);
+    } else {
+      // ffmpeg concat demuxer — 경로에 공백이 있어도 안전하게 단일 트랙으로
+      const listPath = join(outdir, 'concat.txt');
+      await writeFile(listPath, clips.map((c) => `file '${c.file.replaceAll("'", "'\\''")}'`).join('\n'));
+      await run('ffmpeg', ['-y', '-f', 'concat', '-safe', '0', '-i', listPath, '-c:a', 'libmp3lame', '-q:a', '2', joined]);
+      result.joinedFile = joined;
+      console.error(`✓ joined → ${joined}`);
+    }
   }
 
   await writeFile(join(outdir, 'narration.json'), JSON.stringify(result, null, 2));

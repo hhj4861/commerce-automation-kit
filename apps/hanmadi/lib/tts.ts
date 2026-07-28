@@ -16,7 +16,9 @@ import { bumpTtsDailyCount, getTtsAudio, setTtsAudio } from "./store";
 const MAX_TEXT_LEN = 80;
 const DAILY_NEW_GENERATION_LIMIT = 400;
 
-const DEFAULT_VOICE_ID = "21m00Tcm4TlvDq8ikWAM"; // ElevenLabs 기본 제공 "Rachel"
+// "Yooni - Natural & Clear" (한국어 원어민, 밝고 크리스프) — 사용자가 Vrew VO와
+// 가장 유사한 톤으로 청음 선정(2026-07-28). 이전: Claire(ZRJMGKt2Okf3o9C38eSq).
+const DEFAULT_VOICE_ID = "n2fbxG88jqAoaVPUy3IG";
 const DEFAULT_MODEL_ID = "eleven_multilingual_v2"; // 한국어 최고 품질 (flash보다 자연스러움)
 
 /**

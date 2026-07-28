@@ -15,7 +15,7 @@ const mp3Cache = new Map<string, Promise<string | null>>();
 let currentAudio: HTMLAudioElement | null = null;
 
 /** 발음 생성 방식이 바뀌면 올린다 — 브라우저/CDN에 캐시된 옛 mp3를 무효화 */
-const TTS_VERSION = 3;
+const TTS_VERSION = 4; // v4: 음성 Claire → Yooni 교체
 
 function loadMp3(text: string): Promise<string | null> {
   let pending = mp3Cache.get(text);

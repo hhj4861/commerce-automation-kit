@@ -8,8 +8,12 @@
  *   3자 이하는 turbo v2.5 + language_code:ko 로 언어를 강제.
  */
 
-/** ElevenLabs 보이스 라이브러리 "Claire - Calm Female" — 한국어 원어민 */
-export const DEFAULT_VOICE_ID = 'ZRJMGKt2Okf3o9C38eSq';
+/**
+ * ElevenLabs 보이스 라이브러리 "Yooni - Natural & Clear" — 한국어 원어민, 밝고 크리스프.
+ * 사용자가 Vrew VO 톤과 가장 유사한 음성으로 청음 선정(2026-07-28).
+ * 이전: Claire(ZRJMGKt2Okf3o9C38eSq) — 뱅크에 남아 있어 롤백 가능.
+ */
+export const DEFAULT_VOICE_ID = 'n2fbxG88jqAoaVPUy3IG';
 /** 긴 문장 기본 — 프로소디 최상 */
 export const DEFAULT_MODEL_ID = 'eleven_multilingual_v2';
 /** 짧은 문구 전용 — language_code 로 한국어 강제 가능 */
