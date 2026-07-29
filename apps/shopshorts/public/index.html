@@ -507,7 +507,7 @@ const STATUS = {
   rejected:{label:'수정 필요', action:'초안 복귀', cls:'quiet'}
 };
 const HOOK = {'problem-solution':'문제 해결형','before-after':'비포애프터',demo:'제품 데모',curiosity:'호기심 유도형','info-tip':'정보 팁형'};
-let state = {jobs:[], hot:[], blogKeywords:[], filter:'all', sort:'priority', search:'', selected:null, detailKey:null, isCloud:false, workerAt:null};
+let state = {jobs:[], hot:[], requests:[], blogKeywords:[], filter:'all', sort:'priority', search:'', selected:null, detailKey:null, isCloud:false, workerAt:null};
 
 function sampleJobs() {
   return [
@@ -567,7 +567,13 @@ function renderSummary() {
 function renderTopics() {
   const defaults = [{topic:'PDRN 앰플',opportunity:92},{topic:'저당 간식',opportunity:87},{topic:'여름 침구',opportunity:81}];
   const items = state.hot.length ? state.hot.slice(0,3) : defaults;
-  document.getElementById('topics').innerHTML = items.map((it,i) => `
+  const pending = state.requests.filter(r => r.status === 'pending');
+  document.getElementById('topics').innerHTML = pending.map(r => `
+    <article class="topic" style="background:var(--yellow-soft);border-color:#edd9a7">
+      <div class="topic-rank" style="background:#fff7e7;color:var(--yellow)">···</div>
+      <div class="topic-info"><div class="topic-name">${r.topic}</div><div class="topic-score">초안 작성 대기 중</div></div>
+      <span class="status-pill" style="margin-left:auto">요청됨</span>
+    </article>`).join('') + items.map((it,i) => `
     <article class="topic" data-topic-card="${it.topic}">
       <div class="topic-rank">${i+1}</div>
       <div class="topic-info"><div class="topic-name">${it.topic}</div><div class="topic-score">기회 점수 ${it.opportunity ?? '-'}</div></div>
@@ -833,6 +839,7 @@ async function loadHot() {
   try {
     const data = await api('/api/hot-keywords');
     state.hot = data.items || [];
+    state.requests = data.requests || [];
     renderTopics();
     try {
       const blog = await api('/api/keyword-feeds/blog');
@@ -889,7 +896,13 @@ function renderPage(name) {
   if (name === 'trends') {
     const items = state.hot.length ? state.hot : [{topic:'추천 소재를 불러오는 중',opportunity:'-'}];
     const blogs = state.blogKeywords;
-    body = `<div class="section-head"><h2>쇼츠·트렌드 키워드</h2><span class="section-note">opportunity 기준</span></div>
+    const pending = state.requests.filter(r => r.status === 'pending');
+    body = `${pending.length ? `<div class="section-head"><h2>요청한 초안</h2><span class="section-note">${pending.length}개 작성 대기 중</span></div>
+    <div class="page-grid" style="margin-bottom:32px">${pending.map(r => `<article class="page-card" style="background:var(--yellow-soft);border-color:#edd9a7">
+      <span class="status-pill">요청됨</span><h3 style="margin-top:13px">${r.topic}</h3>
+      <p>초안 작성 대기 중 · 준비되면 콘텐츠 큐의 기획 대기 단계에 표시됩니다.</p>
+    </article>`).join('')}</div>` : ''}
+    <div class="section-head"><h2>쇼츠·트렌드 키워드</h2><span class="section-note">opportunity 기준</span></div>
     <div class="page-grid">${items.map((it,i) => `<article class="page-card">
       <div class="topic-rank">${i+1}</div><h3 style="margin-top:13px">${it.topic}</h3>
       <p>기회 점수 ${it.opportunity ?? '-'} · 검색 수요와 경쟁도를 종합한 추천입니다.</p>
