@@ -7,9 +7,9 @@ import Link from "next/link";
  * 결제·연락은 반드시 Preply 안에서만 — 외부 결제 유도 금지(퍼널 가이드 §10).
  */
 
-// TODO: Preply 튜터 프로필 공개 URL 확보 시 채우기 (비어 있으면 버튼 숨김).
-// 주의: 아래 추천 링크와 다르다 — 프로필 링크가 있어야 "이 튜터에게 예약" 직행이 된다.
-const PREPLY_URL = "";
+// 튜터 프로필 직행 (영어권 타깃이라 /en/ 로케일 — 공유 단축링크 preply.in/HYUNJONG…는
+// /ko/ 페이지로 고정 리다이렉트되어 쓰지 않는다). 프로필 ID 8265428.
+const PREPLY_URL = "https://preply.com/en/tutor/8265428";
 
 // 친구 추천 링크 — 학생이 첫 수업 30% 할인을 받는다 (Preply 일반 페이지로 이동)
 const PREPLY_REFERRAL_URL =
