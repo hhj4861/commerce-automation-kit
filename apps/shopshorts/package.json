@@ -8,6 +8,7 @@
     "node": ">=20"
   },
   "scripts": {
-    "start": "node server.mjs"
+    "start": "node server.mjs",
+    "worker": "node worker.mjs"
   }
 }
