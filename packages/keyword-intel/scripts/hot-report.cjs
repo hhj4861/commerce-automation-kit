@@ -5,6 +5,7 @@
  * 전일)을 명시해 실제 날짜보다 앞서 말하지 않는다.
  */
 const path = require('node:path');
+const fs = require('node:fs');
 const Database = require('better-sqlite3');
 
 const dbPath = path.resolve(process.cwd(), process.env.DB_PATH || './data/poc-intel.db');
@@ -60,9 +61,12 @@ ranked.sort((a, b) =>
 );
 
 const top = ranked.slice(0, 10);
+// 후속 "오늘의 블로그 추천" 단계가 급상승 후보 40개에 절대 검색량·경쟁도를 결합한다.
+// 원본 DataLab 응답이 아니라 POC 자체 산출 지표만 전달한다.
+fs.writeFileSync('hot-candidates.json', JSON.stringify(ranked.slice(0, 40)));
 const latestPeriod = top.reduce((max, r) => r.period > max ? r.period : max, '');
 const lines = [
-  `🔥 오늘 급상승 Top ${top.length} (DataLab 최신 제공일 ${latestPeriod})`,
+  `🔥 오늘 트랜드 급상승 Top ${top.length} (DataLab 최신 제공일 ${latestPeriod})`,
   '기준: 최신일 vs 전일·이전 7일 평균 · 상대지수 기반(절대 검색량 아님)',
   '',
 ];
