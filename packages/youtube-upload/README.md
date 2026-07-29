@@ -36,13 +36,28 @@ npm run cli -w @cak/youtube-upload -- upload \
 - `--chapters`/`--chapters-file`: longform-mix 의 유튜브 챕터 텍스트("0:00 …") → 설명에 삽입돼 챕터 인식.
 - 커스텀 썸네일은 채널이 **썸네일 권한**(전화 인증) 필요.
 
+## 댓글 (쇼츠 링크 노출용, 2026-07-28 추가)
+
+쇼츠 UI는 설명란을 접어놓기 때문에 파트너스 링크는 **댓글**로 노출하는 게 표준이다.
+
+```bash
+npm run cli -w @cak/youtube-upload -- comment --video-id VIDEO_ID \
+  --text "제품 보러가기: https://link.coupang.com/a/... \n이 포스팅은 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다."
+```
+
+- **고지 게이트**: 제휴 링크(link.coupang.com·coupa.ng) 포함 댓글은 대가성 고지("파트너스"+"수수료")
+  없으면 거부(`core/comment.ts` — shopping-shorts disclosure 와 동일 의미, 원자간 import 금지라 최소 재구현).
+- **youtube.force-ssl 스코프 필요** — 2026-07-28 이전 발급 토큰은 `auth` 재인증 1회 필요.
+  ⚠️ 채널 선택 화면은 **브랜드 계정명** 표시(BetterrShop=「모두의 상품」, 개인 「홍현종」=베스트셀러).
+- **댓글 고정(pin)은 Data API 미지원** — 스튜디오/앱에서 수동으로 고정할 것.
+
 ## 구조 (kit 규약)
 
 ```
-src/core/      description.ts(설명+챕터) · video-resource.ts(insert 바디)  — 순수
-src/adapters/  youtube.ts(googleapis OAuth·insert·thumbnail) · schemas.ts(zod)
-src/obs/       logger.ts     src/cli/ index.ts(auth|channels|upload)
-test/          core (설명·바디)
+src/core/      description.ts(설명+챕터) · video-resource.ts(insert 바디) · comment.ts(댓글 고지 게이트)  — 순수
+src/adapters/  youtube.ts(googleapis OAuth·insert·thumbnail·commentThreads) · schemas.ts(zod)
+src/obs/       logger.ts     src/cli/ index.ts(auth|channels|upload|update-meta|set-privacy|comment)
+test/          core (설명·바디·댓글 검증)
 ```
 계약: `@cak/contracts` 의 `YoutubeUploadJob`/`YoutubeUploadResult`.
 

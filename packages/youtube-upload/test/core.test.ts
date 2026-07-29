@@ -5,6 +5,7 @@ import { describe, it, expect } from 'vitest';
 import type { YoutubeUploadJob } from '@cak/contracts';
 import { buildDescription, formatHashtags } from '../src/core/description.js';
 import { buildVideoRequestBody } from '../src/core/video-resource.js';
+import { validateCommentText } from '../src/core/comment.js';
 
 describe('formatHashtags', () => {
   it('선행 #·공백 제거하고 #a #b 로', () => {
@@ -63,5 +64,34 @@ describe('buildVideoRequestBody', () => {
     expect(b.snippet.categoryId).toBeUndefined();
     expect(b.status.privacyStatus).toBe('public');
     expect(b.status.selfDeclaredMadeForKids).toBe(true);
+  });
+});
+
+describe('validateCommentText — 제휴 링크 댓글의 대가성 고지 강제', () => {
+  const LINK = '제품 보러가기: https://link.coupang.com/a/abc123';
+  const DISCLOSURE = '이 포스팅은 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다.';
+
+  it('링크+고지 → 통과', () => {
+    expect(validateCommentText(`${LINK}\n\n${DISCLOSURE}`)).toEqual([]);
+  });
+  it('링크만(고지 없음) → 거부', () => {
+    const p = validateCommentText(LINK);
+    expect(p).toHaveLength(1);
+    expect(p[0]).toContain('고지');
+  });
+  it('단축 도메인 coupa.ng 도 제휴 링크로 판정', () => {
+    expect(validateCommentText('https://coupa.ng/xyz')).toHaveLength(1);
+  });
+  it('공백 변형으로 고지 우회 불가(정규화 판정) — "파트 너스"+"수수료" 인정', () => {
+    expect(validateCommentText(`${LINK} 파트 너스 활동으로 수 수료를 받을 수 있음`)).toEqual([]);
+  });
+  it('링크 없는 일반 댓글은 고지 불요', () => {
+    expect(validateCommentText('영상 잘 봤습니다!')).toEqual([]);
+  });
+  it('빈 텍스트 거부', () => {
+    expect(validateCommentText('  ')).toHaveLength(1);
+  });
+  it('10,000자 초과 거부', () => {
+    expect(validateCommentText('a'.repeat(10_001))).toHaveLength(1);
   });
 });

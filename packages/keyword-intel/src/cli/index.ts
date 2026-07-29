@@ -15,7 +15,7 @@
  *
  * 출력 규약: stdout = 데이터(JSON/표), stderr = 로그·경고·알림.
  */
-import { readFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { collectSignals, isWholesaleUnreachable } from './collect.js';
@@ -120,6 +120,16 @@ async function main(): Promise<void> {
       const topIdx = rest.indexOf('--top');
       const topRaw = topIdx >= 0 ? Number(rest[topIdx + 1]) : 20;
       const top = Number.isInteger(topRaw) && topRaw > 0 ? topRaw : 20;
+      const feedIdx = rest.indexOf('--feed-file');
+      const feedFile = feedIdx >= 0 ? rest[feedIdx + 1] : null;
+      const writeFeed = (channel: 'trend' | 'blog', items: unknown[]): void => {
+        if (!feedFile) return;
+        writeFileSync(
+          resolve(feedFile),
+          JSON.stringify({ channel, generatedAt: new Date().toISOString(), items }, null, 2) + '\n',
+        );
+        console.error(`D1 feed written: ${feedFile} (${items.length} items)`);
+      };
 
       // --blog : 블로그용 랭킹(검색광고 절대 검색량×승산). 트렌드용 opportunity 와 별개 지표.
       //   검색광고(searchad) API 는 openapi 와 auth·약관·한도가 달라 코어 예산원장에 끼우지 않고,
@@ -140,6 +150,7 @@ async function main(): Promise<void> {
         // 후보 풀: 저장된 신호 상위(트렌드 순). 여기서 검색광고 절대량으로 재랭킹한다.
         const candidates = topOpportunities(db, Math.max(top * 2, 40));
         if (candidates.length === 0) {
+          writeFeed('blog', []);
           console.log('저장된 신호가 없습니다. 먼저 collect 를 실행하세요.');
           break;
         }
@@ -204,11 +215,23 @@ async function main(): Promise<void> {
           }
         }
         results.sort((a, b) => b.blogScore - a.blogScore || b.monthlyTotal - a.monthlyTotal);
+        const blogTop = results.slice(0, top);
+        writeFeed(
+          'blog',
+          blogTop.map((r) => ({
+            topic: r.keyword,
+            score: r.blogScore,
+            monthlyTotal: r.monthlyTotal,
+            competition: r.compIdx,
+            shoppingDemand: r.shopping,
+            note: r.note,
+          })),
+        );
         console.log(
           `🏆 블로그용 상위 ${Math.min(top, results.length)}개 (실제 검색량×승산 — 트렌드용 opportunity와 별개, 참고 지표):`,
         );
         console.table(
-          results.slice(0, top).map((r) => ({
+          blogTop.map((r) => ({
             키워드: r.keyword,
             blogScore: r.blogScore,
             '월검색량(pc+mo)': r.monthlyTotal,
@@ -254,9 +277,22 @@ async function main(): Promise<void> {
 
       const rows = topOpportunities(db, top);
       if (rows.length === 0) {
+        writeFeed('trend', []);
         console.log('저장된 신호가 없습니다. 먼저 collect 를 실행하세요.');
         break;
       }
+      writeFeed(
+        'trend',
+        rows.map((r) => ({
+          topic: r.keyword,
+          score: r.opportunity,
+          opportunity: r.opportunity,
+          confidence: r.confidence,
+          totalProducts: r.totalProducts,
+          searchTrend: r.trendLatest,
+          shoppingDemand: r.shoppingTrendLatest,
+        })),
+      );
       // ⚠️ 참고 지표: 이 순위로 제조/발주/광고를 자동 실행하지 않는다(LEGAL-BOUNDARY 경계 5).
       console.log(`opportunity 상위 ${rows.length}개 (참고 지표 — 사람 판단의 입력):`);
       console.table(

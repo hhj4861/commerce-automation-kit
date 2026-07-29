@@ -1,0 +1,431 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>쇼핑쇼츠 파이프라인 — Legacy</title>
+<style>
+  :root {
+    --bg: #0e1113; --panel: #14181b; --card: #1a1f23; --line: #262d32; --line-soft: #1f2529;
+    --ink: #e9ecee; --dim: #8b949c; --faint: #5c656d;
+    --act: #e8b45a;          /* 사람 차례 */
+    --act-ink: #1a1204;
+    --ok: #57c99b;           /* 완료·자동 */
+    --bad: #e06c6c;
+    --radius: 10px;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  html { color-scheme: dark; }
+  body {
+    background: var(--bg); color: var(--ink);
+    font: 14px/1.55 -apple-system, "Apple SD Gothic Neo", system-ui, sans-serif;
+    padding: 26px clamp(16px, 4vw, 44px) 60px;
+  }
+  button { font: inherit; cursor: pointer; border: 0; background: none; color: inherit; }
+  button:focus-visible, a:focus-visible { outline: 2px solid var(--act); outline-offset: 2px; }
+
+  /* ---- 헤더 ---- */
+  header { display: flex; align-items: baseline; gap: 14px; margin-bottom: 22px; }
+  h1 { font-size: 17px; font-weight: 700; letter-spacing: -.01em; }
+  header .note { color: var(--faint); font-size: 12px; }
+
+  /* ---- 파이프라인 레일 (시그니처) ---- */
+  .rail { display: flex; align-items: flex-start; margin: 0 0 26px; overflow-x: auto; padding: 6px 2px 2px; }
+  .stage { display: flex; align-items: flex-start; }
+  .node { text-align: center; min-width: 76px; cursor: pointer; border-radius: 8px; padding: 4px 6px 6px; }
+  .node:hover { background: var(--line-soft); }
+  .node .dot {
+    width: 30px; height: 30px; border-radius: 50%; margin: 0 auto 6px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums;
+    background: var(--card); border: 1.5px solid var(--line); color: var(--dim);
+  }
+  .node.active .dot { border-color: var(--dim); color: var(--ink); }
+  .node.needs .dot { background: var(--act); border-color: var(--act); color: var(--act-ink); }
+  .node.done .dot { border-color: var(--ok); color: var(--ok); }
+  .node .lbl { font-size: 11px; color: var(--dim); letter-spacing: .02em; }
+  .node.needs .lbl { color: var(--act); font-weight: 600; }
+  .node.filtered .lbl { text-decoration: underline; text-underline-offset: 3px; }
+  .edge { height: 1.5px; background: var(--line); width: clamp(14px, 3vw, 38px); margin-top: 18px; }
+
+  /* ---- 핫 키워드 ---- */
+  .hot { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 26px; }
+  .hot .cap { font-size: 11px; color: var(--faint); letter-spacing: .06em; margin-right: 2px; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: var(--panel); border: 1px solid var(--line); border-radius: 999px;
+    padding: 5px 6px 5px 13px; font-size: 12.5px;
+  }
+  .chip .op { color: var(--faint); font-size: 11px; font-variant-numeric: tabular-nums; }
+  .chip button {
+    background: var(--card); border: 1px solid var(--line); border-radius: 999px;
+    padding: 2px 10px; font-size: 11.5px; color: var(--dim);
+  }
+  .chip button:hover { color: var(--act); border-color: var(--act); }
+  .chip.pending { color: var(--dim); padding-right: 13px; }
+
+  /* ---- 잡 리스트 ---- */
+  .jobs { display: flex; flex-direction: column; gap: 8px; max-width: 980px; }
+  .row {
+    display: grid; grid-template-columns: 104px 1fr auto; align-items: center; gap: 14px;
+    background: var(--panel); border: 1px solid var(--line-soft); border-radius: var(--radius);
+    padding: 13px 16px; cursor: pointer; transition: border-color .12s;
+  }
+  .row:hover { border-color: var(--line); }
+  .row .stagechip {
+    font-size: 11px; padding: 3px 0; text-align: center; border-radius: 6px;
+    border: 1px solid var(--line); color: var(--dim); white-space: nowrap;
+  }
+  .row.needs .stagechip { border-color: color-mix(in srgb, var(--act) 55%, transparent); color: var(--act); }
+  .row.published .stagechip { border-color: color-mix(in srgb, var(--ok) 55%, transparent); color: var(--ok); }
+  .row .name { font-weight: 600; font-size: 14.5px; }
+  .row .meta { color: var(--faint); font-size: 12px; margin-top: 1px; }
+  .row .meta .warn { color: var(--act); }
+  .row .meta .err { color: var(--bad); }
+  .primary {
+    background: var(--act); color: var(--act-ink); font-weight: 700; font-size: 12.5px;
+    border-radius: 8px; padding: 8px 14px; white-space: nowrap;
+  }
+  .primary:hover { filter: brightness(1.08); }
+  .auto-note { color: var(--faint); font-size: 12px; white-space: nowrap; }
+  .empty { color: var(--faint); padding: 30px 0; text-align: center; }
+
+  /* ---- 드로어 ---- */
+  .scrim { position: fixed; inset: 0; background: rgba(0,0,0,.45); opacity: 0; pointer-events: none; transition: opacity .15s; }
+  .drawer {
+    position: fixed; top: 0; right: 0; bottom: 0; width: min(460px, 94vw);
+    background: var(--panel); border-left: 1px solid var(--line);
+    transform: translateX(102%); transition: transform .18s ease-out;
+    overflow-y: auto; padding: 22px 22px 40px;
+  }
+  body.open .scrim { opacity: 1; pointer-events: auto; }
+  body.open .drawer { transform: none; }
+  @media (prefers-reduced-motion: reduce) { .drawer, .scrim { transition: none; } }
+  .drawer h2 { font-size: 16px; margin-bottom: 2px; }
+  .drawer .sub { color: var(--faint); font-size: 12px; margin-bottom: 18px; }
+  .drawer section { border-top: 1px solid var(--line-soft); padding: 14px 0; }
+  .drawer section > h3 { font-size: 11px; color: var(--faint); letter-spacing: .08em; margin-bottom: 10px; font-weight: 600; }
+  .beats { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  .beats td { padding: 5px 8px 5px 0; vertical-align: top; }
+  .beats td:first-child { color: var(--faint); white-space: nowrap; font-size: 11px; padding-top: 7px; }
+  .beats .cap-t { color: var(--dim); font-size: 11.5px; }
+  video { width: 100%; border-radius: 8px; background: #000; margin-top: 4px; }
+  .btnrow { display: flex; flex-wrap: wrap; gap: 7px; }
+  .btn {
+    border: 1px solid var(--line); border-radius: 8px; padding: 7px 12px;
+    font-size: 12.5px; color: var(--dim); background: var(--card);
+  }
+  .btn:hover { color: var(--ink); border-color: var(--dim); }
+  .btn.warm { color: var(--act); border-color: color-mix(in srgb, var(--act) 45%, transparent); }
+  .btn.danger:hover { color: var(--bad); border-color: var(--bad); }
+  .linkline { font-size: 12px; color: var(--dim); word-break: break-all; margin-bottom: 9px; }
+  .linkline.placeholder { color: var(--act); }
+  .findings { font-size: 12px; color: var(--dim); padding-left: 16px; }
+  .findings .b { color: var(--bad); }
+  .kv { font-size: 12.5px; color: var(--dim); }
+  .kv b { color: var(--ink); font-weight: 600; }
+  .close { position: absolute; top: 14px; right: 16px; color: var(--faint); font-size: 20px; padding: 4px 8px; }
+  .close:hover { color: var(--ink); }
+  .fin-note { font-size: 12px; margin-top: 8px; }
+  .fin-note.err { color: var(--bad); }
+  .fin-note.run { color: var(--act); }
+
+  /* ---- 토스트 ---- */
+  #toast {
+    position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%) translateY(8px);
+    background: var(--card); border: 1px solid var(--line); border-radius: 10px;
+    padding: 10px 16px; font-size: 13px; max-width: min(560px, 90vw);
+    opacity: 0; pointer-events: none; transition: opacity .15s, transform .15s; white-space: pre-wrap;
+  }
+  #toast.show { opacity: 1; transform: translateX(-50%); }
+</style>
+</head>
+<body>
+<header>
+  <h1>쇼핑쇼츠 파이프라인</h1>
+  <span class="note">주황 = 당신 차례 · 나머지는 자동</span>
+</header>
+
+<div class="rail" id="rail"></div>
+<div class="hot" id="hot"></div>
+<div class="jobs" id="jobs"></div>
+
+<div class="scrim" onclick="closeDrawer()"></div>
+<aside class="drawer" id="drawer"></aside>
+<div id="toast"></div>
+
+<script>
+const STAGES = [
+  { key: 'draft',           label: '초안',     action: '기획 승인' },
+  { key: 'script-approved', label: '승인됨',   auto: '클립 생성 대기 (자동)' },
+  { key: 'generated',       label: '클립 완료', action: '자막+TTS' },
+  { key: 'assembled',       label: '조립됨',   action: '검수 요청' },
+  { key: 'review',          label: '발행 검수', action: '발행 확인' },
+  { key: 'published',       label: '발행됨' },
+];
+const HOOK_KO = { 'problem-solution':'문제해결', 'before-after':'비포애프터', demo:'데모', curiosity:'호기심', 'info-tip':'정보팁' };
+let state = { jobs: [], hot: [], requests: [], filter: null, openId: null };
+
+const $ = (id) => document.getElementById(id);
+function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; }
+function toast(t) { const m = $('toast'); m.textContent = t; m.classList.add('show'); clearTimeout(m._t); m._t = setTimeout(() => m.classList.remove('show'), 5000); }
+async function api(path, opts) {
+  const r = await fetch(path, opts);
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(d.error || r.status);
+  return d;
+}
+const isPlaceholder = (u) => /PLACEHOLDER|\/a\/sample/.test(u || '');
+
+// ---- 레일 ----
+function renderRail() {
+  const rail = $('rail'); rail.innerHTML = '';
+  STAGES.forEach((s, i) => {
+    const n = state.jobs.filter(j => j.status === s.key).length;
+    const node = el('div', 'node');
+    if (n > 0) node.classList.add(s.key === 'published' ? 'done' : 'active');
+    if (n > 0 && s.action) node.classList.add('needs');
+    if (state.filter === s.key) node.classList.add('filtered');
+    const dot = el('div', 'dot', String(n));
+    node.appendChild(dot);
+    node.appendChild(el('div', 'lbl', s.label));
+    node.onclick = () => { state.filter = state.filter === s.key ? null : s.key; render(); };
+    const wrap = el('div', 'stage');
+    wrap.appendChild(node);
+    if (i < STAGES.length - 1) wrap.appendChild(el('div', 'edge'));
+    rail.appendChild(wrap);
+  });
+  const rejected = state.jobs.filter(j => j.status === 'rejected').length;
+  if (rejected) {
+    const node = el('div', 'node');
+    node.appendChild(el('div', 'dot', String(rejected)));
+    node.appendChild(el('div', 'lbl', '반려'));
+    node.onclick = () => { state.filter = state.filter === 'rejected' ? null : 'rejected'; render(); };
+    const wrap = el('div', 'stage');
+    wrap.appendChild(el('div', 'edge'));
+    wrap.appendChild(node);
+    $('rail').appendChild(wrap);
+  }
+}
+
+// ---- 핫 키워드 ----
+function renderHot() {
+  const box = $('hot'); box.innerHTML = '';
+  box.appendChild(el('span', 'cap', 'HOT'));
+  state.requests.filter(r => r.status === 'pending').forEach(r => {
+    box.appendChild(el('span', 'chip pending', `${r.topic} · 초안 작성 중…`));
+  });
+  state.hot.forEach(it => {
+    const c = el('span', 'chip');
+    c.appendChild(el('span', '', it.topic));
+    c.appendChild(el('span', 'op', String(it.opportunity)));
+    const b = el('button', '', '+ 초안');
+    b.onclick = async (e) => {
+      e.stopPropagation();
+      try {
+        await api('/api/draft-requests', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ topic: it.topic, opportunity: it.opportunity, contentType: 'shorts' }) });
+        toast(`"${it.topic}" 초안 요청됨 — 대본이 준비되면 초안 단계에 나타납니다`); load();
+      } catch (err) { toast('초안 요청 실패: ' + err.message); }
+    };
+    c.appendChild(b);
+    box.appendChild(c);
+  });
+  if (box.children.length === 1) box.appendChild(el('span', 'chip pending', '신규 후보 없음'));
+}
+
+// ---- 잡 리스트 ----
+function stageOf(j) { return STAGES.find(s => s.key === j.status); }
+
+function primaryAction(j) {
+  switch (j.status) {
+    case 'draft': return { label: '기획 승인', run: () => transition(j, 'script-approved') };
+    case 'generated':
+      if (j.finalize?.state === 'running') return null;
+      return { label: '자막+TTS 붙이기', run: () => finalize(j) };
+    case 'assembled': return { label: '검수 요청', run: () => transition(j, 'review') };
+    case 'review': return { label: '발행 확인', run: () => confirmPublish(j) };
+    case 'rejected': return { label: '초안으로 복귀', run: () => transition(j, 'draft') };
+    default: return null;
+  }
+}
+
+function renderJobs() {
+  const box = $('jobs'); box.innerHTML = '';
+  const order = ['review', 'generated', 'assembled', 'draft', 'script-approved', 'rejected', 'published'];
+  let jobs = [...state.jobs].sort((a, b) => order.indexOf(a.status) - order.indexOf(b.status));
+  if (state.filter) jobs = jobs.filter(j => j.status === state.filter);
+  if (!jobs.length) { box.appendChild(el('div', 'empty', state.filter ? '이 단계에 항목 없음 — 노드를 다시 눌러 전체 보기' : '큐가 비어 있습니다. 위 HOT 키워드에서 시작하세요.')); return; }
+
+  jobs.forEach(j => {
+    const st = stageOf(j) || { label: j.status };
+    const act = primaryAction(j);
+    const row = el('div', 'row' + (act ? ' needs' : '') + (j.status === 'published' ? ' published' : ''));
+    row.appendChild(el('div', 'stagechip', st.label));
+
+    const mid = el('div');
+    mid.appendChild(el('div', 'name', j.brief.productName));
+    const bits = [`${HOOK_KO[j.script.hookType] ?? j.script.hookType} · ${j.script.beats.length}비트`];
+    if (isPlaceholder(j.brief.affiliateUrl)) bits.push('링크 필요');
+    if (j.lintReport && !j.lintReport.ok) bits.push('lint 위반');
+    if (j.finalize?.state === 'running') bits.push('조립 중…');
+    if (j.finalize?.state === 'error') bits.push('조립 실패');
+    const meta = el('div', 'meta');
+    bits.forEach((t, i) => {
+      const s = el('span', t === '링크 필요' || t === '조립 중…' ? 'warn' : (t === 'lint 위반' || t === '조립 실패' ? 'err' : ''), (i ? ' · ' : '') + t);
+      meta.appendChild(s);
+    });
+    mid.appendChild(meta);
+    row.appendChild(mid);
+
+    if (act) {
+      const b = el('button', 'primary', act.label);
+      b.onclick = (e) => { e.stopPropagation(); act.run(); };
+      row.appendChild(b);
+    } else {
+      row.appendChild(el('span', 'auto-note', stageOf(j)?.auto ?? (j.finalize?.state === 'running' ? 'Yooni 조립 중…' : '')));
+    }
+    row.onclick = () => openDrawer(j.brief.id);
+    box.appendChild(row);
+  });
+}
+
+// ---- 액션 ----
+async function transition(j, to, extra = {}) {
+  let body = { to, ...extra };
+  if (to === 'rejected') {
+    const note = prompt('반려 사유'); if (note === null) return; body.note = note;
+  }
+  try { await api(`/api/jobs/${j.brief.id}/transition`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }); load(); }
+  catch (e) { toast('실패: ' + e.message); }
+}
+function confirmPublish(j) {
+  if (isPlaceholder(j.brief.affiliateUrl)) { toast('발행 전 실제 제휴 링크가 필요합니다 — 카드를 열어 링크를 저장하세요'); openDrawer(j.brief.id); return; }
+  if (!confirm('발행 검수 완료로 표시할까요? (업로드는 shorts-publish CLI로 실행)')) return;
+  const ref = prompt('업로드 requestId/URL (선택)', '') || undefined;
+  transition(j, 'published', ref ? { publishRef: ref } : {});
+}
+async function finalize(j) {
+  if (!confirm('Yooni 보이스로 내레이션을 만들고 자막·고지를 입힙니다 (ElevenLabs 비용 발생). 진행할까요?')) return;
+  try { await api(`/api/jobs/${j.brief.id}/finalize`, { method: 'POST' }); toast('조립 시작 — 1~2분 뒤 자동 갱신됩니다'); load(); }
+  catch (e) { toast('조립 시작 실패: ' + e.message); }
+}
+
+// ---- 드로어 ----
+function closeDrawer() { document.body.classList.remove('open'); state.openId = null; state.drawerStamp = null; }
+function openDrawer(id) {
+  state.openId = id; state.drawerStamp = null; renderDrawer(); document.body.classList.add('open');
+}
+function renderDrawer() {
+  const j = state.jobs.find(x => x.brief.id === state.openId);
+  // 잡 데이터가 안 바뀌었으면 재렌더 금지 — <video> 엘리먼트 재생성이 재생을 처음으로 되돌리는 버그 방지
+  if (j && state.drawerStamp === j.updatedAt) return;
+  if (j) state.drawerStamp = j.updatedAt;
+  const d = $('drawer'); d.innerHTML = '';
+  if (!j) return;
+  const close = el('button', 'close', '×'); close.onclick = closeDrawer; d.appendChild(close);
+  d.appendChild(el('h2', '', j.brief.productName));
+  d.appendChild(el('div', 'sub', `${j.brief.id} · ${stageOf(j)?.label ?? j.status} · ${HOOK_KO[j.script.hookType] ?? ''}`));
+
+  // 영상
+  const showFinal = j.outputVideo && ['assembled', 'review', 'published'].includes(j.status);
+  const showPrev = j.previewVideo && j.status === 'generated';
+  if (showFinal || showPrev) {
+    const s = el('section');
+    s.appendChild(el('h3', '', showFinal ? '최종 영상 (자막+내레이션)' : '클립 미리보기 (무자막)'));
+    const v = document.createElement('video');
+    v.controls = true; v.preload = 'metadata';
+    v.src = `/api/jobs/${j.brief.id}/video?which=${showFinal ? 'final' : 'preview'}`;
+    s.appendChild(v);
+    d.appendChild(s);
+  }
+  if (j.finalize?.state === 'running') d.appendChild(el('div', 'fin-note run', '⏳ Yooni 내레이션 + 자막 조립 중…'));
+  if (j.finalize?.state === 'error') d.appendChild(el('div', 'fin-note err', '조립 실패: ' + j.finalize.error));
+
+  // 대본
+  const sc = el('section');
+  sc.appendChild(el('h3', '', '대본 — ' + j.script.title));
+  const tb = el('table', 'beats');
+  j.script.beats.forEach(b => {
+    const tr = el('tr');
+    tr.appendChild(el('td', '', `${b.role} ${b.durationSec}s`));
+    const td = el('td');
+    td.appendChild(el('div', '', b.narration));
+    td.appendChild(el('div', 'cap-t', '자막: ' + b.caption));
+    tr.appendChild(td);
+    tb.appendChild(tr);
+  });
+  sc.appendChild(tb);
+  d.appendChild(sc);
+
+  // 링크
+  const sl = el('section');
+  sl.appendChild(el('h3', '', '제휴 링크'));
+  const cur = j.brief.affiliateUrl || '';
+  const line = el('div', 'linkline' + (isPlaceholder(cur) ? ' placeholder' : ''));
+  line.textContent = cur ? (isPlaceholder(cur) ? '자리표시자 — 발행 전 실제 링크로 교체: ' : '') + cur.replace('https://', '') : '링크 없음';
+  sl.appendChild(line);
+  const lr = el('div', 'btnrow');
+  const mk = (cls, label, fn) => { const b = el('button', 'btn ' + cls, label); b.onclick = fn; lr.appendChild(b); };
+  mk('warm', '링크 붙여넣기', async () => {
+    const u = prompt('발급한 링크 (쿠팡 link.coupang.com·coupa.ng / 네이버 naver.me 등)');
+    if (!u) return;
+    const platform = /coupang|coupa\.ng/.test(u) ? 'coupang' : 'naverConnect';
+    try { const r = await api(`/api/jobs/${j.brief.id}/set-link`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ platform, url: u.trim() }) }); toast('링크 저장됨' + (r.lint ? ` · lint ${r.lint.ok ? '통과' : '위반'}` : '')); load(true); }
+    catch (e) { toast('저장 실패: ' + e.message); }
+  });
+  mk('', '쿠팡 파트너스', () => { navigator.clipboard?.writeText(j.brief.productName).catch(()=>{}); window.open('https://partners.coupang.com/', '_blank'); toast('상품명 복사됨 — 링크 생성 후 붙여넣기'); });
+  mk('', '브랜드커넥트', () => { navigator.clipboard?.writeText(j.brief.productName).catch(()=>{}); window.open('https://brandconnect.naver.com/', '_blank'); toast('상품명 복사됨 — 쇼핑커넥트 링크 발급 후 붙여넣기'); });
+  mk('', '쿠팡 딥링크 변환', async () => {
+    const u = prompt('쿠팡 상품 URL (www.coupang.com/...) — 파트너스 API 키 필요');
+    if (!u) return;
+    try { const r = await api(`/api/jobs/${j.brief.id}/issue-link`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ productUrl: u.trim() }) }); toast('딥링크 발급: ' + r.affiliateUrl); load(true); }
+    catch (e) { toast(e.message); }
+  });
+  sl.appendChild(lr);
+  d.appendChild(sl);
+
+  // 검증
+  const sv = el('section');
+  sv.appendChild(el('h3', '', '검증'));
+  const rep = j.lintReport;
+  const kv = el('div', 'kv');
+  kv.innerHTML = rep ? `lint <b>${rep.ok ? '통과' : '위반'}</b> · 발견 ${rep.findings?.length ?? 0}건` : 'lint 미실행';
+  sv.appendChild(kv);
+  if (rep?.findings?.length) {
+    const ul = el('ul', 'findings');
+    rep.findings.forEach(f => ul.appendChild(el('li', f.severity === 'block' ? 'b' : '', `[${f.severity}] ${f.rule} — ${f.matched}`)));
+    sv.appendChild(ul);
+  }
+  const vr = el('div', 'btnrow'); vr.style.marginTop = '10px';
+  const mkv = (label, fn, cls = '') => { const b = el('button', 'btn ' + cls, label); b.onclick = fn; vr.appendChild(b); };
+  const PREV = { 'script-approved': 'draft', generated: 'script-approved', assembled: 'generated', review: 'assembled', published: 'review' };
+  if (PREV[j.status]) mkv('← 이전 단계로', () => {
+    if (confirm(`${stageOf(j)?.label} → ${STAGES.find(s => s.key === PREV[j.status])?.label} 로 되돌릴까요?`)) transition(j, PREV[j.status]);
+  });
+  mkv('lint 재실행', async () => { try { const r = await api(`/api/jobs/${j.brief.id}/lint`, { method: 'POST' }); toast('lint ' + (r.ok ? '통과' : '위반 ' + r.findings.length + '건')); load(true); } catch (e) { toast('실패: ' + e.message); } });
+  mkv('생성 견적', async () => { try { const r = await api(`/api/jobs/${j.brief.id}/estimate?model=kling3_0-pro`, { method: 'POST' }); toast(`클립 ${r.clipsTotal}cr + TTS ${r.ttsCredits}cr = ${r.grandTotal}cr`); } catch (e) { toast('실패: ' + e.message); } });
+  if (!['published'].includes(j.status)) mkv('반려', () => transition(j, 'rejected'), 'danger');
+  sv.appendChild(vr);
+  d.appendChild(sv);
+}
+
+// ---- 로드 ----
+async function load(keepDrawer = false) {
+  try {
+    const d = await api('/api/jobs');
+    state.jobs = d.jobs;
+    render();
+    if (keepDrawer && state.openId) renderDrawer();
+  } catch (e) { toast('로드 실패: ' + e.message); }
+}
+async function loadHot() {
+  try { const d = await api('/api/hot-keywords'); state.hot = d.items || []; state.requests = d.requests || []; renderHot(); }
+  catch { /* 키워드 로드는 조용히 재시도 */ }
+}
+function render() { renderRail(); renderJobs(); if (state.openId) renderDrawer(); }
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeDrawer(); });
+load(); loadHot();
+setInterval(() => { load(true); loadHot(); }, 12000);
+</script>
+</body>
+</html>

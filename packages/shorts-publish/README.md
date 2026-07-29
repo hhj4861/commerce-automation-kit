@@ -77,4 +77,10 @@ AI 출처(C2PA)를 숨기지 않는다 — 은폐가 아니라 밝히는 게 방
 
 - 밝은 영상용 워드마크 스크림(현재는 그림자만 — 야간 영상은 충분, 주간 밝은 배경은 개선 여지).
 - 힉스필드 `reframe`(피사체 추적 9:16)로 `crop` 구도 깨짐 회피 옵션.
-- 비동기 `poll` 은 실계정 미검증(TODO — 응답 스키마 확정 후 파싱 강화).
+
+## 실계정 실측 (2026-07-28)
+
+- YT+IG 동시 업로드·비동기 `poll` 응답 스키마 검증 완료(`results[].post_url`·`status`).
+- **인스타 캡션**: global `description` 은 인스타에서 무시되고 `instagram_title`(→`title` 폴백)이
+  캡션 전문이 된다 → description 있으면 `instagram_title=제목+설명` 전송(제휴 링크·고지 탈락 방지).
+- 파트너스 링크 포함 영상은 shopping-shorts 의 lint·고지 번인(`DISCLOSURE_OVERLAY_TEXT`)을 선행할 것.

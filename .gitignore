@@ -14,3 +14,6 @@ coverage/
 # IDE (개인 설정 — 커밋 제외)
 .idea/
 .vscode/
+
+# 쇼츠/영상 생성 산출물(대용량, 세션별)
+docs/out/

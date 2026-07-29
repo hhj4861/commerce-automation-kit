@@ -1,0 +1,17 @@
+# shopshorts — Cloudflare Pages(정적 UI) + Functions(API) + D1(큐) + R2(영상)
+# 실행 워커는 로컬 Mac(apps/shopshorts/worker.mjs) — 클라우드는 상태·UI·미디어만 담당.
+name = "shopshorts-dash"
+compatibility_date = "2026-07-01"
+pages_build_output_dir = "public"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "shopshorts"
+database_id = "19e3ee3c-87d5-483e-b420-50f2814c45b8"   # 프로비저닝 후 교체(wrangler d1 create shopshorts)
+
+[[r2_buckets]]
+binding = "MEDIA"
+bucket_name = "shopshorts-media"
+
+[vars]
+# 원격 접속 토큰은 시크릿으로: npx wrangler pages secret put SHOPSHORTS_TOKEN
