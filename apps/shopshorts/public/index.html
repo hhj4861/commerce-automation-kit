@@ -507,7 +507,7 @@ const STATUS = {
   rejected:{label:'수정 필요', action:'초안 복귀', cls:'quiet'}
 };
 const HOOK = {'problem-solution':'문제 해결형','before-after':'비포애프터',demo:'제품 데모',curiosity:'호기심 유도형','info-tip':'정보 팁형'};
-let state = {jobs:[], hot:[], filter:'all', sort:'priority', search:'', selected:null, detailKey:null, isCloud:false, workerAt:null};
+let state = {jobs:[], hot:[], blogKeywords:[], filter:'all', sort:'priority', search:'', selected:null, detailKey:null, isCloud:false, workerAt:null};
 
 function sampleJobs() {
   return [
@@ -834,6 +834,11 @@ async function loadHot() {
     const data = await api('/api/hot-keywords');
     state.hot = data.items || [];
     renderTopics();
+    try {
+      const blog = await api('/api/keyword-feeds/blog');
+      state.blogKeywords = blog.items || [];
+    } catch { state.blogKeywords = []; }
+    if (typeof currentRoute === 'function' && currentRoute() === 'trends') renderPage('trends');
   } catch { /* 다음 자동 갱신 때 재시도 */ }
 }
 function activateNav(name) {
@@ -883,11 +888,18 @@ function renderPage(name) {
   }
   if (name === 'trends') {
     const items = state.hot.length ? state.hot : [{topic:'추천 소재를 불러오는 중',opportunity:'-'}];
-    body = `<div class="page-grid">${items.map((it,i) => `<article class="page-card">
+    const blogs = state.blogKeywords;
+    body = `<div class="section-head"><h2>쇼츠·트렌드 키워드</h2><span class="section-note">opportunity 기준</span></div>
+    <div class="page-grid">${items.map((it,i) => `<article class="page-card">
       <div class="topic-rank">${i+1}</div><h3 style="margin-top:13px">${it.topic}</h3>
       <p>기회 점수 ${it.opportunity ?? '-'} · 검색 수요와 경쟁도를 종합한 추천입니다.</p>
       <button class="detail-cta" data-page-topic="${it.topic}" data-score="${it.opportunity ?? ''}">초안 요청</button>
-    </article>`).join('')}</div>`;
+    </article>`).join('')}</div>
+    <div class="section-head" style="margin-top:32px"><h2>블로그 키워드</h2><span class="section-note">절대 검색량·경쟁도 기준</span></div>
+    ${blogs.length ? `<div class="page-grid">${blogs.map((it,i) => `<article class="page-card">
+      <div class="topic-rank">${i+1}</div><h3 style="margin-top:13px">${it.topic}</h3>
+      <p>블로그 점수 ${it.score ?? '-'} · 월 검색량 ${(it.monthlyTotal ?? 0).toLocaleString()} · 경쟁도 ${it.competition ?? '-'}</p>
+    </article>`).join('')}</div>` : '<div class="empty-page">첫 GitHub Actions 동기화 후 블로그 키워드가 표시됩니다.</div>'}`;
   }
   if (name === 'performance') {
     const needs = state.jobs.filter(j => ['draft','generated','assembled','review','rejected'].includes(j.status)).length;

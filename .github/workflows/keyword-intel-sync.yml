@@ -1,6 +1,9 @@
-name: keyword-intel GitHub Actions POC
+name: keyword-intel sync
 
 on:
+  schedule:
+    # 매시 정각 혼잡을 피해 7분·37분에 실행(간격은 30분).
+    - cron: "7,37 * * * *"
   workflow_dispatch:
     inputs:
       send_telegram:
@@ -13,7 +16,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: keyword-intel-poc
+  group: keyword-intel-sync
   cancel-in-progress: false
 
 jobs:
@@ -33,6 +36,8 @@ jobs:
       NAVER_AD_SECRET_KEY: ${{ secrets.NAVER_AD_SECRET_KEY }}
       TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
       TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+      SHOPSHORTS_CLOUD_URL: ${{ secrets.SHOPSHORTS_CLOUD_URL }}
+      SHOPSHORTS_TOKEN: ${{ secrets.SHOPSHORTS_TOKEN }}
 
     steps:
       - name: Checkout
@@ -56,7 +61,8 @@ jobs:
         run: |
           missing=()
           for key in NAVER_CLIENT_ID NAVER_CLIENT_SECRET \
-            NAVER_AD_CUSTOMER_ID NAVER_AD_API_KEY NAVER_AD_SECRET_KEY; do
+            NAVER_AD_CUSTOMER_ID NAVER_AD_API_KEY NAVER_AD_SECRET_KEY \
+            SHOPSHORTS_CLOUD_URL SHOPSHORTS_TOKEN; do
             if [[ -z "${!key:-}" ]]; then
               missing+=("$key")
             fi
@@ -76,6 +82,9 @@ jobs:
       - name: Collect all 182 keywords
         run: npm run -s collect -- --file seeds/g2-seeds.txt
 
+      - name: Build trend D1 feed
+        run: npm run -s analyze -- --top 20 --feed-file trend-feed.json
+
       - name: Build trend Top 10 without sending
         if: ${{ !inputs.send_telegram }}
         run: npm run -s report -- --top 10 --dry-run
@@ -85,7 +94,20 @@ jobs:
         run: npm run -s report -- --top 10
 
       - name: Build blog Top 10
-        run: npm run -s analyze -- --blog --top 10 | tee blog-report.txt
+        run: npm run -s analyze -- --blog --top 10 --feed-file blog-feed.json | tee blog-report.txt
+
+      - name: Publish trend and blog feeds to D1
+        shell: bash
+        run: |
+          base="${SHOPSHORTS_CLOUD_URL%/}"
+          for channel in trend blog; do
+            curl --fail-with-body --retry 3 \
+              --request PUT \
+              --header "Authorization: Bearer ${SHOPSHORTS_TOKEN}" \
+              --header "Content-Type: application/json" \
+              --data-binary "@${channel}-feed.json" \
+              "${base}/api/keyword-feeds/${channel}"
+          done
 
       - name: Send blog Top 10 to Telegram
         if: ${{ inputs.send_telegram }}
@@ -100,11 +122,11 @@ jobs:
             --data @telegram-blog.json \
             "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage"
 
-      - name: Upload ephemeral POC database
+      - name: Upload ephemeral keyword database
         if: ${{ always() }}
         uses: actions/upload-artifact@v4
         with:
-          name: keyword-intel-poc-db-${{ github.run_id }}
+          name: keyword-intel-db-${{ github.run_id }}
           path: packages/keyword-intel/data/poc-intel.db
           if-no-files-found: warn
           retention-days: 7

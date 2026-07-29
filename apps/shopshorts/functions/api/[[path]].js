@@ -320,11 +320,56 @@ export async function onRequest(context) {
       return json({ ok: true });
     }
 
-    // ---------- 핫 키워드(워커가 push, UI 가 조회) ----------
+    // ---------- 채널별 키워드 피드(GitHub Actions 가 30분마다 push) ----------
+    const feedMatch = path.match(/^keyword-feeds\/(trend|blog)$/);
+    if (feedMatch && method === 'PUT') {
+      const channel = feedMatch[1];
+      const body = await readJson(request);
+      if (!Array.isArray(body?.items)) return json({ error: 'items 배열 필요' }, 400);
+      const items = body.items.slice(0, 100).map((it) => ({
+        topic: String(it?.topic ?? '').trim(),
+        score: Math.round(Number(it?.score ?? it?.opportunity ?? it?.blogScore) || 0),
+        payload: it,
+      })).filter((it) => it.topic.length > 0 && it.topic.length <= 100);
+      const now = new Date().toISOString();
+      const stmts = [env.DB.prepare('DELETE FROM keyword_feeds WHERE channel = ?').bind(channel)];
+      for (const it of items) {
+        stmts.push(
+          env.DB.prepare(
+            'INSERT INTO keyword_feeds(channel, topic, score, payload, updated_at) VALUES (?, ?, ?, ?, ?)',
+          ).bind(channel, it.topic, it.score, JSON.stringify(it.payload), now),
+        );
+      }
+      await env.DB.batch(stmts);
+      return json({ ok: true, channel, count: items.length, updatedAt: now });
+    }
+    if (feedMatch && method === 'GET') {
+      const channel = feedMatch[1];
+      const { results } = await env.DB.prepare(
+        'SELECT topic, score, payload, updated_at FROM keyword_feeds WHERE channel = ? ORDER BY score DESC LIMIT 100',
+      ).bind(channel).all();
+      return json({
+        channel,
+        items: results.map((row) => ({ ...JSON.parse(row.payload), topic: row.topic, score: row.score })),
+        updatedAt: results[0]?.updated_at ?? null,
+      });
+    }
+
+    // ---------- 핫 키워드(대시보드는 trend 채널 상위 후보를 조회) ----------
     if (path === 'hot-keywords' && method === 'GET') {
-      const { results: kws } = await env.DB.prepare(
-        'SELECT topic, opportunity FROM hot_keywords ORDER BY opportunity DESC LIMIT 20',
-      ).all();
+      let kws;
+      try {
+        const { results } = await env.DB.prepare(
+          "SELECT topic, score AS opportunity FROM keyword_feeds WHERE channel = 'trend' ORDER BY score DESC LIMIT 20",
+        ).all();
+        kws = results;
+      } catch {
+        // 마이그레이션 적용 전 배포에서도 기존 대시보드 조회를 유지한다.
+        const { results } = await env.DB.prepare(
+          'SELECT topic, opportunity FROM hot_keywords ORDER BY opportunity DESC LIMIT 20',
+        ).all();
+        kws = results;
+      }
       const { results: reqs } = await env.DB.prepare('SELECT * FROM draft_requests').all();
       const { results: jobRows } = await env.DB.prepare('SELECT data FROM jobs').all();
       const taken = new Set(

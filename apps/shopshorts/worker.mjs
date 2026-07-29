@@ -198,27 +198,9 @@ async function runFinalize(stale) {
   }
 }
 
-async function pushHotKeywords() {
-  const r = await new Promise((resolveP, rejectP) => {
-    const child = spawn('npm', ['run', '--silent', 'analyze', '-w', '@cak/keyword-intel', '--', '--top', '20', '--json'],
-      { cwd: KIT_ROOT, stdio: ['ignore', 'pipe', 'pipe'], env: ENV });
-    let out = '';
-    const timer = setTimeout(() => { child.kill('SIGKILL'); rejectP(new Error('keyword-intel 타임아웃')); }, 120_000);
-    child.stdout.on('data', (d) => (out += d));
-    child.on('error', (e) => { clearTimeout(timer); rejectP(e); });
-    child.on('close', () => { clearTimeout(timer); try { resolveP(JSON.parse(out)); } catch (e) { rejectP(e); } });
-  });
-  const items = (r.items ?? []).map((it) => ({ topic: it.topic, opportunity: it.opportunity }));
-  await api('/api/hot-keywords', {
-    method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ items }),
-  });
-  log('hot-keywords.pushed', { count: items.length });
-}
-
 // ---------- 메인 루프 ----------
 
 let busy = false;
-let lastKeywordPush = 0;
 // 리뷰 확정 결함 수정: 잡별 실패 격리 + 백오프 — 한 잡의 반복 실패가 큐 전체를 막지 않게
 const failures = new Map(); // key: `${id}:${action}` → { count, until }
 
@@ -274,10 +256,6 @@ async function tick() {
     const { jobs } = await api('/api/jobs');
     for (const job of jobs) {
       await handleJob(job); // 잡별 예외는 handleJob 내부에서 격리
-    }
-    if (Date.now() - lastKeywordPush > 30 * 60_000) {
-      lastKeywordPush = Date.now();
-      await pushHotKeywords().catch((e) => log('hot-keywords.error', { error: String(e.message) }));
     }
   } catch (e) {
     log('tick.error', { error: String(e?.message ?? e) });

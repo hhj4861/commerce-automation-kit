@@ -19,12 +19,24 @@ CREATE TABLE IF NOT EXISTS draft_requests (
   requested_at TEXT NOT NULL
 );
 
--- keyword-intel 은 로컬에서만 돈다 → 워커가 주기적으로 push
+-- 이전 클라이언트 호환용. 신규 데이터는 keyword_feeds 에 채널별로 저장한다.
 CREATE TABLE IF NOT EXISTS hot_keywords (
   topic TEXT PRIMARY KEY,
   opportunity INTEGER NOT NULL,
   updated_at TEXT NOT NULL
 );
+
+-- GitHub Actions keyword-intel 이 30분마다 trend/blog 채널을 독립 교체한다.
+CREATE TABLE IF NOT EXISTS keyword_feeds (
+  channel TEXT NOT NULL CHECK(channel IN ('trend', 'blog')),
+  topic TEXT NOT NULL,
+  score INTEGER NOT NULL,
+  payload TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  PRIMARY KEY(channel, topic)
+);
+CREATE INDEX IF NOT EXISTS idx_keyword_feeds_channel_score
+  ON keyword_feeds(channel, score DESC);
 
 -- 워커 하트비트 등 메타(워커 온라인 표시용)
 CREATE TABLE IF NOT EXISTS meta (

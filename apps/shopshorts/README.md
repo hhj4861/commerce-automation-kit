@@ -16,6 +16,7 @@ UI·상태는 클라우드에서도 사용할 수 있고, ffmpeg·TTS·클립 �
 - `server.mjs` — 로컬 API와 정적 UI 서버
 - `worker.mjs` — 클라우드 큐의 lint·TTS·조립 실행자
 - `schema.sql` — D1 스키마
+- `migrations/` — 기존 D1에 적용하는 증분 스키마
 - `wrangler.toml` — Pages·D1·R2 배포 설정
 - `data/` — 로컬 모드의 운영 데이터
 
@@ -42,6 +43,24 @@ npm run cloud:deploy -w @cak/app-shopshorts
 - 딥링크 사용 시: `COUPANG_ACCESS_KEY`, `COUPANG_SECRET_KEY`
 
 로컬 워커 환경에는 `SHOPSHORTS_CLOUD_URL`과 동일한 `SHOPSHORTS_TOKEN`이 필요하다.
+
+## 키워드 동기화
+
+`.github/workflows/keyword-intel-sync.yml`이 매시 7분·37분에 실행되어 트렌드·블로그
+키워드를 채널별로 D1에 전송한다. Mac 워커는 키워드를 전송하지 않고 영상 작업만 담당한다.
+
+GitHub Actions 시크릿:
+
+- `NAVER_CLIENT_ID`, `NAVER_CLIENT_SECRET`
+- `NAVER_AD_CUSTOMER_ID`, `NAVER_AD_API_KEY`, `NAVER_AD_SECRET_KEY`
+- `SHOPSHORTS_CLOUD_URL`, `SHOPSHORTS_TOKEN`
+- 텔레그램 사용 시 `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`
+
+최초 배포 전 기존 D1에 마이그레이션을 적용한다.
+
+```bash
+npx wrangler d1 migrations apply shopshorts --remote
+```
 
 ## 상태 흐름과 게이트
 
