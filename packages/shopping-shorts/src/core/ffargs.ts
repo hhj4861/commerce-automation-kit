@@ -39,12 +39,16 @@ function captionFilter(cue: CaptionCue, fontFile: string, fontSize: number): str
   );
 }
 
-/** 상단 고지 오버레이(상시 표시, 작게·반투명 — 가독은 유지). */
-function disclosureFilter(fontFile: string): string {
+/**
+ * 상단 고지 오버레이(상시 표시) — 영상을 가리지 않게 작고 반투명하게.
+ * 단, 완전히 안 보이면 고지 의무 취지가 무너지므로 판독 가능한 하한(≈0.45)을 지킨다.
+ */
+function disclosureFilter(fontFile: string, text: string = DISCLOSURE_OVERLAY_TEXT): string {
+  // 우측 상단 고정(사용자 결정 2026-07-28) — 작고 반투명, 영상을 가리지 않게
   return (
-    `drawtext=fontfile=${fontFile}:text='${escapeDrawtext(DISCLOSURE_OVERLAY_TEXT)}'` +
-    `:fontsize=30:fontcolor=white@0.85:borderw=2:bordercolor=black@0.5` +
-    `:x=(w-text_w)/2:y=140`
+    `drawtext=fontfile=${fontFile}:text='${escapeDrawtext(text)}'` +
+    `:fontsize=26:fontcolor=white@0.45:borderw=1:bordercolor=black@0.25` +
+    `:x=w-text_w-36:y=64`
   );
 }
 
@@ -118,7 +122,8 @@ export function buildAssembleArgs(
   args.push('-filter_complex', parts.join(';'));
   args.push('-map', videoLabel);
   if (audioLabel !== null) args.push('-map', audioLabel, '-c:a', 'aac', '-b:a', '192k', '-shortest');
-  args.push('-c:v', 'libx264', '-crf', '18', '-preset', 'medium', out);
+  // +faststart: moov 를 파일 앞으로 — 대시보드/웹 스트리밍 재생 필수(실측: moov 후미면 브라우저 재생 끊김)
+  args.push('-c:v', 'libx264', '-crf', '18', '-preset', 'medium', '-movflags', '+faststart', out);
   return args;
 }
 
@@ -134,4 +139,194 @@ export function cuesFromBeats(
     t = end;
   }
   return cues;
+}
+
+// ---------------------------------------------------------------------------
+// 동기(synced) 조립 — Vrew 스타일 (2026-07-28 바쿠치올.mp4 실측 재현)
+//
+// 실측 결함에서 나온 재설계: 내레이션이 비트 영상보다 길면 다음 비트와 겹쳐
+// "TTS 중복" 이 발생한다. 해법은 오디오를 자르는 게 아니라 **세그먼트 길이를
+// 내레이션에 맞추는 것** — L_i = max(클립 길이, 내레이션 길이 + 패딩).
+// 부족분은 클립 마지막 프레임 홀드(tpad clone)로 채우고, 자막(내레이션 전문)과
+// 내레이션을 같은 타임라인에 배치한다. 자막은 화면 중앙, 큰 손글씨풍(나눔펜).
+// ---------------------------------------------------------------------------
+
+/** 세그먼트 내 자막 구절(한 줄) — 시각은 세그먼트 시작 기준 상대값. */
+export interface SubtitleChunk {
+  /** 한 줄 텍스트가 담긴 파일(drawtext textfile — 이스케이프 문제 회피) */
+  file: string;
+  startSec: number;
+  endSec: number;
+}
+
+/** 동기 조립의 한 세그먼트(비트). */
+export interface SyncedSegment {
+  clip: string;
+  /** 클립 실측 길이(초) — ffprobe */
+  clipDurationSec: number;
+  /** 비트 내레이션 mp3 (없으면 무내레이션 세그먼트) */
+  narrationFile?: string;
+  narrationDurationSec?: number;
+  /** 구절 단위 한 줄 자막들(내레이션 진행에 맞춰 순차 표시 — Vrew 방식) */
+  subtitles?: SubtitleChunk[];
+}
+
+export interface SyncedAssembleOpts {
+  width: number;
+  height: number;
+  disclosureOverlay: boolean;
+  /** 오버레이 문구(기본 쿠팡 파트너스 문구 — 쇼핑커넥트 등은 "(광고)") */
+  disclosureText?: string;
+  music?: string;
+  fontFile?: string;
+  /** 자막 크기(기본 62 — Vrew 유사) */
+  subtitleFontSize?: number;
+  /** 내레이션 뒤 여백(초, 기본 0.35) */
+  narrationPadSec?: number;
+  musicVolume?: number;
+}
+
+/** 세그먼트 길이(초): max(클립, 내레이션+패딩). */
+export function segmentLengthSec(seg: SyncedSegment, padSec = 0.35): number {
+  const nar = seg.narrationDurationSec !== undefined ? seg.narrationDurationSec + padSec : 0;
+  return Math.max(seg.clipDurationSec, nar);
+}
+
+/**
+ * 자막 구절 분할 — 내레이션 문장을 한 줄 분량(maxChars)의 구절로 자른다.
+ * 쉼표·마침표 등 구두점 경계를 우선하고, 없으면 공백 경계로 자른다.
+ */
+export function splitSubtitleChunks(text: string, maxChars = 15): string[] {
+  const words = text.trim().split(/\s+/);
+  const chunks: string[] = [];
+  let cur = '';
+  for (const w of words) {
+    const joined = cur.length === 0 ? w : cur + ' ' + w;
+    if (joined.length <= maxChars) {
+      cur = joined;
+      // 구두점으로 끝나면 자연 경계에서 조기 분할(호흡 단위)
+      if (/[,.!?…]$/.test(w) && cur.length >= Math.min(8, maxChars / 2)) {
+        chunks.push(cur);
+        cur = '';
+      }
+    } else {
+      if (cur) chunks.push(cur);
+      cur = w;
+    }
+  }
+  if (cur) chunks.push(cur);
+  return chunks;
+}
+
+/**
+ * 구절별 표시 시간 배분 — 내레이션 길이를 구절 글자수 비례로 나눈다(세그먼트 상대 시각).
+ * 내레이션이 없으면 전체 길이를 균등 분배.
+ */
+export function chunkTimings(
+  chunks: string[],
+  totalSec: number,
+): { startSec: number; endSec: number }[] {
+  const weights = chunks.map((c) => Math.max(1, c.replace(/\s+/g, '').length));
+  const sum = weights.reduce((a, b) => a + b, 0);
+  const out: { startSec: number; endSec: number }[] = [];
+  let t = 0;
+  chunks.forEach((_, i) => {
+    const d = (weights[i]! / sum) * totalSec;
+    out.push({ startSec: t, endSec: i === chunks.length - 1 ? totalSec : t + d });
+    t += d;
+  });
+  return out;
+}
+
+/** 동기 조립 ffmpeg 인자. */
+export function buildSyncedAssembleArgs(
+  segments: SyncedSegment[],
+  out: string,
+  opts: SyncedAssembleOpts,
+): string[] {
+  if (segments.length === 0) throw new Error('segments 가 비어 있음');
+  const font = opts.fontFile ?? DEFAULT_FONT_FILE;
+  const fontSize = opts.subtitleFontSize ?? 62;
+  const pad = opts.narrationPadSec ?? 0.35;
+  const musicVol = opts.musicVolume ?? 0.18;
+  const { width, height } = opts;
+
+  const args: string[] = ['-y'];
+  segments.forEach((s) => args.push('-i', s.clip));
+  const narIdxs: (number | null)[] = [];
+  let inputIdx = segments.length;
+  segments.forEach((s) => {
+    if (s.narrationFile !== undefined) {
+      args.push('-i', s.narrationFile);
+      narIdxs.push(inputIdx++);
+    } else narIdxs.push(null);
+  });
+  let musIdx = -1;
+  if (opts.music !== undefined) {
+    args.push('-i', opts.music);
+    musIdx = inputIdx++;
+  }
+
+  // 타임라인
+  const lengths = segments.map((s) => segmentLengthSec(s, pad));
+  const offsets: number[] = [];
+  lengths.reduce((acc, l, i) => { offsets[i] = acc; return acc + l; }, 0);
+  const total = lengths.reduce((a, b) => a + b, 0);
+
+  const parts: string[] = [];
+  segments.forEach((s, i) => {
+    const hold = Math.max(0, lengths[i]! - s.clipDurationSec);
+    const tpad = hold > 0.01 ? `,tpad=stop_mode=clone:stop_duration=${hold.toFixed(3)}` : '';
+    parts.push(
+      `[${i}:v]scale=w=${width}:h=${height}:force_original_aspect_ratio=increase,` +
+        `crop=${width}:${height},setsar=1,fps=30,setpts=PTS-STARTPTS${tpad}[v${i}]`,
+    );
+  });
+  parts.push(`${segments.map((_, i) => `[v${i}]`).join('')}concat=n=${segments.length}:v=1:a=0[vc]`);
+
+  // 자막(구절 단위 한 줄, 화면 중앙 45% — 한 줄이라 줄별 중앙정렬이 자동 성립) + 고지 오버레이
+  const overlays: string[] = [];
+  segments.forEach((s, i) => {
+    for (const chunk of s.subtitles ?? []) {
+      const st = offsets[i]! + chunk.startSec;
+      const en = offsets[i]! + chunk.endSec;
+      overlays.push(
+        `drawtext=fontfile=${font}:textfile=${chunk.file}` +
+          `:fontsize=${fontSize}:fontcolor=white:borderw=6:bordercolor=black` +
+          `:x=(w-text_w)/2:y=(h-text_h)*0.45` +
+          `:enable='between(t,${st.toFixed(3)},${en.toFixed(3)})'`,
+      );
+    }
+  });
+  if (opts.disclosureOverlay) overlays.push(disclosureFilter(DEFAULT_FONT_FILE, opts.disclosureText));
+  const videoLabel = overlays.length > 0 ? '[vo]' : '[vc]';
+  if (overlays.length > 0) parts.push(`[vc]${overlays.join(',')}[vo]`);
+
+  // 오디오: 비트 내레이션을 각 세그먼트 시작에 배치 + (선택) BGM
+  const audioLabels: string[] = [];
+  segments.forEach((_, i) => {
+    const idx = narIdxs[i];
+    if (idx === null) return;
+    const ms = Math.round(offsets[i]! * 1000);
+    parts.push(`[${idx}:a]adelay=${ms}|${ms}[na${i}]`);
+    audioLabels.push(`[na${i}]`);
+  });
+  if (musIdx >= 0) {
+    parts.push(`[${musIdx}:a]volume=${musicVol},atrim=0:${total.toFixed(3)}[mus]`);
+    audioLabels.push('[mus]');
+  }
+  let audioLabel: string | null = null;
+  if (audioLabels.length === 1) {
+    parts.push(`${audioLabels[0]}apad[aout]`);
+    audioLabel = '[aout]';
+  } else if (audioLabels.length > 1) {
+    parts.push(`${audioLabels.join('')}amix=inputs=${audioLabels.length}:duration=longest:normalize=0,apad[aout]`);
+    audioLabel = '[aout]';
+  }
+
+  args.push('-filter_complex', parts.join(';'));
+  args.push('-map', videoLabel);
+  if (audioLabel !== null) args.push('-map', audioLabel, '-c:a', 'aac', '-b:a', '192k', '-shortest');
+  args.push('-c:v', 'libx264', '-crf', '18', '-preset', 'medium', '-movflags', '+faststart', out);
+  return args;
 }

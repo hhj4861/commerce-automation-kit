@@ -12,16 +12,17 @@
  * 출력 규약: stdout = 데이터(JSON), stderr = 로그.
  * 종료 코드: 0 정상 / 1 검증 실패·사용법 오류(assemble 은 lint block 시 렌더 거부).
  */
-import { readFileSync } from 'node:fs';
-import { isAbsolute, resolve } from 'node:path';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { dirname, isAbsolute, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
 import type { ParseArgsConfig } from 'node:util';
 import type { ShoppingShortsAssembleSpec } from '@cak/contracts';
 import { lintScript } from '../core/lint.js';
-import { hasDisclosure, withDisclosure } from '../core/disclosure.js';
+import { hasDisclosure, overlayTextForUrl, withDisclosure } from '../core/disclosure.js';
 import { estimateShort } from '../core/estimate.js';
-import { buildAssembleArgs, cuesFromBeats } from '../core/ffargs.js';
-import { probe, runFfmpegOrThrow } from '../adapters/ffmpeg.js';
+import { buildAssembleArgs, buildSyncedAssembleArgs, chunkTimings, cuesFromBeats, splitSubtitleChunks, type SyncedSegment } from '../core/ffargs.js';
+import { probe, probeAudioDuration, runFfmpegOrThrow } from '../adapters/ffmpeg.js';
 import { jobFileSchema, toJob } from '../adapters/schemas.js';
 import type { ShoppingShortsBrief, ShortsScript } from '@cak/contracts';
 import { createLogger } from '../obs/logger.js';
@@ -116,6 +117,7 @@ async function main(): Promise<void> {
         clips: STR,
         out: STR,
         narration: STR,
+        'narration-dir': STR,
         music: STR,
         font: STR,
       });
@@ -142,7 +144,62 @@ async function main(): Promise<void> {
 
       const outPath = resolvePath(reqStr(o, 'out'));
       const narration = optStr(o, 'narration');
+      const narrationDir = optStr(o, 'narration-dir');
       const music = optStr(o, 'music');
+
+      // ---- 동기 모드 (Vrew 스타일): 비트별 내레이션에 영상·자막을 맞춘다 ----
+      if (narrationDir !== undefined) {
+        const voDir = resolvePath(narrationDir);
+        const manifest = JSON.parse(readFileSync(join(voDir, 'narration.json'), 'utf8')) as {
+          clips: { file: string; text: string }[];
+        };
+        if (manifest.clips.length !== job.script.beats.length) {
+          throw new UsageError(`내레이션 ${manifest.clips.length}개 ≠ 비트 ${job.script.beats.length}개`);
+        }
+        const capDir = join(dirname(outPath), 'captions');
+        mkdirSync(capDir, { recursive: true });
+        const pad = 0.35;
+        const segments: SyncedSegment[] = [];
+        for (let i = 0; i < clips.length; i++) {
+          const clipInfo = await probe(clips[i]!);
+          const narFile = manifest.clips[i]!.file;
+          const narProbe = await probeAudioDuration(narFile);
+          // 자막 = 내레이션을 구절(한 줄) 단위로 분할, 내레이션 진행에 글자수 비례 배분
+          const chunks = splitSubtitleChunks(job.script.beats[i]!.narration);
+          const timings = chunkTimings(chunks, narProbe + pad);
+          const subtitles = chunks.map((c, k) => {
+            const file = join(capDir, `cap-${i}-${k}.txt`);
+            writeFileSync(file, c, 'utf8');
+            return { file, startSec: timings[k]!.startSec, endSec: timings[k]!.endSec };
+          });
+          segments.push({
+            clip: clips[i]!,
+            clipDurationSec: clipInfo.durationSec,
+            narrationFile: narFile,
+            narrationDurationSec: narProbe,
+            subtitles,
+          });
+        }
+        const pkgRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
+        const defaultVrewFont = join(pkgRoot, 'assets', 'NanumPenScript-Regular.ttf');
+        const args = buildSyncedAssembleArgs(segments, outPath, {
+          width: 1080,
+          height: 1920,
+          disclosureOverlay:
+            typeof job.brief.affiliateUrl === 'string' && job.brief.affiliateUrl.length > 0,
+          // 링크 플랫폼에 맞는 오버레이(쿠팡=파트너스 문구 / 그 외 제휴="(광고)")
+          disclosureText: overlayTextForUrl(job.brief.affiliateUrl),
+          narrationPadSec: pad,
+          ...(music !== undefined ? { music: resolvePath(music) } : {}),
+          fontFile: optStr(o, 'font') ?? defaultVrewFont,
+        });
+        log.info('assemble.synced.start', { segments: segments.length, out: outPath });
+        await runFfmpegOrThrow(args);
+        const probed = await probe(outPath);
+        out({ ok: true, mode: 'synced', out: outPath, probe: probed, lintWarnings: report.findings });
+        break;
+      }
+
       const spec: ShoppingShortsAssembleSpec = {
         clips,
         captions: cuesFromBeats(job.script.beats),

@@ -15,7 +15,7 @@ import type {
   ShoppingShortsBrief,
   ShortsScript,
 } from '@cak/contracts';
-import { hasDisclosure } from './disclosure.js';
+import { hasDisclosure, hasPartnersPhrase, requiresPartnersPhrase } from './disclosure.js';
 
 interface Rule {
   id: string;
@@ -155,14 +155,25 @@ export function lintScript(brief: ShoppingShortsBrief, script: ShortsScript): Sc
   }
 
   // R-disclosure: 제휴 링크가 있으면 설명란 고지 필수(발행 게이트의 근거).
+  // 쿠팡 파트너스 링크는 약관상 표준 문구(파트너스+수수료)까지 요구 — "(광고)"만으로는 부족.
   if (typeof brief.affiliateUrl === 'string' && brief.affiliateUrl.length > 0) {
-    if (!hasDisclosure(script.description)) {
+    if (requiresPartnersPhrase(brief.affiliateUrl)) {
+      if (!hasPartnersPhrase(script.description)) {
+        findings.push({
+          rule: 'disclosure-missing',
+          severity: 'block',
+          field: 'description',
+          matched: '(없음)',
+          reason: '쿠팡 파트너스 발행물은 설명란에 파트너스 표준 문구 필요(약관 의무 — 수익 미지급 리스크)',
+        });
+      }
+    } else if (!hasDisclosure(script.description)) {
       findings.push({
         rule: 'disclosure-missing',
         severity: 'block',
         field: 'description',
         matched: '(없음)',
-        reason: '제휴 링크 발행물에 대가성 고지 문구 누락 — withDisclosure() 로 삽입 필요',
+        reason: '제휴 발행물에 대가성 고지 누락 — "(광고)" 표기 또는 수수료 고지 문구 필요',
       });
     }
   }

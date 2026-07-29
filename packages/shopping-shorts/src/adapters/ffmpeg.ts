@@ -114,6 +114,17 @@ export async function probe(input: string): Promise<ProbeResult> {
   return { width: s.width, height: s.height, durationSec };
 }
 
+/** 오디오/비디오 무관 컨테이너 길이(초) — format=duration. */
+export async function probeAudioDuration(input: string): Promise<number> {
+  const res = await runFf('ffprobe', [
+    '-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', input,
+  ]);
+  if (res.code !== 0) throw new Error(`ffprobe 실패(exit ${res.code}): ${lastLine(res.stderr)}`);
+  const d = Number(res.stdout.trim());
+  if (!Number.isFinite(d)) throw new Error(`duration 파싱 실패: ${input}`);
+  return d;
+}
+
 /** ffmpeg 실행 후 비정상 종료면 stderr 마지막 줄 포함해 실패시킨다. */
 export async function runFfmpegOrThrow(args: string[]): Promise<void> {
   const res = await runFf('ffmpeg', args);
