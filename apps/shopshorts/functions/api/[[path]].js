@@ -59,6 +59,24 @@ const LINK_PLATFORMS = {
 };
 const isPlaceholderLink = (u) => /PLACEHOLDER|\/a\/sample/.test(u ?? '');
 
+function affiliateDisclosure(platform) {
+  return platform === 'coupang'
+    ? '이 포스팅은 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다.'
+    : '이 링크를 통한 구매 시 일정액의 수수료를 제공받을 수 있습니다.';
+}
+
+function buildAffiliateComment(platform, url) {
+  const disclosure = affiliateDisclosure(platform);
+  return `제품 보러가기: ${url}\n\n${disclosure}`;
+}
+
+function ensureDescriptionDisclosure(job, platform) {
+  const description = job.script?.description ?? '';
+  if (/파트너스.{0,20}(수수료|대가)|수수료.{0,20}(제공|지급|받을)/s.test(description)) return;
+  job.script ??= {};
+  job.script.description = `${description}${description.trim() ? '\n\n' : ''}${affiliateDisclosure(platform)}`;
+}
+
 function validateAffiliateUrl(platform, urlStr) {
   const p = LINK_PLATFORMS[platform];
   if (!p) throw new Error(`platform 은 ${Object.keys(LINK_PLATFORMS).join('|')}`);
@@ -218,6 +236,8 @@ export async function onRequest(context) {
         catch (e) { return json({ error: String(e.message) }, 400); }
         job.brief.affiliateUrl = validated;
         job.platformLinks = { ...(job.platformLinks ?? {}), [body.platform]: validated };
+        job.affiliateComment = buildAffiliateComment(body.platform, validated);
+        ensureDescriptionDisclosure(job, body.platform);
         delete job.lintChecked;
         job.lintRequested = true;
         await saveJob(env, job);
@@ -234,6 +254,8 @@ export async function onRequest(context) {
           const link = await coupangDeeplink(env, body.productUrl);
           job.brief.affiliateUrl = link;
           job.platformLinks = { ...(job.platformLinks ?? {}), coupang: link };
+          job.affiliateComment = buildAffiliateComment('coupang', link);
+          ensureDescriptionDisclosure(job, 'coupang');
           delete job.lintChecked;
           job.lintRequested = true;
           await saveJob(env, job);

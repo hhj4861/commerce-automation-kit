@@ -276,6 +276,24 @@ const LINK_PLATFORMS = {
   naverConnect: { hosts: ['naver.me', 'shopping.naver.com', 'smartstore.naver.com', 'brand.naver.com'], label: '네이버 쇼핑커넥트' },
 };
 
+function affiliateDisclosure(platform) {
+  return platform === 'coupang'
+    ? '이 포스팅은 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다.'
+    : '이 링크를 통한 구매 시 일정액의 수수료를 제공받을 수 있습니다.';
+}
+
+function buildAffiliateComment(platform, url) {
+  const disclosure = affiliateDisclosure(platform);
+  return `제품 보러가기: ${url}\n\n${disclosure}`;
+}
+
+function ensureDescriptionDisclosure(job, platform) {
+  const description = job.script?.description ?? '';
+  if (/파트너스.{0,20}(수수료|대가)|수수료.{0,20}(제공|지급|받을)/s.test(description)) return;
+  job.script ??= {};
+  job.script.description = `${description}${description.trim() ? '\n\n' : ''}${affiliateDisclosure(platform)}`;
+}
+
 function validateAffiliateUrl(platform, urlStr) {
   const p = LINK_PLATFORMS[platform];
   if (!p) throw new Error(`platform 은 ${Object.keys(LINK_PLATFORMS).join('|')}`);
@@ -497,6 +515,8 @@ const server = createServer(async (req, res) => {
       catch (e) { json(res, 400, { error: String(e.message) }); return; }
       job.brief.affiliateUrl = validated;              // 주 링크(고지·오버레이 게이트 기준)
       (job.platformLinks ??= {})[body.platform] = validated;
+      job.affiliateComment = buildAffiliateComment(body.platform, validated);
+      ensureDescriptionDisclosure(job, body.platform);
       job.updatedAt = new Date().toISOString();
       saveJobs(jobs);
       // 링크 변경은 고지 요건에 영향 → lint 즉시 재실행해 카드에 반영
@@ -528,6 +548,8 @@ const server = createServer(async (req, res) => {
         const link = await coupangDeeplink(body.productUrl);
         job.brief.affiliateUrl = link;
         (job.platformLinks ??= {}).coupang = link;
+        job.affiliateComment = buildAffiliateComment('coupang', link);
+        ensureDescriptionDisclosure(job, 'coupang');
         job.updatedAt = new Date().toISOString();
         saveJobs(jobs);
         json(res, 200, { ok: true, affiliateUrl: link });
