@@ -47,7 +47,10 @@ jobs:
 
       - name: Install dependencies
         working-directory: .
-        run: npm ci
+        # The monorepo lockfile is currently out of sync with workspace manifests.
+        # Keep the POC isolated: resolve dependencies on the ephemeral runner without
+        # rewriting or committing the repository lockfile.
+        run: npm install --no-package-lock --no-audit --no-fund
 
       - name: Validate required secrets
         shell: bash
