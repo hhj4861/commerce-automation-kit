@@ -2,7 +2,7 @@
  * GitHub Actions POC — 단기 급상승과 검색광고 절대수요·경쟁승산을 결합한 블로그 추천.
  * 추천점수 = hotScore 50% + blogScore 50%. 월검색량 100 미만은 작은 표본 급등을 줄이기 위해 제외.
  */
-import { readFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { keywordTool, loadSearchAdCredentials, SearchAdApiError } from '../src/adapters/searchad-client.js';
 import { scoreBlog } from '../src/core/analyzer.js';
 import { withRetry } from '../src/obs/retry.js';
@@ -20,6 +20,8 @@ interface Recommendation extends HotCandidate {
   monthlyTotal: number;
   compIdx: 'low' | 'mid' | 'high' | null;
   recommendationScore: number;
+  trendScore: number;
+  volumeScore: number;
 }
 
 const credentials = loadSearchAdCredentials();
@@ -49,11 +51,14 @@ for (const candidate of candidates) {
     if (!exact) continue;
     const blog = scoreBlog(exact);
     if (blog.monthlyTotal < 100) continue;
+    const volumeScore = Math.min(100, (Math.log10(Math.max(blog.monthlyTotal, 1)) / 5) * 100);
     recommendations.push({
       ...candidate,
       ...blog,
       compIdx: exact.compIdx,
       recommendationScore: Math.round(candidate.hotScore * 0.5 + blog.blogScore * 0.5),
+      trendScore: Math.round(candidate.hotScore * 0.7 + volumeScore * 0.3),
+      volumeScore,
     });
   } catch {
     lookupFailures += 1;
@@ -67,20 +72,52 @@ recommendations.sort(
     b.monthlyTotal - a.monthlyTotal,
 );
 
-const top = recommendations.slice(0, 10);
-const period = top.reduce((max, r) => (r.period > max ? r.period : max), '');
 const signed = (n: number): string => `${n >= 0 ? '+' : ''}${Math.round(n)}%`;
-const lines = [
-  `🔥 오늘의 블로그 추천 Top ${top.length} (DataLab 최신 제공일 ${period})`,
+const period = recommendations.reduce((max, r) => (r.period > max ? r.period : max), '');
+
+const trendTop = recommendations
+  .filter((r) => r.monthlyTotal >= 1_000)
+  .sort(
+    (a, b) =>
+      b.trendScore - a.trendScore ||
+      b.hotScore - a.hotScore ||
+      b.monthlyTotal - a.monthlyTotal,
+  )
+  .slice(0, 10);
+const trendLines = [
+  `🔥 최신 트랜드 급상승 후보 Top ${trendTop.length} (182개 기준 · DataLab 최신 제공일 ${period})`,
+  '보정: 실제 전일값 필수 · 최근 7일 중 5일 이상 관측 · 급상승 70% + 검색량 신뢰도 30% · 월검색 1,000 이상',
+  '',
+];
+trendTop.forEach((r, i) => {
+  trendLines.push(
+    `${i + 1}. ${r.keyword} · 보정 ${r.trendScore} · hot ${r.hotScore} · 월 ${r.monthlyTotal.toLocaleString()} · 전일 ${signed(r.dayPct)} · 7일평균 ${signed(r.baselinePct)}`,
+  );
+});
+if (!trendTop.length) trendLines.push('보정 조건을 충족한 키워드가 없습니다.');
+writeFileSync('trend-hot-report.txt', trendLines.join('\n') + '\n');
+
+recommendations.sort(
+  (a, b) =>
+    b.recommendationScore - a.recommendationScore ||
+    b.hotScore - a.hotScore ||
+    b.monthlyTotal - a.monthlyTotal,
+);
+const blogTop = recommendations.slice(0, 10);
+const blogLines = [
+  `🔥 오늘의 블로그 추천 Top ${blogTop.length} (DataLab 최신 제공일 ${period})`,
   '기준: 트랜드 급상승 50% + 월검색량·광고경쟁 승산 50% · 월검색량 100 이상',
   '',
 ];
-top.forEach((r, i) => {
+blogTop.forEach((r, i) => {
   const dailyAverage = Math.round(r.monthlyTotal / 30.4);
-  lines.push(
+  blogLines.push(
     `${i + 1}. ${r.keyword} · 추천 ${r.recommendationScore} · hot ${r.hotScore} · 월 ${r.monthlyTotal.toLocaleString()}(일평균≈${dailyAverage.toLocaleString()}) · 전일 ${signed(r.dayPct)} · 경쟁 ${r.compIdx ?? '-'}`,
   );
 });
-if (!top.length) lines.push('추천 조건을 충족한 키워드가 없습니다.');
-if (lookupFailures) lines.push('', `⚠️ 검색광고 조회 실패 ${lookupFailures}건`);
-console.log(lines.join('\n'));
+if (!blogTop.length) blogLines.push('추천 조건을 충족한 키워드가 없습니다.');
+if (lookupFailures) blogLines.push('', `⚠️ 검색광고 조회 실패 ${lookupFailures}건`);
+writeFileSync('blog-hot-report.txt', blogLines.join('\n') + '\n');
+console.log(trendLines.join('\n'));
+console.log('');
+console.log(blogLines.join('\n'));

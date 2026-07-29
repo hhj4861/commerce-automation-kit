@@ -95,24 +95,24 @@ jobs:
         if: ${{ inputs.send_telegram }}
         run: npm run -s report -- --top 10
 
-      - name: Build today's trend hot Top 10
-        run: node scripts/hot-report.cjs | tee hot-report.txt
+      - name: Build calendar-correct hot candidates
+        run: node scripts/hot-report.cjs
 
-      - name: Send today's trend hot Top 10 to Telegram
+      - name: Build calibrated trend and blog recommendations
+        run: npx tsx scripts/blog-hot-report.ts
+
+      - name: Send calibrated trend hot Top 10 to Telegram
         if: ${{ inputs.send_telegram }}
         shell: bash
         run: |
           jq -n \
             --arg chat_id "$TELEGRAM_CHAT_ID" \
-            --rawfile text hot-report.txt \
+            --rawfile text trend-hot-report.txt \
             '{chat_id: $chat_id, text: $text}' > telegram-hot.json
           curl --fail-with-body --retry 3 \
             --header "Content-Type: application/json" \
             --data @telegram-hot.json \
             "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage"
-
-      - name: Build today's blog recommendations Top 10
-        run: npx tsx scripts/blog-hot-report.ts | tee blog-hot-report.txt
 
       - name: Send today's blog recommendations Top 10 to Telegram
         if: ${{ inputs.send_telegram }}
