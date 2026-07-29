@@ -5,7 +5,8 @@
  * 사용:
  *   npm run collect -- "루테인,밀크씨슬,콜라겐"     # 키워드 수집 → IntelBatch JSON(stdout)
  *   npm run collect -- --file seeds/g2-seeds.txt     # 시드 파일 수집(줄당 1키워드, # 주석 허용)
- *   npm run analyze -- --top 20                      # 저장 신호를 opportunity 순 정렬(참고 지표)
+ *   npm run analyze -- --top 20                      # 트렌드용: 저장 신호를 opportunity(데이터랩) 순 정렬
+ *   npm run analyze -- --blog --top 15               # 블로그용: 검색광고 절대검색량×승산 랭킹(NAVER_AD_* 필요)
  *   npm run dlq                                      # DLQ 목록 (격리·연속실패 현황)
  *   npm run dlq -- clear [키워드]                    # DLQ 즉시 해제(전체 또는 특정 키워드)
  *   npm run report                                   # 일일 다이제스트 → 텔레그램 전송
@@ -29,6 +30,8 @@ try {
 }
 import { purgeExpired, topOpportunities, signalsForExport } from '../store/signals.js';
 import { buildBlogExport, resolveProfile } from './export.js';
+import { loadSearchAdCredentials, keywordTool, SearchAdApiError } from '../adapters/searchad-client.js';
+import { scoreBlog } from '../core/analyzer.js';
 import { clearAll, clearFailure, dlqReport, dlqThresholdFromEnv } from '../store/dlq.js';
 import { buildDigest } from './report.js';
 import {
@@ -117,6 +120,105 @@ async function main(): Promise<void> {
       const topIdx = rest.indexOf('--top');
       const topRaw = topIdx >= 0 ? Number(rest[topIdx + 1]) : 20;
       const top = Number.isInteger(topRaw) && topRaw > 0 ? topRaw : 20;
+
+      // --blog : 블로그용 랭킹(검색광고 절대 검색량×승산). 트렌드용 opportunity 와 별개 지표.
+      //   검색광고(searchad) API 는 openapi 와 auth·약관·한도가 달라 코어 예산원장에 끼우지 않고,
+      //   이 명령에서 후보(트렌드 상위)에 대해 **일시 조회 → blogScore 계산** 만 한다(raw 미영속).
+      //   ⚠️ 이 데이터는 재판매 금지 — 본인 시스템 랭킹 표시에만 사용.
+      if (rest.includes('--blog')) {
+        const cred = loadSearchAdCredentials();
+        if (!cred) {
+          console.error(
+            '검색광고 자격증명(NAVER_AD_CUSTOMER_ID/NAVER_AD_API_KEY/NAVER_AD_SECRET_KEY) 미설정 — 블로그 랭킹은 검색광고 키워드도구 API 가 필요합니다.',
+          );
+          process.exitCode = 2;
+          break;
+        }
+        const db = openDb();
+        const purgedB = purgeExpired(db);
+        if (purgedB > 0) console.error(`(약관 TTL 만료 캐시 ${purgedB}건 무효화)`);
+        // 후보 풀: 저장된 신호 상위(트렌드 순). 여기서 검색광고 절대량으로 재랭킹한다.
+        const candidates = topOpportunities(db, Math.max(top * 2, 40));
+        if (candidates.length === 0) {
+          console.log('저장된 신호가 없습니다. 먼저 collect 를 실행하세요.');
+          break;
+        }
+        const norm = (s: string): string => s.replace(/\s+/g, '');
+        const netCode = (e: unknown): string =>
+          String(
+            (e as { code?: string } | null)?.code ??
+              (e as { cause?: { code?: string } } | null)?.cause?.code,
+          );
+        const NET_RETRY = ['ECONNRESET', 'ETIMEDOUT', 'ENOTFOUND', 'EAI_AGAIN', 'UND_ERR_SOCKET'];
+        interface BlogRow {
+          keyword: string;
+          blogScore: number;
+          monthlyTotal: number;
+          compIdx: string;
+          shopping: number | null;
+          note: string;
+        }
+        const results: BlogRow[] = [];
+        console.error(`검색광고 조회 중 (${candidates.length}개 후보)...`);
+        for (const c of candidates) {
+          try {
+            // 한도 수치 비공개 → 429/5xx/일시 네트워크는 적응형 백오프(코어 예산원장과 무관).
+            const rows = await withRetry(() => keywordTool(cred, c.keyword), {
+              maxAttempts: 4,
+              baseDelayMs: 1500,
+              shouldRetry: (e) =>
+                (e instanceof SearchAdApiError && (e.rateLimited || e.status >= 500)) ||
+                NET_RETRY.includes(netCode(e)),
+            });
+            const exact = rows.find((r) => norm(r.relKeyword) === norm(c.keyword)) ?? null;
+            if (!exact) {
+              results.push({
+                keyword: c.keyword,
+                blogScore: 0,
+                monthlyTotal: 0,
+                compIdx: '-',
+                shopping: c.shoppingTrendLatest,
+                note: '검색광고 데이터 없음',
+              });
+              continue;
+            }
+            const sc = scoreBlog(exact);
+            results.push({
+              keyword: c.keyword,
+              blogScore: sc.blogScore,
+              monthlyTotal: sc.monthlyTotal,
+              compIdx: exact.compIdx ?? '-',
+              shopping: c.shoppingTrendLatest,
+              note: exact.masked ? '검색량 마스킹(<10)' : '',
+            });
+          } catch (e) {
+            // 실패도 조용히 삼키지 않는다(silent drop 금지) — 비고에 사유 표면화.
+            results.push({
+              keyword: c.keyword,
+              blogScore: 0,
+              monthlyTotal: 0,
+              compIdx: '-',
+              shopping: c.shoppingTrendLatest,
+              note: `조회실패: ${(e instanceof Error ? e.message : String(e)).slice(0, 50)}`,
+            });
+          }
+        }
+        results.sort((a, b) => b.blogScore - a.blogScore || b.monthlyTotal - a.monthlyTotal);
+        console.log(
+          `🏆 블로그용 상위 ${Math.min(top, results.length)}개 (실제 검색량×승산 — 트렌드용 opportunity와 별개, 참고 지표):`,
+        );
+        console.table(
+          results.slice(0, top).map((r) => ({
+            키워드: r.keyword,
+            blogScore: r.blogScore,
+            '월검색량(pc+mo)': r.monthlyTotal,
+            '광고경쟁도': r.compIdx,
+            '쇼핑수요(0~100)': r.shopping ?? '-',
+            비고: r.note,
+          })),
+        );
+        break;
+      }
 
       // --json [--profile blog-kr|blog-global] : wp-auto-blog 브릿지 export(§8, 단방향).
       // 읽기 전용 뷰 — 추가 API 호출 0. stdout=JSON 데이터, stderr=경고.
