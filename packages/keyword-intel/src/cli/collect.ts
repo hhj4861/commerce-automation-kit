@@ -148,6 +148,14 @@ export async function collectSignals(
   const dlqThreshold = dlqThresholdFromEnv();
   const startedAt = now().toISOString();
   const runId = `run_${now().getTime()}_${Math.random().toString(36).slice(2, 6)}`;
+  // 기본 프로덕션 수집은 기존 90일/주간을 유지한다. GitHub Actions hot-keyword POC만
+  // date/14일을 환경변수로 주입해 "최신일 vs 전일·7일 평균" 계산에 쓸 일별 시계열을 받는다.
+  const trendTimeUnit = process.env.TREND_TIME_UNIT === 'date' ? 'date' : 'week';
+  const requestedLookback = Number(process.env.TREND_LOOKBACK_DAYS);
+  const trendLookbackDays =
+    Number.isInteger(requestedLookback) && requestedLookback >= 7 && requestedLookback <= 365
+      ? requestedLookback
+      : 90;
 
   const signals: KeywordSignal[] = [];
   const failures: IntelBatch['failures'] = [];
@@ -229,7 +237,7 @@ export async function collectSignals(
           let trendRaw = null;
           let trendSkippedByBudget = false;
           const end = now();
-          const start = new Date(end.getTime() - 90 * 864e5);
+          const start = new Date(end.getTime() - trendLookbackDays * 864e5);
           try {
             trendRaw = await withRetry(
               () =>
@@ -237,7 +245,7 @@ export async function collectSignals(
                   searchTrend(cred, {
                     startDate: start.toISOString().slice(0, 10),
                     endDate: end.toISOString().slice(0, 10),
-                    timeUnit: 'week',
+                    timeUnit: trendTimeUnit,
                     keywordGroups: [{ groupName: kw, keywords: [kw] }],
                   }),
                 ),

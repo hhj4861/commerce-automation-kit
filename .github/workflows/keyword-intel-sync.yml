@@ -29,6 +29,8 @@ jobs:
     env:
       CI: "true"
       DB_PATH: ./data/poc-intel.db
+      TREND_TIME_UNIT: date
+      TREND_LOOKBACK_DAYS: "14"
       NAVER_CLIENT_ID: ${{ secrets.NAVER_CLIENT_ID }}
       NAVER_CLIENT_SECRET: ${{ secrets.NAVER_CLIENT_SECRET }}
       NAVER_AD_CUSTOMER_ID: ${{ secrets.NAVER_AD_CUSTOMER_ID }}
@@ -92,6 +94,38 @@ jobs:
       - name: Send trend Top 10 to Telegram
         if: ${{ inputs.send_telegram }}
         run: npm run -s report -- --top 10
+
+      - name: Build today's trend hot Top 10
+        run: node scripts/hot-report.cjs | tee hot-report.txt
+
+      - name: Send today's trend hot Top 10 to Telegram
+        if: ${{ inputs.send_telegram }}
+        shell: bash
+        run: |
+          jq -n \
+            --arg chat_id "$TELEGRAM_CHAT_ID" \
+            --rawfile text hot-report.txt \
+            '{chat_id: $chat_id, text: $text}' > telegram-hot.json
+          curl --fail-with-body --retry 3 \
+            --header "Content-Type: application/json" \
+            --data @telegram-hot.json \
+            "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage"
+
+      - name: Build today's blog recommendations Top 10
+        run: npx tsx scripts/blog-hot-report.ts | tee blog-hot-report.txt
+
+      - name: Send today's blog recommendations Top 10 to Telegram
+        if: ${{ inputs.send_telegram }}
+        shell: bash
+        run: |
+          jq -n \
+            --arg chat_id "$TELEGRAM_CHAT_ID" \
+            --rawfile text blog-hot-report.txt \
+            '{chat_id: $chat_id, text: $text}' > telegram-blog-hot.json
+          curl --fail-with-body --retry 3 \
+            --header "Content-Type: application/json" \
+            --data @telegram-blog-hot.json \
+            "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage"
 
       - name: Build blog Top 10
         run: npm run -s analyze -- --blog --top 10 --feed-file blog-feed.json | tee blog-report.txt
