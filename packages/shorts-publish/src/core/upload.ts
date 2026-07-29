@@ -44,6 +44,12 @@ export function buildUploadTextFields(target: PublishTarget, user: string): Uplo
     fields.push({ name: 'is_aigc', value: target.aiDisclosed ? 'true' : 'false' });
   }
   if (target.platforms.includes('instagram')) {
+    // 인스타는 global description 을 무시하고 instagram_title(→ title 폴백)이 캡션 전문이 된다
+    // (실측 2026-07-28, docs.upload-post.com). description(제휴 링크·대가성 고지 포함)이
+    // 캡션에서 탈락하지 않도록 title+description 을 합쳐 전송한다.
+    if (target.description !== undefined && target.description.length > 0) {
+      fields.push({ name: 'instagram_title', value: `${target.title}\n\n${target.description}` });
+    }
     fields.push({ name: 'media_type', value: 'REELS' });
     fields.push({ name: 'share_to_feed', value: 'true' });
   }

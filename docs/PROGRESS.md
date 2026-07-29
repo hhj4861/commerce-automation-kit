@@ -33,12 +33,12 @@ cd packages/keyword-intel && npm test     # 81개 통과하면 정상
 | manychat-reply (#4) | 미착수 스캐폴드 |
 | ad-video-gen (#5) | ✅ 착수(07-24) — 컨셉 게이트·프롬프트·비용·ffmpeg 후반. 실제 생성은 `.claude/skills/ad-video` 스킬 |
 | showcase-site (#6) | ✅ 착수(07-24) — works.json 단일소스·CRUD·CF Pages 배포. `apps/firstframe` 관리 |
-| shorts-publish (#7) | ✅ **착수(07-25)** — 광고영상(16:9)→쇼츠(9:16) 로컬 ffmpeg 렌더(기본 blur-brand)→upload-post 통합 업로드. 테스트 40·타입체크·적대적리뷰(6건 수정). 실업로드는 사용자 upload-post 계정 필요(전엔 `--dry-run`) |
+| shorts-publish (#7) | ✅ **착수(07-25) + 실계정 첫 업로드 성공(07-28)** — 광고영상(16:9)→쇼츠(9:16) 로컬 ffmpeg 렌더(기본 blur-brand)→upload-post 통합 업로드. 테스트 42·타입체크. **실측(07-28)**: 프로필 `commerce_account`(YT=BetterrShop·IG=ttangkong_pom)로 바쿠치올 쇼츠 YT+IG 동시 업로드·비동기 poll 스키마 검증 완료. 결함 수정: 인스타는 global description 무시·`instagram_title`이 캡션 전문(문서 실측) → description 있으면 `instagram_title=제목+설명` 전송(제휴 링크·대가성 고지 탈락 방지). 파트너스 링크 영상은 shopping-shorts 고지 번인+lint 선행 필수 |
 | ai-music (#8) | ✅ **착수(07-25)** — 컨셉→음악 브리프→프롬프트→트랙을 광고에 믹스(더킹·-14 LUFS). 백엔드 교체형: elevenlabs(공식 API·광고 clear), suno-manual(사람 게이트), suno-auto(가드 스텁—공식 API 부재, 비공식 미지원). 테스트 24·타입체크. 실생성은 ElevenLabs 키/Suno 유료 필요 |
 | shopping-shorts (#12) | ✅ **착수(07-27)** — 쇼핑쇼츠 결정적 파트(대본 lint·고지 강제·9:16 조립·실측 견적). 테스트 28·타입체크·CLI/대시보드 E2E 스모크 통과. 근거: 쇼핑쇼츠 강의 3편 영상분석 — 채택(훅 유형·레이어 편집·파트너스 3%)/금지선 대체(타인영상 재가공→전량 자체생성, 상세페이지 캡처→금지, 가짜 경험담→lint block). 스킬 `.claude/skills/shopping-shorts` + `apps/shopshorts` 대시보드(사람 게이트 2개, 127.0.0.1 전용)와 3축 구성. 파트너스 딥링크 API는 D1 실측 후 예약 슬롯 |
 | product-page-gen (#10) | ✅ **착수(07-26) + 적대적 리뷰 3렌즈 반영 완료** — 키워드→큐텐재팬 상세페이지(일본어 HTML+텍스트+컴플라이언스 리포트). 결정적 파트: 약기법 23규칙+화장품법 14규칙 lint(NFKC 정규화·면책문구 프리패스·혼합스크립트 방어, block 시 렌더 거부), Qxpress 물류 게이트(인화성·Economy 규격 회전 판정·부피무게 하한 추정·2023-08 요율 TODO(D1)), 마진 시뮬(평시 12%/메가와리 27.5%, 음수·enum 검증, 표시-판정 일치), 톤 3종 렌더(src escape·locale 무결성). **리뷰 실측 결함 24건 수정**(critical 2: gauges lint 우회·img src 주입 / major 8 / minor 14) — 게이트 우회 경로 전부 폐쇄, render 게이트가 brief.productName·전성분까지 lint. 테스트 67·타입체크·E2E 스모크 통과. 카피·리서치·사람 게이트는 `.claude/skills/product-page` 스킬. 근거: venture-studio `shopee-yeokjikgu/platform-selection-2026-07-26.md`. J'QSM 등록 자동화는 의도적 미구현(사람 게이트) |
 | longform-mix (#9) | ✅ **착수(07-26)** — N트랙→롱폼 음악믹스 영상(무료 ffmpeg). 배경 3종(비주얼라이저/footage/이미지)·챕터·썸네일 2종(감성/클릭베이트)·Pexels 공식 API. 테스트 19. gym mix Vol.1 산출 |
-| youtube-upload (#11) | ✅ **착수(07-27)** — 롱폼 YouTube Data API 업로드(videos.insert+썸네일+챕터). OAuth 리프레시 토큰 무인. 테스트 5. 사용자 Google Cloud OAuth 설정+`auth` 1회 필요 |
+| youtube-upload (#11) | ✅ **착수(07-27) + comment 명령(07-28)** — 롱폼 YouTube Data API 업로드(videos.insert+썸네일+챕터) + **댓글 작성**(commentThreads.insert, 쇼츠 파트너스 링크 노출용 — 제휴 링크 댓글은 대가성 고지 없으면 거부). OAuth 리프레시 토큰 무인. 테스트 16. **force-ssl 스코프 추가로 구 토큰은 comment 사용 전 `auth` 재인증 1회 필요**(채널 선택 함정: BetterrShop=「모두의 상품」). 댓글 고정은 API 미지원(수동) |
 
 **keyword-intel 게이트 현황**
 

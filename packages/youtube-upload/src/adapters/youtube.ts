@@ -14,6 +14,9 @@ export type OAuthClient = InstanceType<typeof google.auth.OAuth2>;
 const SCOPES = [
   'https://www.googleapis.com/auth/youtube.upload',
   'https://www.googleapis.com/auth/youtube',
+  // commentThreads.insert 는 force-ssl 스코프를 요구한다(업로드·메타수정만으론 403).
+  // 2026-07-28 이전에 발급된 토큰에는 이 스코프가 없으므로 comment 명령을 쓰려면 재인증 1회 필요.
+  'https://www.googleapis.com/auth/youtube.force-ssl',
 ];
 
 interface OAuthCfg {
@@ -101,6 +104,18 @@ export async function setPrivacy(client: OAuthClient, videoId: string, privacySt
     part: ['status'],
     requestBody: { id: videoId, status: { privacyStatus, selfDeclaredMadeForKids: false } },
   });
+}
+
+/** 최상위 댓글 작성 → commentId 반환. youtube.force-ssl 스코프 필요(구 토큰은 재인증). */
+export async function insertComment(client: OAuthClient, videoId: string, text: string): Promise<string> {
+  const youtube = google.youtube({ version: 'v3', auth: client });
+  const res = await youtube.commentThreads.insert({
+    part: ['snippet'],
+    requestBody: { snippet: { videoId, topLevelComment: { snippet: { textOriginal: text } } } },
+  });
+  const id = res.data.id;
+  if (id === undefined || id === null || id.length === 0) throw new Error('댓글 응답에 commentId 가 없음');
+  return id;
 }
 
 /** 커스텀 썸네일 세팅. */

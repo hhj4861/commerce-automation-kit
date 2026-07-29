@@ -42,6 +42,16 @@ describe('buildUploadTextFields', () => {
     expect(values(f, 'share_to_feed')).toEqual(['true']);
   });
 
+  it('인스타: description 있으면 instagram_title=제목+설명(캡션 전문 — 링크·고지 탈락 방지)', () => {
+    const f = buildUploadTextFields(full, 'u');
+    expect(values(f, 'instagram_title')).toEqual(['T\n\nD']);
+  });
+
+  it('인스타: description 없으면 instagram_title 생략(title 폴백)', () => {
+    const f = buildUploadTextFields({ platforms: ['instagram'], title: 'T', aiDisclosed: true }, 'u');
+    expect(values(f, 'instagram_title')).toEqual([]);
+  });
+
   it('aiDisclosed=false 면 AI 표기 false 로 전송(은폐 아님, 명시적 false)', () => {
     const f = buildUploadTextFields({ ...full, aiDisclosed: false }, 'u');
     expect(values(f, 'containsSyntheticMedia')).toEqual(['false']);

@@ -4,9 +4,10 @@
  * 사용:
  *   npm run cli -- auth                         # 1회 브라우저 인증 → 리프레시 토큰 저장(대화형)
  *   npm run cli -- channels                      # 인증 검증(내 채널 목록)
- *   npm run cli -- upload --video mix.mp4 --title "…" [--description "…"|--desc-file f] \
+ *   npm run cli -- upload --video mix.mp4 --title "…" [--description "…"|--description-file f] \
  *        [--tags a,b] [--category 10] [--privacy private|unlisted|public] \
  *        [--thumbnail thumb.jpg] [--chapters "…"|--chapters-file f] [--made-for-kids]
+ *   npm run cli -- comment --video-id ID --text "…"|--text-file f   # 링크 댓글(고지 검증, force-ssl 필요)
  *
  * 환경변수:
  *   YOUTUBE_CLIENT_SECRET  = Google Cloud OAuth 데스크톱 클라이언트 client_secret.json 경로 (필수)
@@ -23,6 +24,7 @@ import type { ParseArgsConfig } from 'node:util';
 import type { YoutubeUploadJob, YoutubeUploadResult } from '@cak/contracts';
 import { buildDescription } from '../core/description.js';
 import { buildVideoRequestBody } from '../core/video-resource.js';
+import { validateCommentText } from '../core/comment.js';
 import {
   createOAuthClient,
   loadTokens,
@@ -33,6 +35,7 @@ import {
   updateVideoMeta,
   setPrivacy,
   setThumbnail,
+  insertComment,
   type OAuthClient,
 } from '../adapters/youtube.js';
 import { youtubePrivacySchema } from '../adapters/schemas.js';
@@ -252,8 +255,41 @@ async function main(): Promise<void> {
       break;
     }
 
+    case 'comment': {
+      // 쇼츠는 설명란이 접혀 보여서 파트너스 링크는 댓글로 단다(달고 나서 고정은 스튜디오에서 수동).
+      // 제휴 링크 포함 시 대가성 고지 없으면 거부. 고정(pin)은 Data API 미지원 — TODO(D1) 아님, 스펙 부재.
+      const o = parse(rest, { 'video-id': STR, text: STR, 'text-file': STR });
+      const videoId = reqStr(o, 'video-id');
+      const text = strOrFile(o, 'text');
+      if (text === undefined) throw new UsageError('--text 또는 --text-file 필수');
+      const problems = validateCommentText(text);
+      if (problems.length > 0) {
+        out({ ok: false, videoId, problems });
+        process.exit(1);
+      }
+      try {
+        const commentId = await insertComment(authedClient(), videoId, text);
+        out({ ok: true, videoId, commentId, url: `https://youtu.be/${videoId}` });
+      } catch (e) {
+        const status = (e as { code?: unknown }).code;
+        if (status === 403 || status === '403') {
+          out({
+            ok: false,
+            videoId,
+            problems: [
+              '403 — 토큰에 youtube.force-ssl 스코프가 없을 가능성이 큼. ' +
+                '`cli -- auth` 로 재인증 1회 필요(채널 선택 화면은 브랜드 계정명 표시: BetterrShop=「모두의 상품」).',
+            ],
+          });
+          process.exit(1);
+        }
+        exitTransientOrThrow(e);
+      }
+      break;
+    }
+
     default:
-      console.error('명령: auth | channels | upload | update-meta | set-privacy');
+      console.error('명령: auth | channels | upload | update-meta | set-privacy | comment');
       process.exit(1);
   }
 }
