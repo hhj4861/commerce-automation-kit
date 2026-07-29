@@ -38,12 +38,8 @@ const LINKS = [
     en: "Try a free 5-minute lesson",
     sub: "Read Korean in 5 minutes. No sign-up, just tap",
   },
-  {
-    href: "/library",
-    primary: false,
-    en: "Free Korean study packs",
-    sub: "Phrases, pronunciation drills, K-culture expressions",
-  },
+  // /library는 수업 자료(팩) 성격이라 뺐다 — 전환 집중(체험→예약).
+  // 학생에게 팩이 필요한 순간(체험 마지막·학생 포털)에는 이미 연결돼 있다.
   {
     href: PREPLY_REFERRAL_URL,
     primary: false,
