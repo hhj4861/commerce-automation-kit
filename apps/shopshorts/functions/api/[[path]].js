@@ -1,5 +1,5 @@
 /**
- * shopshorts-cloud API — Pages Functions 라우터.
+ * shopshorts Cloudflare API — Pages Functions 라우터.
  *
  * 역할 분담(클라우드는 "상태·미디어"만, 실행은 로컬):
  *  - D1: 잡 큐 단일 진실 소스(전이 화이트리스트를 여기서 강제 — UI/워커 공통 게이트)

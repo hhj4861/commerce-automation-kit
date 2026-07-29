@@ -385,9 +385,22 @@ const server = createServer(async (req, res) => {
       }
     }
     // 정적 UI
-    if (req.method === 'GET' && (url.pathname === '/' || url.pathname === '/index.html')) {
+    const appPages = ['/', '/index.html', '/contents', '/trends', '/performance', '/affiliate-links', '/settings'];
+    if (req.method === 'GET' && appPages.includes(url.pathname)) {
       res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
       res.end(readFileSync(join(__dirname, 'public', 'index.html')));
+      return;
+    }
+    // 개편 전 UI — 전환 직후 비교·롤백 확인용.
+    if (req.method === 'GET' && (url.pathname === '/legacy' || url.pathname === '/legacy.html')) {
+      res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
+      res.end(readFileSync(join(__dirname, 'public', 'legacy.html')));
+      return;
+    }
+    // 과거 검토 링크 호환.
+    if (req.method === 'GET' && (url.pathname === '/design-proposal' || url.pathname === '/design-proposal.html')) {
+      res.writeHead(302, { location: '/' });
+      res.end();
       return;
     }
 

@@ -1,4 +1,4 @@
--- shopshorts-cloud D1 스키마 — 클라우드 큐가 단일 진실 소스(로컬 jobs.json 대체)
+-- shopshorts D1 스키마 — 클라우드 큐가 단일 진실 소스(로컬 jobs.json 대체)
 -- 잡 본문은 JSON 블롭(data) — @cak/contracts ShoppingShortsJob 형태 유지(계약 일관성).
 -- status 는 질의 최적화를 위한 발췌 컬럼(항상 data.status 와 동기).
 

@@ -1,22 +1,47 @@
-# apps/shopshorts — 쇼핑쇼츠 운영 대시보드 (원자 조합 서비스)
+# apps/shopshorts — 쇼핑쇼츠 통합 운영 앱
 
-`packages/`의 원자들을 조합해 쇼핑쇼츠 제작·발행 큐를 운영하는 **로컬 전용** 서비스.
-원자 로직을 재구현하지 않는다 — lint/견적/조립은 전부 `@cak/shopping-shorts` CLI 를 spawn.
+공용 UI, 로컬 실행 서버·워커, Cloudflare Pages Functions·D1·R2 구성을 한 디렉터리에서 관리한다.
+UI·상태는 클라우드에서도 사용할 수 있고, ffmpeg·TTS·클립 생성 같은 무거운 실행은 로컬 Mac 워커가 담당한다.
 
 ```
-keyword-intel(#1) ─┐  (소재 신호)
-스킬 shopping-shorts ─→ [이 앱: 잡 큐 + 사람 게이트] ─→ shorts-publish(#7) 업로드(사람 실행)
-힉스필드(생성)     ─┘        │
-                      @cak/shopping-shorts(#12): lint·고지·조립 게이트
+[Pages 공용 UI + Functions API + D1 큐 + R2 영상]
+             ▲ 결과 업로드          │ 사람 승인·작업 요청
+             └──── [worker.mjs / 로컬 Mac] ────┘
 ```
 
-## 실행
+## 구성
+
+- `public/index.html` — 로컬·클라우드 공용 UI
+- `functions/` — Cloudflare Pages API와 인증 미들웨어
+- `server.mjs` — 로컬 API와 정적 UI 서버
+- `worker.mjs` — 클라우드 큐의 lint·TTS·조립 실행자
+- `schema.sql` — D1 스키마
+- `wrangler.toml` — Pages·D1·R2 배포 설정
+- `data/` — 로컬 모드의 운영 데이터
+
+## 로컬 실행
 
 ```bash
 npm start -w @cak/app-shopshorts     # http://127.0.0.1:5178 (127.0.0.1 바인딩 — 외부 노출 없음)
 ```
 
 데이터: `apps/shopshorts/data/jobs.json` (gitignore — 운영 데이터).
+
+## Cloudflare 실행·배포
+
+```bash
+npm run cloud:dev -w @cak/app-shopshorts
+npm run cloud:deploy -w @cak/app-shopshorts
+```
+
+프로젝트: `shopshorts-dash` (`https://shopshorts-dash.pages.dev`)
+
+- D1: `shopshorts`
+- R2: `shopshorts-media`
+- Pages 시크릿: `SHOPSHORTS_TOKEN`
+- 딥링크 사용 시: `COUPANG_ACCESS_KEY`, `COUPANG_SECRET_KEY`
+
+로컬 워커 환경에는 `SHOPSHORTS_CLOUD_URL`과 동일한 `SHOPSHORTS_TOKEN`이 필요하다.
 
 ## 상태 흐름과 게이트
 

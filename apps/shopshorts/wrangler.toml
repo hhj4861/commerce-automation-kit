@@ -1,4 +1,4 @@
-# shopshorts-cloud — Cloudflare Pages(정적 UI) + Functions(API) + D1(큐) + R2(영상)
+# shopshorts — Cloudflare Pages(정적 UI) + Functions(API) + D1(큐) + R2(영상)
 # 실행 워커는 로컬 Mac(apps/shopshorts/worker.mjs) — 클라우드는 상태·UI·미디어만 담당.
 name = "shopshorts-dash"
 compatibility_date = "2026-07-01"

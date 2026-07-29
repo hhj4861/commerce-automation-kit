@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>쇼핑쇼츠 파이프라인</title>
+<title>쇼핑쇼츠 파이프라인 — Legacy</title>
 <style>
   :root {
     --bg: #0e1113; --panel: #14181b; --card: #1a1f23; --line: #262d32; --line-soft: #1f2529;
@@ -144,7 +144,6 @@
 <header>
   <h1>쇼핑쇼츠 파이프라인</h1>
   <span class="note">주황 = 당신 차례 · 나머지는 자동</span>
-  <span class="note" id="worker-badge">워커 상태 확인 중…</span>
 </header>
 
 <div class="rail" id="rail"></div>
@@ -241,8 +240,8 @@ function primaryAction(j) {
   switch (j.status) {
     case 'draft': return { label: '기획 승인', run: () => transition(j, 'script-approved') };
     case 'generated':
-      if (j.finalize?.state === 'requested' || j.finalize?.state === 'running') return null;
-      return { label: '자막+TTS 요청', run: () => finalize(j) };
+      if (j.finalize?.state === 'running') return null;
+      return { label: '자막+TTS 붙이기', run: () => finalize(j) };
     case 'assembled': return { label: '검수 요청', run: () => transition(j, 'review') };
     case 'review': return { label: '발행 확인', run: () => confirmPublish(j) };
     case 'rejected': return { label: '초안으로 복귀', run: () => transition(j, 'draft') };
@@ -258,7 +257,7 @@ function renderJobs() {
   if (!jobs.length) { box.appendChild(el('div', 'empty', state.filter ? '이 단계에 항목 없음 — 노드를 다시 눌러 전체 보기' : '큐가 비어 있습니다. 위 HOT 키워드에서 시작하세요.')); return; }
 
   jobs.forEach(j => {
-    const st = stageOf(j) || { label: j.status === 'rejected' ? '반려' : j.status };
+    const st = stageOf(j) || { label: j.status };
     const act = primaryAction(j);
     const row = el('div', 'row' + (act ? ' needs' : '') + (j.status === 'published' ? ' published' : ''));
     row.appendChild(el('div', 'stagechip', st.label));
@@ -268,8 +267,7 @@ function renderJobs() {
     const bits = [`${HOOK_KO[j.script.hookType] ?? j.script.hookType} · ${j.script.beats.length}비트`];
     if (isPlaceholder(j.brief.affiliateUrl)) bits.push('링크 필요');
     if (j.lintReport && !j.lintReport.ok) bits.push('lint 위반');
-    if (j.status === 'script-approved' && j.lintChecked !== true) bits.push('lint 검증 대기(워커)');
-    if (j.finalize?.state === 'requested' || j.finalize?.state === 'running') bits.push('조립 중…');
+    if (j.finalize?.state === 'running') bits.push('조립 중…');
     if (j.finalize?.state === 'error') bits.push('조립 실패');
     const meta = el('div', 'meta');
     bits.forEach((t, i) => {
@@ -284,7 +282,7 @@ function renderJobs() {
       b.onclick = (e) => { e.stopPropagation(); act.run(); };
       row.appendChild(b);
     } else {
-      row.appendChild(el('span', 'auto-note', (j.finalize?.state === 'requested' || j.finalize?.state === 'running') ? '워커 조립 중…' : (stageOf(j)?.auto ?? '')));
+      row.appendChild(el('span', 'auto-note', stageOf(j)?.auto ?? (j.finalize?.state === 'running' ? 'Yooni 조립 중…' : '')));
     }
     row.onclick = () => openDrawer(j.brief.id);
     box.appendChild(row);
@@ -307,9 +305,9 @@ function confirmPublish(j) {
   transition(j, 'published', ref ? { publishRef: ref } : {});
 }
 async function finalize(j) {
-  if (!confirm('Yooni 보이스 내레이션 + 자막 조립을 로컬 워커에 요청합니다 (ElevenLabs 비용 발생). 진행할까요?')) return;
-  try { await api(`/api/jobs/${j.brief.id}/request-finalize`, { method: 'POST' }); toast('요청됨 — Mac 워커가 집어가면 1~2분 내 완료됩니다'); load(); }
-  catch (e) { toast('요청 실패: ' + e.message); }
+  if (!confirm('Yooni 보이스로 내레이션을 만들고 자막·고지를 입힙니다 (ElevenLabs 비용 발생). 진행할까요?')) return;
+  try { await api(`/api/jobs/${j.brief.id}/finalize`, { method: 'POST' }); toast('조립 시작 — 1~2분 뒤 자동 갱신됩니다'); load(); }
+  catch (e) { toast('조립 시작 실패: ' + e.message); }
 }
 
 // ---- 드로어 ----
@@ -329,8 +327,8 @@ function renderDrawer() {
   d.appendChild(el('div', 'sub', `${j.brief.id} · ${stageOf(j)?.label ?? j.status} · ${HOOK_KO[j.script.hookType] ?? ''}`));
 
   // 영상
-  const showFinal = j.mediaUploaded?.final && ['assembled', 'review', 'published'].includes(j.status);
-  const showPrev = j.mediaUploaded?.preview && j.status === 'generated';
+  const showFinal = j.outputVideo && ['assembled', 'review', 'published'].includes(j.status);
+  const showPrev = j.previewVideo && j.status === 'generated';
   if (showFinal || showPrev) {
     const s = el('section');
     s.appendChild(el('h3', '', showFinal ? '최종 영상 (자막+내레이션)' : '클립 미리보기 (무자막)'));
@@ -340,8 +338,7 @@ function renderDrawer() {
     s.appendChild(v);
     d.appendChild(s);
   }
-  if (j.finalize?.state === 'requested') d.appendChild(el('div', 'fin-note run', '⏳ 워커 대기 중(요청됨)…'));
-  if (j.finalize?.state === 'running') d.appendChild(el('div', 'fin-note run', '⏳ 워커가 Yooni 내레이션 + 자막 조립 중…'));
+  if (j.finalize?.state === 'running') d.appendChild(el('div', 'fin-note run', '⏳ Yooni 내레이션 + 자막 조립 중…'));
   if (j.finalize?.state === 'error') d.appendChild(el('div', 'fin-note err', '조립 실패: ' + j.finalize.error));
 
   // 대본
@@ -405,7 +402,8 @@ function renderDrawer() {
   if (PREV[j.status]) mkv('← 이전 단계로', () => {
     if (confirm(`${stageOf(j)?.label} → ${STAGES.find(s => s.key === PREV[j.status])?.label} 로 되돌릴까요?`)) transition(j, PREV[j.status]);
   });
-  mkv('lint 재검증 요청', async () => { try { await api(`/api/jobs/${j.brief.id}/request-lint`, { method: 'POST' }); toast('재검증 요청됨 — 워커가 곧 처리합니다'); load(true); } catch (e) { toast('실패: ' + e.message); } });
+  mkv('lint 재실행', async () => { try { const r = await api(`/api/jobs/${j.brief.id}/lint`, { method: 'POST' }); toast('lint ' + (r.ok ? '통과' : '위반 ' + r.findings.length + '건')); load(true); } catch (e) { toast('실패: ' + e.message); } });
+  mkv('생성 견적', async () => { try { const r = await api(`/api/jobs/${j.brief.id}/estimate?model=kling3_0-pro`, { method: 'POST' }); toast(`클립 ${r.clipsTotal}cr + TTS ${r.ttsCredits}cr = ${r.grandTotal}cr`); } catch (e) { toast('실패: ' + e.message); } });
   if (!['published'].includes(j.status)) mkv('반려', () => transition(j, 'rejected'), 'danger');
   sv.appendChild(vr);
   d.appendChild(sv);
@@ -416,12 +414,6 @@ async function load(keepDrawer = false) {
   try {
     const d = await api('/api/jobs');
     state.jobs = d.jobs;
-    const b = document.getElementById('worker-badge');
-    if (b) {
-      const fresh = d.workerAt && (Date.now() - new Date(d.workerAt).getTime() < 90_000);
-      b.textContent = fresh ? '● 워커 온라인' : '○ 워커 오프라인 — Mac이 꺼져 있으면 작업이 큐에 대기합니다';
-      b.style.color = fresh ? 'var(--ok)' : 'var(--act)';
-    }
     render();
     if (keepDrawer && state.openId) renderDrawer();
   } catch (e) { toast('로드 실패: ' + e.message); }

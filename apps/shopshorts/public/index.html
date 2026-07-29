@@ -3,429 +3,1047 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>쇼핑쇼츠 파이프라인</title>
+<title>Shopshorts — Content Studio</title>
 <style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@500;600;700&family=Noto+Sans+KR:wght@400;500;600;700&display=swap');
+
   :root {
-    --bg: #0e1113; --panel: #14181b; --card: #1a1f23; --line: #262d32; --line-soft: #1f2529;
-    --ink: #e9ecee; --dim: #8b949c; --faint: #5c656d;
-    --act: #e8b45a;          /* 사람 차례 */
-    --act-ink: #1a1204;
-    --ok: #57c99b;           /* 완료·자동 */
-    --bad: #e06c6c;
-    --radius: 10px;
+    --canvas: #f7f7f4;
+    --surface: #fff;
+    --surface-soft: #f1f2ed;
+    --ink: #242622;
+    --muted: #73776f;
+    --faint: #a4a79f;
+    --line: #e5e6df;
+    --brand: #ff6b4a;
+    --brand-soft: #fff0eb;
+    --mint: #277e64;
+    --mint-soft: #e7f4ee;
+    --yellow: #a26800;
+    --yellow-soft: #fff3d7;
+    --red: #b54b42;
+    --red-soft: #fbeae7;
+    --blue: #5378d8;
+    --shadow: 0 12px 32px rgba(35, 42, 32, .07);
+    --radius: 18px;
   }
-  * { box-sizing: border-box; margin: 0; }
-  html { color-scheme: dark; }
+
+  * { box-sizing: border-box; }
+  html { color-scheme: light; }
   body {
-    background: var(--bg); color: var(--ink);
-    font: 14px/1.55 -apple-system, "Apple SD Gothic Neo", system-ui, sans-serif;
-    padding: 26px clamp(16px, 4vw, 44px) 60px;
+    margin: 0;
+    background: var(--canvas);
+    color: var(--ink);
+    font-family: "DM Sans", "Noto Sans KR", -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 14px;
   }
-  button { font: inherit; cursor: pointer; border: 0; background: none; color: inherit; }
-  button:focus-visible, a:focus-visible { outline: 2px solid var(--act); outline-offset: 2px; }
+  button { font: inherit; color: inherit; }
+  button:focus-visible { outline: 3px solid rgba(255,107,74,.3); outline-offset: 2px; }
+  svg { display: block; }
 
-  /* ---- 헤더 ---- */
-  header { display: flex; align-items: baseline; gap: 14px; margin-bottom: 22px; }
-  h1 { font-size: 17px; font-weight: 700; letter-spacing: -.01em; }
-  header .note { color: var(--faint); font-size: 12px; }
+  .app { min-height: 100vh; display: grid; grid-template-columns: 224px minmax(0, 1fr); }
+  .sidebar {
+    position: sticky; top: 0; height: 100vh;
+    padding: 28px 18px 20px; background: #20231f; color: #fff;
+    display: flex; flex-direction: column;
+  }
+  .brand { display: flex; align-items: center; gap: 11px; padding: 0 10px 31px; }
+  .brand-mark {
+    width: 34px; height: 34px; border-radius: 11px; display: grid; place-items: center;
+    background: var(--brand); box-shadow: inset 0 -2px 0 rgba(0,0,0,.08);
+  }
+  .brand-name { font-size: 16px; font-weight: 700; letter-spacing: -.03em; }
+  .brand-name span { display: block; color: #8f948c; font-size: 10px; font-weight: 500; letter-spacing: .07em; margin-top: 1px; }
+  .nav-label { color: #777d74; font-size: 10px; font-weight: 700; letter-spacing: .12em; padding: 0 12px 9px; }
+  nav { display: grid; gap: 5px; }
+  .nav-item {
+    border: 0; background: transparent; border-radius: 11px; color: #aeb3ab;
+    height: 42px; padding: 0 12px; display: flex; align-items: center; gap: 11px;
+    text-align: left; cursor: pointer; transition: .16s ease;
+  }
+  .nav-item:hover { color: #fff; background: #2a2e29; }
+  .nav-item.active { color: #fff; background: #343833; }
+  .nav-item.active svg { color: #ff8065; }
+  .nav-item .count { margin-left: auto; font-size: 11px; color: #23251f; background: #ff8065; border-radius: 99px; padding: 1px 7px; font-weight: 700; }
+  .sidebar-foot { margin-top: auto; }
+  .system {
+    border: 1px solid #353a34; background: #272a26; border-radius: 13px; padding: 12px;
+    color: #aeb3ab; font-size: 11px;
+  }
+  .system strong { display: flex; align-items: center; gap: 7px; color: #e7e9e4; font-size: 12px; margin-bottom: 4px; }
+  .online { width: 7px; height: 7px; background: #63c798; border-radius: 50%; box-shadow: 0 0 0 3px rgba(99,199,152,.13); }
 
-  /* ---- 파이프라인 레일 (시그니처) ---- */
-  .rail { display: flex; align-items: flex-start; margin: 0 0 26px; overflow-x: auto; padding: 6px 2px 2px; }
-  .stage { display: flex; align-items: flex-start; }
-  .node { text-align: center; min-width: 76px; cursor: pointer; border-radius: 8px; padding: 4px 6px 6px; }
-  .node:hover { background: var(--line-soft); }
-  .node .dot {
-    width: 30px; height: 30px; border-radius: 50%; margin: 0 auto 6px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums;
-    background: var(--card); border: 1.5px solid var(--line); color: var(--dim);
+  main { min-width: 0; padding: 0 38px 64px; }
+  .topbar {
+    height: 78px; display: flex; align-items: center; justify-content: space-between;
+    border-bottom: 1px solid var(--line); margin-bottom: 31px;
   }
-  .node.active .dot { border-color: var(--dim); color: var(--ink); }
-  .node.needs .dot { background: var(--act); border-color: var(--act); color: var(--act-ink); }
-  .node.done .dot { border-color: var(--ok); color: var(--ok); }
-  .node .lbl { font-size: 11px; color: var(--dim); letter-spacing: .02em; }
-  .node.needs .lbl { color: var(--act); font-weight: 600; }
-  .node.filtered .lbl { text-decoration: underline; text-underline-offset: 3px; }
-  .edge { height: 1.5px; background: var(--line); width: clamp(14px, 3vw, 38px); margin-top: 18px; }
+  .breadcrumb { color: var(--muted); font-size: 13px; }
+  .breadcrumb strong { color: var(--ink); font-weight: 600; }
+  .top-actions { display: flex; align-items: center; gap: 10px; }
+  .icon-btn {
+    width: 38px; height: 38px; display: grid; place-items: center; border-radius: 11px;
+    border: 1px solid var(--line); background: var(--surface); cursor: pointer;
+  }
+  .avatar { width: 36px; height: 36px; border-radius: 50%; background: #d5e7df; display: grid; place-items: center; color: var(--mint); font-size: 12px; font-weight: 700; }
+  .view[hidden] { display: none; }
+  .page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; margin: 31px 0 24px; }
+  .page-head h1 { margin-top: 5px; }
+  .page-head p { color: var(--muted); margin: 8px 0 0; }
+  .page-grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 12px; }
+  .page-card { border: 1px solid var(--line); background: var(--surface); border-radius: 16px; padding: 17px; }
+  .page-card.clickable { cursor: pointer; transition: .15s ease; }
+  .page-card.clickable:hover { transform: translateY(-1px); border-color: #d0d3ca; box-shadow: var(--shadow); }
+  .page-card h3 { margin: 0; font-size: 14px; }
+  .page-card p { color: var(--muted); font-size: 11px; line-height: 1.6; margin: 7px 0 0; }
+  .metric-large { font-size: 30px; font-weight: 700; letter-spacing: -.05em; margin-top: 13px; }
+  .video-library { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 16px; }
+  .video-card {
+    border: 0; background: transparent; padding: 0; text-align: left; cursor: pointer;
+    min-width: 0; border-radius: 18px;
+  }
+  .video-cover {
+    position: relative; aspect-ratio: 9 / 14; overflow: hidden; border-radius: 17px;
+    background: linear-gradient(145deg, #dbc1bd, #584950); box-shadow: 0 10px 28px rgba(35,42,32,.08);
+    transition: transform .18s ease, box-shadow .18s ease;
+  }
+  .video-card:hover .video-cover { transform: translateY(-3px); box-shadow: 0 16px 34px rgba(35,42,32,.13); }
+  .video-cover video { width: 100%; height: 100%; object-fit: cover; background: #1d201c; }
+  .video-cover::after { content:""; position:absolute; inset:auto 0 0; height:38%; background:linear-gradient(transparent,rgba(15,17,14,.62)); pointer-events:none; }
+  .video-cover.empty::before {
+    content:""; position:absolute; width:86px; height:86px; border:18px solid rgba(255,255,255,.08);
+    border-radius:50%; right:-26px; top:-22px;
+  }
+  .cover-play {
+    position:absolute; z-index:2; left:50%; top:50%; transform:translate(-50%,-50%);
+    width:43px; height:43px; display:grid; place-items:center; border-radius:50%;
+    background:rgba(255,255,255,.9); color:var(--ink); box-shadow:0 5px 16px rgba(0,0,0,.13);
+  }
+  .cover-state { position:absolute; z-index:2; left:11px; top:11px; padding:5px 8px; border-radius:99px; background:rgba(24,27,23,.68); color:#fff; font-size:9px; font-weight:700; backdrop-filter:blur(7px); }
+  .cover-duration { position:absolute; z-index:2; right:10px; bottom:10px; color:#fff; font-size:9px; font-weight:600; }
+  .cover-placeholder { position:absolute; inset:0; display:grid; place-items:center; color:rgba(255,255,255,.72); }
+  .video-info { padding:11px 3px 4px; }
+  .video-info strong { display:block; font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .video-info span { display:block; color:var(--muted); font-size:10px; margin-top:4px; }
+  .library-meta { display:flex; align-items:center; justify-content:space-between; gap:15px; margin-bottom:16px; color:var(--muted); font-size:11px; }
+  .library-filter { display:flex; gap:6px; }
+  .library-filter button { border:1px solid var(--line); background:#fff; color:var(--muted); border-radius:9px; height:31px; padding:0 10px; font-size:10px; cursor:pointer; }
+  .library-filter button.active { background:var(--ink); color:#fff; border-color:var(--ink); }
+  .viewer {
+    position:fixed; inset:0; z-index:40; display:grid; place-items:center; padding:24px;
+    background:rgba(22,24,21,.7); backdrop-filter:blur(8px);
+  }
+  .viewer[hidden] { display:none; }
+  .viewer-panel {
+    width:min(880px,96vw); max-height:92vh; overflow:auto; display:grid; grid-template-columns:minmax(260px,390px) minmax(260px,1fr);
+    background:var(--surface); border-radius:22px; box-shadow:0 30px 80px rgba(0,0,0,.28); position:relative;
+  }
+  .viewer-media { min-height:610px; background:#171916; border-radius:22px 0 0 22px; overflow:hidden; display:grid; place-items:center; }
+  .viewer-media video { width:100%; height:100%; max-height:82vh; object-fit:contain; background:#111; }
+  .viewer-no-video { color:#8d9189; text-align:center; font-size:12px; line-height:1.6; }
+  .viewer-copy { padding:34px 30px; }
+  .viewer-copy h2 { font-size:23px; margin:8px 0; }
+  .viewer-copy > p { color:var(--muted); font-size:12px; line-height:1.65; }
+  .viewer-close { position:absolute; z-index:3; right:15px; top:14px; width:34px; height:34px; border:1px solid var(--line); background:rgba(255,255,255,.92); border-radius:10px; cursor:pointer; font-size:20px; }
+  .viewer-beats { margin-top:23px; display:grid; gap:12px; }
+  .viewer-beat { display:grid; grid-template-columns:24px 1fr; gap:9px; color:var(--muted); font-size:11px; line-height:1.55; }
+  .page-table { border: 1px solid var(--line); border-radius: 17px; overflow: hidden; background: var(--surface); }
+  .page-row { display: grid; grid-template-columns: minmax(180px,1fr) 130px 130px 110px; gap: 15px; align-items: center; padding: 14px 17px; border-bottom: 1px solid var(--line); }
+  .page-row:last-child { border-bottom: 0; }
+  .page-row.header { color: var(--muted); background: var(--surface-soft); font-size: 10px; font-weight: 700; letter-spacing: .05em; }
+  .page-row strong { font-size: 12px; }
+  .page-row span { color: var(--muted); font-size: 11px; }
+  .page-row button { border: 1px solid var(--line); background: #fff; border-radius: 8px; height: 31px; font-size: 10px; cursor: pointer; }
+  .empty-page { padding: 55px 25px; text-align: center; color: var(--muted); }
+  .setting-row { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 16px 0; border-bottom: 1px solid var(--line); }
+  .setting-row:last-child { border-bottom: 0; }
+  .setting-row strong { display: block; font-size: 12px; }
+  .setting-row small { color: var(--muted); }
+  .toggle { width: 39px; height: 23px; border: 0; border-radius: 99px; background: #cfd2ca; padding: 3px; cursor: pointer; }
+  .toggle::after { content:""; display:block; width:17px; height:17px; border-radius:50%; background:#fff; transition:.15s; }
+  .toggle.on { background: var(--mint); }
+  .toggle.on::after { transform: translateX(16px); }
 
-  /* ---- 핫 키워드 ---- */
-  .hot { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 26px; }
-  .hot .cap { font-size: 11px; color: var(--faint); letter-spacing: .06em; margin-right: 2px; }
-  .chip {
-    display: inline-flex; align-items: center; gap: 8px;
-    background: var(--panel); border: 1px solid var(--line); border-radius: 999px;
-    padding: 5px 6px 5px 13px; font-size: 12.5px;
+  .hero { display: flex; justify-content: space-between; align-items: flex-end; gap: 20px; margin-bottom: 23px; }
+  .eyebrow { color: var(--brand); font-size: 11px; font-weight: 700; letter-spacing: .1em; margin-bottom: 7px; }
+  h1 { margin: 0; font-size: clamp(26px, 3vw, 34px); letter-spacing: -.055em; line-height: 1.25; }
+  .hero p { color: var(--muted); margin: 9px 0 0; }
+  .new-btn {
+    border: 0; border-radius: 12px; background: var(--ink); color: #fff; height: 43px;
+    padding: 0 17px; display: flex; align-items: center; gap: 8px; font-weight: 600; cursor: pointer;
+    box-shadow: 0 7px 18px rgba(26,29,25,.13);
   }
-  .chip .op { color: var(--faint); font-size: 11px; font-variant-numeric: tabular-nums; }
-  .chip button {
-    background: var(--card); border: 1px solid var(--line); border-radius: 999px;
-    padding: 2px 10px; font-size: 11.5px; color: var(--dim);
-  }
-  .chip button:hover { color: var(--act); border-color: var(--act); }
-  .chip.pending { color: var(--dim); padding-right: 13px; }
 
-  /* ---- 잡 리스트 ---- */
-  .jobs { display: flex; flex-direction: column; gap: 8px; max-width: 980px; }
-  .row {
-    display: grid; grid-template-columns: 104px 1fr auto; align-items: center; gap: 14px;
-    background: var(--panel); border: 1px solid var(--line-soft); border-radius: var(--radius);
-    padding: 13px 16px; cursor: pointer; transition: border-color .12s;
+  .summary { display: grid; grid-template-columns: 1.35fr repeat(3, 1fr); gap: 12px; margin-bottom: 28px; }
+  .summary-card {
+    min-height: 108px; border: 1px solid var(--line); background: var(--surface);
+    border-radius: var(--radius); padding: 18px 19px; position: relative; overflow: hidden;
+    cursor: pointer; transition: transform .15s ease, border-color .15s ease, box-shadow .15s ease;
   }
-  .row:hover { border-color: var(--line); }
-  .row .stagechip {
-    font-size: 11px; padding: 3px 0; text-align: center; border-radius: 6px;
-    border: 1px solid var(--line); color: var(--dim); white-space: nowrap;
+  .summary-card:hover { transform: translateY(-2px); border-color: #d3d5cd; box-shadow: var(--shadow); }
+  .summary-card.selected { box-shadow: 0 0 0 2px var(--brand-soft); border-color: #f0a995; }
+  .summary-card.featured { background: #26362f; color: #fff; border-color: #26362f; }
+  .summary-card.featured::after {
+    content: ""; position: absolute; width: 120px; height: 120px; border: 24px solid rgba(255,255,255,.045);
+    border-radius: 50%; right: -42px; bottom: -60px;
   }
-  .row.needs .stagechip { border-color: color-mix(in srgb, var(--act) 55%, transparent); color: var(--act); }
-  .row.published .stagechip { border-color: color-mix(in srgb, var(--ok) 55%, transparent); color: var(--ok); }
-  .row .name { font-weight: 600; font-size: 14.5px; }
-  .row .meta { color: var(--faint); font-size: 12px; margin-top: 1px; }
-  .row .meta .warn { color: var(--act); }
-  .row .meta .err { color: var(--bad); }
-  .primary {
-    background: var(--act); color: var(--act-ink); font-weight: 700; font-size: 12.5px;
-    border-radius: 8px; padding: 8px 14px; white-space: nowrap;
-  }
-  .primary:hover { filter: brightness(1.08); }
-  .auto-note { color: var(--faint); font-size: 12px; white-space: nowrap; }
-  .empty { color: var(--faint); padding: 30px 0; text-align: center; }
+  .summary-label { color: var(--muted); font-size: 11px; font-weight: 600; display: flex; align-items: center; gap: 7px; }
+  .featured .summary-label { color: #a8b8b1; }
+  .summary-value { font-size: 27px; font-weight: 700; letter-spacing: -.05em; margin-top: 10px; line-height: 1; }
+  .summary-sub { font-size: 11px; color: var(--muted); margin-top: 7px; }
+  .featured .summary-sub { color: #a8b8b1; }
+  .summary-card .spark { position: absolute; right: 16px; bottom: 18px; color: #78b19c; }
 
-  /* ---- 드로어 ---- */
-  .scrim { position: fixed; inset: 0; background: rgba(0,0,0,.45); opacity: 0; pointer-events: none; transition: opacity .15s; }
-  .drawer {
-    position: fixed; top: 0; right: 0; bottom: 0; width: min(460px, 94vw);
-    background: var(--panel); border-left: 1px solid var(--line);
-    transform: translateX(102%); transition: transform .18s ease-out;
-    overflow-y: auto; padding: 22px 22px 40px;
+  .section-head { display: flex; align-items: center; justify-content: space-between; gap: 18px; margin-bottom: 13px; }
+  h2 { margin: 0; font-size: 17px; letter-spacing: -.035em; }
+  .section-note { color: var(--muted); font-size: 12px; }
+  .topic-strip { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 11px; margin-bottom: 31px; }
+  .topic {
+    border: 1px solid var(--line); border-radius: 15px; background: rgba(255,255,255,.72);
+    padding: 14px 15px; display: flex; align-items: center; gap: 12px;
+    cursor: pointer; transition: transform .15s ease, border-color .15s ease;
   }
-  body.open .scrim { opacity: 1; pointer-events: auto; }
-  body.open .drawer { transform: none; }
-  @media (prefers-reduced-motion: reduce) { .drawer, .scrim { transition: none; } }
-  .drawer h2 { font-size: 16px; margin-bottom: 2px; }
-  .drawer .sub { color: var(--faint); font-size: 12px; margin-bottom: 18px; }
-  .drawer section { border-top: 1px solid var(--line-soft); padding: 14px 0; }
-  .drawer section > h3 { font-size: 11px; color: var(--faint); letter-spacing: .08em; margin-bottom: 10px; font-weight: 600; }
-  .beats { width: 100%; border-collapse: collapse; font-size: 12.5px; }
-  .beats td { padding: 5px 8px 5px 0; vertical-align: top; }
-  .beats td:first-child { color: var(--faint); white-space: nowrap; font-size: 11px; padding-top: 7px; }
-  .beats .cap-t { color: var(--dim); font-size: 11.5px; }
-  video { width: 100%; border-radius: 8px; background: #000; margin-top: 4px; }
-  .btnrow { display: flex; flex-wrap: wrap; gap: 7px; }
-  .btn {
-    border: 1px solid var(--line); border-radius: 8px; padding: 7px 12px;
-    font-size: 12.5px; color: var(--dim); background: var(--card);
+  .topic:hover { transform: translateY(-1px); border-color: #d2d4cc; }
+  .topic-rank { width: 30px; height: 30px; border-radius: 10px; background: var(--brand-soft); color: var(--brand); display: grid; place-items: center; font-weight: 700; }
+  .topic-info { min-width: 0; }
+  .topic-name { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .topic-score { color: var(--muted); font-size: 11px; margin-top: 2px; }
+  .topic button {
+    margin-left: auto; flex: 0 0 auto; border: 1px solid var(--line); background: #fff;
+    width: 31px; height: 31px; border-radius: 9px; display: grid; place-items: center; cursor: pointer;
   }
-  .btn:hover { color: var(--ink); border-color: var(--dim); }
-  .btn.warm { color: var(--act); border-color: color-mix(in srgb, var(--act) 45%, transparent); }
-  .btn.danger:hover { color: var(--bad); border-color: var(--bad); }
-  .linkline { font-size: 12px; color: var(--dim); word-break: break-all; margin-bottom: 9px; }
-  .linkline.placeholder { color: var(--act); }
-  .findings { font-size: 12px; color: var(--dim); padding-left: 16px; }
-  .findings .b { color: var(--bad); }
-  .kv { font-size: 12.5px; color: var(--dim); }
-  .kv b { color: var(--ink); font-weight: 600; }
-  .close { position: absolute; top: 14px; right: 16px; color: var(--faint); font-size: 20px; padding: 4px 8px; }
-  .close:hover { color: var(--ink); }
-  .fin-note { font-size: 12px; margin-top: 8px; }
-  .fin-note.err { color: var(--bad); }
-  .fin-note.run { color: var(--act); }
+  .topic button:hover { border-color: var(--brand); color: var(--brand); }
 
-  /* ---- 토스트 ---- */
-  #toast {
-    position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%) translateY(8px);
-    background: var(--card); border: 1px solid var(--line); border-radius: 10px;
-    padding: 10px 16px; font-size: 13px; max-width: min(560px, 90vw);
-    opacity: 0; pointer-events: none; transition: opacity .15s, transform .15s; white-space: pre-wrap;
+  .workspace { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 18px; align-items: start; }
+  .queue-shell, .detail {
+    border: 1px solid var(--line); border-radius: 20px; background: rgba(255,255,255,.78);
   }
-  #toast.show { opacity: 1; transform: translateX(-50%); }
+  .queue-shell { padding: 18px; min-width: 0; }
+  .queue-top { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+  .queue-top h2 span { margin-left: 5px; color: var(--faint); font-weight: 500; }
+  .view-controls { display: flex; gap: 7px; }
+  .mini-btn {
+    border: 1px solid var(--line); background: #fff; color: var(--muted); height: 34px;
+    padding: 0 11px; border-radius: 10px; display: flex; align-items: center; gap: 6px; cursor: pointer;
+  }
+  .pipeline {
+    display: flex; overflow-x: auto; gap: 3px; padding: 19px 0 15px; scrollbar-width: none;
+  }
+  .pipeline::-webkit-scrollbar { display: none; }
+  .stage {
+    min-width: max-content; border: 0; background: transparent; border-radius: 9px; padding: 8px 10px;
+    color: var(--muted); cursor: pointer; font-size: 12px; display: flex; align-items: center; gap: 7px;
+  }
+  .stage:hover { background: var(--surface-soft); }
+  .stage.active { background: var(--ink); color: #fff; }
+  .stage-count { min-width: 19px; height: 19px; padding: 0 5px; border-radius: 6px; display: grid; place-items: center; background: #eceee8; color: var(--muted); font-size: 10px; }
+  .stage.active .stage-count { background: #fff; color: var(--ink); }
+  .stage.attention:not(.active) { color: var(--brand); }
+
+  .job-list { display: grid; gap: 8px; }
+  .job {
+    border: 1px solid transparent; background: #fff; border-radius: 14px; padding: 14px;
+    display: grid; grid-template-columns: 42px minmax(0,1fr) auto; gap: 12px; align-items: center;
+    cursor: pointer; transition: transform .15s, border-color .15s, box-shadow .15s;
+  }
+  .job:hover { transform: translateY(-1px); border-color: #dcded6; box-shadow: 0 8px 22px rgba(35,42,32,.06); }
+  .job.selected { border-color: #f4a28e; box-shadow: 0 0 0 2px var(--brand-soft); }
+  .thumb { width: 42px; height: 51px; border-radius: 10px; display: grid; place-items: center; color: rgba(255,255,255,.9); overflow: hidden; }
+  .thumb.beauty { background: linear-gradient(145deg, #df9f9a, #774f61); }
+  .thumb.home { background: linear-gradient(145deg, #93b6a4, #40594c); }
+  .thumb.food { background: linear-gradient(145deg, #e2aa62, #82523e); }
+  .job-title { font-size: 13px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .job-meta { margin-top: 5px; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; color: var(--muted); font-size: 11px; }
+  .dot { width: 3px; height: 3px; border-radius: 50%; background: #c3c5bf; }
+  .flag { padding: 2px 6px; border-radius: 5px; background: var(--yellow-soft); color: var(--yellow); font-weight: 600; }
+  .job-action {
+    border: 0; background: var(--brand); color: #fff; padding: 0 12px; height: 34px;
+    border-radius: 10px; font-size: 11px; font-weight: 700; cursor: pointer; white-space: nowrap;
+  }
+  .job-action.secondary { background: var(--mint-soft); color: var(--mint); }
+  .job-action.quiet { background: var(--surface-soft); color: var(--muted); }
+
+  .detail { position: sticky; top: 18px; overflow: hidden; }
+  .detail-empty { padding: 50px 25px; color: var(--muted); text-align: center; }
+  .detail-head { padding: 20px 20px 16px; border-bottom: 1px solid var(--line); }
+  .detail-kicker { display: flex; align-items: center; justify-content: space-between; color: var(--muted); font-size: 11px; margin-bottom: 10px; }
+  .status-pill { border-radius: 99px; padding: 4px 8px; background: var(--brand-soft); color: var(--brand); font-weight: 700; }
+  .detail h3 { font-size: 18px; margin: 0; letter-spacing: -.04em; }
+  .detail-desc { color: var(--muted); font-size: 11px; margin-top: 6px; line-height: 1.55; }
+  .video-preview {
+    margin: 16px 20px 0; height: 145px; border-radius: 15px; overflow: hidden; position: relative;
+    background: radial-gradient(circle at 68% 30%, #e7b8b3, transparent 27%), linear-gradient(145deg, #a87279, #332f3c);
+  }
+  .video-preview::after { content: ""; position: absolute; inset: auto 0 0; height: 55%; background: linear-gradient(transparent, rgba(18,20,18,.52)); }
+  .play {
+    position: absolute; z-index: 2; left: 50%; top: 50%; transform: translate(-50%,-50%);
+    width: 42px; height: 42px; border-radius: 50%; border: 1px solid rgba(255,255,255,.38);
+    background: rgba(255,255,255,.9); display: grid; place-items: center; color: var(--ink);
+  }
+  .duration { position: absolute; z-index: 2; bottom: 10px; right: 10px; color: #fff; font-size: 10px; background: rgba(0,0,0,.4); border-radius: 5px; padding: 3px 6px; }
+  .detail-body { padding: 17px 20px 20px; }
+  .detail-section + .detail-section { margin-top: 18px; }
+  .detail-label { color: var(--muted); font-size: 10px; font-weight: 700; letter-spacing: .08em; margin-bottom: 9px; }
+  .steps { display: grid; gap: 9px; }
+  .beat { display: grid; grid-template-columns: 24px 1fr auto; gap: 8px; font-size: 11px; align-items: start; }
+  .beat-num { width: 22px; height: 22px; border-radius: 7px; display: grid; place-items: center; background: var(--surface-soft); color: var(--muted); font-size: 9px; }
+  .beat p { margin: 1px 0 0; line-height: 1.5; }
+  .beat time { color: var(--faint); font-size: 10px; margin-top: 3px; }
+  .checkline { display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--mint); background: var(--mint-soft); border-radius: 9px; padding: 9px 10px; }
+  .detail-cta { width: 100%; height: 42px; border: 0; background: var(--brand); color: #fff; border-radius: 11px; font-weight: 700; cursor: pointer; margin-top: 16px; }
+  .detail-cta:disabled { background: var(--surface-soft); color: var(--faint); cursor: default; }
+  .detail-links { display: flex; justify-content: center; gap: 16px; margin-top: 11px; }
+  .detail-links button { border: 0; background: none; color: var(--muted); font-size: 10px; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+  .detail-tools { display: flex; flex-wrap: wrap; gap: 7px; }
+  .tool-btn {
+    border: 1px solid var(--line); background: #fff; color: var(--muted); border-radius: 9px;
+    min-height: 33px; padding: 0 10px; font-size: 10px; font-weight: 600; cursor: pointer;
+  }
+  .tool-btn:hover { border-color: #bbbfb5; color: var(--ink); }
+  .tool-btn.warm { border-color: #f2c0b4; color: var(--brand); background: var(--brand-soft); }
+  .tool-btn.danger { color: var(--red); }
+  .affiliate-box { border: 1px solid var(--line); background: #fff; border-radius: 10px; padding: 10px; }
+  .affiliate-url { color: var(--muted); font-size: 10px; line-height: 1.5; word-break: break-all; margin-bottom: 8px; }
+  .affiliate-url.missing { color: var(--yellow); }
+  .finding-list { margin: 8px 0 0; padding-left: 17px; color: var(--red); font-size: 10px; line-height: 1.6; }
+  .finalize-note { border-radius: 9px; padding: 9px 10px; font-size: 10px; margin-top: 10px; background: var(--yellow-soft); color: var(--yellow); }
+  .video-preview video { width: 100%; height: 100%; object-fit: contain; background: #161815; position: relative; z-index: 3; }
+
+  .toast {
+    position: fixed; left: 50%; bottom: 24px; z-index: 20; transform: translate(-50%, 15px);
+    background: #20231f; color: #fff; border-radius: 12px; padding: 11px 15px; font-size: 12px;
+    opacity: 0; pointer-events: none; transition: .2s ease; box-shadow: var(--shadow);
+  }
+  .toast.show { opacity: 1; transform: translate(-50%, 0); }
+  .mobile-head, .mobile-nav { display: none; }
+
+  @media (max-width: 1050px) {
+    .workspace { grid-template-columns: 1fr; }
+    .detail { position: static; }
+    .detail-inner { display: grid; grid-template-columns: 1fr 1.2fr; }
+    .video-preview { height: auto; min-height: 220px; margin-bottom: 16px; }
+  }
+  @media (max-width: 820px) {
+    .app { display: block; }
+    .sidebar { display: none; }
+    .mobile-head { height: 62px; display: flex; align-items: center; justify-content: space-between; padding: 0 18px; background: #20231f; color: #fff; }
+    .mobile-head .brand { padding: 0; }
+    .mobile-nav {
+      display: flex; position: sticky; top: 0; z-index: 10; overflow-x: auto; gap: 5px;
+      padding: 8px 12px; background: rgba(32,35,31,.97); scrollbar-width: none;
+    }
+    .mobile-nav .nav-item { flex: 0 0 auto; height: 35px; padding: 0 10px; font-size: 11px; }
+    main { padding: 0 18px 45px; }
+    .topbar { display: none; }
+    .hero { padding-top: 25px; }
+    .summary { grid-template-columns: 1fr 1fr; }
+    .summary-card.featured { grid-column: span 2; }
+    .topic-strip { grid-template-columns: 1fr; }
+    .page-grid { grid-template-columns: 1fr 1fr; }
+    .video-library { grid-template-columns: repeat(3, minmax(0,1fr)); gap:11px; }
+    .viewer-panel { grid-template-columns:1fr; width:min(480px,96vw); }
+    .viewer-media { min-height:420px; border-radius:22px 22px 0 0; }
+  }
+  @media (max-width: 560px) {
+    .hero { align-items: flex-start; }
+    .hero p { max-width: 260px; }
+    .new-btn { width: 42px; padding: 0; justify-content: center; flex: 0 0 auto; }
+    .new-btn span { display: none; }
+    .summary { gap: 8px; }
+    .summary-card { min-height: 99px; padding: 15px; }
+    .summary-value { font-size: 23px; }
+    .section-head { align-items: flex-start; }
+    .section-note { display: none; }
+    .queue-shell { margin: 0 -7px; padding: 12px; border-radius: 17px; }
+    .mini-btn span { display: none; }
+    .job { grid-template-columns: 39px minmax(0,1fr); }
+    .job-action { grid-column: 2; justify-self: start; }
+    .detail-inner { display: block; }
+    .video-preview { min-height: 175px; }
+    .page-grid { grid-template-columns: 1fr; }
+    .page-row { grid-template-columns: minmax(0,1fr) auto; }
+    .page-row.header, .page-row > :nth-child(2), .page-row > :nth-child(3) { display: none; }
+    .video-library { grid-template-columns: repeat(2,minmax(0,1fr)); }
+    .video-cover { border-radius:14px; }
+    .viewer { padding:10px; }
+    .viewer-media { min-height:360px; }
+    .viewer-copy { padding:25px 20px; }
+  }
 </style>
 </head>
 <body>
-<header>
-  <h1>쇼핑쇼츠 파이프라인</h1>
-  <span class="note">주황 = 당신 차례 · 나머지는 자동</span>
-</header>
+<div class="mobile-head">
+  <div class="brand">
+    <div class="brand-mark" data-icon="spark"></div>
+    <div class="brand-name">Shopshorts</div>
+  </div>
+  <div class="avatar">SS</div>
+</div>
+<nav class="mobile-nav" aria-label="모바일 메뉴">
+  <button class="nav-item active" data-nav="dashboard">대시보드</button>
+  <button class="nav-item" data-nav="content">콘텐츠</button>
+  <button class="nav-item" data-nav="trends">트렌드</button>
+  <button class="nav-item" data-nav="links">제휴 링크</button>
+</nav>
 
-<div class="rail" id="rail"></div>
-<div class="hot" id="hot"></div>
-<div class="jobs" id="jobs"></div>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-mark" data-icon="spark"></div>
+      <div class="brand-name">Shopshorts<span>CONTENT STUDIO</span></div>
+    </div>
+    <div class="nav-label">WORKSPACE</div>
+    <nav>
+      <button class="nav-item active" data-icon-before="grid" data-nav="dashboard">대시보드 <span class="count" id="navCount">0</span></button>
+      <button class="nav-item" data-icon-before="layers" data-nav="content">콘텐츠</button>
+      <button class="nav-item" data-icon-before="trend" data-nav="trends">트렌드 탐색</button>
+      <button class="nav-item" data-icon-before="chart" data-nav="performance">성과</button>
+    </nav>
+    <div class="nav-label" style="margin-top:28px">MANAGE</div>
+    <nav>
+      <button class="nav-item" data-icon-before="link" data-nav="links">제휴 링크</button>
+      <button class="nav-item" data-icon-before="settings" data-nav="settings">설정</button>
+    </nav>
+    <div class="sidebar-foot">
+      <div class="system">
+        <strong id="systemStatus"><span class="online"></span> 자동화 정상 작동 중</strong>
+        <span id="systemNote">마지막 동기화 · 방금 전</span>
+      </div>
+    </div>
+  </aside>
 
-<div class="scrim" onclick="closeDrawer()"></div>
-<aside class="drawer" id="drawer"></aside>
-<div id="toast"></div>
+  <main>
+    <div class="topbar">
+      <div class="breadcrumb">워크스페이스&nbsp; / &nbsp;<strong>쇼핑쇼츠 운영</strong></div>
+      <div class="top-actions">
+        <button class="icon-btn" aria-label="검색" data-icon="search" data-top-action="search"></button>
+        <button class="icon-btn" aria-label="알림" data-icon="bell" data-top-action="notifications"></button>
+        <div class="avatar">SS</div>
+      </div>
+    </div>
+
+    <div class="view" id="dashboardView">
+    <section class="hero">
+      <div>
+        <div class="eyebrow">TODAY'S WORKSPACE</div>
+        <h1>좋은 아침이에요 👋</h1>
+        <p id="heroCopy">지금 확인이 필요한 작업을 모아두었어요.</p>
+      </div>
+      <button class="new-btn" data-icon-before="plus" data-new><span>새 쇼츠 만들기</span></button>
+    </section>
+
+    <section class="summary" id="summary" data-section="summary"></section>
+
+    <div class="section-head">
+      <h2>지금 뜨는 소재</h2>
+      <span class="section-note">기회 점수를 바탕으로 자동 추천했어요</span>
+    </div>
+    <section class="topic-strip" id="topics" data-section="trends"></section>
+
+    <section class="workspace" data-section="content">
+      <div class="queue-shell">
+        <div class="queue-top">
+          <h2>콘텐츠 큐 <span id="queueCount">0</span></h2>
+          <div class="view-controls">
+            <button class="mini-btn" data-icon-before="filter" data-control="filter"><span>필터</span></button>
+            <button class="mini-btn" data-icon-before="sort" data-control="sort"><span id="sortLabel">우선순위순</span></button>
+          </div>
+        </div>
+        <div class="pipeline" id="pipeline"></div>
+        <div class="job-list" id="jobs"></div>
+      </div>
+      <aside class="detail" id="detail">
+        <div class="detail-empty">콘텐츠를 선택하면<br>상세 내용을 보여드려요.</div>
+      </aside>
+    </section>
+    </div>
+    <div class="view" id="pageView" hidden></div>
+  </main>
+</div>
+<div class="toast" id="toast"></div>
+<div class="viewer" id="viewer" hidden></div>
 
 <script>
+const ICONS = {
+  spark:'<path d="M12 2.7c.5 4.7 2.7 7 7.3 7.5-4.6.5-6.8 2.8-7.3 7.5-.5-4.7-2.7-7-7.3-7.5 4.6-.5 6.8-2.8 7.3-7.5Z" fill="currentColor"/><path d="M19 15.5c.2 2 1.2 3 3 3.2-1.8.2-2.8 1.2-3 3.1-.2-1.9-1.2-2.9-3-3.1 1.8-.2 2.8-1.2 3-3.2Z" fill="currentColor"/>',
+  grid:'<rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/>',
+  layers:'<path d="m12 3 9 5-9 5-9-5 9-5Z"/><path d="m3 12 9 5 9-5M3 16l9 5 9-5"/>',
+  trend:'<path d="M3 17 9 11l4 4 8-9"/><path d="M15 6h6v6"/>',
+  chart:'<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
+  link:'<path d="M10 13a5 5 0 0 0 7.5.5l2-2a5 5 0 0 0-7-7l-1.2 1.2"/><path d="M14 11a5 5 0 0 0-7.5-.5l-2 2a5 5 0 0 0 7 7l1.2-1.2"/>',
+  settings:'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2.8 2.8-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6v.2h-4V21a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1L4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9A1.7 1.7 0 0 0 3 14H2.8v-4H3a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9L4.2 7 7 4.2l.1.1A1.7 1.7 0 0 0 9 4.6 1.7 1.7 0 0 0 10 3v-.2h4V3a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1L19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.2v4H21a1.7 1.7 0 0 0-1.6 1Z"/>',
+  search:'<circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/>',
+  bell:'<path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/>',
+  plus:'<path d="M12 5v14M5 12h14"/>',
+  filter:'<path d="M4 5h16l-6 7v5l-4 2v-7L4 5Z"/>',
+  sort:'<path d="M8 6h12M8 12h9M8 18h6M4 4v16"/><path d="m2 18 2 2 2-2"/>',
+  check:'<path d="m5 12 4 4L19 6"/>',
+  play:'<path d="m9 7 8 5-8 5V7Z" fill="currentColor"/>',
+  image:'<rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="9" r="2"/><path d="m21 15-5-5L5 21"/>'
+};
+function svg(name, size=17) {
+  const filled = name === 'spark' || name === 'play';
+  return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="${filled ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name] || ''}</svg>`;
+}
+document.querySelectorAll('[data-icon]').forEach(el => el.innerHTML = svg(el.dataset.icon, el.dataset.icon === 'spark' ? 22 : 17));
+document.querySelectorAll('[data-icon-before]').forEach(el => el.insertAdjacentHTML('afterbegin', svg(el.dataset.iconBefore, 17)));
+
 const STAGES = [
-  { key: 'draft',           label: '초안',     action: '기획 승인' },
-  { key: 'script-approved', label: '승인됨',   auto: '클립 생성 대기 (자동)' },
-  { key: 'generated',       label: '클립 완료', action: '자막+TTS' },
-  { key: 'assembled',       label: '조립됨',   action: '검수 요청' },
-  { key: 'review',          label: '발행 검수', action: '발행 확인' },
-  { key: 'published',       label: '발행됨' },
+  {key:'all', label:'전체'},
+  {key:'draft', label:'기획 대기', attention:true},
+  {key:'script-approved', label:'클립 생성'},
+  {key:'generated', label:'후반 작업', attention:true},
+  {key:'assembled', label:'검수 준비'},
+  {key:'review', label:'발행 검수', attention:true},
+  {key:'published', label:'발행 완료'}
 ];
-const HOOK_KO = { 'problem-solution':'문제해결', 'before-after':'비포애프터', demo:'데모', curiosity:'호기심', 'info-tip':'정보팁' };
-let state = { jobs: [], hot: [], requests: [], filter: null, openId: null };
+const STATUS = {
+  draft:{label:'기획 대기', action:'기획 승인', cls:''},
+  'script-approved':{label:'클립 생성 중', action:'자동 진행 중', cls:'quiet'},
+  generated:{label:'후반 작업', action:'자막 + TTS', cls:''},
+  assembled:{label:'검수 준비', action:'검수 요청', cls:'secondary'},
+  review:{label:'발행 검수', action:'발행 확인', cls:''},
+  published:{label:'발행 완료', action:'완료', cls:'secondary'},
+  rejected:{label:'수정 필요', action:'초안 복귀', cls:'quiet'}
+};
+const HOOK = {'problem-solution':'문제 해결형','before-after':'비포애프터',demo:'제품 데모',curiosity:'호기심 유도형','info-tip':'정보 팁형'};
+let state = {jobs:[], hot:[], filter:'all', sort:'priority', search:'', selected:null, detailKey:null, isCloud:false, workerAt:null};
 
-const $ = (id) => document.getElementById(id);
-function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; }
-function toast(t) { const m = $('toast'); m.textContent = t; m.classList.add('show'); clearTimeout(m._t); m._t = setTimeout(() => m.classList.remove('show'), 5000); }
+function sampleJobs() {
+  return [
+    {brief:{id:'pdrn',productName:'PDRN 앰플',keyword:'PDRN 앰플',category:'뷰티',affiliateUrl:'https://example.com'},script:{hookType:'curiosity',title:'PDRN 앰플이 뭐길래?',beats:[{narration:'요즘 검색량 급상승, PDRN 앰플이 뭐길래?',durationSec:3},{narration:'연어 DNA 유래 성분을 쉽게 정리해요.',durationSec:5},{narration:'민감 피부라면 패치테스트부터.',durationSec:4}]},status:'review',lintReport:{ok:true},updatedAt:new Date().toISOString()},
+    {brief:{id:'rack',productName:'스텐 건조대',category:'리빙',affiliateUrl:'PLACEHOLDER'},script:{hookType:'problem-solution',title:'빨래 널 곳 부족?',beats:[{narration:'빨래 널 곳이 늘 부족하다면',durationSec:3},{narration:'튼튼하고 접으면 공간도 절약돼요.',durationSec:5},{narration:'자세한 정보는 프로필 링크에.',durationSec:4}]},status:'draft',lintReport:{ok:true},updatedAt:new Date().toISOString()},
+    {brief:{id:'retinol',productName:'저농도 레티놀 크림',category:'뷰티',affiliateUrl:'https://example.com'},script:{hookType:'info-tip',title:'레티놀 입문 3원칙',beats:[{narration:'레티놀 처음이라면 세 가지만 기억하세요.',durationSec:3},{narration:'저농도부터, 밤에만 사용하세요.',durationSec:5},{narration:'다음 날 선크림은 필수예요.',durationSec:4}]},status:'assembled',lintReport:{ok:true},updatedAt:new Date().toISOString()}
+  ];
+}
+const isPlaceholder = u => /PLACEHOLDER|\/a\/sample/.test(u || '');
+const categoryClass = j => j.brief?.category === '뷰티' ? 'beauty' : j.brief?.category === '식품' ? 'food' : 'home';
+const fmtTime = value => {
+  if (!value) return '방금 전';
+  const hours = Math.floor((Date.now() - new Date(value)) / 3600000);
+  return hours < 1 ? '방금 전' : hours < 24 ? `${hours}시간 전` : `${Math.floor(hours/24)}일 전`;
+};
+function showToast(msg) {
+  const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(t.timer); t.timer = setTimeout(() => t.classList.remove('show'), 4500);
+}
 async function api(path, opts) {
-  const r = await fetch(path, opts);
-  const d = await r.json().catch(() => ({}));
-  if (!r.ok) throw new Error(d.error || r.status);
-  return d;
-}
-const isPlaceholder = (u) => /PLACEHOLDER|\/a\/sample/.test(u || '');
-
-// ---- 레일 ----
-function renderRail() {
-  const rail = $('rail'); rail.innerHTML = '';
-  STAGES.forEach((s, i) => {
-    const n = state.jobs.filter(j => j.status === s.key).length;
-    const node = el('div', 'node');
-    if (n > 0) node.classList.add(s.key === 'published' ? 'done' : 'active');
-    if (n > 0 && s.action) node.classList.add('needs');
-    if (state.filter === s.key) node.classList.add('filtered');
-    const dot = el('div', 'dot', String(n));
-    node.appendChild(dot);
-    node.appendChild(el('div', 'lbl', s.label));
-    node.onclick = () => { state.filter = state.filter === s.key ? null : s.key; render(); };
-    const wrap = el('div', 'stage');
-    wrap.appendChild(node);
-    if (i < STAGES.length - 1) wrap.appendChild(el('div', 'edge'));
-    rail.appendChild(wrap);
-  });
-  const rejected = state.jobs.filter(j => j.status === 'rejected').length;
-  if (rejected) {
-    const node = el('div', 'node');
-    node.appendChild(el('div', 'dot', String(rejected)));
-    node.appendChild(el('div', 'lbl', '반려'));
-    node.onclick = () => { state.filter = state.filter === 'rejected' ? null : 'rejected'; render(); };
-    const wrap = el('div', 'stage');
-    wrap.appendChild(el('div', 'edge'));
-    wrap.appendChild(node);
-    $('rail').appendChild(wrap);
-  }
+  const res = await fetch(path, opts);
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || String(res.status));
+  return data;
 }
 
-// ---- 핫 키워드 ----
-function renderHot() {
-  const box = $('hot'); box.innerHTML = '';
-  box.appendChild(el('span', 'cap', 'HOT'));
-  state.requests.filter(r => r.status === 'pending').forEach(r => {
-    box.appendChild(el('span', 'chip pending', `${r.topic} · 초안 작성 중…`));
+function renderSummary() {
+  const needs = state.jobs.filter(j => ['draft','generated','assembled','review','rejected'].includes(j.status)).length;
+  const generating = state.jobs.filter(j => j.status === 'script-approved' || j.finalize?.state === 'running').length;
+  const published = state.jobs.filter(j => j.status === 'published').length;
+  document.getElementById('heroCopy').textContent = needs ? `오늘 확인이 필요한 작업이 ${needs}개 있어요.` : '모든 작업이 순조롭게 진행되고 있어요.';
+  document.getElementById('navCount').textContent = needs;
+  document.getElementById('summary').innerHTML = `
+    <article class="summary-card featured ${state.filter === 'needs' ? 'selected' : ''}" data-summary-filter="needs">
+      <div class="summary-label"><span class="online"></span> 오늘 할 일</div>
+      <div class="summary-value">${needs}<span style="font-size:14px;margin-left:3px">개</span></div>
+      <div class="summary-sub">${needs ? '승인과 검수가 기다리고 있어요' : '확인할 작업이 없어요'}</div>
+    </article>
+    <article class="summary-card ${state.filter === 'all' ? 'selected' : ''}" data-summary-filter="all">
+      <div class="summary-label">전체 콘텐츠</div><div class="summary-value">${state.jobs.length}</div>
+      <div class="summary-sub">현재 파이프라인</div>
+    </article>
+    <article class="summary-card ${state.filter === 'generating' ? 'selected' : ''}" data-summary-filter="generating">
+      <div class="summary-label">자동 제작 중</div><div class="summary-value">${generating}</div>
+      <div class="summary-sub">클립 · 내레이션</div>
+    </article>
+    <article class="summary-card ${state.filter === 'published' ? 'selected' : ''}" data-summary-filter="published">
+      <div class="summary-label">발행 완료</div><div class="summary-value">${published}</div>
+      <div class="summary-sub">누적 콘텐츠</div>
+      <div class="spark"><svg width="58" height="24" viewBox="0 0 58 24" fill="none"><path d="M1 20c8-1 8-8 16-8s8 5 16 1S42 4 57 2" stroke="currentColor" stroke-width="2"/><path d="M1 20c8-1 8-8 16-8s8 5 16 1S42 4 57 2v22H1Z" fill="currentColor" opacity=".08"/></svg></div>
+    </article>`;
+  document.querySelectorAll('[data-summary-filter]').forEach(card => card.onclick = () => {
+    setQueueFilter(card.dataset.summaryFilter, false);
   });
-  state.hot.forEach(it => {
-    const c = el('span', 'chip');
-    c.appendChild(el('span', '', it.topic));
-    c.appendChild(el('span', 'op', String(it.opportunity)));
-    const b = el('button', '', '+ 초안');
-    b.onclick = async (e) => {
-      e.stopPropagation();
-      try {
-        await api('/api/draft-requests', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ topic: it.topic, opportunity: it.opportunity, contentType: 'shorts' }) });
-        toast(`"${it.topic}" 초안 요청됨 — 대본이 준비되면 초안 단계에 나타납니다`); load();
-      } catch (err) { toast('초안 요청 실패: ' + err.message); }
-    };
-    c.appendChild(b);
-    box.appendChild(c);
-  });
-  if (box.children.length === 1) box.appendChild(el('span', 'chip pending', '신규 후보 없음'));
 }
 
-// ---- 잡 리스트 ----
-function stageOf(j) { return STAGES.find(s => s.key === j.status); }
+function renderTopics() {
+  const defaults = [{topic:'PDRN 앰플',opportunity:92},{topic:'저당 간식',opportunity:87},{topic:'여름 침구',opportunity:81}];
+  const items = state.hot.length ? state.hot.slice(0,3) : defaults;
+  document.getElementById('topics').innerHTML = items.map((it,i) => `
+    <article class="topic" data-topic-card="${it.topic}">
+      <div class="topic-rank">${i+1}</div>
+      <div class="topic-info"><div class="topic-name">${it.topic}</div><div class="topic-score">기회 점수 ${it.opportunity ?? '-'}</div></div>
+      <button aria-label="${it.topic} 초안 만들기" data-topic="${it.topic}" data-score="${it.opportunity ?? ''}">${svg('plus',15)}</button>
+    </article>`).join('');
+  document.querySelectorAll('[data-topic-card]').forEach(card => card.onclick = () => {
+    showToast(`“${card.dataset.topicCard}” · 오른쪽 + 버튼을 누르면 초안을 만들 수 있어요.`);
+  });
+  document.querySelectorAll('[data-topic]').forEach(b => b.onclick = async e => {
+    e.stopPropagation();
+    try {
+      await api('/api/draft-requests', {
+        method:'POST', headers:{'content-type':'application/json'},
+        body:JSON.stringify({topic:b.dataset.topic, opportunity:Number(b.dataset.score) || undefined, contentType:'shorts'})
+      });
+      showToast(`“${b.dataset.topic}” 초안을 요청했어요. 준비되면 기획 대기에 나타납니다.`);
+      await loadHot();
+    } catch (e) { showToast('초안 요청 실패: ' + e.message); }
+  });
+}
 
-function primaryAction(j) {
-  switch (j.status) {
-    case 'draft': return { label: '기획 승인', run: () => transition(j, 'script-approved') };
-    case 'generated':
-      if (j.finalize?.state === 'running') return null;
-      return { label: '자막+TTS 붙이기', run: () => finalize(j) };
-    case 'assembled': return { label: '검수 요청', run: () => transition(j, 'review') };
-    case 'review': return { label: '발행 확인', run: () => confirmPublish(j) };
-    case 'rejected': return { label: '초안으로 복귀', run: () => transition(j, 'draft') };
-    default: return null;
-  }
+function renderPipeline() {
+  document.getElementById('pipeline').innerHTML = STAGES.map(s => {
+    const count = s.key === 'all' ? state.jobs.length : state.jobs.filter(j => j.status === s.key).length;
+    return `<button class="stage ${state.filter === s.key ? 'active' : ''} ${s.attention ? 'attention' : ''}" data-stage="${s.key}">${s.label}<span class="stage-count">${count}</span></button>`;
+  }).join('');
+  document.querySelectorAll('[data-stage]').forEach(b => b.onclick = () => setQueueFilter(b.dataset.stage));
 }
 
 function renderJobs() {
-  const box = $('jobs'); box.innerHTML = '';
-  const order = ['review', 'generated', 'assembled', 'draft', 'script-approved', 'rejected', 'published'];
-  let jobs = [...state.jobs].sort((a, b) => order.indexOf(a.status) - order.indexOf(b.status));
-  if (state.filter) jobs = jobs.filter(j => j.status === state.filter);
-  if (!jobs.length) { box.appendChild(el('div', 'empty', state.filter ? '이 단계에 항목 없음 — 노드를 다시 눌러 전체 보기' : '큐가 비어 있습니다. 위 HOT 키워드에서 시작하세요.')); return; }
-
-  jobs.forEach(j => {
-    const st = stageOf(j) || { label: j.status };
-    const act = primaryAction(j);
-    const row = el('div', 'row' + (act ? ' needs' : '') + (j.status === 'published' ? ' published' : ''));
-    row.appendChild(el('div', 'stagechip', st.label));
-
-    const mid = el('div');
-    mid.appendChild(el('div', 'name', j.brief.productName));
-    const bits = [`${HOOK_KO[j.script.hookType] ?? j.script.hookType} · ${j.script.beats.length}비트`];
-    if (isPlaceholder(j.brief.affiliateUrl)) bits.push('링크 필요');
-    if (j.lintReport && !j.lintReport.ok) bits.push('lint 위반');
-    if (j.finalize?.state === 'running') bits.push('조립 중…');
-    if (j.finalize?.state === 'error') bits.push('조립 실패');
-    const meta = el('div', 'meta');
-    bits.forEach((t, i) => {
-      const s = el('span', t === '링크 필요' || t === '조립 중…' ? 'warn' : (t === 'lint 위반' || t === '조립 실패' ? 'err' : ''), (i ? ' · ' : '') + t);
-      meta.appendChild(s);
-    });
-    mid.appendChild(meta);
-    row.appendChild(mid);
-
-    if (act) {
-      const b = el('button', 'primary', act.label);
-      b.onclick = (e) => { e.stopPropagation(); act.run(); };
-      row.appendChild(b);
-    } else {
-      row.appendChild(el('span', 'auto-note', stageOf(j)?.auto ?? (j.finalize?.state === 'running' ? 'Yooni 조립 중…' : '')));
-    }
-    row.onclick = () => openDrawer(j.brief.id);
-    box.appendChild(row);
+  const order = ['review','draft','generated','assembled','script-approved','rejected','published'];
+  let jobs = [...state.jobs];
+  if (state.sort === 'updated') {
+    jobs.sort((a,b) => new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0));
+  } else {
+    jobs.sort((a,b) => order.indexOf(a.status)-order.indexOf(b.status));
+  }
+  if (state.filter === 'needs') jobs = jobs.filter(j => ['draft','generated','assembled','review','rejected'].includes(j.status));
+  else if (state.filter === 'generating') jobs = jobs.filter(j => j.status === 'script-approved' || j.finalize?.state === 'running');
+  else if (state.filter === 'missing-link') jobs = jobs.filter(j => isPlaceholder(j.brief?.affiliateUrl));
+  else if (state.filter !== 'all') jobs = jobs.filter(j => j.status === state.filter);
+  if (state.search) {
+    const q = state.search.toLocaleLowerCase('ko');
+    jobs = jobs.filter(j => `${j.brief?.productName || ''} ${j.brief?.keyword || ''} ${j.script?.title || ''}`.toLocaleLowerCase('ko').includes(q));
+  }
+  document.getElementById('queueCount').textContent = jobs.length;
+  const box = document.getElementById('jobs');
+  if (!jobs.length) { box.innerHTML = '<div class="detail-empty">이 단계에는 아직 콘텐츠가 없어요.</div>'; return; }
+  box.innerHTML = jobs.map(j => {
+    const st = STATUS[j.status] || {label:j.status,action:'확인',cls:'quiet'};
+    const warning = isPlaceholder(j.brief?.affiliateUrl) ? '<span class="flag">링크 필요</span>' : '';
+    return `<article class="job ${state.selected === j.brief.id ? 'selected' : ''}" data-job="${j.brief.id}">
+      <div class="thumb ${categoryClass(j)}">${svg('image',18)}</div>
+      <div><div class="job-title">${j.brief.productName}</div>
+      <div class="job-meta"><span>${st.label}</span><span class="dot"></span><span>${HOOK[j.script?.hookType] || '쇼츠'}</span><span class="dot"></span><span>${fmtTime(j.updatedAt)}</span>${warning}</div></div>
+      <button class="job-action ${st.cls}" data-action="${j.brief.id}">${st.action}</button>
+    </article>`;
+  }).join('');
+  document.querySelectorAll('[data-job]').forEach(row => row.onclick = () => { state.selected = row.dataset.job; renderJobs(); renderDetail(true); });
+  document.querySelectorAll('[data-action]').forEach(b => b.onclick = e => {
+    e.stopPropagation();
+    const job = state.jobs.find(j => j.brief.id === b.dataset.action);
+    if (job) runPrimary(job);
   });
 }
 
-// ---- 액션 ----
-async function transition(j, to, extra = {}) {
-  let body = { to, ...extra };
+function setQueueFilter(filter, scrollToQueue=true) {
+  state.filter = filter;
+  state.search = '';
+  renderSummary();
+  renderPipeline();
+  renderJobs();
+  if (scrollToQueue) {
+    document.querySelector('[data-section="content"]')?.scrollIntoView({behavior:'smooth', block:'start'});
+  }
+}
+
+function previousStage(status) {
+  return {'script-approved':'draft',generated:'script-approved',assembled:'generated',review:'assembled',published:'review'}[status];
+}
+async function transition(job, to, extra={}) {
+  const body = {to, ...extra};
   if (to === 'rejected') {
-    const note = prompt('반려 사유'); if (note === null) return; body.note = note;
+    const note = prompt('수정이 필요한 이유를 적어주세요.');
+    if (note === null) return;
+    body.note = note;
   }
-  try { await api(`/api/jobs/${j.brief.id}/transition`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }); load(); }
-  catch (e) { toast('실패: ' + e.message); }
-}
-function confirmPublish(j) {
-  if (isPlaceholder(j.brief.affiliateUrl)) { toast('발행 전 실제 제휴 링크가 필요합니다 — 카드를 열어 링크를 저장하세요'); openDrawer(j.brief.id); return; }
-  if (!confirm('발행 검수 완료로 표시할까요? (업로드는 shorts-publish CLI로 실행)')) return;
-  const ref = prompt('업로드 requestId/URL (선택)', '') || undefined;
-  transition(j, 'published', ref ? { publishRef: ref } : {});
-}
-async function finalize(j) {
-  if (!confirm('Yooni 보이스로 내레이션을 만들고 자막·고지를 입힙니다 (ElevenLabs 비용 발생). 진행할까요?')) return;
-  try { await api(`/api/jobs/${j.brief.id}/finalize`, { method: 'POST' }); toast('조립 시작 — 1~2분 뒤 자동 갱신됩니다'); load(); }
-  catch (e) { toast('조립 시작 실패: ' + e.message); }
-}
-
-// ---- 드로어 ----
-function closeDrawer() { document.body.classList.remove('open'); state.openId = null; state.drawerStamp = null; }
-function openDrawer(id) {
-  state.openId = id; state.drawerStamp = null; renderDrawer(); document.body.classList.add('open');
-}
-function renderDrawer() {
-  const j = state.jobs.find(x => x.brief.id === state.openId);
-  // 잡 데이터가 안 바뀌었으면 재렌더 금지 — <video> 엘리먼트 재생성이 재생을 처음으로 되돌리는 버그 방지
-  if (j && state.drawerStamp === j.updatedAt) return;
-  if (j) state.drawerStamp = j.updatedAt;
-  const d = $('drawer'); d.innerHTML = '';
-  if (!j) return;
-  const close = el('button', 'close', '×'); close.onclick = closeDrawer; d.appendChild(close);
-  d.appendChild(el('h2', '', j.brief.productName));
-  d.appendChild(el('div', 'sub', `${j.brief.id} · ${stageOf(j)?.label ?? j.status} · ${HOOK_KO[j.script.hookType] ?? ''}`));
-
-  // 영상
-  const showFinal = j.outputVideo && ['assembled', 'review', 'published'].includes(j.status);
-  const showPrev = j.previewVideo && j.status === 'generated';
-  if (showFinal || showPrev) {
-    const s = el('section');
-    s.appendChild(el('h3', '', showFinal ? '최종 영상 (자막+내레이션)' : '클립 미리보기 (무자막)'));
-    const v = document.createElement('video');
-    v.controls = true; v.preload = 'metadata';
-    v.src = `/api/jobs/${j.brief.id}/video?which=${showFinal ? 'final' : 'preview'}`;
-    s.appendChild(v);
-    d.appendChild(s);
-  }
-  if (j.finalize?.state === 'running') d.appendChild(el('div', 'fin-note run', '⏳ Yooni 내레이션 + 자막 조립 중…'));
-  if (j.finalize?.state === 'error') d.appendChild(el('div', 'fin-note err', '조립 실패: ' + j.finalize.error));
-
-  // 대본
-  const sc = el('section');
-  sc.appendChild(el('h3', '', '대본 — ' + j.script.title));
-  const tb = el('table', 'beats');
-  j.script.beats.forEach(b => {
-    const tr = el('tr');
-    tr.appendChild(el('td', '', `${b.role} ${b.durationSec}s`));
-    const td = el('td');
-    td.appendChild(el('div', '', b.narration));
-    td.appendChild(el('div', 'cap-t', '자막: ' + b.caption));
-    tr.appendChild(td);
-    tb.appendChild(tr);
-  });
-  sc.appendChild(tb);
-  d.appendChild(sc);
-
-  // 링크
-  const sl = el('section');
-  sl.appendChild(el('h3', '', '제휴 링크'));
-  const cur = j.brief.affiliateUrl || '';
-  const line = el('div', 'linkline' + (isPlaceholder(cur) ? ' placeholder' : ''));
-  line.textContent = cur ? (isPlaceholder(cur) ? '자리표시자 — 발행 전 실제 링크로 교체: ' : '') + cur.replace('https://', '') : '링크 없음';
-  sl.appendChild(line);
-  const lr = el('div', 'btnrow');
-  const mk = (cls, label, fn) => { const b = el('button', 'btn ' + cls, label); b.onclick = fn; lr.appendChild(b); };
-  mk('warm', '링크 붙여넣기', async () => {
-    const u = prompt('발급한 링크 (쿠팡 link.coupang.com·coupa.ng / 네이버 naver.me 등)');
-    if (!u) return;
-    const platform = /coupang|coupa\.ng/.test(u) ? 'coupang' : 'naverConnect';
-    try { const r = await api(`/api/jobs/${j.brief.id}/set-link`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ platform, url: u.trim() }) }); toast('링크 저장됨' + (r.lint ? ` · lint ${r.lint.ok ? '통과' : '위반'}` : '')); load(true); }
-    catch (e) { toast('저장 실패: ' + e.message); }
-  });
-  mk('', '쿠팡 파트너스', () => { navigator.clipboard?.writeText(j.brief.productName).catch(()=>{}); window.open('https://partners.coupang.com/', '_blank'); toast('상품명 복사됨 — 링크 생성 후 붙여넣기'); });
-  mk('', '브랜드커넥트', () => { navigator.clipboard?.writeText(j.brief.productName).catch(()=>{}); window.open('https://brandconnect.naver.com/', '_blank'); toast('상품명 복사됨 — 쇼핑커넥트 링크 발급 후 붙여넣기'); });
-  mk('', '쿠팡 딥링크 변환', async () => {
-    const u = prompt('쿠팡 상품 URL (www.coupang.com/...) — 파트너스 API 키 필요');
-    if (!u) return;
-    try { const r = await api(`/api/jobs/${j.brief.id}/issue-link`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ productUrl: u.trim() }) }); toast('딥링크 발급: ' + r.affiliateUrl); load(true); }
-    catch (e) { toast(e.message); }
-  });
-  sl.appendChild(lr);
-  d.appendChild(sl);
-
-  // 검증
-  const sv = el('section');
-  sv.appendChild(el('h3', '', '검증'));
-  const rep = j.lintReport;
-  const kv = el('div', 'kv');
-  kv.innerHTML = rep ? `lint <b>${rep.ok ? '통과' : '위반'}</b> · 발견 ${rep.findings?.length ?? 0}건` : 'lint 미실행';
-  sv.appendChild(kv);
-  if (rep?.findings?.length) {
-    const ul = el('ul', 'findings');
-    rep.findings.forEach(f => ul.appendChild(el('li', f.severity === 'block' ? 'b' : '', `[${f.severity}] ${f.rule} — ${f.matched}`)));
-    sv.appendChild(ul);
-  }
-  const vr = el('div', 'btnrow'); vr.style.marginTop = '10px';
-  const mkv = (label, fn, cls = '') => { const b = el('button', 'btn ' + cls, label); b.onclick = fn; vr.appendChild(b); };
-  const PREV = { 'script-approved': 'draft', generated: 'script-approved', assembled: 'generated', review: 'assembled', published: 'review' };
-  if (PREV[j.status]) mkv('← 이전 단계로', () => {
-    if (confirm(`${stageOf(j)?.label} → ${STAGES.find(s => s.key === PREV[j.status])?.label} 로 되돌릴까요?`)) transition(j, PREV[j.status]);
-  });
-  mkv('lint 재실행', async () => { try { const r = await api(`/api/jobs/${j.brief.id}/lint`, { method: 'POST' }); toast('lint ' + (r.ok ? '통과' : '위반 ' + r.findings.length + '건')); load(true); } catch (e) { toast('실패: ' + e.message); } });
-  mkv('생성 견적', async () => { try { const r = await api(`/api/jobs/${j.brief.id}/estimate?model=kling3_0-pro`, { method: 'POST' }); toast(`클립 ${r.clipsTotal}cr + TTS ${r.ttsCredits}cr = ${r.grandTotal}cr`); } catch (e) { toast('실패: ' + e.message); } });
-  if (!['published'].includes(j.status)) mkv('반려', () => transition(j, 'rejected'), 'danger');
-  sv.appendChild(vr);
-  d.appendChild(sv);
-}
-
-// ---- 로드 ----
-async function load(keepDrawer = false) {
   try {
-    const d = await api('/api/jobs');
-    state.jobs = d.jobs;
-    render();
-    if (keepDrawer && state.openId) renderDrawer();
-  } catch (e) { toast('로드 실패: ' + e.message); }
+    await api(`/api/jobs/${job.brief.id}/transition`, {
+      method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify(body)
+    });
+    showToast('상태를 변경했어요.');
+    await load(true);
+  } catch (e) { showToast('처리 실패: ' + e.message); }
+}
+async function finalize(job) {
+  if (!confirm('Yooni 보이스로 내레이션을 만들고 자막과 고지를 입힐까요? ElevenLabs 비용이 발생합니다.')) return;
+  try {
+    const endpoint = state.isCloud ? 'request-finalize' : 'finalize';
+    await api(`/api/jobs/${job.brief.id}/${endpoint}`, {method:'POST'});
+    showToast(state.isCloud ? '로컬 워커에 후반 작업을 요청했어요.' : '후반 작업을 시작했어요. 완료되면 자동으로 갱신됩니다.');
+    await load(true);
+  } catch (e) { showToast('후반 작업 시작 실패: ' + e.message); }
+}
+function confirmPublish(job) {
+  if (isPlaceholder(job.brief.affiliateUrl)) {
+    showToast('발행 전에 실제 제휴 링크를 저장해 주세요.');
+    state.selected = job.brief.id; renderDetail(); return;
+  }
+  if (!confirm('발행 검수를 완료로 표시할까요? 실제 업로드는 별도 발행 도구에서 진행됩니다.')) return;
+  const ref = prompt('업로드 requestId 또는 URL (선택)', '') || undefined;
+  transition(job, 'published', ref ? {publishRef:ref} : {});
+}
+function runPrimary(job) {
+  state.selected = job.brief.id;
+  if (job.status === 'draft') return transition(job, 'script-approved');
+  if (job.status === 'generated') return finalize(job);
+  if (job.status === 'assembled') return transition(job, 'review');
+  if (job.status === 'review') return confirmPublish(job);
+  if (job.status === 'rejected') return transition(job, 'draft');
+  renderJobs(); renderDetail();
+}
+
+function renderDetail(force=false) {
+  const j = state.jobs.find(j => j.brief.id === state.selected);
+  if (!j) return;
+  const detailKey = `${j.brief.id}:${j.updatedAt || ''}`;
+  // 자동 갱신 중 video 요소를 다시 만들면 재생 위치가 초기화되므로 데이터가 바뀔 때만 갱신한다.
+  if (!force && state.detailKey === detailKey) return;
+  state.detailKey = detailKey;
+  const st = STATUS[j.status] || {label:j.status,action:'확인'};
+  const beats = (j.script?.beats || []).slice(0,3);
+  const totalSec = beats.reduce((n,b)=>n+(b.durationSec||0),0);
+  const showFinal = j.outputVideo && ['assembled','review','published'].includes(j.status);
+  const showPreview = j.previewVideo && j.status === 'generated';
+  const hasAction = ['draft','generated','assembled','review','rejected'].includes(j.status) && !['requested','running'].includes(j.finalize?.state);
+  const findings = j.lintReport?.findings || [];
+  const affiliate = j.brief.affiliateUrl || '';
+  document.getElementById('detail').innerHTML = `
+    <div class="detail-head">
+      <div class="detail-kicker"><span>콘텐츠 상세</span><span class="status-pill">${st.label}</span></div>
+      <h3>${j.brief.productName}</h3>
+      <div class="detail-desc">${j.script?.title || '쇼핑 쇼츠 콘텐츠'} · ${HOOK[j.script?.hookType] || '쇼츠'}</div>
+    </div>
+    <div class="detail-inner">
+      <div class="video-preview">
+        ${showFinal || showPreview
+          ? `<video controls preload="metadata" src="/api/jobs/${j.brief.id}/video?which=${showFinal ? 'final' : 'preview'}"></video>`
+          : `<button class="play" aria-label="미리보기 없음" disabled>${svg('play',18)}</button>`}
+        <span class="duration">${totalSec}초</span>
+      </div>
+      <div class="detail-body">
+        <div class="detail-section">
+          <div class="detail-label">SCRIPT FLOW</div>
+          <div class="steps">${beats.map((b,i) => `<div class="beat"><div class="beat-num">0${i+1}</div><p>${b.narration}</p><time>${b.durationSec || '-'}s</time></div>`).join('')}</div>
+        </div>
+        <div class="detail-section">
+          <div class="detail-label">QUALITY CHECK</div>
+          <div class="checkline">${svg('check',15)} ${j.lintReport?.ok === false ? `확인할 표현이 ${findings.length}건 있어요` : '필수 고지와 표현 검사를 통과했어요'}</div>
+          ${findings.length ? `<ul class="finding-list">${findings.map(f => `<li>[${f.severity}] ${f.rule} — ${f.matched}</li>`).join('')}</ul>` : ''}
+          ${j.finalize?.state === 'requested' ? '<div class="finalize-note">로컬 워커가 작업을 가져가길 기다리고 있어요…</div>' : ''}
+          ${j.finalize?.state === 'running' ? '<div class="finalize-note">내레이션과 자막을 조립하고 있어요…</div>' : ''}
+          ${j.finalize?.state === 'error' ? `<div class="finalize-note">조립 실패: ${j.finalize.error}</div>` : ''}
+        </div>
+        <div class="detail-section">
+          <div class="detail-label">AFFILIATE LINK</div>
+          <div class="affiliate-box">
+            <div class="affiliate-url ${isPlaceholder(affiliate) ? 'missing' : ''}">${affiliate ? (isPlaceholder(affiliate) ? '실제 링크로 교체가 필요해요 · ' : '') + affiliate : '아직 제휴 링크가 없어요.'}</div>
+            <div class="detail-tools">
+              <button class="tool-btn warm" data-tool="set-link">링크 붙여넣기</button>
+              <button class="tool-btn" data-tool="coupang">쿠팡 파트너스</button>
+              <button class="tool-btn" data-tool="naver">브랜드커넥트</button>
+              <button class="tool-btn" data-tool="deeplink">딥링크 변환</button>
+            </div>
+          </div>
+        </div>
+        <div class="detail-section">
+          <div class="detail-label">TOOLS</div>
+          <div class="detail-tools">
+            <button class="tool-btn" data-tool="lint">lint 재실행</button>
+            <button class="tool-btn" data-tool="estimate">생성 견적</button>
+            ${previousStage(j.status) ? '<button class="tool-btn" data-tool="previous">이전 단계</button>' : ''}
+            ${j.status !== 'published' ? '<button class="tool-btn danger" data-tool="reject">수정 요청</button>' : ''}
+          </div>
+        </div>
+        <button class="detail-cta" data-primary ${hasAction ? '' : 'disabled'}>${['requested','running'].includes(j.finalize?.state) ? '후반 작업 진행 중' : st.action}</button>
+      </div>
+    </div>`;
+  document.querySelector('[data-primary]')?.addEventListener('click', () => hasAction && runPrimary(j));
+  document.querySelectorAll('[data-tool]').forEach(b => b.onclick = () => runTool(b.dataset.tool, j));
+}
+
+async function runTool(tool, j) {
+  if (tool === 'set-link') {
+    const url = prompt('발급한 제휴 링크를 붙여넣어 주세요.');
+    if (!url) return;
+    const platform = /coupang|coupa\.ng/.test(url) ? 'coupang' : 'naverConnect';
+    try {
+      const r = await api(`/api/jobs/${j.brief.id}/set-link`, {method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({platform,url:url.trim()})});
+      showToast('링크를 저장했어요' + (r.lint ? ` · lint ${r.lint.ok ? '통과' : '위반'}` : ''));
+      await load(true);
+    } catch (e) { showToast('링크 저장 실패: ' + e.message); }
+  }
+  if (tool === 'coupang' || tool === 'naver') {
+    navigator.clipboard?.writeText(j.brief.productName).catch(()=>{});
+    window.open(tool === 'coupang' ? 'https://partners.coupang.com/' : 'https://brandconnect.naver.com/', '_blank');
+    showToast('상품명을 복사했어요. 링크 발급 후 붙여넣어 주세요.');
+  }
+  if (tool === 'deeplink') {
+    const productUrl = prompt('쿠팡 상품 URL을 입력해 주세요. 파트너스 API 키가 필요합니다.');
+    if (!productUrl) return;
+    try {
+      const r = await api(`/api/jobs/${j.brief.id}/issue-link`, {method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({productUrl:productUrl.trim()})});
+      showToast('딥링크를 발급했어요: ' + r.affiliateUrl); await load(true);
+    } catch (e) { showToast('딥링크 발급 실패: ' + e.message); }
+  }
+  if (tool === 'lint') {
+    try {
+      if (state.isCloud) {
+        await api(`/api/jobs/${j.brief.id}/request-lint`, {method:'POST'});
+        showToast('로컬 워커에 lint 재검증을 요청했어요.');
+      } else {
+        const r = await api(`/api/jobs/${j.brief.id}/lint`, {method:'POST'});
+        showToast(`lint ${r.ok ? '통과' : `위반 ${r.findings.length}건`}`);
+      }
+      await load(true);
+    } catch (e) { showToast('lint 실패: ' + e.message); }
+  }
+  if (tool === 'estimate') {
+    if (state.isCloud) { showToast('생성 견적은 로컬 운영 화면에서 확인할 수 있어요.'); return; }
+    try {
+      const r = await api(`/api/jobs/${j.brief.id}/estimate?model=kling3_0-pro`, {method:'POST'});
+      showToast(`예상 비용 · 클립 ${r.clipsTotal}cr + TTS ${r.ttsCredits}cr = ${r.grandTotal}cr`);
+    } catch (e) { showToast('견적 실패: ' + e.message); }
+  }
+  if (tool === 'previous') {
+    const prev = previousStage(j.status);
+    if (prev && confirm('이전 단계로 되돌릴까요?')) transition(j, prev);
+  }
+  if (tool === 'reject') transition(j, 'rejected');
+}
+
+async function load(keepSelection=false) {
+  try {
+    const data = await api('/api/jobs');
+    state.jobs = data.jobs || [];
+    state.isCloud = Object.prototype.hasOwnProperty.call(data, 'workerAt');
+    state.workerAt = data.workerAt || null;
+    const workerFresh = state.workerAt && Date.now() - new Date(state.workerAt).getTime() < 90000;
+    document.getElementById('systemStatus').innerHTML = state.isCloud
+      ? `<span class="online" style="${workerFresh ? '' : 'background:#8d9189;box-shadow:none'}"></span> 워커 ${workerFresh ? '온라인' : '오프라인'}`
+      : '<span class="online"></span> 로컬 자동화 정상';
+    document.getElementById('systemNote').textContent = state.isCloud
+      ? (workerFresh ? 'Mac 실행 워커 연결됨' : '작업은 워커 연결까지 대기합니다') : '마지막 동기화 · 방금 전';
+  } catch (e) { showToast('작업 목록을 불러오지 못했어요: ' + e.message); return; }
+  if (!keepSelection || !state.jobs.some(j => j.brief.id === state.selected)) {
+    state.selected = state.jobs.find(j => j.status === 'review')?.brief.id || state.jobs[0]?.brief.id || null;
+  }
+  renderSummary(); renderTopics(); renderPipeline(); renderJobs(); renderDetail();
+  if (typeof currentRoute === 'function' && currentRoute() !== 'dashboard') renderPage(currentRoute());
 }
 async function loadHot() {
-  try { const d = await api('/api/hot-keywords'); state.hot = d.items || []; state.requests = d.requests || []; renderHot(); }
-  catch { /* 키워드 로드는 조용히 재시도 */ }
+  try {
+    const data = await api('/api/hot-keywords');
+    state.hot = data.items || [];
+    renderTopics();
+  } catch { /* 다음 자동 갱신 때 재시도 */ }
 }
-function render() { renderRail(); renderJobs(); if (state.openId) renderDrawer(); }
-document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeDrawer(); });
-load(); loadHot();
-setInterval(() => { load(true); loadHot(); }, 12000);
+function activateNav(name) {
+  document.querySelectorAll('[data-nav]').forEach(b => b.classList.toggle('active', b.dataset.nav === name));
+}
+const ROUTES = {
+  dashboard:'/', content:'/contents', trends:'/trends', performance:'/performance',
+  links:'/affiliate-links', settings:'/settings'
+};
+const ROUTE_NAMES = Object.fromEntries(Object.entries(ROUTES).map(([key,value]) => [value,key]));
+function currentRoute() {
+  return ROUTE_NAMES[location.pathname.replace(/\/+$/, '') || '/'] || 'dashboard';
+}
+function navigate(name, push=true) {
+  activateNav(name);
+  if (name === 'dashboard') {
+    document.getElementById('dashboardView').hidden = false;
+    document.getElementById('pageView').hidden = true;
+    state.filter = 'all'; state.search = ''; renderSummary(); renderPipeline(); renderJobs(); renderDetail();
+    window.scrollTo({top:0, behavior:'smooth'});
+  } else {
+    document.getElementById('dashboardView').hidden = true;
+    document.getElementById('pageView').hidden = false;
+    renderPage(name);
+    window.scrollTo({top:0, behavior:'smooth'});
+  }
+  if (push && location.pathname !== ROUTES[name]) history.pushState({page:name}, '', ROUTES[name]);
+}
+function renderPage(name) {
+  const view = document.getElementById('pageView');
+  const title = {content:'콘텐츠',trends:'트렌드 탐색',performance:'성과',links:'제휴 링크',settings:'설정'}[name];
+  const copy = {
+    content:'제작 중인 쇼츠와 완료된 콘텐츠를 한곳에서 관리하세요.',
+    trends:'기회 점수가 높은 소재를 발견하고 바로 초안을 요청하세요.',
+    performance:'현재 파이프라인의 제작 및 발행 현황입니다.',
+    links:'발행에 필요한 제휴 링크를 확인하고 관리하세요.',
+    settings:'작업 환경과 알림 방식을 관리하세요.'
+  }[name];
+  let body = '';
+  if (name === 'content') {
+    const playable = state.jobs.filter(j => videoWhich(j)).length;
+    body = `<div class="library-meta">
+      <span>전체 ${state.jobs.length}개 · 재생 가능 ${playable}개</span>
+      <div class="library-filter"><button class="active" data-library-filter="all">전체</button><button data-library-filter="ready">완성 영상</button><button data-library-filter="working">제작 중</button></div>
+    </div>
+    <div class="video-library" id="videoLibrary">${renderVideoCards(state.jobs)}</div>`;
+  }
+  if (name === 'trends') {
+    const items = state.hot.length ? state.hot : [{topic:'추천 소재를 불러오는 중',opportunity:'-'}];
+    body = `<div class="page-grid">${items.map((it,i) => `<article class="page-card">
+      <div class="topic-rank">${i+1}</div><h3 style="margin-top:13px">${it.topic}</h3>
+      <p>기회 점수 ${it.opportunity ?? '-'} · 검색 수요와 경쟁도를 종합한 추천입니다.</p>
+      <button class="detail-cta" data-page-topic="${it.topic}" data-score="${it.opportunity ?? ''}">초안 요청</button>
+    </article>`).join('')}</div>`;
+  }
+  if (name === 'performance') {
+    const needs = state.jobs.filter(j => ['draft','generated','assembled','review','rejected'].includes(j.status)).length;
+    const generating = state.jobs.filter(j => j.status === 'script-approved' || j.finalize?.state === 'running').length;
+    const published = state.jobs.filter(j => j.status === 'published').length;
+    body = `<div class="page-grid">
+      <article class="page-card"><h3>확인 필요</h3><div class="metric-large">${needs}</div><p>승인 또는 검수를 기다리는 콘텐츠</p></article>
+      <article class="page-card"><h3>자동 제작 중</h3><div class="metric-large">${generating}</div><p>클립·내레이션 생성 작업</p></article>
+      <article class="page-card"><h3>발행 완료</h3><div class="metric-large">${published}</div><p>현재까지 발행 처리된 콘텐츠</p></article>
+    </div>`;
+  }
+  if (name === 'links') {
+    body = `<div class="page-table">
+      <div class="page-row header"><span>콘텐츠</span><span>플랫폼</span><span>상태</span><span>작업</span></div>
+      ${state.jobs.map(j => {
+        const missing = isPlaceholder(j.brief?.affiliateUrl);
+        const platform = /coupang|coupa\.ng/.test(j.brief?.affiliateUrl || '') ? '쿠팡' : '네이버/기타';
+        return `<div class="page-row"><strong>${j.brief.productName}</strong><span>${platform}</span>
+          <span style="color:${missing ? 'var(--yellow)' : 'var(--mint)'}">${missing ? '링크 필요' : '연결됨'}</span>
+          <button data-page-link="${j.brief.id}">${missing ? '링크 등록' : '변경'}</button></div>`;
+      }).join('') || '<div class="empty-page">관리할 콘텐츠가 없어요.</div>'}
+    </div>`;
+  }
+  if (name === 'settings') {
+    const autoRefresh = localStorage.getItem('shopshorts:autoRefresh') !== 'off';
+    const notifications = localStorage.getItem('shopshorts:notifications') !== 'off';
+    body = `<article class="page-card">
+      <div class="setting-row"><div><strong>자동 새로고침</strong><small>12초마다 작업 상태를 확인합니다.</small></div><button class="toggle ${autoRefresh ? 'on' : ''}" data-setting="autoRefresh" aria-label="자동 새로고침"></button></div>
+      <div class="setting-row"><div><strong>작업 알림</strong><small>확인이 필요한 작업을 대시보드에 표시합니다.</small></div><button class="toggle ${notifications ? 'on' : ''}" data-setting="notifications" aria-label="작업 알림"></button></div>
+      <div class="setting-row"><div><strong>운영 서버</strong><small>${state.isCloud ? 'Cloudflare Pages · D1 · R2' : '로컬 전용 · 127.0.0.1:5178'}</small></div><span class="status-pill">정상</span></div>
+    </article>`;
+  }
+  view.innerHTML = `<div class="page-head"><div><div class="eyebrow">SHOPSHORTS</div><h1>${title}</h1><p>${copy}</p></div></div>${body}`;
+  bindPageActions(name);
+}
+function bindPageActions(name) {
+  document.querySelectorAll('[data-open-job]').forEach(b => b.onclick = () => {
+    state.selected = b.dataset.openJob; navigate('dashboard'); renderJobs(); renderDetail(true);
+    document.querySelector('[data-section="content"]')?.scrollIntoView({behavior:'smooth',block:'start'});
+  });
+  document.querySelectorAll('[data-page-topic]').forEach(b => b.onclick = async () => {
+    try {
+      await api('/api/draft-requests',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({topic:b.dataset.pageTopic,opportunity:Number(b.dataset.score)||undefined,contentType:'shorts'})});
+      showToast(`“${b.dataset.pageTopic}” 초안을 요청했어요.`); await loadHot(); renderPage('trends');
+    } catch(e) { showToast('초안 요청 실패: '+e.message); }
+  });
+  document.querySelectorAll('[data-page-link]').forEach(b => b.onclick = () => {
+    const job = state.jobs.find(j => j.brief.id === b.dataset.pageLink);
+    if (job) runTool('set-link', job).then(() => renderPage('links'));
+  });
+  document.querySelectorAll('[data-setting]').forEach(b => b.onclick = () => {
+    b.classList.toggle('on');
+    localStorage.setItem(`shopshorts:${b.dataset.setting}`, b.classList.contains('on') ? 'on' : 'off');
+    showToast('설정을 저장했어요.');
+  });
+  document.querySelectorAll('[data-library-filter]').forEach(b => b.onclick = () => {
+    document.querySelectorAll('[data-library-filter]').forEach(x => x.classList.toggle('active', x === b));
+    const jobs = b.dataset.libraryFilter === 'ready' ? state.jobs.filter(videoWhich)
+      : b.dataset.libraryFilter === 'working' ? state.jobs.filter(j => !videoWhich(j)) : state.jobs;
+    document.getElementById('videoLibrary').innerHTML = renderVideoCards(jobs);
+    bindVideoCards();
+  });
+  bindVideoCards();
+}
+function videoWhich(j) {
+  if (j.mediaUploaded?.final || (j.outputVideo && ['assembled','review','published'].includes(j.status))) return 'final';
+  if (j.mediaUploaded?.preview || (j.previewVideo && j.status === 'generated')) return 'preview';
+  return null;
+}
+function videoDuration(j) {
+  const sec = (j.script?.beats || []).reduce((sum,b) => sum + (Number(b.durationSec) || 0), 0);
+  return sec ? `${sec}초` : '';
+}
+function renderVideoCards(jobs) {
+  if (!jobs.length) return '<div class="empty-page">이 조건에 해당하는 콘텐츠가 없어요.</div>';
+  return jobs.map(j => {
+    const which = videoWhich(j);
+    const status = STATUS[j.status]?.label || j.status;
+    return `<button class="video-card" data-watch-job="${j.brief.id}">
+      <div class="video-cover ${which ? '' : 'empty'} ${categoryClass(j)}">
+        ${which ? `<video muted playsinline preload="metadata" src="/api/jobs/${j.brief.id}/video?which=${which}"></video><span class="cover-play">${svg('play',17)}</span>`
+          : `<div class="cover-placeholder">${svg('image',27)}</div>`}
+        <span class="cover-state">${status}</span><span class="cover-duration">${videoDuration(j)}</span>
+      </div>
+      <div class="video-info"><strong>${j.brief.productName}</strong><span>${HOOK[j.script?.hookType] || '쇼츠'} · ${fmtTime(j.updatedAt)}</span></div>
+    </button>`;
+  }).join('');
+}
+function bindVideoCards() {
+  document.querySelectorAll('[data-watch-job]').forEach(card => card.onclick = () => openViewer(card.dataset.watchJob));
+}
+function openViewer(id) {
+  const j = state.jobs.find(j => j.brief.id === id);
+  if (!j) return;
+  const which = videoWhich(j);
+  const viewer = document.getElementById('viewer');
+  viewer.innerHTML = `<div class="viewer-panel" role="dialog" aria-modal="true" aria-label="${j.brief.productName}">
+    <button class="viewer-close" aria-label="닫기">×</button>
+    <div class="viewer-media">${which
+      ? `<video controls autoplay playsinline src="/api/jobs/${j.brief.id}/video?which=${which}"></video>`
+      : `<div class="viewer-no-video">${svg('image',30)}<br><br>아직 재생할 영상이 없어요.<br>${STATUS[j.status]?.label || j.status} 단계입니다.</div>`}</div>
+    <div class="viewer-copy"><div class="eyebrow">${STATUS[j.status]?.label || j.status}</div>
+      <h2>${j.brief.productName}</h2><p>${j.script?.title || '쇼핑 쇼츠 콘텐츠'}</p>
+      <div class="viewer-beats">${(j.script?.beats || []).map((b,i) => `<div class="viewer-beat"><span class="beat-num">0${i+1}</span><span>${b.narration}</span></div>`).join('')}</div>
+      <button class="detail-cta" data-view-detail="${j.brief.id}">작업 상세로 이동</button>
+    </div></div>`;
+  viewer.hidden = false;
+  viewer.querySelector('.viewer-close').onclick = closeViewer;
+  viewer.onclick = e => { if (e.target === viewer) closeViewer(); };
+  viewer.querySelector('[data-view-detail]').onclick = () => {
+    closeViewer(); state.selected = j.brief.id; navigate('dashboard'); renderJobs(); renderDetail(true);
+    document.querySelector('[data-section="content"]')?.scrollIntoView({behavior:'smooth',block:'start'});
+  };
+}
+function closeViewer() {
+  const viewer = document.getElementById('viewer');
+  viewer.querySelector('video')?.pause();
+  viewer.hidden = true; viewer.innerHTML = '';
+}
+document.querySelectorAll('[data-nav]').forEach(button => button.onclick = () => navigate(button.dataset.nav));
+window.addEventListener('popstate', () => navigate(currentRoute(), false));
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeViewer(); });
+document.querySelector('[data-new]')?.addEventListener('click', () => {
+  navigate('trends');
+});
+document.querySelector('[data-control="filter"]')?.addEventListener('click', () => {
+  const filters = ['all','needs','missing-link'];
+  const labels = {all:'전체 콘텐츠',needs:'확인할 작업', 'missing-link':'링크가 필요한 콘텐츠'};
+  const next = filters[(filters.indexOf(state.filter) + 1) % filters.length];
+  setQueueFilter(next);
+  showToast(`필터: ${labels[next]}`);
+});
+document.querySelector('[data-control="sort"]')?.addEventListener('click', () => {
+  state.sort = state.sort === 'priority' ? 'updated' : 'priority';
+  document.getElementById('sortLabel').textContent = state.sort === 'priority' ? '우선순위순' : '업데이트순';
+  renderJobs();
+});
+document.querySelector('[data-top-action="search"]')?.addEventListener('click', () => {
+  const query = prompt('찾을 상품명이나 키워드를 입력해 주세요.', state.search);
+  if (query === null) return;
+  state.filter = 'all'; state.search = query.trim();
+  renderSummary(); renderPipeline(); renderJobs();
+  document.querySelector('[data-section="content"]')?.scrollIntoView({behavior:'smooth', block:'start'});
+  if (state.search) showToast(`“${state.search}” 검색 결과를 표시합니다.`);
+});
+document.querySelector('[data-top-action="notifications"]')?.addEventListener('click', () => {
+  activateNav('content');
+  setQueueFilter('needs');
+  showToast('지금 확인이 필요한 작업만 모았습니다.');
+});
+load().then(() => navigate(currentRoute(), false)); loadHot().then(() => {
+  if (currentRoute() === 'trends') renderPage('trends');
+});
+setInterval(() => {
+  if (localStorage.getItem('shopshorts:autoRefresh') !== 'off') { load(true); loadHot(); }
+}, 12000);
 </script>
 </body>
 </html>
