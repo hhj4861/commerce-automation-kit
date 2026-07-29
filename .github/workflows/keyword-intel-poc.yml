@@ -3,15 +3,11 @@ name: keyword-intel GitHub Actions POC
 on:
   workflow_dispatch:
     inputs:
-      keywords:
-        description: "Comma-separated keywords (keep small for the POC)"
-        required: false
-        default: "루테인,밀크씨슬,콜라겐"
       send_telegram:
-        description: "Send the generated report to Telegram"
+        description: "Send trend and blog Top 10 reports to Telegram"
         required: true
         type: boolean
-        default: false
+        default: true
 
 permissions:
   contents: read
@@ -23,7 +19,7 @@ concurrency:
 jobs:
   collect-and-report:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 45
     defaults:
       run:
         working-directory: packages/keyword-intel
@@ -32,6 +28,9 @@ jobs:
       DB_PATH: ./data/poc-intel.db
       NAVER_CLIENT_ID: ${{ secrets.NAVER_CLIENT_ID }}
       NAVER_CLIENT_SECRET: ${{ secrets.NAVER_CLIENT_SECRET }}
+      NAVER_AD_CUSTOMER_ID: ${{ secrets.NAVER_AD_CUSTOMER_ID }}
+      NAVER_AD_API_KEY: ${{ secrets.NAVER_AD_API_KEY }}
+      NAVER_AD_SECRET_KEY: ${{ secrets.NAVER_AD_SECRET_KEY }}
       TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
       TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
 
@@ -56,7 +55,8 @@ jobs:
         shell: bash
         run: |
           missing=()
-          for key in NAVER_CLIENT_ID NAVER_CLIENT_SECRET; do
+          for key in NAVER_CLIENT_ID NAVER_CLIENT_SECRET \
+            NAVER_AD_CUSTOMER_ID NAVER_AD_API_KEY NAVER_AD_SECRET_KEY; do
             if [[ -z "${!key:-}" ]]; then
               missing+=("$key")
             fi
@@ -73,18 +73,32 @@ jobs:
             exit 1
           fi
 
-      - name: Collect POC keywords
-        env:
-          POC_KEYWORDS: ${{ inputs.keywords }}
-        run: npm run -s collect -- "$POC_KEYWORDS"
+      - name: Collect all 182 keywords
+        run: npm run -s collect -- --file seeds/g2-seeds.txt
 
-      - name: Build report without sending
+      - name: Build trend Top 10 without sending
         if: ${{ !inputs.send_telegram }}
-        run: npm run -s report -- --dry-run
+        run: npm run -s report -- --top 10 --dry-run
 
-      - name: Send report to Telegram
+      - name: Send trend Top 10 to Telegram
         if: ${{ inputs.send_telegram }}
-        run: npm run -s report
+        run: npm run -s report -- --top 10
+
+      - name: Build blog Top 10
+        run: npm run -s analyze -- --blog --top 10 | tee blog-report.txt
+
+      - name: Send blog Top 10 to Telegram
+        if: ${{ inputs.send_telegram }}
+        shell: bash
+        run: |
+          jq -n \
+            --arg chat_id "$TELEGRAM_CHAT_ID" \
+            --rawfile text blog-report.txt \
+            '{chat_id: $chat_id, text: $text}' > telegram-blog.json
+          curl --fail-with-body --retry 3 \
+            --header "Content-Type: application/json" \
+            --data @telegram-blog.json \
+            "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage"
 
       - name: Upload ephemeral POC database
         if: ${{ always() }}
