@@ -723,9 +723,8 @@ function confirmPublish(job) {
     showToast('발행 전에 실제 제휴 링크를 저장해 주세요.');
     state.selected = job.brief.id; renderDetail(); return;
   }
-  if (!confirm('발행 검수를 완료로 표시할까요? 실제 업로드는 별도 발행 도구에서 진행됩니다.')) return;
-  const ref = prompt('업로드 requestId 또는 URL (선택)', '') || undefined;
-  transition(job, 'published', ref ? {publishRef:ref} : {});
+  if (!confirm('발행 검수를 완료할까요? 확인하면 로컬 워커가 유튜브·인스타그램에 실제 업로드합니다.')) return;
+  transition(job, 'published', {});
 }
 function runPrimary(job) {
   state.selected = job.brief.id;
@@ -777,6 +776,10 @@ function renderDetail(force=false) {
           ${j.finalize?.state === 'requested' ? '<div class="finalize-note">로컬 워커가 작업을 가져가길 기다리고 있어요…</div>' : ''}
           ${j.finalize?.state === 'running' ? '<div class="finalize-note">내레이션과 자막을 조립하고 있어요…</div>' : ''}
           ${j.finalize?.state === 'error' ? `<div class="finalize-note">조립 실패: ${j.finalize.error}</div>` : ''}
+          ${j.upload?.state === 'requested' ? '<div class="finalize-note">발행 확정 — 로컬 워커가 업로드를 가져가길 기다리고 있어요…</div>' : ''}
+          ${['running','uploaded'].includes(j.upload?.state) ? '<div class="finalize-note">유튜브·인스타그램에 업로드하고 있어요…</div>' : ''}
+          ${j.upload?.state === 'done' ? `<div class="finalize-note">업로드 완료 ✓ ${(j.upload.results||[]).filter(r=>r.url).map(r=>`<a href="${r.url}" target="_blank" rel="noopener">${r.platform}</a>`).join(' · ')}</div>` : ''}
+          ${j.upload?.state === 'failed' ? `<div class="finalize-note">업로드 실패: ${j.upload.error || ''}</div>` : ''}
         </div>
         <div class="detail-section">
           <div class="detail-label">AFFILIATE LINK</div>
@@ -801,6 +804,7 @@ function renderDetail(force=false) {
             <button class="tool-btn" data-tool="lint">lint 재실행</button>
             <button class="tool-btn" data-tool="estimate">생성 견적</button>
             ${previousStage(j.status) ? '<button class="tool-btn" data-tool="previous">이전 단계</button>' : ''}
+            ${j.status === 'published' && j.upload?.state === 'failed' ? '<button class="tool-btn warm" data-tool="retry-upload">업로드 재시도</button>' : ''}
             ${j.status !== 'published' ? '<button class="tool-btn danger" data-tool="reject">수정 요청</button>' : ''}
           </div>
         </div>
@@ -852,6 +856,12 @@ async function runTool(tool, j) {
       const r = await api(`/api/jobs/${j.brief.id}/issue-link`, {method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({productUrl:productUrl.trim()})});
       showToast('딥링크를 발급하고 댓글 문구에 반영했어요.'); await load(true);
     } catch (e) { showToast('딥링크 발급 실패: ' + e.message); }
+  }
+  if (tool === 'retry-upload') {
+    try {
+      await api(`/api/jobs/${j.brief.id}/request-upload`, {method:'POST'});
+      showToast('업로드를 다시 요청했어요.'); await load(true);
+    } catch (e) { showToast('재요청 실패: ' + e.message); }
   }
   if (tool === 'lint') {
     try {

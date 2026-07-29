@@ -144,11 +144,12 @@ export function cuesFromBeats(
 // ---------------------------------------------------------------------------
 // 동기(synced) 조립 — Vrew 스타일 (2026-07-28 바쿠치올.mp4 실측 재현)
 //
-// 실측 결함에서 나온 재설계: 내레이션이 비트 영상보다 길면 다음 비트와 겹쳐
-// "TTS 중복" 이 발생한다. 해법은 오디오를 자르는 게 아니라 **세그먼트 길이를
-// 내레이션에 맞추는 것** — L_i = max(클립 길이, 내레이션 길이 + 패딩).
-// 부족분은 클립 마지막 프레임 홀드(tpad clone)로 채우고, 자막(내레이션 전문)과
-// 내레이션을 같은 타임라인에 배치한다. 자막은 화면 중앙, 큰 손글씨풍(나눔펜).
+// 실측 결함 2건에서 나온 재설계: ① 내레이션이 비트 영상보다 길면 다음 비트와
+// 겹쳐 "TTS 중복", ② 영상이 내레이션보다 길면 비트 사이 무음 공백. 해법은
+// **세그먼트 길이를 내레이션에 맞추는 것** — L_i = 내레이션 + 패딩(내레이션이
+// 없는 세그먼트만 클립 길이). 남는 클립은 trim, 부족분은 마지막 프레임 홀드
+// (tpad clone). 마지막 세그먼트만 endHoldSec 여운을 더해 뚝 끊기지 않게 한다.
+// 자막(내레이션 전문)은 내레이션과 같은 타임라인 — 화면 중앙, 손글씨풍(나눔펜).
 // ---------------------------------------------------------------------------
 
 /** 세그먼트 내 자막 구절(한 줄) — 시각은 세그먼트 시작 기준 상대값. */
@@ -183,13 +184,16 @@ export interface SyncedAssembleOpts {
   subtitleFontSize?: number;
   /** 내레이션 뒤 여백(초, 기본 0.35) */
   narrationPadSec?: number;
+  /** 마지막 세그먼트 끝 여운(초, 기본 0.6) — 내레이션 종료와 동시에 끊기는 것 방지 */
+  endHoldSec?: number;
   musicVolume?: number;
 }
 
-/** 세그먼트 길이(초): max(클립, 내레이션+패딩). */
+/** 세그먼트 길이(초): 내레이션+패딩(내레이션 없으면 클립 길이) — 비트 간 무음 공백 제거. */
 export function segmentLengthSec(seg: SyncedSegment, padSec = 0.35): number {
-  const nar = seg.narrationDurationSec !== undefined ? seg.narrationDurationSec + padSec : 0;
-  return Math.max(seg.clipDurationSec, nar);
+  return seg.narrationDurationSec !== undefined
+    ? seg.narrationDurationSec + padSec
+    : seg.clipDurationSec;
 }
 
 /**
@@ -267,34 +271,53 @@ export function buildSyncedAssembleArgs(
     musIdx = inputIdx++;
   }
 
-  // 타임라인
-  const lengths = segments.map((s) => segmentLengthSec(s, pad));
+  // 타임라인 — 마지막 세그먼트만 끝 여운을 더한다(내레이션 종료 즉시 컷 방지)
+  const endHold = opts.endHoldSec ?? 0.6;
+  const lengths = segments.map(
+    (s, i) => segmentLengthSec(s, pad) + (i === segments.length - 1 ? endHold : 0),
+  );
   const offsets: number[] = [];
   lengths.reduce((acc, l, i) => { offsets[i] = acc; return acc + l; }, 0);
   const total = lengths.reduce((a, b) => a + b, 0);
 
   const parts: string[] = [];
   segments.forEach((s, i) => {
+    // 클립 > 세그먼트 → 남는 꼬리 trim(무음 공백 제거), 클립 < 세그먼트 → 마지막 프레임 홀드
     const hold = Math.max(0, lengths[i]! - s.clipDurationSec);
+    const trim = s.clipDurationSec - lengths[i]! > 0.01
+      ? `,trim=duration=${lengths[i]!.toFixed(3)}` : '';
     const tpad = hold > 0.01 ? `,tpad=stop_mode=clone:stop_duration=${hold.toFixed(3)}` : '';
     parts.push(
       `[${i}:v]scale=w=${width}:h=${height}:force_original_aspect_ratio=increase,` +
-        `crop=${width}:${height},setsar=1,fps=30,setpts=PTS-STARTPTS${tpad}[v${i}]`,
+        `crop=${width}:${height},setsar=1,fps=30${trim},setpts=PTS-STARTPTS${tpad}[v${i}]`,
     );
   });
   parts.push(`${segments.map((_, i) => `[v${i}]`).join('')}concat=n=${segments.length}:v=1:a=0[vc]`);
 
   // 자막(구절 단위 한 줄, 화면 중앙 45% — 한 줄이라 줄별 중앙정렬이 자동 성립) + 고지 오버레이
+  // 테두리는 borderw(FreeType stroker)가 아니라 8방향 오프셋 검정 사본 + 흰 본문.
+  // 실측(2026-07-29): 손글씨 폰트의 획 겹침 글자(잎·얇·땐)에서 borderw≥4가
+  // 얇은 속공간을 검게 메워 "글자 깨짐"이 발생 — 오프셋 방식은 굵기를 유지하면서 무결.
+  const OUTLINE_OFFSETS: [number, number][] = [
+    [-3, 0], [3, 0], [0, -3], [0, 3], [-2, -2], [2, 2], [-2, 2], [2, -2],
+  ];
   const overlays: string[] = [];
   segments.forEach((s, i) => {
     for (const chunk of s.subtitles ?? []) {
       const st = offsets[i]! + chunk.startSec;
       const en = offsets[i]! + chunk.endSec;
+      const enable = `:enable='between(t,${st.toFixed(3)},${en.toFixed(3)})'`;
+      for (const [dx, dy] of OUTLINE_OFFSETS) {
+        overlays.push(
+          `drawtext=fontfile=${font}:textfile=${chunk.file}` +
+            `:fontsize=${fontSize}:fontcolor=black` +
+            `:x=(w-text_w)/2+(${dx}):y=(h-text_h)*0.45+(${dy})${enable}`,
+        );
+      }
       overlays.push(
         `drawtext=fontfile=${font}:textfile=${chunk.file}` +
-          `:fontsize=${fontSize}:fontcolor=white:borderw=6:bordercolor=black` +
-          `:x=(w-text_w)/2:y=(h-text_h)*0.45` +
-          `:enable='between(t,${st.toFixed(3)},${en.toFixed(3)})'`,
+          `:fontsize=${fontSize}:fontcolor=white` +
+          `:x=(w-text_w)/2:y=(h-text_h)*0.45${enable}`,
       );
     }
   });

@@ -206,8 +206,28 @@ export async function onRequest(context) {
         // 승인 전이 → 워커 lint 재검증 대기. 그 외 전이 → 미실행 finalize 요청은 취소(유령 조립 방지)
         if (to === 'script-approved') delete job.lintChecked;
         if (job.finalize?.state === 'requested') delete job.finalize;
+        // 발행 확인(사람 게이트 2) → 로컬 워커가 실제 업로드 실행. 이미 참조가 있으면(수동 업로드) 건너뜀
+        if (to === 'published' && !job.publishRef) {
+          job.upload = {
+            state: 'requested',
+            at: new Date().toISOString(),
+            platforms: Array.isArray(body.platforms) && body.platforms.length > 0
+              ? body.platforms : ['youtube', 'instagram'],
+          };
+        }
         await saveJob(env, job);
         return json({ ok: true, job });
+      }
+
+      // 업로드 재요청(실패 후 사람이 다시 시도) — published 상태에서만
+      if (sub === 'request-upload' && method === 'POST') {
+        if (job.status !== 'published') return json({ error: `published 상태에서만 가능(현재 ${job.status})` }, 400);
+        if (job.upload?.state === 'running' || job.upload?.state === 'uploaded') {
+          return json({ error: '업로드가 이미 진행 중' }, 409);
+        }
+        job.upload = { state: 'requested', at: new Date().toISOString(), platforms: job.upload?.platforms ?? ['youtube', 'instagram'] };
+        await saveJob(env, job);
+        return json({ ok: true, upload: job.upload });
       }
 
       if (sub === 'request-finalize' && method === 'POST') {

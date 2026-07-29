@@ -9,6 +9,8 @@
  *       --platforms youtube,instagram,tiktok [--user NAME] [--desc "..."] [--tags a,b]
  *   npm run cli -- publish --in ad.mp4 --out short.mp4 --mode blur-brand --brand "KOREA JINDO" \
  *       --title "..." --platforms youtube,instagram,tiktok [--desc][--tags][--dry-run]
+ *   npm run cli -- upload --video short.mp4 --title "..." --platforms youtube,instagram \
+ *       [--desc][--tags][--dry-run]        # 이미 9:16 완성본(렌더 생략) — 가로 영상은 거부
  *   npm run cli -- poll --request-id <id>
  *
  * 출력 규약: stdout = 데이터(JSON), stderr = 로그.
@@ -194,6 +196,36 @@ async function main(): Promise<void> {
       if (!result.ok) process.exit(1);
       break;
     }
+    case 'upload': {
+      // 이미 9:16 으로 완성된 영상(예: shopping-shorts 동기 조립본)을 렌더 없이 업로드.
+      const o = parse(rest, {
+        video: STR, user: STR, title: STR, platforms: STR, desc: STR, tags: STR,
+        thumbnail: STR, 'yt-privacy': STR, 'tiktok-privacy': STR, 'no-ai-disclose': BOOL,
+        'dry-run': BOOL,
+      });
+      const target = buildTarget(o);
+      const video = resolvePath(reqStr(o, 'video'));
+      const info = await probe(video);
+      if (info.width > info.height) {
+        throw new UsageError(
+          `가로 영상(${info.width}x${info.height}) — upload 는 세로 완성본 전용, 16:9 는 publish(렌더 포함) 사용`,
+        );
+      }
+      const apiKey = process.env.UPLOAD_POST_API_KEY;
+      const user = optStr(o, 'user') ?? process.env.UPLOAD_POST_USER;
+      const thumb = optStr(o, 'thumbnail');
+      const thumbPath = thumb ? resolvePath(thumb) : undefined;
+      if (flag(o, 'dry-run') || !apiKey || !user) {
+        const why = flag(o, 'dry-run') ? 'dry-run' : 'UPLOAD_POST_API_KEY/USER 미설정 → 전송 안 함';
+        out({ ok: true, upload: 'skipped', why, request: describeUpload(target, user ?? '(미설정)', video, thumbPath) });
+        break;
+      }
+      const result = await uploadShort({ apiKey, user, video, target, ...(thumbPath ? { thumbnail: thumbPath } : {}) });
+      out(result);
+      if (result.status === 0) process.exit(75); // 네트워크 순단 = 일시적
+      if (!result.ok) process.exit(1);
+      break;
+    }
     case 'poll': {
       const o = parse(rest, { 'request-id': STR });
       const apiKey = process.env.UPLOAD_POST_API_KEY;
@@ -205,7 +237,7 @@ async function main(): Promise<void> {
       break;
     }
     default:
-      console.error('명령: render | describe-upload | publish | poll');
+      console.error('명령: render | describe-upload | publish | upload | poll');
       process.exit(1);
   }
 }
