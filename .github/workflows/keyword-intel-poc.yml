@@ -1,0 +1,93 @@
+name: keyword-intel GitHub Actions POC
+
+on:
+  workflow_dispatch:
+    inputs:
+      keywords:
+        description: "Comma-separated keywords (keep small for the POC)"
+        required: false
+        default: "루테인,밀크씨슬,콜라겐"
+      send_telegram:
+        description: "Send the generated report to Telegram"
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: keyword-intel-poc
+  cancel-in-progress: false
+
+jobs:
+  collect-and-report:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: packages/keyword-intel
+    env:
+      CI: "true"
+      DB_PATH: ./data/poc-intel.db
+      NAVER_CLIENT_ID: ${{ secrets.NAVER_CLIENT_ID }}
+      NAVER_CLIENT_SECRET: ${{ secrets.NAVER_CLIENT_SECRET }}
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Install dependencies
+        working-directory: .
+        run: npm ci
+
+      - name: Validate required secrets
+        shell: bash
+        run: |
+          missing=()
+          for key in NAVER_CLIENT_ID NAVER_CLIENT_SECRET; do
+            if [[ -z "${!key:-}" ]]; then
+              missing+=("$key")
+            fi
+          done
+          if [[ "${{ inputs.send_telegram }}" == "true" ]]; then
+            for key in TELEGRAM_BOT_TOKEN TELEGRAM_CHAT_ID; do
+              if [[ -z "${!key:-}" ]]; then
+                missing+=("$key")
+              fi
+            done
+          fi
+          if (( ${#missing[@]} > 0 )); then
+            echo "::error::Missing GitHub Actions secrets: ${missing[*]}"
+            exit 1
+          fi
+
+      - name: Collect POC keywords
+        env:
+          POC_KEYWORDS: ${{ inputs.keywords }}
+        run: npm run -s collect -- "$POC_KEYWORDS"
+
+      - name: Build report without sending
+        if: ${{ !inputs.send_telegram }}
+        run: npm run -s report -- --dry-run
+
+      - name: Send report to Telegram
+        if: ${{ inputs.send_telegram }}
+        run: npm run -s report
+
+      - name: Upload ephemeral POC database
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: keyword-intel-poc-db-${{ github.run_id }}
+          path: packages/keyword-intel/data/poc-intel.db
+          if-no-files-found: warn
+          retention-days: 7
