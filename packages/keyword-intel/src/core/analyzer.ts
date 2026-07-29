@@ -94,6 +94,36 @@ export function scoreOpportunity(
   };
 }
 
+/** 검색광고 절대 검색수 입력 (searchad-client 의 KeywordToolRow 발췌). */
+export interface BlogVolumeInput {
+  monthlyPc: number | null;
+  monthlyMobile: number | null;
+  compIdx: 'low' | 'mid' | 'high' | null;
+}
+
+export interface BlogScore {
+  /** 절대 월 검색수(PC+모바일). 마스킹("<10")은 0 취급 */
+  monthlyTotal: number;
+  /** 0~100. 높을수록 "실제 검색 많고 이길 수 있는" */
+  blogScore: number;
+}
+
+/** 광고 경쟁도 → 승산 계수. 저권위 블로그는 '높음' 헤드텀을 못 이기므로 감산. */
+const BLOG_WINNABILITY: Record<'low' | 'mid' | 'high', number> = { low: 1, mid: 0.75, high: 0.5 };
+
+/**
+ * blogScore: **트렌드용 opportunity(데이터랩 상대)와 분리된 블로그용 지표.**
+ * 절대 검색량(트래픽 상한) × 승산(광고 경쟁도)로, "실제 많이 검색되고 이길 수 있는" 순.
+ * 검색량은 log10 스케일(100000→100, 1000→60, 100→40)로 롱테일을 압축한다.
+ * ⚠️ opportunity 와 마찬가지로 참고 지표이며 자동 실행 트리거가 아니다.
+ */
+export function scoreBlog(v: BlogVolumeInput): BlogScore {
+  const monthlyTotal = (v.monthlyPc ?? 0) + (v.monthlyMobile ?? 0);
+  const volumeScore = clamp((Math.log10(Math.max(monthlyTotal, 1)) / 5) * 100, 0, 100);
+  const winnability = v.compIdx ? BLOG_WINNABILITY[v.compIdx] : 0.7; // 경쟁도 미상은 중립
+  return { monthlyTotal, blogScore: Math.round(clamp(volumeScore * winnability, 0, 100)) };
+}
+
 const avg = (xs: number[]): number => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0);
 const pctChange = (from: number, to: number): number | null =>
   from === 0 ? null : ((to - from) / from) * 100;

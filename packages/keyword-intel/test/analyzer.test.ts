@@ -4,6 +4,7 @@ import {
   summarizeTrend,
   summarizeShoppingTrend,
   scoreOpportunity,
+  scoreBlog,
 } from '../src/core/analyzer.js';
 import type {
   ShopSearchResult,
@@ -91,5 +92,44 @@ describe('scoreOpportunity', () => {
     expect(s.confidence).toBeLessThanOrEqual(0.7);
     expect(s.opportunity).toBeGreaterThanOrEqual(0);
     expect(s.opportunity).toBeLessThanOrEqual(100);
+  });
+});
+
+describe('scoreBlog — 블로그용(절대 검색량×승산)', () => {
+  it('검색량 클수록 점수 높다 (log 스케일)', () => {
+    const hi = scoreBlog({ monthlyPc: 20000, monthlyMobile: 50000, compIdx: 'mid' });
+    const lo = scoreBlog({ monthlyPc: 30, monthlyMobile: 30, compIdx: 'mid' });
+    expect(hi.monthlyTotal).toBe(70000);
+    expect(lo.monthlyTotal).toBe(60);
+    expect(hi.blogScore).toBeGreaterThan(lo.blogScore);
+  });
+
+  it('경쟁도 높을수록 감산 (같은 검색량이면 low > mid > high)', () => {
+    const v = { monthlyPc: 10000, monthlyMobile: 20000 };
+    const low = scoreBlog({ ...v, compIdx: 'low' }).blogScore;
+    const mid = scoreBlog({ ...v, compIdx: 'mid' }).blogScore;
+    const high = scoreBlog({ ...v, compIdx: 'high' }).blogScore;
+    expect(low).toBeGreaterThan(mid);
+    expect(mid).toBeGreaterThan(high);
+  });
+
+  it('마스킹(null) 검색량은 0 취급 — 크래시 없음', () => {
+    const s = scoreBlog({ monthlyPc: null, monthlyMobile: null, compIdx: null });
+    expect(s.monthlyTotal).toBe(0);
+    expect(s.blogScore).toBeGreaterThanOrEqual(0);
+    expect(s.blogScore).toBeLessThanOrEqual(100);
+  });
+
+  it('경쟁도 미상은 중립 계수(0.7) — low와 high 사이', () => {
+    const v = { monthlyPc: 10000, monthlyMobile: 20000 };
+    const unknown = scoreBlog({ ...v, compIdx: null }).blogScore;
+    expect(unknown).toBeLessThan(scoreBlog({ ...v, compIdx: 'low' }).blogScore);
+    expect(unknown).toBeGreaterThan(scoreBlog({ ...v, compIdx: 'high' }).blogScore);
+  });
+
+  it('점수는 항상 0~100 범위', () => {
+    const huge = scoreBlog({ monthlyPc: 9_000_000, monthlyMobile: 9_000_000, compIdx: 'low' });
+    expect(huge.blogScore).toBeLessThanOrEqual(100);
+    expect(huge.blogScore).toBeGreaterThanOrEqual(0);
   });
 });
