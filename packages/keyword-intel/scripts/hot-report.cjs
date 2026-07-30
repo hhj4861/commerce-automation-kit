@@ -30,8 +30,10 @@ const dayKey = (period, delta) => {
 };
 
 const ranked = [];
+let rowsWithTrendData = 0;
 for (const row of rows) {
   const series = JSON.parse(row.trend).series || [];
+  if (series.length) rowsWithTrendData += 1;
   if (series.length < 3) continue;
   const latestPoint = series.at(-1);
   const byDay = new Map(series.map((p) => [p.period, Number(p.ratio)]));
@@ -75,4 +77,12 @@ ranked.sort((a, b) =>
 // 후속 보정 단계가 급상승 후보에 절대 검색량을 결합한다.
 // 원본 DataLab 응답이 아니라 POC 자체 산출 지표만 전달한다.
 fs.writeFileSync('hot-candidates.json', JSON.stringify(ranked.slice(0, 80)));
-console.log(`달력·관측일 보정 급상승 후보 생성: ${ranked.length}건`);
+fs.writeFileSync('hot-status.json', JSON.stringify({
+  totalKeywords: rows.length,
+  rowsWithTrendData,
+  unavailable: rows.length > 0 && rowsWithTrendData === 0,
+}));
+console.log(
+  `달력·관측일 보정 급상승 후보 생성: ${ranked.length}건 ` +
+  `(DataLab 수집 ${rowsWithTrendData}/${rows.length})`,
+);

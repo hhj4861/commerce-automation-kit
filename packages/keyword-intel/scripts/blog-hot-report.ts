@@ -28,6 +28,11 @@ const credentials = loadSearchAdCredentials();
 if (!credentials) throw new Error('NAVER_AD_* 검색광고 자격증명이 필요합니다.');
 
 const candidates = JSON.parse(readFileSync('hot-candidates.json', 'utf8')) as HotCandidate[];
+const hotStatus = JSON.parse(readFileSync('hot-status.json', 'utf8')) as {
+  totalKeywords: number;
+  rowsWithTrendData: number;
+  unavailable: boolean;
+};
 const normalize = (s: string): string => s.replace(/\s+/g, '');
 const retryableCodes = ['ECONNRESET', 'ETIMEDOUT', 'ENOTFOUND', 'EAI_AGAIN', 'UND_ERR_SOCKET'];
 const codeOf = (e: unknown): string =>
@@ -91,7 +96,9 @@ const trendTop = recommendations
   )
   .slice(0, 10);
 const trendLines = [
-  `🔥 최신 트랜드 급상승 후보 Top ${trendTop.length} (182개 기준 · DataLab 최신 제공일 ${period})`,
+  hotStatus.unavailable
+    ? `⚠️ 최신 트랜드 산출 불가 (DataLab 수집 0/${hotStatus.totalKeywords})`
+    : `🔥 최신 트랜드 급상승 후보 Top ${trendTop.length} (182개 기준 · DataLab 최신 제공일 ${period})`,
   '보정: 실제 전일값 필수 · 전일/7일평균 모두 상승 · hot 20+ · 급상승 70% + 검색량 신뢰도 30% · 월검색 1,000+',
   '',
 ];
@@ -100,7 +107,11 @@ trendTop.forEach((r, i) => {
     `${i + 1}. ${r.keyword} · 보정 ${r.trendScore} · hot ${r.hotScore} · 월 ${r.monthlyTotal.toLocaleString()} · 전일 ${signed(r.dayPct)} · 7일평균 ${signed(r.baselinePct)}`,
   );
 });
-if (!trendTop.length) trendLines.push('보정 조건을 충족한 키워드가 없습니다.');
+if (hotStatus.unavailable) {
+  trendLines.push('Naver DataLab 데이터가 수집되지 않았습니다. API 쿼터·자격증명을 확인하고 다음 실행에서 재시도합니다.');
+} else if (!trendTop.length) {
+  trendLines.push('보정 조건을 충족한 키워드가 없습니다.');
+}
 writeFileSync('trend-hot-report.txt', trendLines.join('\n') + '\n');
 
 recommendations.sort(
@@ -111,7 +122,9 @@ recommendations.sort(
 );
 const blogTop = recommendations.slice(0, 10);
 const blogLines = [
-  `🔥 오늘의 블로그 추천 Top ${blogTop.length} (DataLab 최신 제공일 ${period})`,
+  hotStatus.unavailable
+    ? `⚠️ 오늘의 블로그 추천 산출 불가 (DataLab 수집 0/${hotStatus.totalKeywords})`
+    : `🔥 오늘의 블로그 추천 Top ${blogTop.length} (DataLab 최신 제공일 ${period})`,
   '기준: 트랜드 급상승 50% + 월검색량·광고경쟁 승산 50% · 월검색량 100 이상',
   '',
 ];
@@ -121,7 +134,11 @@ blogTop.forEach((r, i) => {
     `${i + 1}. ${r.keyword} · 추천 ${r.recommendationScore} · hot ${r.hotScore} · 월 ${r.monthlyTotal.toLocaleString()}(일평균≈${dailyAverage.toLocaleString()}) · 전일 ${signed(r.dayPct)} · 경쟁 ${r.compIdx ?? '-'}`,
   );
 });
-if (!blogTop.length) blogLines.push('추천 조건을 충족한 키워드가 없습니다.');
+if (hotStatus.unavailable) {
+  blogLines.push('Naver DataLab 데이터가 수집되지 않아 급상승 기반 추천을 만들지 않았습니다.');
+} else if (!blogTop.length) {
+  blogLines.push('추천 조건을 충족한 키워드가 없습니다.');
+}
 if (lookupFailures) blogLines.push('', `⚠️ 검색광고 조회 실패 ${lookupFailures}건`);
 writeFileSync('blog-hot-report.txt', blogLines.join('\n') + '\n');
 console.log(trendLines.join('\n'));
