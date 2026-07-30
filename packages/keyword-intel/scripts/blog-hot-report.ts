@@ -76,7 +76,13 @@ const signed = (n: number): string => `${n >= 0 ? '+' : ''}${Math.round(n)}%`;
 const period = recommendations.reduce((max, r) => (r.period > max ? r.period : max), '');
 
 const trendTop = recommendations
-  .filter((r) => r.monthlyTotal >= 1_000)
+  .filter(
+    (r) =>
+      r.monthlyTotal >= 1_000 &&
+      r.hotScore >= 20 &&
+      r.dayPct > 0 &&
+      r.baselinePct > 0,
+  )
   .sort(
     (a, b) =>
       b.trendScore - a.trendScore ||
@@ -86,7 +92,7 @@ const trendTop = recommendations
   .slice(0, 10);
 const trendLines = [
   `🔥 최신 트랜드 급상승 후보 Top ${trendTop.length} (182개 기준 · DataLab 최신 제공일 ${period})`,
-  '보정: 실제 전일값 필수 · 최근 7일 중 5일 이상 관측 · 급상승 70% + 검색량 신뢰도 30% · 월검색 1,000 이상',
+  '보정: 실제 전일값 필수 · 전일/7일평균 모두 상승 · hot 20+ · 급상승 70% + 검색량 신뢰도 30% · 월검색 1,000+',
   '',
 ];
 trendTop.forEach((r, i) => {
