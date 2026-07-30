@@ -1,11 +1,11 @@
 {
-  "day": "2026-07-29",
-  "generatedAt": "2026-07-29T00:55:31.115Z",
+  "day": "2026-07-30",
+  "generatedAt": "2026-07-30T01:06:55.999Z",
   "dnsReady": true,
   "collectAttempts": 1,
   "selfHealTriggered": false,
   "finalOk": true,
   "signals": 182,
   "failures": 0,
-  "lastRunFinishedAt": "2026-07-29T00:55:28.599Z"
+  "lastRunFinishedAt": "2026-07-30T01:06:54.117Z"
 }
