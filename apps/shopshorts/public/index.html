@@ -144,6 +144,25 @@
     border:1px solid var(--line); border-radius:9px; min-height:34px; padding:0 32px 0 11px;
     background:#fff; color:var(--ink); font:inherit; font-size:11px; cursor:pointer;
   }
+  .custom-topic-card {
+    display:grid; grid-template-columns:minmax(0,1fr) minmax(330px,.9fr); gap:24px; align-items:center;
+    margin-bottom:28px; padding:20px; border:1px solid #d7e3dc; border-radius:17px;
+    background:linear-gradient(135deg, var(--mint-soft), #fff 62%);
+  }
+  .custom-topic-card h2 { margin:7px 0 0; font-size:18px; letter-spacing:-.035em; }
+  .custom-topic-card p { margin:7px 0 0; color:var(--muted); font-size:11px; line-height:1.6; }
+  .custom-topic-tag { color:var(--mint); font-size:10px; font-weight:800; letter-spacing:.06em; }
+  .custom-topic-form { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:8px; }
+  .custom-topic-form input {
+    min-width:0; height:42px; box-sizing:border-box; border:1px solid var(--line); border-radius:11px;
+    background:#fff; color:var(--ink); padding:0 12px; font:inherit; font-size:12px; outline:none;
+  }
+  .custom-topic-form input:focus { border-color:var(--mint); box-shadow:0 0 0 3px rgba(50,113,83,.1); }
+  .custom-topic-form button {
+    height:42px; border:0; border-radius:11px; padding:0 15px; background:var(--ink); color:#fff;
+    font:inherit; font-size:11px; font-weight:700; cursor:pointer; white-space:nowrap;
+  }
+  .custom-topic-form button:disabled { background:var(--surface-soft); color:var(--faint); cursor:default; }
   .viewer {
     position:fixed; inset:0; z-index:40; display:grid; place-items:center; padding:24px;
     background:rgba(22,24,21,.7); backdrop-filter:blur(8px);
@@ -400,6 +419,7 @@
     .video-library { grid-template-columns: repeat(3, minmax(0,1fr)); gap:11px; }
     .viewer-panel { grid-template-columns:1fr; width:min(480px,96vw); }
     .viewer-media { min-height:420px; border-radius:22px 22px 0 0; }
+    .custom-topic-card { grid-template-columns:1fr; gap:15px; }
   }
   @media (max-width: 560px) {
     .hero { align-items: flex-start; }
@@ -428,6 +448,8 @@
     .viewer { padding:10px; }
     .viewer-media { min-height:360px; }
     .viewer-copy { padding:25px 20px; }
+    .custom-topic-form { grid-template-columns:1fr; }
+    .custom-topic-form button { width:100%; }
   }
 </style>
 </head>
@@ -1122,6 +1144,17 @@ function renderPage(name) {
         </select>
       </div>
     </div>
+    <section class="custom-topic-card" data-custom-topic-panel>
+      <div>
+        <div class="custom-topic-tag">직접 입력 · 트렌드 점수 없음</div>
+        <h2>원하는 주제로 바로 시작하세요</h2>
+        <p>트렌드 목록에 없는 상품명이나 아이디어도 기획 대기에 추가할 수 있습니다. 이후 승인과 검수 절차는 동일합니다.</p>
+      </div>
+      <div class="custom-topic-form">
+        <input data-custom-topic maxlength="100" autocomplete="off" placeholder="예: 장마철 신발 건조기 비교" aria-label="직접 만들 쇼츠 주제">
+        <button data-custom-topic-create>쇼츠 초안 만들기</button>
+      </div>
+    </section>
     ${pending.length ? `<div class="section-head"><h2>요청한 초안</h2><span class="section-note">${pending.length}개 작성 대기 중</span></div>
     <div class="page-grid" style="margin-bottom:32px">${pending.map(r => `<article class="page-card" style="background:var(--yellow-soft);border-color:#edd9a7">
       <span class="status-pill">요청됨</span><h3 style="margin-top:13px">${escapeHtml(r.topic)}</h3>
@@ -1229,7 +1262,31 @@ function renderPage(name) {
   view.innerHTML = `<div class="page-head"><div><div class="eyebrow">SHOPSHORTS</div><h1>${title}</h1><p>${copy}</p></div></div>${body}`;
   bindPageActions(name);
 }
+async function requestShortsDraft(topic, opportunity, button) {
+  const cleanTopic = String(topic || '').trim();
+  if (!cleanTopic) return showToast('만들고 싶은 쇼츠 주제를 입력해 주세요.');
+  if (button) button.disabled = true;
+  try {
+    await api('/api/draft-requests', {
+      method:'POST', headers:{'content-type':'application/json'},
+      body:JSON.stringify({topic:cleanTopic, opportunity, contentType:'shorts'})
+    });
+    showToast(`“${cleanTopic}” 초안을 요청했어요. 기획 대기에 추가했습니다.`);
+    await loadHot();
+    renderPage('trends');
+  } catch (e) {
+    showToast('초안 요청 실패: ' + e.message);
+    if (button?.isConnected) button.disabled = false;
+  }
+}
 function bindPageActions(name) {
+  const customTopicInput = document.querySelector('[data-custom-topic]');
+  const customTopicButton = document.querySelector('[data-custom-topic-create]');
+  const submitCustomTopic = () => requestShortsDraft(customTopicInput?.value, undefined, customTopicButton);
+  customTopicButton?.addEventListener('click', submitCustomTopic);
+  customTopicInput?.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); submitCustomTopic(); }
+  });
   document.querySelector('[data-trend-date]')?.addEventListener('change', async e => {
     state.trendDate = e.target.value;
     if (!state.trendDate) {
@@ -1283,11 +1340,8 @@ function bindPageActions(name) {
     state.selected = b.dataset.openJob; navigate('dashboard'); renderJobs(); renderDetail(true);
     document.querySelector('[data-section="content"]')?.scrollIntoView({behavior:'smooth',block:'start'});
   });
-  document.querySelectorAll('[data-page-topic]').forEach(b => b.onclick = async () => {
-    try {
-      await api('/api/draft-requests',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({topic:b.dataset.pageTopic,opportunity:Number(b.dataset.score)||undefined,contentType:'shorts'})});
-      showToast(`“${b.dataset.pageTopic}” 초안을 요청했어요. 기획 대기에 추가했습니다.`); await loadHot(); renderPage('trends');
-    } catch(e) { showToast('초안 요청 실패: '+e.message); }
+  document.querySelectorAll('[data-page-topic]').forEach(b => b.onclick = () => {
+    requestShortsDraft(b.dataset.pageTopic, Number(b.dataset.score) || undefined, b);
   });
   document.querySelectorAll('[data-page-link]').forEach(b => b.onclick = () => {
     const job = state.jobs.find(j => j.brief.id === b.dataset.pageLink);
@@ -1374,6 +1428,9 @@ window.addEventListener('popstate', () => navigate(currentRoute(), false));
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeViewer(); });
 document.querySelector('[data-new]')?.addEventListener('click', () => {
   navigate('trends');
+  const input = document.querySelector('[data-custom-topic]');
+  input?.scrollIntoView({behavior:'smooth', block:'center'});
+  input?.focus({preventScroll:true});
 });
 document.querySelector('[data-control="filter"]')?.addEventListener('click', () => {
   const filters = ['all','needs','missing-link'];
