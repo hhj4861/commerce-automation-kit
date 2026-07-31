@@ -464,6 +464,19 @@ const server = createServer(async (req, res) => {
       return;
     }
 
+    const drDelete = url.pathname.match(/^\/api\/draft-requests\/([a-z0-9가-힣-]+)$/);
+    if (drDelete && req.method === 'DELETE') {
+      const slug = decodeURIComponent(drDelete[1]);
+      const rows = loadDraftRequests();
+      if (!rows.some((r) => r.slug === slug)) {
+        json(res, 404, { error: `초안 요청 없음: ${slug}` });
+        return;
+      }
+      saveDraftRequests(rows.filter((r) => r.slug !== slug));
+      json(res, 200, { ok: true, deleted: { slug, request: true } });
+      return;
+    }
+
     // 잡 등록(스킬이 초안을 밀어넣는 입구) — draft 로만 들어온다.
     if (req.method === 'POST' && url.pathname === '/api/jobs') {
       const body = await readBody(req);
@@ -491,6 +504,30 @@ const server = createServer(async (req, res) => {
       jobs.push(job);
       saveJobs(jobs);
       json(res, 201, { ok: true, job });
+      return;
+    }
+
+    const jobDelete = url.pathname.match(/^\/api\/jobs\/([a-z0-9-]+)$/);
+    if (jobDelete && req.method === 'DELETE') {
+      const id = jobDelete[1];
+      const jobs = loadJobs();
+      const job = findJob(jobs, id);
+      if (!job) {
+        json(res, 404, { error: `잡 없음: ${id}` });
+        return;
+      }
+      const busy = ['requested', 'running'].includes(job.finalize?.state)
+        || ['requested', 'running'].includes(job.upload?.state);
+      if (busy) {
+        json(res, 409, { error: '후반 작업 또는 업로드가 진행 중이라 삭제할 수 없습니다. 완료 후 다시 시도해 주세요.' });
+        return;
+      }
+      // 로컬 outputVideo/clipPaths는 앱 밖의 원본·공용 산출물일 수 있어 파일은 보존한다.
+      saveJobs(jobs.filter((item) => item.brief.id !== id));
+      json(res, 200, {
+        ok: true,
+        deleted: { id, job: true, mediaFilesPreserved: true },
+      });
       return;
     }
 

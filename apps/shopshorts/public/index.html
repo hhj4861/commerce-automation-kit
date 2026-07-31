@@ -98,10 +98,19 @@
   .page-card p { color: var(--muted); font-size: 11px; line-height: 1.6; margin: 7px 0 0; }
   .metric-large { font-size: 30px; font-weight: 700; letter-spacing: -.05em; margin-top: 13px; }
   .video-library { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 16px; }
+  .video-card-shell { position: relative; min-width: 0; }
   .video-card {
-    border: 0; background: transparent; padding: 0; text-align: left; cursor: pointer;
-    min-width: 0; border-radius: 18px;
+    width: 100%; border: 0; background: transparent; padding: 0; text-align: left; cursor: pointer;
+    min-width: 0; border-radius: 18px; display: block;
   }
+  .video-delete {
+    position: absolute; z-index: 4; right: 10px; top: 10px; width: 31px; height: 31px;
+    display: grid; place-items: center; border: 1px solid rgba(255,255,255,.34); border-radius: 10px;
+    background: rgba(31,34,29,.68); color: #fff; cursor: pointer; backdrop-filter: blur(7px);
+    opacity: 0; transform: translateY(-3px); transition: opacity .15s ease, transform .15s ease, background .15s ease;
+  }
+  .video-card-shell:hover .video-delete, .video-delete:focus-visible { opacity: 1; transform: translateY(0); }
+  .video-delete:hover { background: var(--red); }
   .video-cover {
     position: relative; aspect-ratio: 9 / 14; overflow: hidden; border-radius: 17px;
     background: linear-gradient(145deg, #dbc1bd, #584950); box-shadow: 0 10px 28px rgba(35,42,32,.08);
@@ -129,6 +138,12 @@
   .library-filter { display:flex; gap:6px; }
   .library-filter button { border:1px solid var(--line); background:#fff; color:var(--muted); border-radius:9px; height:31px; padding:0 10px; font-size:10px; cursor:pointer; }
   .library-filter button.active { background:var(--ink); color:#fff; border-color:var(--ink); }
+  .archive-picker { display:flex; align-items:center; gap:8px; }
+  .archive-picker label { color:var(--faint); font-size:10px; font-weight:700; letter-spacing:.05em; }
+  .archive-picker select {
+    border:1px solid var(--line); border-radius:9px; min-height:34px; padding:0 32px 0 11px;
+    background:#fff; color:var(--ink); font:inherit; font-size:11px; cursor:pointer;
+  }
   .viewer {
     position:fixed; inset:0; z-index:40; display:grid; place-items:center; padding:24px;
     background:rgba(22,24,21,.7); backdrop-filter:blur(8px);
@@ -262,6 +277,12 @@
   }
   .job-action.secondary { background: var(--mint-soft); color: var(--mint); }
   .job-action.quiet { background: var(--surface-soft); color: var(--muted); }
+  .job-actions { display:flex; align-items:center; gap:6px; }
+  .job-delete {
+    width:34px; height:34px; display:grid; place-items:center; border:1px solid var(--line);
+    border-radius:10px; background:#fff; color:var(--faint); cursor:pointer;
+  }
+  .job-delete:hover, .job-delete:focus-visible { color:var(--red); border-color:#e8b5ac; background:#fff5f2; }
 
   .detail { position: sticky; top: 18px; overflow: hidden; }
   .detail-empty { padding: 50px 25px; color: var(--muted); text-align: center; }
@@ -302,6 +323,34 @@
   .tool-btn:hover { border-color: #bbbfb5; color: var(--ink); }
   .tool-btn.warm { border-color: #f2c0b4; color: var(--brand); background: var(--brand-soft); }
   .tool-btn.danger { color: var(--red); }
+  .affiliate-partners { display:grid; gap:14px; }
+  .affiliate-partner {
+    border:1px solid var(--line); border-radius:17px; background:var(--surface); overflow:hidden;
+  }
+  .affiliate-partner-head {
+    display:flex; align-items:center; justify-content:space-between; gap:15px;
+    padding:15px 17px; background:var(--surface-soft); border-bottom:1px solid var(--line);
+  }
+  .affiliate-partner-title { display:flex; align-items:center; gap:10px; }
+  .affiliate-partner-mark {
+    width:31px; height:31px; border-radius:10px; display:grid; place-items:center;
+    background:var(--brand-soft); color:var(--brand); font-weight:800; font-size:11px;
+  }
+  .affiliate-partner-title strong { display:block; font-size:13px; }
+  .affiliate-partner-title small { display:block; color:var(--muted); font-size:10px; margin-top:2px; }
+  .affiliate-count { color:var(--muted); font-size:10px; }
+  .affiliate-link-row {
+    display:grid; grid-template-columns:minmax(150px,.8fr) minmax(220px,1.6fr) auto;
+    align-items:center; gap:14px; padding:13px 17px; border-bottom:1px solid var(--line);
+  }
+  .affiliate-link-row:last-child { border-bottom:0; }
+  .affiliate-link-row strong { font-size:12px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .affiliate-link-row a { color:var(--mint); font-size:10px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .affiliate-link-row .missing-link { color:var(--yellow); font-size:10px; }
+  .affiliate-link-row button {
+    border:1px solid var(--line); background:#fff; border-radius:8px; min-height:31px;
+    padding:0 10px; color:var(--muted); font-size:10px; cursor:pointer;
+  }
   .affiliate-box { border: 1px solid var(--line); background: #fff; border-radius: 10px; padding: 10px; }
   .affiliate-url { color: var(--muted); font-size: 10px; line-height: 1.5; word-break: break-all; margin-bottom: 8px; }
   .affiliate-url.missing { color: var(--yellow); }
@@ -365,7 +414,10 @@
     .queue-shell { margin: 0 -7px; padding: 12px; border-radius: 17px; }
     .mini-btn span { display: none; }
     .job { grid-template-columns: 39px minmax(0,1fr); }
-    .job-action { grid-column: 2; justify-self: start; }
+    .job-actions { grid-column: 2; justify-self: start; }
+    .video-delete { opacity:1; transform:none; }
+    .affiliate-link-row { grid-template-columns:1fr auto; }
+    .affiliate-link-row a, .affiliate-link-row .missing-link { grid-column:1 / -1; grid-row:2; }
     .detail-inner { display: block; }
     .video-preview { min-height: 175px; }
     .page-grid { grid-template-columns: 1fr; }
@@ -487,6 +539,7 @@ const ICONS = {
   plus:'<path d="M12 5v14M5 12h14"/>',
   filter:'<path d="M4 5h16l-6 7v5l-4 2v-7L4 5Z"/>',
   sort:'<path d="M8 6h12M8 12h9M8 18h6M4 4v16"/><path d="m2 18 2 2 2-2"/>',
+  trash:'<path d="M4 7h16M9 7V4h6v3M7 7l1 13h8l1-13M10 11v5M14 11v5"/>',
   check:'<path d="m5 12 4 4L19 6"/>',
   play:'<path d="m9 7 8 5-8 5V7Z" fill="currentColor"/>',
   image:'<rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="9" r="2"/><path d="m21 15-5-5L5 21"/>'
@@ -524,6 +577,10 @@ const BLOG_STATUS = {
   dispatching:'요청 중', queued:'실행 대기', generating:'글 작성 중',
   'draft-ready':'초안 준비', failed:'실패'
 };
+const AFFILIATE_PARTNERS = [
+  {key:'coupang', label:'쿠팡 파트너스', mark:'C', host:/^(?:[^.]+\.)?(?:link\.coupang\.com|coupang\.com|coupa\.ng)$/},
+  {key:'naverConnect', label:'네이버 쇼핑커넥트', mark:'N', host:/^(?:[^.]+\.)?(?:naver\.me|shopping\.naver\.com|smartstore\.naver\.com|brand\.naver\.com)$/}
+];
 let state = {
   jobs:[], hot:[], requests:[], blogKeywords:[], blogRequests:[], archiveDates:[],
   trendDate:'', archiveHot:null, archiveBlog:null,
@@ -545,6 +602,14 @@ const affiliateComment = job => {
     ? '이 포스팅은 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다.'
     : '이 링크를 통한 구매 시 일정액의 수수료를 제공받을 수 있습니다.';
   return job.affiliateComment || `제품 보러가기: ${url}\n\n${disclosure}`;
+};
+const affiliateLinkFor = (job, partner) => {
+  const stored = job.platformLinks?.[partner.key];
+  if (stored && !isPlaceholder(stored)) return stored;
+  const primary = job.brief?.affiliateUrl || '';
+  if (!primary || isPlaceholder(primary)) return '';
+  try { return partner.host.test(new URL(primary).hostname) ? primary : ''; }
+  catch { return ''; }
 };
 const categoryClass = j => j.brief?.category === '뷰티' ? 'beauty' : j.brief?.category === '식품' ? 'food' : 'home';
 const fmtTime = value => {
@@ -642,6 +707,7 @@ function renderJobs() {
     .filter(r => r.status === 'pending')
     .map((r, index) => ({
       _request:true,
+      _requestSlug:r.slug,
       status:'draft',
       brief:{id:`request:${r.slug || index}`, productName:r.topic, category:'', affiliateUrl:''},
       script:{title:'초안 작성 중'},
@@ -672,7 +738,12 @@ function renderJobs() {
       <div class="thumb ${categoryClass(j)}">${svg('image',18)}</div>
       <div><div class="job-title">${j.brief.productName}</div>
       <div class="job-meta"><span>${st.label}</span><span class="dot"></span><span>${waiting ? '초안 작성 중' : (HOOK[j.script?.hookType] || '쇼츠')}</span><span class="dot"></span><span>${fmtTime(j.updatedAt)}</span>${warning}</div></div>
-      <button class="job-action ${waiting ? 'quiet' : st.cls}" ${waiting ? 'data-request-waiting' : `data-action="${j.brief.id}"`}>${waiting ? '작성 중' : st.action}</button>
+      <div class="job-actions">
+        <button class="job-action ${waiting ? 'quiet' : st.cls}" ${waiting ? 'data-request-waiting' : `data-action="${j.brief.id}"`}>${waiting ? '작성 중' : st.action}</button>
+        <button class="job-delete" aria-label="${escapeHtml(j.brief.productName)} 삭제" ${waiting
+          ? `data-delete-request="${escapeHtml(j._requestSlug || '')}"`
+          : `data-delete-job="${escapeHtml(j.brief.id)}"`}>${svg('trash',15)}</button>
+      </div>
     </article>`;
   }).join('');
   document.querySelectorAll('[data-job]').forEach(row => row.onclick = () => {
@@ -690,6 +761,16 @@ function renderJobs() {
     e.stopPropagation();
     const job = state.jobs.find(j => j.brief.id === b.dataset.action);
     if (job) runPrimary(job);
+  });
+  document.querySelectorAll('[data-delete-job]').forEach(b => b.onclick = e => {
+    e.stopPropagation();
+    const job = state.jobs.find(j => j.brief.id === b.dataset.deleteJob);
+    if (job) deleteJob(job);
+  });
+  document.querySelectorAll('[data-delete-request]').forEach(b => b.onclick = e => {
+    e.stopPropagation();
+    const request = state.requests.find(r => r.slug === b.dataset.deleteRequest);
+    if (request) deleteDraftRequest(request);
   });
 }
 
@@ -721,6 +802,30 @@ async function transition(job, to, extra={}) {
     showToast('상태를 변경했어요.');
     await load(true);
   } catch (e) { showToast('처리 실패: ' + e.message); }
+}
+async function deleteJob(job) {
+  const name = job.brief?.productName || job.brief?.id || '콘텐츠';
+  if (!confirm(`“${name}” 콘텐츠를 삭제할까요?\n\n작업 기록과 클라우드에 업로드된 미리보기·최종 영상이 함께 삭제됩니다. 이 작업은 되돌릴 수 없습니다.`)) return;
+  try {
+    await api(`/api/jobs/${job.brief.id}`, {method:'DELETE'});
+    closeViewer();
+    state.selected = null;
+    state.detailKey = null;
+    showToast(`“${name}” 콘텐츠를 삭제했어요.`);
+    await load();
+  } catch (e) {
+    showToast('콘텐츠 삭제 실패: ' + e.message);
+  }
+}
+async function deleteDraftRequest(request) {
+  if (!confirm(`“${request.topic}” 초안 요청을 취소할까요?`)) return;
+  try {
+    await api(`/api/draft-requests/${encodeURIComponent(request.slug)}`, {method:'DELETE'});
+    showToast('초안 요청을 취소했어요.');
+    await loadHot();
+  } catch (e) {
+    showToast('요청 취소 실패: ' + e.message);
+  }
 }
 async function finalize(job) {
   if (!confirm('Yooni 보이스로 내레이션을 만들고 자막과 고지를 입힐까요? ElevenLabs 비용이 발생합니다.')) return;
@@ -819,6 +924,7 @@ function renderDetail(force=false) {
             ${previousStage(j.status) ? '<button class="tool-btn" data-tool="previous">이전 단계</button>' : ''}
             ${j.status === 'published' && j.upload?.state === 'failed' ? '<button class="tool-btn warm" data-tool="retry-upload">업로드 재시도</button>' : ''}
             ${j.status !== 'published' ? '<button class="tool-btn danger" data-tool="reject">수정 요청</button>' : ''}
+            <button class="tool-btn danger" data-tool="delete">콘텐츠 삭제</button>
           </div>
         </div>
         <button class="detail-cta" data-primary ${hasAction ? '' : 'disabled'}>${['requested','running'].includes(j.finalize?.state) ? '후반 작업 진행 중' : st.action}</button>
@@ -852,6 +958,10 @@ async function saveAffiliateLink(j, url) {
 }
 
 async function runTool(tool, j) {
+  if (tool === 'delete') {
+    await deleteJob(j);
+    return;
+  }
   if (tool === 'set-link') {
     const url = prompt('발급한 제휴 링크를 붙여넣어 주세요.');
     if (!url) return;
@@ -1002,10 +1112,15 @@ function renderPage(name) {
     const pending = state.requests.filter(r => r.status === 'pending');
     body = `<div class="library-meta">
       <span>${state.trendDate ? `${state.trendDate} 아카이브` : '최신 30분 동기화 데이터'}</span>
-      <select data-trend-date style="border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:#fff">
-        <option value="">최신 데이터</option>
-        ${state.archiveDates.map(d => `<option value="${escapeHtml(d.snapshot_date)}" ${state.trendDate === d.snapshot_date ? 'selected' : ''}>${escapeHtml(d.snapshot_date)}</option>`).join('')}
-      </select>
+      <div class="archive-picker">
+        <label for="trendArchiveDate">관측일</label>
+        <select id="trendArchiveDate" data-trend-date>
+          <option value="">최신 데이터</option>
+          ${state.archiveDates.length
+            ? state.archiveDates.map(d => `<option value="${escapeHtml(d.snapshot_date)}" ${state.trendDate === d.snapshot_date ? 'selected' : ''}>${escapeHtml(d.snapshot_date)}</option>`).join('')
+            : '<option value="" disabled>아카이브 준비 중</option>'}
+        </select>
+      </div>
     </div>
     ${pending.length ? `<div class="section-head"><h2>요청한 초안</h2><span class="section-note">${pending.length}개 작성 대기 중</span></div>
     <div class="page-grid" style="margin-bottom:32px">${pending.map(r => `<article class="page-card" style="background:var(--yellow-soft);border-color:#edd9a7">
@@ -1066,16 +1181,41 @@ function renderPage(name) {
     </div>`;
   }
   if (name === 'links') {
-    body = `<div class="page-table">
-      <div class="page-row header"><span>콘텐츠</span><span>플랫폼</span><span>상태</span><span>작업</span></div>
-      ${state.jobs.map(j => {
-        const missing = isPlaceholder(j.brief?.affiliateUrl);
-        const platform = /coupang|coupa\.ng/.test(j.brief?.affiliateUrl || '') ? '쿠팡' : '네이버/기타';
-        return `<div class="page-row"><strong>${j.brief.productName}</strong><span>${platform}</span>
-          <span style="color:${missing ? 'var(--yellow)' : 'var(--mint)'}">${missing ? '링크 필요' : '연결됨'}</span>
-          <button data-page-link="${j.brief.id}">${missing ? '링크 등록' : '변경'}</button></div>`;
-      }).join('') || '<div class="empty-page">관리할 콘텐츠가 없어요.</div>'}
-    </div>`;
+    const linkedIds = new Set();
+    const partnerSections = AFFILIATE_PARTNERS.map(partner => {
+      const rows = state.jobs.map(job => ({job, link:affiliateLinkFor(job, partner)})).filter(row => row.link);
+      rows.forEach(row => linkedIds.add(row.job.brief.id));
+      return `<section class="affiliate-partner">
+        <div class="affiliate-partner-head">
+          <div class="affiliate-partner-title">
+            <span class="affiliate-partner-mark">${partner.mark}</span>
+            <div><strong>${partner.label}</strong><small>연결된 콘텐츠 링크</small></div>
+          </div>
+          <span class="affiliate-count">${rows.length}개</span>
+        </div>
+        ${rows.length ? rows.map(({job, link}) => `<div class="affiliate-link-row">
+          <strong>${escapeHtml(job.brief.productName)}</strong>
+          <a href="${escapeHtml(link)}" target="_blank" rel="noopener">${escapeHtml(link)}</a>
+          <button data-page-link="${escapeHtml(job.brief.id)}">링크 변경</button>
+        </div>`).join('') : '<div class="empty-page">이 제휴사에 연결된 콘텐츠가 없습니다.</div>'}
+      </section>`;
+    }).join('');
+    const unlinked = state.jobs.filter(job => !linkedIds.has(job.brief.id));
+    const unlinkedSection = `<section class="affiliate-partner">
+      <div class="affiliate-partner-head">
+        <div class="affiliate-partner-title">
+          <span class="affiliate-partner-mark">+</span>
+          <div><strong>연결 필요</strong><small>제휴사가 아직 지정되지 않은 콘텐츠</small></div>
+        </div>
+        <span class="affiliate-count">${unlinked.length}개</span>
+      </div>
+      ${unlinked.length ? unlinked.map(job => `<div class="affiliate-link-row">
+        <strong>${escapeHtml(job.brief.productName)}</strong>
+        <span class="missing-link">제휴 링크를 등록해 주세요.</span>
+        <button data-page-link="${escapeHtml(job.brief.id)}">링크 등록</button>
+      </div>`).join('') : '<div class="empty-page">모든 콘텐츠에 제휴사가 연결됐습니다.</div>'}
+    </section>`;
+    body = `<div class="affiliate-partners">${partnerSections}${unlinkedSection}</div>`;
   }
   if (name === 'settings') {
     const autoRefresh = localStorage.getItem('shopshorts:autoRefresh') !== 'off';
@@ -1181,18 +1321,25 @@ function renderVideoCards(jobs) {
   return jobs.map(j => {
     const which = videoWhich(j);
     const status = STATUS[j.status]?.label || j.status;
-    return `<button class="video-card" data-watch-job="${j.brief.id}">
-      <div class="video-cover ${which ? '' : 'empty'} ${categoryClass(j)}">
-        ${which ? `<video muted playsinline preload="metadata" src="/api/jobs/${j.brief.id}/video?which=${which}"></video><span class="cover-play">${svg('play',17)}</span>`
-          : `<div class="cover-placeholder">${svg('image',27)}</div>`}
-        <span class="cover-state">${status}</span><span class="cover-duration">${videoDuration(j)}</span>
-      </div>
-      <div class="video-info"><strong>${j.brief.productName}</strong><span>${HOOK[j.script?.hookType] || '쇼츠'} · ${fmtTime(j.updatedAt)}</span></div>
-    </button>`;
+    return `<div class="video-card-shell">
+      <button class="video-card" data-watch-job="${escapeHtml(j.brief.id)}">
+        <div class="video-cover ${which ? '' : 'empty'} ${categoryClass(j)}">
+          ${which ? `<video muted playsinline preload="metadata" src="/api/jobs/${escapeHtml(j.brief.id)}/video?which=${which}"></video><span class="cover-play">${svg('play',17)}</span>`
+            : `<div class="cover-placeholder">${svg('image',27)}</div>`}
+          <span class="cover-state">${escapeHtml(status)}</span><span class="cover-duration">${videoDuration(j)}</span>
+        </div>
+        <div class="video-info"><strong>${escapeHtml(j.brief.productName)}</strong><span>${escapeHtml(HOOK[j.script?.hookType] || '쇼츠')} · ${fmtTime(j.updatedAt)}</span></div>
+      </button>
+      <button class="video-delete" data-delete-library-job="${escapeHtml(j.brief.id)}" aria-label="${escapeHtml(j.brief.productName)} 삭제">${svg('trash',15)}</button>
+    </div>`;
   }).join('');
 }
 function bindVideoCards() {
   document.querySelectorAll('[data-watch-job]').forEach(card => card.onclick = () => openViewer(card.dataset.watchJob));
+  document.querySelectorAll('[data-delete-library-job]').forEach(button => button.onclick = () => {
+    const job = state.jobs.find(item => item.brief.id === button.dataset.deleteLibraryJob);
+    if (job) deleteJob(job);
+  });
 }
 function openViewer(id) {
   const j = state.jobs.find(j => j.brief.id === id);

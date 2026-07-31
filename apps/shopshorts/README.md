@@ -88,6 +88,10 @@ draft ──(게이트1: lint 재검증+사람 승인)──> script-approved �
 | GET | `/api/hot-keywords` | keyword-intel 상위 후보 3개(큐 중복 제외, 10분 캐시) + 초안 요청 목록 |
 | POST | `/api/draft-requests` | `{topic, contentType, opportunity?}` — 초안 요청 큐. **contentType: shorts 활성 / ad·blog·music 예약 슬롯**(콘텐츠 유형 확장 심). Claude 세션 모니터가 감지해 대본 작성→잡 등록 |
 | POST | `/api/draft-requests/:slug/done` | 초안 완료 처리(요청 제거) |
+| DELETE | `/api/draft-requests/:slug` | 아직 작성 전인 초안 요청 취소 |
+| DELETE | `/api/jobs/:id` | 콘텐츠 작업 삭제. Cloud에서는 D1 작업과 R2 preview/final을 함께 삭제하며, 후반작업·업로드 진행 중에는 409로 거부 |
+| GET | `/api/keyword-feeds/:channel?date=YYYY-MM-DD` | 최신 또는 KST 관측일별 trend/blog 스냅샷 조회 |
+| GET | `/api/keyword-feed-dates` | 보관된 관측일 목록 |
 | GET | `/api/jobs/:id/video?which=preview\|final\|clipN` | 영상 스트리밍(Range 지원) — **잡에 기록된 파일만**(임의 경로 차단) |
 | POST | `/api/jobs/:id/finalize` | **자막+TTS 조립**(generated→assembled, 비동기). tts-narration(#13) Claire 정렬 내레이션 + shopping-shorts assemble(자막 h-560·고지 번인) — 바쿠치올 클립과 동일 스타일/보이스. ElevenLabs 비용 발생 |
 

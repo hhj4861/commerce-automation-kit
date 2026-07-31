@@ -184,6 +184,24 @@ export async function onRequest(context) {
       const job = await getJob(env, id);
       if (!job) return json({ error: `잡 없음: ${id}` }, 404);
 
+      // 콘텐츠 삭제 — 실행 중인 워커와 경합하지 않게 대기/실행 상태에서는 거부한다.
+      // 관리 대상인 D1 작업 레코드와 R2 preview/final만 지우며 원본 소스에는 관여하지 않는다.
+      if (!sub && method === 'DELETE') {
+        const busy = ['requested', 'running'].includes(job.finalize?.state)
+          || ['requested', 'running'].includes(job.upload?.state);
+        if (busy) {
+          return json({ error: '후반 작업 또는 업로드가 진행 중이라 삭제할 수 없습니다. 완료 후 다시 시도해 주세요.' }, 409);
+        }
+        const mediaKeys = [`jobs/${id}/preview.mp4`, `jobs/${id}/final.mp4`];
+        try {
+          await Promise.all(mediaKeys.map((key) => env.MEDIA.delete(key)));
+        } catch (e) {
+          return json({ error: `R2 영상 삭제 실패 — 작업 기록은 보존됨: ${String(e?.message ?? e)}` }, 502);
+        }
+        await env.DB.prepare('DELETE FROM jobs WHERE id = ?').bind(id).run();
+        return json({ ok: true, deleted: { id, job: true, mediaKeys } });
+      }
+
       // 워커 전용 전체 갱신 — x-shopshorts-worker 헤더 필수(UI 오사용 방지),
       // 대본이 바뀌면 lintChecked 를 무효화해 재검증을 강제(발행 게이트 무결성).
       if (!sub && method === 'PUT') {
@@ -381,6 +399,14 @@ export async function onRequest(context) {
     if (dr && method === 'POST') {
       await env.DB.prepare('DELETE FROM draft_requests WHERE slug = ?').bind(decodeURIComponent(dr[1])).run();
       return json({ ok: true });
+    }
+
+    const drDelete = path.match(/^draft-requests\/([a-z0-9가-힣-]+)$/);
+    if (drDelete && method === 'DELETE') {
+      const slug = decodeURIComponent(drDelete[1]);
+      const result = await env.DB.prepare('DELETE FROM draft_requests WHERE slug = ?').bind(slug).run();
+      if (!result.meta?.changes) return json({ error: `초안 요청 없음: ${slug}` }, 404);
+      return json({ ok: true, deleted: { slug, request: true } });
     }
 
     // ---------- WordPress 블로그 자동발행 POC ----------
