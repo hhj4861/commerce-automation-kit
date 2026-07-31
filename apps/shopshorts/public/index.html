@@ -391,6 +391,7 @@
   <button class="nav-item active" data-nav="dashboard">대시보드</button>
   <button class="nav-item" data-nav="content">콘텐츠</button>
   <button class="nav-item" data-nav="trends">트렌드</button>
+  <button class="nav-item" data-nav="blog">블로그 POC</button>
   <button class="nav-item" data-nav="links">제휴 링크</button>
 </nav>
 
@@ -405,6 +406,7 @@
       <button class="nav-item active" data-icon-before="grid" data-nav="dashboard">대시보드 <span class="count" id="navCount">0</span></button>
       <button class="nav-item" data-icon-before="layers" data-nav="content">콘텐츠</button>
       <button class="nav-item" data-icon-before="trend" data-nav="trends">트렌드 탐색</button>
+      <button class="nav-item" data-icon-before="layers" data-nav="blog">블로그 POC</button>
       <button class="nav-item" data-icon-before="chart" data-nav="performance">성과</button>
     </nav>
     <div class="nav-label" style="margin-top:28px">MANAGE</div>
@@ -493,6 +495,9 @@ function svg(name, size=17) {
   const filled = name === 'spark' || name === 'play';
   return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="${filled ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name] || ''}</svg>`;
 }
+const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, char => ({
+  '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'
+}[char]));
 document.querySelectorAll('[data-icon]').forEach(el => el.innerHTML = svg(el.dataset.icon, el.dataset.icon === 'spark' ? 22 : 17));
 document.querySelectorAll('[data-icon-before]').forEach(el => el.insertAdjacentHTML('afterbegin', svg(el.dataset.iconBefore, 17)));
 
@@ -515,7 +520,15 @@ const STATUS = {
   rejected:{label:'수정 필요', action:'초안 복귀', cls:'quiet'}
 };
 const HOOK = {'problem-solution':'문제 해결형','before-after':'비포애프터',demo:'제품 데모',curiosity:'호기심 유도형','info-tip':'정보 팁형'};
-let state = {jobs:[], hot:[], requests:[], blogKeywords:[], filter:'all', sort:'priority', search:'', selected:null, detailKey:null, isCloud:false, workerAt:null};
+const BLOG_STATUS = {
+  dispatching:'요청 중', queued:'실행 대기', generating:'글 작성 중',
+  'draft-ready':'초안 준비', failed:'실패'
+};
+let state = {
+  jobs:[], hot:[], requests:[], blogKeywords:[], blogRequests:[], archiveDates:[],
+  trendDate:'', archiveHot:null, archiveBlog:null,
+  filter:'all', sort:'priority', search:'', selected:null, detailKey:null, isCloud:false, workerAt:null
+};
 
 function sampleJobs() {
   return [
@@ -723,9 +736,8 @@ function confirmPublish(job) {
     showToast('발행 전에 실제 제휴 링크를 저장해 주세요.');
     state.selected = job.brief.id; renderDetail(); return;
   }
-  if (!confirm('발행 검수를 완료로 표시할까요? 실제 업로드는 별도 발행 도구에서 진행됩니다.')) return;
-  const ref = prompt('업로드 requestId 또는 URL (선택)', '') || undefined;
-  transition(job, 'published', ref ? {publishRef:ref} : {});
+  if (!confirm('발행 검수를 완료할까요? 확인하면 로컬 워커가 유튜브·인스타그램에 실제 업로드합니다.')) return;
+  transition(job, 'published', {});
 }
 function runPrimary(job) {
   state.selected = job.brief.id;
@@ -777,6 +789,10 @@ function renderDetail(force=false) {
           ${j.finalize?.state === 'requested' ? '<div class="finalize-note">로컬 워커가 작업을 가져가길 기다리고 있어요…</div>' : ''}
           ${j.finalize?.state === 'running' ? '<div class="finalize-note">내레이션과 자막을 조립하고 있어요…</div>' : ''}
           ${j.finalize?.state === 'error' ? `<div class="finalize-note">조립 실패: ${j.finalize.error}</div>` : ''}
+          ${j.upload?.state === 'requested' ? '<div class="finalize-note">발행 확정 — 로컬 워커가 업로드를 가져가길 기다리고 있어요…</div>' : ''}
+          ${['running','uploaded'].includes(j.upload?.state) ? '<div class="finalize-note">유튜브·인스타그램에 업로드하고 있어요…</div>' : ''}
+          ${j.upload?.state === 'done' ? `<div class="finalize-note">업로드 완료 ✓ ${(j.upload.results||[]).filter(r=>r.url).map(r=>`<a href="${r.url}" target="_blank" rel="noopener">${r.platform}</a>`).join(' · ')}</div>` : ''}
+          ${j.upload?.state === 'failed' ? `<div class="finalize-note">업로드 실패: ${j.upload.error || ''}</div>` : ''}
         </div>
         <div class="detail-section">
           <div class="detail-label">AFFILIATE LINK</div>
@@ -801,6 +817,7 @@ function renderDetail(force=false) {
             <button class="tool-btn" data-tool="lint">lint 재실행</button>
             <button class="tool-btn" data-tool="estimate">생성 견적</button>
             ${previousStage(j.status) ? '<button class="tool-btn" data-tool="previous">이전 단계</button>' : ''}
+            ${j.status === 'published' && j.upload?.state === 'failed' ? '<button class="tool-btn warm" data-tool="retry-upload">업로드 재시도</button>' : ''}
             ${j.status !== 'published' ? '<button class="tool-btn danger" data-tool="reject">수정 요청</button>' : ''}
           </div>
         </div>
@@ -852,6 +869,12 @@ async function runTool(tool, j) {
       const r = await api(`/api/jobs/${j.brief.id}/issue-link`, {method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({productUrl:productUrl.trim()})});
       showToast('딥링크를 발급하고 댓글 문구에 반영했어요.'); await load(true);
     } catch (e) { showToast('딥링크 발급 실패: ' + e.message); }
+  }
+  if (tool === 'retry-upload') {
+    try {
+      await api(`/api/jobs/${j.brief.id}/request-upload`, {method:'POST'});
+      showToast('업로드를 다시 요청했어요.'); await load(true);
+    } catch (e) { showToast('재요청 실패: ' + e.message); }
   }
   if (tool === 'lint') {
     try {
@@ -911,15 +934,28 @@ async function loadHot() {
       const blog = await api('/api/keyword-feeds/blog');
       state.blogKeywords = blog.items || [];
     } catch { state.blogKeywords = []; }
+    try {
+      const archive = await api('/api/keyword-feed-dates');
+      state.archiveDates = archive.dates || [];
+    } catch { state.archiveDates = []; }
     if (typeof currentRoute === 'function' && currentRoute() === 'trends') renderPage('trends');
   } catch { /* 다음 자동 갱신 때 재시도 */ }
+}
+async function loadBlogPoc(render=true) {
+  try {
+    const data = await api('/api/blog-poc-requests');
+    state.blogRequests = data.requests || [];
+    if (render && typeof currentRoute === 'function' && currentRoute() === 'blog') renderPage('blog');
+  } catch (e) {
+    if (render) showToast('블로그 POC 목록을 불러오지 못했어요: ' + e.message);
+  }
 }
 function activateNav(name) {
   document.querySelectorAll('[data-nav]').forEach(b => b.classList.toggle('active', b.dataset.nav === name));
 }
 const ROUTES = {
   dashboard:'/', content:'/contents', trends:'/trends', performance:'/performance',
-  links:'/affiliate-links', settings:'/settings'
+  blog:'/blog', links:'/affiliate-links', settings:'/settings'
 };
 const ROUTE_NAMES = Object.fromEntries(Object.entries(ROUTES).map(([key,value]) => [value,key]));
 function currentRoute() {
@@ -942,10 +978,11 @@ function navigate(name, push=true) {
 }
 function renderPage(name) {
   const view = document.getElementById('pageView');
-  const title = {content:'콘텐츠',trends:'트렌드 탐색',performance:'성과',links:'제휴 링크',settings:'설정'}[name];
+  const title = {content:'콘텐츠',trends:'트렌드 탐색',blog:'블로그 POC',performance:'성과',links:'제휴 링크',settings:'설정'}[name];
   const copy = {
     content:'제작 중인 쇼츠와 완료된 콘텐츠를 한곳에서 관리하세요.',
     trends:'기회 점수가 높은 소재를 발견하고 바로 초안을 요청하세요.',
+    blog:'직접 키워드를 선택해 WordPress 초안 생성 흐름을 검증하세요.',
     performance:'현재 파이프라인의 제작 및 발행 현황입니다.',
     links:'발행에 필요한 제휴 링크를 확인하고 관리하세요.',
     settings:'작업 환경과 알림 방식을 관리하세요.'
@@ -960,25 +997,63 @@ function renderPage(name) {
     <div class="video-library" id="videoLibrary">${renderVideoCards(state.jobs)}</div>`;
   }
   if (name === 'trends') {
-    const items = state.hot.length ? state.hot : [{topic:'추천 소재를 불러오는 중',opportunity:'-'}];
-    const blogs = state.blogKeywords;
+    const items = (state.trendDate ? state.archiveHot : state.hot) || [];
+    const blogs = (state.trendDate ? state.archiveBlog : state.blogKeywords) || [];
     const pending = state.requests.filter(r => r.status === 'pending');
-    body = `${pending.length ? `<div class="section-head"><h2>요청한 초안</h2><span class="section-note">${pending.length}개 작성 대기 중</span></div>
+    body = `<div class="library-meta">
+      <span>${state.trendDate ? `${state.trendDate} 아카이브` : '최신 30분 동기화 데이터'}</span>
+      <select data-trend-date style="border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:#fff">
+        <option value="">최신 데이터</option>
+        ${state.archiveDates.map(d => `<option value="${escapeHtml(d.snapshot_date)}" ${state.trendDate === d.snapshot_date ? 'selected' : ''}>${escapeHtml(d.snapshot_date)}</option>`).join('')}
+      </select>
+    </div>
+    ${pending.length ? `<div class="section-head"><h2>요청한 초안</h2><span class="section-note">${pending.length}개 작성 대기 중</span></div>
     <div class="page-grid" style="margin-bottom:32px">${pending.map(r => `<article class="page-card" style="background:var(--yellow-soft);border-color:#edd9a7">
-      <span class="status-pill">요청됨</span><h3 style="margin-top:13px">${r.topic}</h3>
+      <span class="status-pill">요청됨</span><h3 style="margin-top:13px">${escapeHtml(r.topic)}</h3>
       <p>콘텐츠 큐의 기획 대기 단계에서 대본을 자동으로 작성 중입니다.</p>
     </article>`).join('')}</div>` : ''}
     <div class="section-head"><h2>쇼츠·트렌드 키워드</h2><span class="section-note">opportunity 기준</span></div>
-    <div class="page-grid">${items.map((it,i) => `<article class="page-card">
-      <div class="topic-rank">${i+1}</div><h3 style="margin-top:13px">${it.topic}</h3>
+    <div class="page-grid">${items.length ? items.map((it,i) => `<article class="page-card">
+      <div class="topic-rank">${i+1}</div><h3 style="margin-top:13px">${escapeHtml(it.topic)}</h3>
       <p>기회 점수 ${it.opportunity ?? '-'} · 검색 수요와 경쟁도를 종합한 추천입니다.</p>
-      <button class="detail-cta" data-page-topic="${it.topic}" data-score="${it.opportunity ?? ''}">초안 요청</button>
-    </article>`).join('')}</div>
+      <button class="detail-cta" data-page-topic="${escapeHtml(it.topic)}" data-score="${it.opportunity ?? ''}">초안 요청</button>
+    </article>`).join('') : '<div class="empty-page">선택한 날짜의 트렌드 데이터가 없습니다.</div>'}</div>
     <div class="section-head" style="margin-top:32px"><h2>블로그 키워드</h2><span class="section-note">절대 검색량·경쟁도 기준</span></div>
     ${blogs.length ? `<div class="page-grid">${blogs.map((it,i) => `<article class="page-card">
-      <div class="topic-rank">${i+1}</div><h3 style="margin-top:13px">${it.topic}</h3>
-      <p>블로그 점수 ${it.score ?? '-'} · 월 검색량 ${(it.monthlyTotal ?? 0).toLocaleString()} · 경쟁도 ${it.competition ?? '-'}</p>
+      <div class="topic-rank">${i+1}</div><h3 style="margin-top:13px">${escapeHtml(it.topic)}</h3>
+      <p>블로그 점수 ${it.score ?? '-'} · 월 검색량 ${(it.monthlyTotal ?? 0).toLocaleString()} · 경쟁도 ${escapeHtml(it.competition ?? '-')}</p>
+      ${state.trendDate ? '' : `<button class="detail-cta" data-blog-seed="${escapeHtml(it.topic)}">블로그 POC에서 사용</button>`}
     </article>`).join('')}</div>` : '<div class="empty-page">첫 GitHub Actions 동기화 후 블로그 키워드가 표시됩니다.</div>'}`;
+  }
+  if (name === 'blog') {
+    body = `<article class="page-card" style="margin-bottom:24px">
+      <span class="status-pill">POC · 초안 전용</span>
+      <h3 style="margin-top:13px">WordPress 초안 만들기</h3>
+      <p>공개 발행 없이 wp-auto-blog GitHub Actions를 실행합니다.</p>
+      <div style="display:grid;grid-template-columns:minmax(180px,1fr) 130px auto;gap:8px;margin-top:16px">
+        <input data-blog-topic placeholder="블로그 주제 입력" style="border:1px solid var(--line);border-radius:8px;padding:10px">
+        <select data-blog-category style="border:1px solid var(--line);border-radius:8px;padding:10px;background:#fff">
+          <option>생활정보</option><option>취업</option><option>건강</option>
+        </select>
+        <button class="detail-cta" data-blog-create style="width:auto;margin:0">초안 만들기</button>
+      </div>
+      <div class="detail-tools" style="margin-top:12px">
+        ${state.blogKeywords.slice(0,5).map(x => `<button class="tool-btn" data-blog-suggestion="${escapeHtml(x.topic)}">${escapeHtml(x.topic)}</button>`).join('')}
+      </div>
+    </article>
+    <div class="section-head"><h2>POC 실행 기록</h2><span class="section-note">실행 상태는 직접 새로고침할 수 있어요</span></div>
+    <div class="page-table">
+      <div class="page-row header"><span>주제</span><span>카테고리</span><span>상태</span><span>작업</span></div>
+      ${state.blogRequests.map(r => `<div class="page-row">
+        <strong>${escapeHtml(r.topic)}</strong><span>${escapeHtml(r.category)}</span>
+        <span style="color:${r.status === 'failed' ? 'var(--red)' : r.status === 'draft-ready' ? 'var(--mint)' : 'var(--yellow)'}">${escapeHtml(BLOG_STATUS[r.status] || r.status)}</span>
+        <span style="display:flex;gap:6px;flex-wrap:wrap">
+          <button data-blog-sync="${escapeHtml(r.id)}">상태 확인</button>
+          ${r.run_url ? `<a href="${escapeHtml(r.run_url)}" target="_blank" rel="noopener">Actions</a>` : ''}
+          ${r.status === 'draft-ready' ? '<a href="https://trendpulse.blog/wp-admin/edit.php?post_status=draft&post_type=post" target="_blank" rel="noopener">초안 열기</a>' : ''}
+        </span>
+      </div>`).join('') || '<div class="empty-page">아직 직접 실행한 POC가 없습니다.</div>'}
+    </div>`;
   }
   if (name === 'performance') {
     const needs = state.jobs.filter(j => ['draft','generated','assembled','review','rejected'].includes(j.status)).length;
@@ -1015,6 +1090,55 @@ function renderPage(name) {
   bindPageActions(name);
 }
 function bindPageActions(name) {
+  document.querySelector('[data-trend-date]')?.addEventListener('change', async e => {
+    state.trendDate = e.target.value;
+    if (!state.trendDate) {
+      state.archiveHot = null; state.archiveBlog = null; renderPage('trends'); return;
+    }
+    try {
+      const [trend, blog] = await Promise.all([
+        api(`/api/keyword-feeds/trend?date=${encodeURIComponent(state.trendDate)}`),
+        api(`/api/keyword-feeds/blog?date=${encodeURIComponent(state.trendDate)}`)
+      ]);
+      state.archiveHot = trend.items || [];
+      state.archiveBlog = blog.items || [];
+      renderPage('trends');
+    } catch (e) { showToast('아카이브를 불러오지 못했어요: ' + e.message); }
+  });
+  document.querySelectorAll('[data-blog-seed]').forEach(b => b.onclick = () => {
+    navigate('blog');
+    const input = document.querySelector('[data-blog-topic]');
+    if (input) input.value = b.dataset.blogSeed;
+  });
+  document.querySelectorAll('[data-blog-suggestion]').forEach(b => b.onclick = () => {
+    const input = document.querySelector('[data-blog-topic]');
+    if (input) { input.value = b.dataset.blogSuggestion; input.focus(); }
+  });
+  document.querySelector('[data-blog-create]')?.addEventListener('click', async b => {
+    const topic = document.querySelector('[data-blog-topic]')?.value.trim();
+    const category = document.querySelector('[data-blog-category]')?.value;
+    if (!topic) return showToast('블로그 주제를 입력해 주세요.');
+    b.currentTarget.disabled = true;
+    try {
+      await api('/api/blog-poc-requests', {
+        method:'POST', headers:{'content-type':'application/json'},
+        body:JSON.stringify({topic, category})
+      });
+      showToast('WordPress 초안 생성을 요청했어요. 공개 발행은 되지 않습니다.');
+      await loadBlogPoc();
+    } catch (e) {
+      showToast('블로그 POC 요청 실패: ' + e.message);
+      b.currentTarget.disabled = false;
+    }
+  });
+  document.querySelectorAll('[data-blog-sync]').forEach(b => b.onclick = async () => {
+    b.disabled = true;
+    try {
+      const result = await api(`/api/blog-poc-requests/${b.dataset.blogSync}/sync`, {method:'POST'});
+      showToast(result.note || 'GitHub Actions 상태를 갱신했어요.');
+      await loadBlogPoc();
+    } catch (e) { showToast('상태 확인 실패: ' + e.message); b.disabled = false; }
+  });
   document.querySelectorAll('[data-open-job]').forEach(b => b.onclick = () => {
     state.selected = b.dataset.openJob; navigate('dashboard'); renderJobs(); renderDetail(true);
     document.querySelector('[data-section="content"]')?.scrollIntoView({behavior:'smooth',block:'start'});
@@ -1132,8 +1256,14 @@ document.querySelector('[data-top-action="notifications"]')?.addEventListener('c
 load().then(() => navigate(currentRoute(), false)); loadHot().then(() => {
   if (currentRoute() === 'trends') renderPage('trends');
 });
+loadBlogPoc(false).then(() => {
+  if (currentRoute() === 'blog') renderPage('blog');
+});
 setInterval(() => {
-  if (localStorage.getItem('shopshorts:autoRefresh') !== 'off') { load(true); loadHot(); }
+  if (localStorage.getItem('shopshorts:autoRefresh') !== 'off') {
+    load(true); loadHot();
+    if (currentRoute() === 'blog') loadBlogPoc();
+  }
 }, 12000);
 </script>
 </body>

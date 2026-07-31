@@ -38,6 +38,32 @@ CREATE TABLE IF NOT EXISTS keyword_feeds (
 CREATE INDEX IF NOT EXISTS idx_keyword_feeds_channel_score
   ON keyword_feeds(channel, score DESC);
 
+CREATE TABLE IF NOT EXISTS keyword_feed_archive (
+  snapshot_date TEXT NOT NULL,
+  channel TEXT NOT NULL CHECK(channel IN ('trend', 'blog')),
+  topic TEXT NOT NULL,
+  score INTEGER NOT NULL,
+  payload TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  PRIMARY KEY(snapshot_date, channel, topic)
+);
+CREATE INDEX IF NOT EXISTS idx_keyword_feed_archive_date_score
+  ON keyword_feed_archive(channel, snapshot_date DESC, score DESC);
+
+CREATE TABLE IF NOT EXISTS blog_poc_requests (
+  id TEXT PRIMARY KEY,
+  topic TEXT NOT NULL,
+  category TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'dispatching',
+  run_id INTEGER,
+  run_url TEXT,
+  error TEXT,
+  requested_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_blog_poc_requests_requested
+  ON blog_poc_requests(requested_at DESC);
+
 -- 워커 하트비트 등 메타(워커 온라인 표시용)
 CREATE TABLE IF NOT EXISTS meta (
   key TEXT PRIMARY KEY,

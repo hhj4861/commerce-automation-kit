@@ -403,7 +403,7 @@ const server = createServer(async (req, res) => {
       }
     }
     // 정적 UI
-    const appPages = ['/', '/index.html', '/contents', '/trends', '/performance', '/affiliate-links', '/settings'];
+    const appPages = ['/', '/index.html', '/contents', '/trends', '/blog', '/performance', '/affiliate-links', '/settings'];
     if (req.method === 'GET' && appPages.includes(url.pathname)) {
       res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
       res.end(readFileSync(join(__dirname, 'public', 'index.html')));

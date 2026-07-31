@@ -198,11 +198,95 @@ async function runFinalize(stale) {
   }
 }
 
+// ---------- 실제 업로드 (발행 확인 = 사람 게이트 2 통과 → upload-post) ----------
+
+/** 업로드 설명란: 대본 설명 + 제휴 링크 라인(파트너스 고지 블록 앞에 삽입). */
+function uploadDescription(job) {
+  const base = job.script?.description ?? '';
+  const url = job.brief?.affiliateUrl;
+  if (!url) return base;
+  const blocks = base.split('\n\n');
+  const linkLine = `🔗 제품 보러가기: ${url}`;
+  const i = blocks.findIndex((b) => b.includes('파트너스'));
+  if (i >= 0) blocks.splice(i, 0, linkLine);
+  else blocks.push(linkLine);
+  return blocks.join('\n\n');
+}
+
+async function runUpload(stale) {
+  const id = stale.brief.id;
+  // 실행 직전 최신 상태 재확인 — 역전이·수동 처리된 잡을 업로드하지 않는다
+  const { jobs } = await api('/api/jobs');
+  const job = jobs.find((j) => j.brief.id === id);
+  if (!job || job.status !== 'published' || job.upload?.state !== 'requested') {
+    log('publish-upload.skip-stale', { id, status: job?.status, upload: job?.upload?.state });
+    return;
+  }
+  await updateJob(id, (f) => ({ upload: { ...f.upload, state: 'running', at: new Date().toISOString() } }));
+  try {
+    const video = join(WORK_DIR, id, `${id}-final.mp4`);
+    if (!existsSync(video)) throw new Error(`최종 영상 없음: ${video} — 이 워커에서 조립된 잡만 업로드 가능`);
+    const platforms = (job.upload.platforms ?? ['youtube', 'instagram']).join(',');
+    const r = await runCli(['-w', '@cak/shorts-publish', '--', 'upload',
+      '--video', video, '--title', job.script.title, '--platforms', platforms,
+      '--desc', uploadDescription(job), '--yt-privacy', 'public']);
+    if (r.code === 75) {
+      // 네트워크 순단 — requested 로 되돌려 백오프 후 재시도(과금·중복 없음: 접수 실패)
+      await updateJob(id, (f) => ({ upload: { ...f.upload, state: 'requested', at: new Date().toISOString(), note: '네트워크 순단 — 재시도 대기' } }));
+      throw new Error('transient');
+    }
+    if (r.data?.ok !== true || !r.data?.requestId) {
+      throw new Error(`업로드 접수 실패: ${JSON.stringify(r.data?.body ?? r.data ?? null).slice(0, 200)}`);
+    }
+    await updateJob(id, () => ({
+      publishRef: r.data.requestId,
+      upload: { state: 'uploaded', requestId: r.data.requestId, platforms: job.upload.platforms, at: new Date().toISOString() },
+    }));
+    log('publish-upload.sent', { id, requestId: r.data.requestId });
+  } catch (e) {
+    const msg = String(e?.message ?? e);
+    if (msg !== 'transient') {
+      await updateJob(id, () => ({ upload: { state: 'failed', error: msg, at: new Date().toISOString() } })).catch(() => {});
+    }
+    throw e;
+  }
+}
+
+async function pollUpload(job) {
+  const id = job.brief.id;
+  const r = await runCli(['-w', '@cak/shorts-publish', '--', 'poll', '--request-id', job.upload.requestId]);
+  if (r.data?.ok !== true) {
+    if (r.code === 75) return; // 네트워크 순단 — 다음 틱에 재폴링
+    throw new Error(`상태 조회 실패: ${JSON.stringify(r.data ?? null).slice(0, 200)}`);
+  }
+  const st = r.data.body?.status;
+  if (st === 'completed') {
+    const results = (r.data.body.results ?? []).map((x) => ({
+      platform: x.platform, success: x.success === true,
+      url: x.post_url ?? null, error: x.error_message ?? null,
+    }));
+    const allOk = results.length > 0 && results.every((x) => x.success);
+    const errText = results.filter((x) => !x.success).map((x) => `${x.platform}: ${x.error}`).join(' / ');
+    await updateJob(id, (f) => ({
+      upload: {
+        ...f.upload, state: allOk ? 'done' : 'failed', results,
+        at: new Date().toISOString(), ...(allOk ? {} : { error: errText }),
+      },
+    }));
+    log('publish-upload.completed', { id, allOk, results: results.map((x) => x.url) });
+  } else if (st === 'failed' || st === 'error') {
+    await updateJob(id, (f) => ({ upload: { ...f.upload, state: 'failed', error: `업로드 ${st}`, at: new Date().toISOString() } }));
+    log('publish-upload.failed', { id, st });
+  }
+  // pending/processing → 다음 폴링 주기에 재확인
+}
+
 // ---------- 메인 루프 ----------
 
 let busy = false;
 // 리뷰 확정 결함 수정: 잡별 실패 격리 + 백오프 — 한 잡의 반복 실패가 큐 전체를 막지 않게
 const failures = new Map(); // key: `${id}:${action}` → { count, until }
+const lastPoll = new Map(); // 업로드 상태 폴링 주기 제한
 
 function shouldSkip(id, action) {
   const f = failures.get(`${id}:${action}`);
@@ -236,6 +320,19 @@ async function handleJob(job) {
     if (shouldSkip(id, 'finalize')) return;
     try { await runFinalize(job); clearFailure(id, 'finalize'); }
     catch (e) { recordFailure(id, 'finalize'); log('finalize.outer-error', { id, error: String(e?.message ?? e) }); }
+    return;
+  }
+  if (job.status === 'published' && job.upload?.state === 'requested') {
+    if (shouldSkip(id, 'publish-upload')) return;
+    try { await runUpload(job); clearFailure(id, 'publish-upload'); }
+    catch (e) { recordFailure(id, 'publish-upload'); log('publish-upload.error', { id, error: String(e?.message ?? e) }); }
+    return;
+  }
+  if (job.status === 'published' && job.upload?.state === 'uploaded') {
+    if (Date.now() - (lastPoll.get(id) ?? 0) < 20_000) return; // 20초 주기 폴링
+    lastPoll.set(id, Date.now());
+    try { await pollUpload(job); }
+    catch (e) { log('publish-poll.error', { id, error: String(e?.message ?? e) }); }
     return;
   }
   if (job.previewVideo && existsSync(job.previewVideo) && !job.mediaUploaded?.preview && !shouldSkip(id, 'up-preview')) {
@@ -274,6 +371,13 @@ async function recoverStuck() {
           finalize: { state: 'error', error: '워커 중단으로 조립이 끊김 — 다시 요청하세요', at: new Date().toISOString() },
         }));
         log('recover.stuck-finalize', { id: job.brief.id });
+      }
+      if (job.upload?.state === 'running') {
+        // 접수 전 중단이면 미전송 — 재요청 가능하게 실패로 풀어준다(uploaded 부터는 poll 이 이어받음)
+        await updateJob(job.brief.id, () => ({
+          upload: { state: 'failed', error: '워커 중단으로 업로드가 끊김 — 업로드 재시도를 눌러주세요', at: new Date().toISOString() },
+        }));
+        log('recover.stuck-upload', { id: job.brief.id });
       }
     }
   } catch (e) {

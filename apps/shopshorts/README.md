@@ -71,8 +71,10 @@ draft ──(게이트1: lint 재검증+사람 승인)──> script-approved �
 
 - **게이트 전이(승인·발행)는 서버가 그 자리에서 원자 lint 를 재실행** — 캐시된 결과를 신뢰하지 않는다.
 - `review` 진입은 `outputVideo`(조립 산출물) 필수.
-- **업로드는 이 앱이 하지 않는다** — shorts-publish CLI 로 사람이 실행하고 requestId 만 기록.
-  (완전 무인화 금지 — 저관여 + 사람 감시. 금지선 #3·#8)
+- **업로드는 발행 확인(사람 게이트 2)이 트리거한다** — 검수를 마친 사람이 버튼을 누르면
+  로컬 워커가 shorts-publish `upload`(렌더 생략, 9:16 완성본 전용)로 upload-post 에 전송하고
+  requestId·플랫폼별 결과 URL 을 잡에 기록한다. 무검수 자동 발행 경로는 없다(금지선 #3·#8 —
+  모든 업로드는 사람 버튼 1회 = 저관여 + 사람 감시). 실패 시 UI 의 "업로드 재시도" 버튼으로 재요청.
 
 ## API
 
@@ -95,7 +97,7 @@ draft ──(게이트1: lint 재검증+사람 승인)──> script-approved �
 핫 키워드(TOP3 표시) →[발행 버튼]→ 초안 요청 →(Claude 모니터: 대본 작성)→ draft
   →[기획 승인]→ (Claude 모니터: 힉스필드 클립 생성) → generated + 무자막 미리보기 링크
   →[자막+TTS 붙이기]→ (서버: Claire TTS + 조립) → assembled + 최종 영상 링크
-  →[검수 요청]→ review →[발행 확인]→ published (업로드는 사람이 CLI)
+  →[검수 요청]→ review →[발행 확인]→ published → (워커: upload-post 실제 업로드 → 결과 URL 기록)
 ```
 LLM 이 필요한 단계(대본·클립 생성)는 Claude 세션 모니터가, 결정적 단계(TTS·조립)는 서버가 수행.
 
