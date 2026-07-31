@@ -21,6 +21,9 @@ const TRANSITIONS = {
   published: ['review'],
 };
 const CONTENT_TYPES = ['shorts', 'ad', 'blog', 'music'];
+const BLOG_CATEGORIES = ['생활정보', '취업', '건강'];
+const BLOG_REPO = 'hhj4861/wp-auto-blog';
+const BLOG_WORKFLOW = 'auto-post.yml';
 
 const json = (data, status = 200) =>
   new Response(JSON.stringify(data), {
@@ -50,6 +53,24 @@ async function saveJob(env, job) {
     .bind(job.brief.id, JSON.stringify(job), job.status, job.updatedAt)
     .run();
   return job;
+}
+
+async function githubRequest(env, path, init = {}) {
+  if (!env.WP_AUTO_BLOG_GITHUB_TOKEN) {
+    const e = new Error('WP_AUTO_BLOG_GITHUB_TOKEN 시크릿이 설정되지 않았습니다.');
+    e.status = 503;
+    throw e;
+  }
+  return fetch(`https://api.github.com/repos/${BLOG_REPO}${path}`, {
+    ...init,
+    headers: {
+      accept: 'application/vnd.github+json',
+      authorization: `Bearer ${env.WP_AUTO_BLOG_GITHUB_TOKEN}`,
+      'x-github-api-version': '2022-11-28',
+      'user-agent': 'shopshorts-blog-poc',
+      ...(init.headers ?? {}),
+    },
+  });
 }
 
 // 제휴 링크 검증(로컬 server.mjs 와 동일 규칙)
@@ -362,6 +383,107 @@ export async function onRequest(context) {
       return json({ ok: true });
     }
 
+    // ---------- WordPress 블로그 자동발행 POC ----------
+    // POC는 GitHub Actions에 publish=false만 전달한다. 공개 발행은 의도적으로 지원하지 않는다.
+    if (path === 'blog-poc-requests' && method === 'GET') {
+      const { results } = await env.DB.prepare(
+        'SELECT id, topic, category, status, run_id, run_url, error, requested_at, updated_at ' +
+        'FROM blog_poc_requests ORDER BY requested_at DESC LIMIT 30',
+      ).all();
+      return json({ requests: results });
+    }
+
+    if (path === 'blog-poc-requests' && method === 'POST') {
+      const body = await readJson(request);
+      const topic = String(body?.topic ?? '').trim();
+      const category = String(body?.category ?? '').trim();
+      if (!topic || topic.length > 100) return json({ error: 'topic은 1~100자여야 합니다.' }, 400);
+      // wp-auto-blog의 현재 workflow가 topic을 작은따옴표 셸 인자로 조립한다.
+      // 워크플로를 안전한 argv 전달 방식으로 바꾸기 전까지 quote/control 문자는 받지 않는다.
+      if (/['\u0000-\u001f\u007f]/.test(topic)) {
+        return json({ error: 'topic에는 작은따옴표나 줄바꿈·제어문자를 사용할 수 없습니다.' }, 400);
+      }
+      if (!BLOG_CATEGORIES.includes(category)) {
+        return json({ error: `category는 ${BLOG_CATEGORIES.join('|')} 중 하나여야 합니다.` }, 400);
+      }
+      // workflow_dispatch는 응답에 run_id를 주지 않는다. 동시에 두 건을 보내면 실행을
+      // 요청과 확정적으로 매칭할 수 없으므로 POC에서는 1건씩만 검증한다.
+      const active = await env.DB.prepare(
+        "SELECT id, topic, status FROM blog_poc_requests " +
+        "WHERE status IN ('dispatching', 'queued', 'generating') " +
+        "AND datetime(requested_at) >= datetime('now', '-45 minutes') ORDER BY requested_at DESC LIMIT 1",
+      ).first();
+      if (active) {
+        return json({
+          error: `이미 “${active.topic}” POC가 ${active.status} 상태입니다. 상태 확인 후 다시 시도해 주세요.`,
+          activeRequestId: active.id,
+        }, 409);
+      }
+      const id = crypto.randomUUID();
+      const now = new Date().toISOString();
+      await env.DB.prepare(
+        'INSERT INTO blog_poc_requests(id, topic, category, status, requested_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)',
+      ).bind(id, topic, category, 'dispatching', now, now).run();
+
+      const dispatched = await githubRequest(env, `/actions/workflows/${BLOG_WORKFLOW}/dispatches`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          ref: 'main',
+          inputs: { mode: 'general', topic, publish: 'false', category },
+        }),
+      });
+      if (!dispatched.ok) {
+        const detail = (await dispatched.text()).slice(0, 500);
+        await env.DB.prepare(
+          'UPDATE blog_poc_requests SET status = ?, error = ?, updated_at = ? WHERE id = ?',
+        ).bind('failed', `GitHub ${dispatched.status}: ${detail}`, new Date().toISOString(), id).run();
+        return json({ error: `GitHub Actions 실행 실패(${dispatched.status})`, id }, 502);
+      }
+      await env.DB.prepare(
+        'UPDATE blog_poc_requests SET status = ?, updated_at = ? WHERE id = ?',
+      ).bind('queued', new Date().toISOString(), id).run();
+      return json({ ok: true, id, status: 'queued', publish: false }, 202);
+    }
+
+    const blogSync = path.match(/^blog-poc-requests\/([a-f0-9-]+)\/sync$/);
+    if (blogSync && method === 'POST') {
+      const row = await env.DB.prepare('SELECT * FROM blog_poc_requests WHERE id = ?')
+        .bind(blogSync[1]).first();
+      if (!row) return json({ error: 'POC 요청을 찾을 수 없습니다.' }, 404);
+      const runsRes = await githubRequest(
+        env,
+        `/actions/workflows/${BLOG_WORKFLOW}/runs?event=workflow_dispatch&per_page=20`,
+      );
+      if (!runsRes.ok) return json({ error: `GitHub 실행 조회 실패(${runsRes.status})` }, 502);
+      const runs = (await runsRes.json()).workflow_runs ?? [];
+      let run = row.run_id ? runs.find((r) => r.id === row.run_id) : null;
+      if (!run) {
+        const requestedAt = new Date(row.requested_at).getTime() - 10000;
+        const claimed = await env.DB.prepare(
+          'SELECT run_id FROM blog_poc_requests WHERE run_id IS NOT NULL AND id <> ?',
+        ).bind(row.id).all();
+        const claimedIds = new Set(claimed.results.map((r) => Number(r.run_id)));
+        run = runs
+          .filter((r) => new Date(r.created_at).getTime() >= requestedAt && !claimedIds.has(Number(r.id)))
+          .sort((a, b) => new Date(a.created_at) - new Date(b.created_at))[0];
+      }
+      if (!run) return json({ ok: true, request: row, note: 'GitHub 실행 배정을 기다리는 중입니다.' });
+      const status = run.status === 'completed'
+        ? (run.conclusion === 'success' ? 'draft-ready' : 'failed')
+        : (run.status === 'queued' ? 'queued' : 'generating');
+      await env.DB.prepare(
+        'UPDATE blog_poc_requests SET status = ?, run_id = ?, run_url = ?, error = ?, updated_at = ? WHERE id = ?',
+      ).bind(
+        status, run.id, run.html_url,
+        status === 'failed' ? `GitHub Actions: ${run.conclusion ?? 'failed'}` : null,
+        new Date().toISOString(), row.id,
+      ).run();
+      const updated = await env.DB.prepare('SELECT * FROM blog_poc_requests WHERE id = ?')
+        .bind(row.id).first();
+      return json({ ok: true, request: updated });
+    }
+
     // ---------- 채널별 키워드 피드(GitHub Actions 가 30분마다 push) ----------
     const feedMatch = path.match(/^keyword-feeds\/(trend|blog)$/);
     if (feedMatch && method === 'PUT') {
@@ -374,27 +496,53 @@ export async function onRequest(context) {
         payload: it,
       })).filter((it) => it.topic.length > 0 && it.topic.length <= 100);
       const now = new Date().toISOString();
-      const stmts = [env.DB.prepare('DELETE FROM keyword_feeds WHERE channel = ?').bind(channel)];
+      const snapshotDate = new Date(Date.now() + 9 * 3600000).toISOString().slice(0, 10);
+      const stmts = [
+        env.DB.prepare('DELETE FROM keyword_feeds WHERE channel = ?').bind(channel),
+        env.DB.prepare('DELETE FROM keyword_feed_archive WHERE channel = ? AND snapshot_date = ?')
+          .bind(channel, snapshotDate),
+      ];
       for (const it of items) {
         stmts.push(
           env.DB.prepare(
             'INSERT INTO keyword_feeds(channel, topic, score, payload, updated_at) VALUES (?, ?, ?, ?, ?)',
           ).bind(channel, it.topic, it.score, JSON.stringify(it.payload), now),
+          env.DB.prepare(
+            'INSERT INTO keyword_feed_archive(snapshot_date, channel, topic, score, payload, updated_at) ' +
+            'VALUES (?, ?, ?, ?, ?, ?)',
+          ).bind(snapshotDate, channel, it.topic, it.score, JSON.stringify(it.payload), now),
         );
       }
       await env.DB.batch(stmts);
-      return json({ ok: true, channel, count: items.length, updatedAt: now });
+      return json({ ok: true, channel, count: items.length, snapshotDate, updatedAt: now });
     }
     if (feedMatch && method === 'GET') {
       const channel = feedMatch[1];
-      const { results } = await env.DB.prepare(
-        'SELECT topic, score, payload, updated_at FROM keyword_feeds WHERE channel = ? ORDER BY score DESC LIMIT 100',
-      ).bind(channel).all();
+      const date = url.searchParams.get('date');
+      if (date && !/^\d{4}-\d{2}-\d{2}$/.test(date)) return json({ error: 'date는 YYYY-MM-DD 형식이어야 합니다.' }, 400);
+      const query = date
+        ? env.DB.prepare(
+          'SELECT topic, score, payload, updated_at FROM keyword_feed_archive ' +
+          'WHERE channel = ? AND snapshot_date = ? ORDER BY score DESC LIMIT 100',
+        ).bind(channel, date)
+        : env.DB.prepare(
+          'SELECT topic, score, payload, updated_at FROM keyword_feeds WHERE channel = ? ORDER BY score DESC LIMIT 100',
+        ).bind(channel);
+      const { results } = await query.all();
       return json({
         channel,
+        snapshotDate: date ?? null,
         items: results.map((row) => ({ ...JSON.parse(row.payload), topic: row.topic, score: row.score })),
         updatedAt: results[0]?.updated_at ?? null,
       });
+    }
+
+    if (path === 'keyword-feed-dates' && method === 'GET') {
+      const { results } = await env.DB.prepare(
+        'SELECT snapshot_date, MAX(updated_at) AS updated_at FROM keyword_feed_archive ' +
+        'GROUP BY snapshot_date ORDER BY snapshot_date DESC LIMIT 90',
+      ).all();
+      return json({ dates: results });
     }
 
     // ---------- 핫 키워드(대시보드는 trend 채널 상위 후보를 조회) ----------
@@ -462,6 +610,6 @@ export async function onRequest(context) {
 
     return json({ error: 'not found' }, 404);
   } catch (e) {
-    return json({ error: String(e?.message ?? e) }, 500);
+    return json({ error: String(e?.message ?? e) }, e?.status ?? 500);
   }
 }
