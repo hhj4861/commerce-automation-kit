@@ -10,6 +10,7 @@
   "scripts": {
     "start": "node server.mjs",
     "worker": "node worker.mjs",
+    "test": "node --test test/*.test.mjs",
     "cloud:dev": "npx wrangler pages dev public",
     "cloud:deploy": "npx wrangler pages deploy public --project-name shopshorts-dash"
   }
