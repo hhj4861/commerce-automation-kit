@@ -1070,6 +1070,20 @@ async function loadHot() {
       const archive = await api('/api/keyword-feed-dates');
       state.archiveDates = archive.dates || [];
     } catch { state.archiveDates = []; }
+    if (!state.hot.length && !state.blogKeywords.length && state.archiveDates.length && !state.trendDate) {
+      const fallbackDate = state.archiveDates[0].snapshot_date;
+      try {
+        const [trend, blog] = await Promise.all([
+          api(`/api/keyword-feeds/trend?date=${encodeURIComponent(fallbackDate)}`),
+          api(`/api/keyword-feeds/blog?date=${encodeURIComponent(fallbackDate)}`)
+        ]);
+        if ((trend.items || []).length || (blog.items || []).length) {
+          state.trendDate = fallbackDate;
+          state.archiveHot = trend.items || [];
+          state.archiveBlog = blog.items || [];
+        }
+      } catch { /* 최신 데이터가 없으면 빈 상태를 그대로 표시 */ }
+    }
     if (typeof currentRoute === 'function' && currentRoute() === 'trends') renderPage('trends');
   } catch { /* 다음 자동 갱신 때 재시도 */ }
 }

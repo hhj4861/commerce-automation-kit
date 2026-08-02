@@ -77,6 +77,18 @@ export function isWholesaleUnreachable(batch: IntelBatch): boolean {
 }
 
 /**
+ * 요청은 있었지만 유효 신호가 하나도 만들어지지 않은 전량 실패인가.
+ *
+ * 원인 종류와 무관하게 이 배치는 최신 피드로 게시하면 안 된다. 2026-08-03 실측에서
+ * 네이버 검색 API 권한 오류(SE05) 182건이 exit 0으로 끝났고, 후속 동기화가 빈 피드로
+ * 기존 D1 데이터를 삭제했다. 미도달 장애는 isWholesaleUnreachable 로 별도 재시도하고,
+ * 그 외 전량 실패는 즉시 실패시켜 기존 정상 스냅샷을 보존한다.
+ */
+export function isWholesaleFailure(batch: IntelBatch): boolean {
+  return batch.requestedKeywords.length > 0 && batch.signals.length === 0;
+}
+
+/**
  * 일시적 네트워크 오류 코드 — 백오프 재시도 대상(실측: datalab ECONNRESET·wake 직후 ENOTFOUND).
  * 미도달 코드도 포함한다(네트워크가 곧 준비될 수 있으므로).
  */

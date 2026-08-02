@@ -130,6 +130,17 @@ jobs:
       - name: Build blog Top 10
         run: npm run -s analyze -- --blog --top 10 --feed-file blog-feed.json | tee blog-report.txt
 
+      - name: Refuse empty feeds
+        shell: bash
+        run: |
+          trend_count="$(jq '.items | length' trend-feed.json)"
+          blog_count="$(jq '.items | length' blog-feed.json)"
+          if (( trend_count == 0 || blog_count == 0 )); then
+            echo "::error::빈 피드 게시 거부: trend=${trend_count}, blog=${blog_count}. 기존 D1 스냅샷을 보존합니다."
+            exit 1
+          fi
+          echo "피드 검증 통과: trend=${trend_count}, blog=${blog_count}"
+
       - name: Publish trend and blog feeds to D1
         shell: bash
         run: |
