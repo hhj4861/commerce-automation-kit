@@ -105,3 +105,33 @@ test('DELETE /draft-requests/:slug 는 대기 요청을 취소하고 없는 요�
   assert.equal(first.status, 200);
   assert.equal(second.status, 404);
 });
+
+test('빈 키워드 피드는 기존 데이터를 지우기 전에 422로 거부한다', async () => {
+  const { env } = envWith(null);
+  const response = await onRequest({
+    request: new Request('https://example.test/api/keyword-feeds/trend', {
+      method: 'PUT',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ items: [] }),
+    }),
+    env,
+  });
+  const result = await response.json();
+
+  assert.equal(response.status, 422);
+  assert.match(result.error, /빈 피드/);
+});
+
+test('잘못된 아카이브 날짜는 DB 변경 전에 거부한다', async () => {
+  const { env } = envWith(null);
+  const response = await onRequest({
+    request: new Request('https://example.test/api/keyword-feeds/blog', {
+      method: 'PUT',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ snapshotDate: '31-07-2026', archiveOnly: true, items: [{ topic: '복구 항목', score: 1 }] }),
+    }),
+    env,
+  });
+
+  assert.equal(response.status, 400);
+});

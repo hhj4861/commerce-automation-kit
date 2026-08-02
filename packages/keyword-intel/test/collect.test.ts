@@ -13,7 +13,12 @@ vi.mock('../src/adapters/naver-client.js', async (importOriginal) => {
   return { ...actual, searchShop: vi.fn(), searchTrend: vi.fn(), shoppingCategoryKeywords: vi.fn() };
 });
 
-import { collectSignals, isWholesaleUnreachable, type CollectDeps } from '../src/cli/collect.js';
+import {
+  collectSignals,
+  isWholesaleFailure,
+  isWholesaleUnreachable,
+  type CollectDeps,
+} from '../src/cli/collect.js';
 import type { IntelBatch } from '@cak/contracts';
 import {
   searchShop,
@@ -680,5 +685,26 @@ describe('isWholesaleUnreachable — 전량 미도달 판정(크론 재시도 �
     // 실제 collect 가 만든 reason 에 [코드] 태그가 붙어 있어야 판정이 성립한다.
     expect(batch.failures.every((f) => f.reason.includes('[UND_ERR_CONNECT_TIMEOUT]'))).toBe(true);
     expect(isWholesaleUnreachable(batch)).toBe(true);
+  });
+});
+
+describe('isWholesaleFailure — 빈 최신 피드 게시 방지', () => {
+  const batch = (requested: number, signals: number): IntelBatch => ({
+    runId: 'r',
+    requestedKeywords: Array.from({ length: requested }, (_, i) => `keyword-${i}`),
+    signals: Array.from({ length: signals }, () => ({})) as unknown as IntelBatch['signals'],
+    failures: [],
+    callsSpent: { naver_search_shop: 0, naver_datalab_search: 0, naver_datalab_shopping: 0 },
+    startedAt: 's',
+    finishedAt: 'f',
+  });
+
+  it('요청은 있지만 신호가 0건이면 게시 불가 전량 실패다', () => {
+    expect(isWholesaleFailure(batch(182, 0))).toBe(true);
+  });
+
+  it('신호가 하나라도 있거나 요청이 없으면 전량 실패가 아니다', () => {
+    expect(isWholesaleFailure(batch(182, 1))).toBe(false);
+    expect(isWholesaleFailure(batch(0, 0))).toBe(false);
   });
 });

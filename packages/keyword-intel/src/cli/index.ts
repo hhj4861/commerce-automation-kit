@@ -18,7 +18,7 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { collectSignals, isWholesaleUnreachable } from './collect.js';
+import { collectSignals, isWholesaleFailure, isWholesaleUnreachable } from './collect.js';
 import { openDb } from '../store/db.js';
 
 // .env 자동 로드(CLI 전용, Node 20.12+ 내장) — cwd 가 아닌 "패키지 루트" 기준(DB_PATH 와 동일 원칙).
@@ -113,6 +113,12 @@ async function main(): Promise<void> {
           `\n🚨 전량 미도달 실패 ${batch.failures.length}건 — 네트워크(DNS) 미준비 추정. exit 75 로 종료(래퍼가 재시도).`,
         );
         process.exit(75);
+      }
+      if (isWholesaleFailure(batch)) {
+        console.error(
+          `\n🚨 수집 전량 실패 ${batch.failures.length}건 — 빈 피드를 게시하지 않도록 실패 종료합니다. API 권한·쿼터·오류 내역을 확인하세요.`,
+        );
+        process.exit(1);
       }
       break;
     }

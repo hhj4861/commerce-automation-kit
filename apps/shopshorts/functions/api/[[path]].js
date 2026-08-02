@@ -521,26 +521,36 @@ export async function onRequest(context) {
         score: Math.round(Number(it?.score ?? it?.opportunity ?? it?.blogScore) || 0),
         payload: it,
       })).filter((it) => it.topic.length > 0 && it.topic.length <= 100);
+      if (items.length === 0) {
+        return json({ error: '빈 피드는 기존 최신 데이터와 아카이브를 보호하기 위해 게시할 수 없습니다.' }, 422);
+      }
       const now = new Date().toISOString();
-      const snapshotDate = new Date(Date.now() + 9 * 3600000).toISOString().slice(0, 10);
+      const requestedDate = body.snapshotDate == null ? '' : String(body.snapshotDate);
+      if (requestedDate && !/^\d{4}-\d{2}-\d{2}$/.test(requestedDate)) {
+        return json({ error: 'snapshotDate는 YYYY-MM-DD 형식이어야 합니다.' }, 400);
+      }
+      const snapshotDate = requestedDate || new Date(Date.now() + 9 * 3600000).toISOString().slice(0, 10);
+      const archiveOnly = body.archiveOnly === true;
       const stmts = [
-        env.DB.prepare('DELETE FROM keyword_feeds WHERE channel = ?').bind(channel),
         env.DB.prepare('DELETE FROM keyword_feed_archive WHERE channel = ? AND snapshot_date = ?')
           .bind(channel, snapshotDate),
       ];
+      if (!archiveOnly) {
+        stmts.unshift(env.DB.prepare('DELETE FROM keyword_feeds WHERE channel = ?').bind(channel));
+      }
       for (const it of items) {
-        stmts.push(
-          env.DB.prepare(
+        if (!archiveOnly) {
+          stmts.push(env.DB.prepare(
             'INSERT INTO keyword_feeds(channel, topic, score, payload, updated_at) VALUES (?, ?, ?, ?, ?)',
-          ).bind(channel, it.topic, it.score, JSON.stringify(it.payload), now),
-          env.DB.prepare(
-            'INSERT INTO keyword_feed_archive(snapshot_date, channel, topic, score, payload, updated_at) ' +
-            'VALUES (?, ?, ?, ?, ?, ?)',
-          ).bind(snapshotDate, channel, it.topic, it.score, JSON.stringify(it.payload), now),
-        );
+          ).bind(channel, it.topic, it.score, JSON.stringify(it.payload), now));
+        }
+        stmts.push(env.DB.prepare(
+          'INSERT INTO keyword_feed_archive(snapshot_date, channel, topic, score, payload, updated_at) ' +
+          'VALUES (?, ?, ?, ?, ?, ?)',
+        ).bind(snapshotDate, channel, it.topic, it.score, JSON.stringify(it.payload), now));
       }
       await env.DB.batch(stmts);
-      return json({ ok: true, channel, count: items.length, snapshotDate, updatedAt: now });
+      return json({ ok: true, channel, count: items.length, snapshotDate, archiveOnly, updatedAt: now });
     }
     if (feedMatch && method === 'GET') {
       const channel = feedMatch[1];
