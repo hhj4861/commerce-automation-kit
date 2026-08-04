@@ -1369,8 +1369,12 @@ function copyResearchText(t) {
 function openObserveWindow(platform, term) {
   const url = RESEARCH_URLS[platform](term);
   const left = Math.max(0, (window.screen?.availWidth ?? 1400) - 440);
-  const win = window.open(url, 'ss-observe', `width=420,height=760,left=${left},top=60,noopener`);
+  // 주의: features 에 noopener 를 넣으면 크롬이 크기 지정을 무시하고 일반 탭으로 연다 —
+  // 크기 지정 팝업으로 열고 opener 는 코드로 끊는다(역방향 내비게이션 방지).
+  const win = window.open(url, 'ss-observe', `width=420,height=760,left=${left},top=60,resizable=yes,scrollbars=yes`);
   if (!win) { showToast('팝업이 차단됐어요 — 브라우저에서 이 사이트의 팝업을 허용해 주세요.'); return; }
+  try { win.opener = null; } catch {}
+  try { win.focus(); } catch {}
   showToast(`${platform}에서 “${term}” 관찰 창을 열었어요.`);
 }
 
