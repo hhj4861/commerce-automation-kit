@@ -601,6 +601,15 @@ export async function onRequest(context) {
           'VALUES (?, ?, ?, ?, ?, ?)',
         ).bind(snapshotDate, channel, it.topic, it.score, JSON.stringify(it.payload), now));
       }
+      // 트렌드 피드 갱신 시 상위 키워드의 현지 검색어 변환을 미리 대기열에 넣는다 —
+      // Claude 세션 모니터가 클릭 전에 생성해두므로 리서치 패널이 항상 즉시 뜬다(지연 체감 제거).
+      if (channel === 'trend' && !archiveOnly) {
+        for (const it of items.slice(0, 10)) {
+          stmts.push(env.DB.prepare(
+            "INSERT INTO keyword_research (topic, status, requested_at) VALUES (?1, 'pending', ?2) ON CONFLICT(topic) DO NOTHING",
+          ).bind(it.topic, now));
+        }
+      }
       await env.DB.batch(stmts);
       return json({ ok: true, channel, count: items.length, snapshotDate, archiveOnly, updatedAt: now });
     }
