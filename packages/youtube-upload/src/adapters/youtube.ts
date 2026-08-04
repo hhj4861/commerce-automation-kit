@@ -79,8 +79,11 @@ export async function searchShorts(
   auth: OAuthClient | string, // OAuth 클라이언트 또는 API 키(검색은 키만으로 가능·만료 없음)
   query: string,
   maxResults = 9,
+  opts: { order?: 'viewCount' | 'date' | 'relevance'; publishedAfterDays?: number } = {},
 ): Promise<{ id: string; title: string }[]> {
   const youtube = google.youtube({ version: 'v3', auth });
+  // 관찰 기준: 최근 N일(기본 90일) 안에서 조회수순 — "검증된 최신 연출"을 본다
+  const days = opts.publishedAfterDays ?? 90;
   const res = await youtube.search.list({
     part: ['snippet'],
     q: query,
@@ -88,7 +91,8 @@ export async function searchShorts(
     videoDuration: 'short',
     regionCode: 'KR',
     relevanceLanguage: 'ko',
-    order: 'relevance',
+    order: opts.order ?? 'viewCount',
+    publishedAfter: new Date(Date.now() - days * 864e5).toISOString(),
     maxResults,
   });
   return (res.data.items ?? [])

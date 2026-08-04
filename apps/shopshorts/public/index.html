@@ -373,12 +373,25 @@
   .affiliate-box { border: 1px solid var(--line); background: #fff; border-radius: 10px; padding: 10px; }
   .affiliate-url { color: var(--muted); font-size: 10px; line-height: 1.5; word-break: break-all; margin-bottom: 8px; }
   .affiliate-url.missing { color: var(--yellow); }
-  .affiliate-input-row { display:grid; grid-template-columns:1fr auto; gap:7px; margin-bottom:8px; }
+  .affiliate-saved-list { display:grid; gap:7px; margin-bottom:9px; }
+  .affiliate-saved-row {
+    display:grid; grid-template-columns:minmax(0,1fr) auto; gap:8px; align-items:center;
+    padding:9px 10px; border:1px solid var(--line); border-radius:9px; background:var(--surface-soft);
+  }
+  .affiliate-saved-row.primary { border-left:3px solid var(--mint); padding-left:8px; background:var(--mint-soft); }
+  .affiliate-saved-main { min-width:0; }
+  .affiliate-saved-title { display:flex; align-items:center; gap:6px; font-size:10px; font-weight:700; }
+  .affiliate-saved-main a { display:block; margin-top:3px; color:var(--muted); font-size:9px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .affiliate-primary { padding:2px 5px; border-radius:5px; background:var(--mint); color:#fff; font-size:8px; letter-spacing:.04em; }
+  .affiliate-link-actions { display:flex; gap:4px; }
+  .affiliate-link-actions button { border:1px solid var(--line); border-radius:7px; background:#fff; color:var(--muted); padding:5px 7px; font-size:9px; cursor:pointer; }
+  .affiliate-link-actions button.danger:hover { color:var(--red); border-color:#e8b5ac; }
+  .affiliate-input-row { display:grid; grid-template-columns:minmax(105px,.5fr) minmax(0,1.4fr) auto; gap:7px; margin-bottom:8px; }
   .affiliate-input-row input, .affiliate-comment {
     width:100%; box-sizing:border-box; border:1px solid var(--line); border-radius:8px; background:#fafbf8;
     color:var(--ink); font:inherit; font-size:11px; padding:9px 10px; outline:none;
   }
-  .affiliate-input-row input:focus { border-color:var(--green); box-shadow:0 0 0 3px rgba(50,113,83,.09); }
+  .affiliate-input-row input:focus { border-color:var(--mint); box-shadow:0 0 0 3px rgba(50,113,83,.09); }
   .affiliate-comment { min-height:82px; resize:vertical; line-height:1.55; margin-top:7px; }
   .comment-head { display:flex; align-items:center; justify-content:space-between; margin-top:11px; color:var(--muted); font-size:10px; }
   .finding-list { margin: 8px 0 0; padding-left: 17px; color: var(--red); font-size: 10px; line-height: 1.6; }
@@ -408,6 +421,8 @@
       display: flex; position: sticky; top: 0; z-index: 10; overflow-x: auto; gap: 5px;
       padding: 8px 12px; background: rgba(32,35,31,.97); scrollbar-width: none;
     }
+    .affiliate-input-row { grid-template-columns:1fr auto; }
+    .affiliate-input-row [data-affiliate-label] { grid-column:1 / -1; }
     .mobile-nav .nav-item { flex: 0 0 auto; height: 35px; padding: 0 10px; font-size: 11px; }
     main { padding: 0 18px 45px; }
     .topbar { display: none; }
@@ -506,6 +521,9 @@
   .observe-player iframe { width:100%; aspect-ratio:9/16; border:0; border-radius:12px; background:#000; display:block; }
   .observe-back { margin:8px auto 0; display:flex; align-items:center; gap:6px; border:1px solid var(--line); background:#fff; border-radius:9px; padding:7px 12px; font-size:12px; cursor:pointer; }
   .observe-empty { color:var(--muted); font-size:12px; text-align:center; padding:28px 14px; line-height:1.7; }
+  .observe-tabs { flex:none; display:flex; gap:4px; background:#2a2e29; padding:6px 8px; }
+  .observe-tabs button { flex:1; border:0; border-radius:8px; background:transparent; color:#aeb3ab; font-size:10.5px; padding:6px 2px; cursor:pointer; }
+  .observe-tabs button.on { background:#fff; color:var(--ink); font-weight:700; }
   .observe-foot { flex:none; border-top:1px solid var(--line); background:#fff; padding:10px 12px; }
   .observe-foot-label { color:var(--faint); font-size:9.5px; font-weight:700; letter-spacing:.08em; margin-bottom:7px; }
   .observe-pops { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; }
@@ -678,21 +696,27 @@ function sampleJobs() {
   ];
 }
 const isPlaceholder = u => /PLACEHOLDER|\/a\/sample/.test(u || '');
-const affiliateComment = job => {
+const affiliateLinksFor = job => {
+  const saved = Array.isArray(job.affiliateLinks)
+    ? job.affiliateLinks.filter(link => link?.id && link?.url && !isPlaceholder(link.url))
+    : [];
+  if (saved.length) return saved;
   const url = job.brief?.affiliateUrl || '';
-  if (!url || isPlaceholder(url)) return '';
-  const disclosure = /coupang|coupa\.ng/.test(url)
-    ? '이 포스팅은 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다.'
-    : '이 링크를 통한 구매 시 일정액의 수수료를 제공받을 수 있습니다.';
-  return job.affiliateComment || `제품 보러가기: ${url}\n\n${disclosure}`;
+  if (!url || isPlaceholder(url)) return [];
+  const partner = AFFILIATE_PARTNERS.find(p => {
+    try { return p.host.test(new URL(url).hostname); } catch { return false; }
+  });
+  return [{id:`legacy-${partner?.key || 'link'}`, platform:partner?.key || 'naverConnect', label:'제품 보러가기', url, primary:true}];
 };
-const affiliateLinkFor = (job, partner) => {
-  const stored = job.platformLinks?.[partner.key];
-  if (stored && !isPlaceholder(stored)) return stored;
-  const primary = job.brief?.affiliateUrl || '';
-  if (!primary || isPlaceholder(primary)) return '';
-  try { return partner.host.test(new URL(primary).hostname) ? primary : ''; }
-  catch { return ''; }
+const affiliateComment = job => {
+  const links = affiliateLinksFor(job);
+  if (!links.length) return '';
+  if (job.affiliateComment && Array.isArray(job.affiliateLinks)) return job.affiliateComment;
+  const rows = links.map(link => `- ${link.label}: ${link.url}`).join('\n');
+  const disclosures = [...new Set(links.map(link => link.platform === 'coupang'
+    ? '이 포스팅은 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다.'
+    : '이 링크를 통한 구매 시 일정액의 수수료를 제공받을 수 있습니다.'))];
+  return `제품 구매 링크\n${rows}\n\n${disclosures.join('\n')}`;
 };
 const categoryClass = j => j.brief?.category === '뷰티' ? 'beauty' : j.brief?.category === '식품' ? 'food' : 'home';
 const fmtTime = value => {
@@ -952,6 +976,7 @@ function renderDetail(force=false) {
   const hasAction = ['draft','generated','assembled','review','rejected'].includes(j.status) && !['requested','running'].includes(j.finalize?.state);
   const findings = j.lintReport?.findings || [];
   const affiliate = j.brief.affiliateUrl || '';
+  const affiliateLinks = affiliateLinksFor(j);
   document.getElementById('detail').innerHTML = `
     <div class="detail-head">
       <div class="detail-kicker"><span>콘텐츠 상세</span><span class="status-pill">${st.label}</span></div>
@@ -985,10 +1010,23 @@ function renderDetail(force=false) {
         <div class="detail-section">
           <div class="detail-label">AFFILIATE LINK</div>
           <div class="affiliate-box">
-            <div class="affiliate-url ${isPlaceholder(affiliate) ? 'missing' : ''}">${affiliate ? (isPlaceholder(affiliate) ? '실제 링크로 교체가 필요해요 · ' : '') + affiliate : '아직 제휴 링크가 없어요.'}</div>
+            <div class="affiliate-url ${affiliateLinks.length ? '' : 'missing'}">${affiliateLinks.length ? `${affiliateLinks.length}개 링크 · 대표 링크는 영상 고지와 호환 데이터에 사용됩니다.` : (affiliate && isPlaceholder(affiliate) ? '샘플 링크를 실제 제휴 링크로 교체해 주세요.' : '아직 제휴 링크가 없어요.')}</div>
+            <div class="affiliate-saved-list">
+              ${affiliateLinks.map(link => `<div class="affiliate-saved-row ${link.primary ? 'primary' : ''}">
+                <div class="affiliate-saved-main">
+                  <div class="affiliate-saved-title">${escapeHtml(link.label)} ${link.primary ? '<span class="affiliate-primary">대표</span>' : ''}</div>
+                  <a href="${escapeHtml(link.url)}" target="_blank" rel="noopener">${escapeHtml(link.url)}</a>
+                </div>
+                <div class="affiliate-link-actions">
+                  ${link.primary ? '' : `<button data-affiliate-primary="${escapeHtml(link.id)}">대표로</button>`}
+                  <button class="danger" data-affiliate-delete="${escapeHtml(link.id)}">삭제</button>
+                </div>
+              </div>`).join('')}
+            </div>
             <div class="affiliate-input-row">
-              <input data-affiliate-input type="url" inputmode="url" placeholder="발급한 제휴 링크를 여기에 붙여넣으세요" value="${isPlaceholder(affiliate) ? '' : affiliate}">
-              <button class="tool-btn warm" data-save-link>저장</button>
+              <input data-affiliate-label maxlength="60" placeholder="링크 이름 (예: 본품)">
+              <input data-affiliate-input type="url" inputmode="url" placeholder="발급한 제휴 링크 붙여넣기">
+              <button class="tool-btn warm" data-save-link ${affiliateLinks.length >= 10 ? 'disabled' : ''}>링크 추가</button>
             </div>
             <div class="detail-tools">
               <button class="tool-btn" data-tool="coupang">쿠팡 파트너스</button>
@@ -996,7 +1034,7 @@ function renderDetail(force=false) {
               <button class="tool-btn" data-tool="deeplink">딥링크 변환</button>
             </div>
             <div class="comment-head"><span>댓글 반영 미리보기</span><button class="tool-btn" data-copy-comment ${affiliateComment(j) ? '' : 'disabled'}>댓글 복사</button></div>
-            <textarea class="affiliate-comment" readonly placeholder="링크를 저장하면 고지 문구가 포함된 댓글이 자동 생성됩니다.">${affiliateComment(j)}</textarea>
+            <textarea class="affiliate-comment" readonly placeholder="링크를 추가하면 고지 문구가 포함된 댓글이 자동 생성됩니다.">${escapeHtml(affiliateComment(j))}</textarea>
           </div>
         </div>
         <div class="detail-section">
@@ -1017,8 +1055,9 @@ function renderDetail(force=false) {
   document.querySelectorAll('[data-tool]').forEach(b => b.onclick = () => runTool(b.dataset.tool, j));
   document.querySelector('[data-save-link]')?.addEventListener('click', () => {
     const url = document.querySelector('[data-affiliate-input]')?.value.trim();
+    const label = document.querySelector('[data-affiliate-label]')?.value.trim();
     if (!url) return showToast('발급한 제휴 링크를 입력해 주세요.');
-    saveAffiliateLink(j, url);
+    saveAffiliateLink(j, url, label);
   });
   document.querySelector('[data-affiliate-input]')?.addEventListener('keydown', e => {
     if (e.key === 'Enter') document.querySelector('[data-save-link]')?.click();
@@ -1029,13 +1068,31 @@ function renderDetail(force=false) {
     try { await navigator.clipboard.writeText(text); showToast('댓글 문구를 복사했어요.'); }
     catch { showToast('댓글을 선택해서 복사해 주세요.'); }
   });
+  document.querySelectorAll('[data-affiliate-primary]').forEach(b => b.onclick = async () => {
+    b.disabled = true;
+    try {
+      await api(`/api/jobs/${j.brief.id}/links/${encodeURIComponent(b.dataset.affiliatePrimary)}/primary`, {method:'POST'});
+      showToast('대표 링크를 변경했어요.');
+      await load(true);
+    } catch (e) { showToast('대표 링크 변경 실패: ' + e.message); b.disabled = false; }
+  });
+  document.querySelectorAll('[data-affiliate-delete]').forEach(b => b.onclick = async () => {
+    const link = affiliateLinks.find(link => link.id === b.dataset.affiliateDelete);
+    if (!link || !confirm(`“${link.label}” 링크를 삭제할까요?`)) return;
+    b.disabled = true;
+    try {
+      await api(`/api/jobs/${j.brief.id}/links/${encodeURIComponent(link.id)}`, {method:'DELETE'});
+      showToast('제휴 링크를 삭제했어요.');
+      await load(true);
+    } catch (e) { showToast('링크 삭제 실패: ' + e.message); b.disabled = false; }
+  });
 }
 
-async function saveAffiliateLink(j, url) {
+async function saveAffiliateLink(j, url, label='') {
   const platform = /coupang|coupa\.ng/.test(url) ? 'coupang' : 'naverConnect';
   try {
-    const r = await api(`/api/jobs/${j.brief.id}/set-link`, {method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({platform,url})});
-    showToast('링크를 저장하고 댓글 문구에 반영했어요' + (r.lint ? ` · lint ${r.lint.ok ? '통과' : '위반'}` : ''));
+    const r = await api(`/api/jobs/${j.brief.id}/set-link`, {method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({platform,url,label})});
+    showToast('링크를 추가하고 댓글 문구에 반영했어요' + (r.lint ? ` · lint ${r.lint.ok ? '통과' : '위반'}` : ''));
     await load(true);
   } catch (e) { showToast('링크 저장 실패: ' + e.message); }
 }
@@ -1321,7 +1378,9 @@ function renderPage(name) {
   if (name === 'links') {
     const linkedIds = new Set();
     const partnerSections = AFFILIATE_PARTNERS.map(partner => {
-      const rows = state.jobs.map(job => ({job, link:affiliateLinkFor(job, partner)})).filter(row => row.link);
+      const rows = state.jobs.flatMap(job => affiliateLinksFor(job)
+        .filter(link => link.platform === partner.key)
+        .map(link => ({job, link})));
       rows.forEach(row => linkedIds.add(row.job.brief.id));
       return `<section class="affiliate-partner">
         <div class="affiliate-partner-head">
@@ -1332,9 +1391,9 @@ function renderPage(name) {
           <span class="affiliate-count">${rows.length}개</span>
         </div>
         ${rows.length ? rows.map(({job, link}) => `<div class="affiliate-link-row">
-          <strong>${escapeHtml(job.brief.productName)}</strong>
-          <a href="${escapeHtml(link)}" target="_blank" rel="noopener">${escapeHtml(link)}</a>
-          <button data-page-link="${escapeHtml(job.brief.id)}">링크 변경</button>
+          <strong>${escapeHtml(job.brief.productName)} · ${escapeHtml(link.label)}${link.primary ? ' (대표)' : ''}</strong>
+          <a href="${escapeHtml(link.url)}" target="_blank" rel="noopener">${escapeHtml(link.url)}</a>
+          <button data-page-link="${escapeHtml(job.brief.id)}">링크 관리</button>
         </div>`).join('') : '<div class="empty-page">이 제휴사에 연결된 콘텐츠가 없습니다.</div>'}
       </section>`;
     }).join('');
@@ -1373,6 +1432,7 @@ const RESEARCH_URLS = {
   '샤오홍슈': t => 'https://www.xiaohongshu.com/search_result?keyword=' + encodeURIComponent(t),
   '도우인': t => 'https://www.douyin.com/search/' + encodeURIComponent(t),
   '유튜브 쇼츠': t => 'https://www.youtube.com/results?search_query=' + encodeURIComponent(t + ' shorts'),
+  '릴스': t => 'https://www.instagram.com/explore/tags/' + encodeURIComponent(t.replace(/\s+/g, '')) + '/',
 };
 const researchState = { topic:null, score:undefined, timer:null, translations:null, memo:'', seq:0, polls:0 };
 
@@ -1416,11 +1476,13 @@ function renderResearchBody(translations) {
     langs.innerHTML =
       group('샤오홍슈 · 중국어', translations.xhs) + group('도우인 · 중국어', translations.dy) + group('TikTok · 영어', translations.en);
     const ytCount = (translations.youtube ?? []).length;
-    opens.innerHTML = `<button class="open-btn" data-observe-panel style="border-color:var(--brand);color:var(--brand)">👁 관찰 창 열기 <span>페이지 안 <b>▸</b></span></button>
-      <div class="memo-note">${ytCount ? `유튜브 쇼츠 ${ytCount}편을 페이지 안에서 바로 재생합니다.` : '유튜브 쇼츠 그리드는 수집되는 대로 표시됩니다.'} 틱톡·샤오홍슈·도우인은 창 하단 버튼(팝업)으로 봅니다.</div>`;
+    const tabs = [['유튜브 쇼츠', ytCount ? `그리드 ${ytCount}편` : '그리드'], ['릴스', '팝업'], ['TikTok', '팝업'], ['샤오홍슈', '팝업'], ['도우인', '팝업']];
+    opens.innerHTML = tabs.map(([pf, hint]) =>
+      `<button class="open-btn" data-observe-tab="${pf}">${pf} 검색 <span>관찰 창 · ${hint} <b>▸</b></span></button>`).join('') +
+      `<div class="memo-note">유튜브는 페이지 안 재생(공식 임베드). 나머지는 검색 결과 임베드를 플랫폼이 막아 관찰 창에서 팝업으로 엽니다.</div>`;
   }
   document.querySelectorAll('[data-copy-term]').forEach(b => b.onclick = () => copyResearchText(b.dataset.copyTerm));
-  document.querySelector('[data-observe-panel]')?.addEventListener('click', openObservePanel);
+  document.querySelectorAll('[data-observe-tab]').forEach(b => b.onclick = () => openObservePanel(b.dataset.observeTab));
 }
 
 // ---- 관찰 창 (인페이지 오버레이) — 재렌더에 안전하게 body 직속으로 1회 생성 ----
@@ -1431,15 +1493,50 @@ function ensureObserveEl() {
   el.id = 'observePanel'; el.className = 'observe';
   el.innerHTML = `
     <div class="observe-head"><b>관찰 창</b><small id="observeTerm"></small><button class="observe-close" aria-label="닫기">✕</button></div>
-    <div class="observe-body" id="observeBody"></div>
-    <div class="observe-foot">
-      <div class="observe-foot-label">현지 플랫폼 직접 보기 · 팝업</div>
-      <div class="observe-pops" id="observePops"></div>
-      <div class="observe-note">틱톡·샤오홍슈·도우인은 페이지 내 표시를 플랫폼이 차단해 작은 팝업 창으로 열립니다. 유튜브는 공식 임베드라 이 창 안에서 재생됩니다 — 어느 쪽이든 관찰만, 수집 없음.</div>
-    </div>`;
+    <div class="observe-tabs" id="observeTabs"></div>
+    <div class="observe-body" id="observeBody"></div>`;
   document.body.appendChild(el);
   el.querySelector('.observe-close').onclick = () => el.classList.remove('show');
   return el;
+}
+
+const OBSERVE_PLATFORMS = ['유튜브 쇼츠', '릴스', 'TikTok', '샤오홍슈', '도우인'];
+function observeTermFor(platform) {
+  const t = researchState.translations ?? {};
+  if (platform === 'TikTok') return (t.en ?? [])[0] ?? researchState.topic;
+  if (platform === '샤오홍슈') return (t.xhs ?? [])[0] ?? researchState.topic;
+  if (platform === '도우인') return (t.dy ?? [])[0] ?? researchState.topic;
+  return researchState.topic;
+}
+
+function renderObserveTab(platform) {
+  const el = document.getElementById('observePanel');
+  el.dataset.tab = platform;
+  document.querySelectorAll('#observeTabs button').forEach(b =>
+    b.classList.toggle('on', b.dataset.tab === platform));
+  const body = document.getElementById('observeBody');
+  if (platform === '유튜브 쇼츠') { renderObserveGrid(); return; }
+  const term = observeTermFor(platform);
+  const why = platform === '릴스'
+    ? '인스타그램은 검색 결과 임베드를 차단합니다. 공식 해시태그 검색 API(메타 앱 심사)가 승인되면 이 자리에 그리드가 뜹니다 — 예약 슬롯.'
+    : `${platform}는 검색 결과를 페이지 안에 넣는 공식 통로가 없어(임베드 차단 · 검색 API 미제공) 팝업 창으로 봅니다. 긁어와서 표시하는 방식은 저작권·약관 금지선이라 쓰지 않습니다.`;
+  body.innerHTML = `<div class="observe-empty">
+      <div style="font-size:26px;margin-bottom:8px">🪟</div>
+      “${escapeHtml(term)}”<br>${why}<br>
+      <button class="observe-back" data-obs-open style="margin-top:12px;border-color:var(--brand);color:var(--brand)">${platform} 팝업으로 열기 ↗</button>
+    </div>`;
+  body.querySelector('[data-obs-open]').onclick = () => openObserveWindow(platform, term);
+}
+
+function openObservePanel(platform = '유튜브 쇼츠') {
+  if (!researchState.topic) return;
+  const el = ensureObserveEl();
+  document.getElementById('observeTerm').textContent = '“' + researchState.topic + '”';
+  document.getElementById('observeTabs').innerHTML = OBSERVE_PLATFORMS.map(pf =>
+    `<button data-tab="${pf}">${pf === '유튜브 쇼츠' ? '유튜브' : pf}</button>`).join('');
+  document.querySelectorAll('#observeTabs button').forEach(b => b.onclick = () => renderObserveTab(b.dataset.tab));
+  renderObserveTab(platform);
+  el.classList.add('show');
 }
 
 function renderObserveGrid() {
@@ -1456,7 +1553,7 @@ function renderObserveGrid() {
     };
     return;
   }
-  body.innerHTML = `<div class="observe-grid">${yt.map(v =>
+  body.innerHTML = `<div class="memo-note" style="margin:0 2px 8px">유튜브 쇼츠 · 최근 90일 · 조회수순</div><div class="observe-grid">${yt.map(v =>
     `<button class="observe-thumb" data-yt="${v.id}"><img loading="lazy" src="https://i.ytimg.com/vi/${v.id}/mqdefault.jpg" alt=""><span>${escapeHtml(v.title).slice(0, 40)}</span></button>`).join('')}</div>`;
   body.querySelectorAll('[data-yt]').forEach(b => b.onclick = () => {
     body.innerHTML = `<div class="observe-player"><iframe src="https://www.youtube.com/embed/${b.dataset.yt}?autoplay=1&playsinline=1&rel=0" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe></div>
@@ -1465,22 +1562,7 @@ function renderObserveGrid() {
   });
 }
 
-function openObservePanel() {
-  if (!researchState.topic) return;
-  const el = ensureObserveEl();
-  document.getElementById('observeTerm').textContent = '“' + researchState.topic + '”';
-  const t = researchState.translations ?? {};
-  const pops = [
-    ['TikTok', (t.en ?? [])[0] ?? researchState.topic],
-    ['샤오홍슈', (t.xhs ?? [])[0] ?? researchState.topic],
-    ['도우인', (t.dy ?? [])[0] ?? researchState.topic],
-  ];
-  document.getElementById('observePops').innerHTML = pops.map(([pf, term]) =>
-    `<button class="observe-pop" data-obs-pop="${pf}" data-term="${escapeHtml(term)}">${pf} ↗</button>`).join('');
-  document.querySelectorAll('[data-obs-pop]').forEach(b => b.onclick = () => openObserveWindow(b.dataset.obsPop, b.dataset.term));
-  renderObserveGrid();
-  el.classList.add('show');
-}
+
 
 async function pollResearch() {
   // 종료 조건: 패널이 닫혔거나(topic null) 트렌드 페이지를 떠났거나(DOM 부재) 시도 상한 도달
@@ -1663,7 +1745,10 @@ function bindPageActions(name) {
   restoreResearchPanel();
   document.querySelectorAll('[data-page-link]').forEach(b => b.onclick = () => {
     const job = state.jobs.find(j => j.brief.id === b.dataset.pageLink);
-    if (job) runTool('set-link', job).then(() => renderPage('links'));
+    if (!job) return;
+    state.selected = job.brief.id;
+    navigate('dashboard'); renderJobs(); renderDetail(true);
+    document.querySelector('[data-section="content"]')?.scrollIntoView({behavior:'smooth',block:'start'});
   });
   document.querySelectorAll('[data-setting]').forEach(b => b.onclick = () => {
     b.classList.toggle('on');
