@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS draft_requests (
   opportunity INTEGER,
   status TEXT NOT NULL DEFAULT 'pending',
   requested_at TEXT NOT NULL
+  -- memo 컬럼은 migrations/0004 의 ALTER 로 추가된다(여기 넣으면 신규 DB 에서 중복 컬럼 충돌)
 );
 
 -- 이전 클라이언트 호환용. 신규 데이터는 keyword_feeds 에 채널별로 저장한다.
@@ -68,4 +69,14 @@ CREATE INDEX IF NOT EXISTS idx_blog_poc_requests_requested
 CREATE TABLE IF NOT EXISTS meta (
   key TEXT PRIMARY KEY,
   value TEXT NOT NULL
+);
+
+-- 소재 리서치: 키워드별 현지 검색어 변환 캐시(검색어 문자열만 — 콘텐츠 수집 없음).
+-- 변환 생성은 Claude 세션(모니터)이 pending 감지 → ready 로 채움.
+CREATE TABLE IF NOT EXISTS keyword_research (
+  topic TEXT PRIMARY KEY,
+  data TEXT,                                -- {"xhs":[],"dy":[],"en":[]} JSON (NULL = 생성 대기)
+  status TEXT NOT NULL DEFAULT 'pending',   -- pending | ready
+  requested_at TEXT NOT NULL,
+  updated_at TEXT
 );
