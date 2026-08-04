@@ -5,6 +5,7 @@ import {
   summarizeShoppingTrend,
   scoreOpportunity,
   scoreBlog,
+  EMPTY_COMPETITION,
 } from '../src/core/analyzer.js';
 import type {
   ShopSearchResult,
@@ -131,5 +132,21 @@ describe('scoreBlog — 블로그용(절대 검색량×승산)', () => {
     const huge = scoreBlog({ monthlyPc: 9_000_000, monthlyMobile: 9_000_000, compIdx: 'low' });
     expect(huge.blogScore).toBeLessThanOrEqual(100);
     expect(huge.blogScore).toBeGreaterThanOrEqual(0);
+  });
+});
+
+describe('scoreOpportunity — 쇼핑 검색 미수집(soft-fail) 보수화', () => {
+  it('competitionKnown=false 면 경쟁항 기여 0 · 신뢰도 상한 0.5', () => {
+    const trend = { latest: 100, series: [{ period: '2026-08-01', ratio: 100 }] };
+    const s = scoreOpportunity(EMPTY_COMPETITION, trend as never, false);
+    expect(s.opportunity).toBe(60); // demand*0.6 만 — 빈 시장 오독으로 부풀리지 않음
+    expect(s.confidence).toBeLessThanOrEqual(0.5);
+  });
+
+  it('competitionKnown 기본값(true)은 기존 산식 그대로', () => {
+    const trend = { latest: 100, series: [{ period: '2026-08-01', ratio: 100 }] };
+    const comp = { totalProducts: 1, priceLow: null, priceHigh: null, priceMedian: null, distinctSellers: 1, brandedRatio: 0 };
+    const s = scoreOpportunity(comp as never, trend as never);
+    expect(s.opportunity).toBe(100); // density 0 → penalty 0
   });
 });

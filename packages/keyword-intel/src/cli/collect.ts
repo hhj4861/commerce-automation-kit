@@ -22,6 +22,7 @@ import {
   type ShoppingInsightResult,
 } from '../adapters/naver-client.js';
 import {
+  EMPTY_COMPETITION,
   summarizeCompetition,
   summarizeTrend,
   summarizeShoppingTrend,
@@ -171,6 +172,8 @@ export async function collectSignals(
 
   const signals: KeywordSignal[] = [];
   const failures: IntelBatch['failures'] = [];
+  // 쇼핑 검색 soft-fail 키워드(신호는 저장, 경쟁 지표만 미수집) — silent drop 금지 원칙
+  const shopUnavailable: string[] = [];
   const callsSpent: Record<IntelSource, number> = {
     naver_search_shop: 0,
     naver_datalab_search: 0,
@@ -240,10 +243,29 @@ export async function collectSignals(
           return;
         }
         try {
-          const shop = await withRetry(
-            () => spend('naver_search_shop', () => searchShop(cred, kw, { display: 40, sort: 'sim' })),
-            { ...deps.retry, shouldRetry: retryable, onRetry: onRetry('search_shop', kw) },
-          );
+          // 쇼핑 검색 — 2026-08-04 실측: 앱 단위로 shop 만 SE05(404) 차단될 수 있다(타 검색·데이터랩 정상).
+          // 서버가 "응답한" 오류(NaverApiError/스키마 불일치)는 soft-fail 로 수집을 지속하고
+          // coverage.ok.naver_search_shop=false 로 투명화한다. 네트워크 미도달·예산 소진은
+          // 기존대로 하드 실패 경로(환불·부분 재수집 자가복구)를 태운다.
+          let shop: Awaited<ReturnType<typeof searchShop>> | null = null;
+          try {
+            shop = await withRetry(
+              () => spend('naver_search_shop', () => searchShop(cred, kw, { display: 40, sort: 'sim' })),
+              { ...deps.retry, shouldRetry: retryable, onRetry: onRetry('search_shop', kw) },
+            );
+          } catch (err) {
+            // 404(SE05)만 soft-fail — 500(일시 장애)·400(키워드 귀속→DLQ)·미도달(자가복구)의
+            // 기존 실패 의미론은 그대로 둔다. SE05 는 앱 단위 차단이라 재시도가 무의미하다.
+            if (err instanceof NaverApiError && err.status === 404) {
+              log.warn('SHOP_UNAVAILABLE', {
+                keyword: kw,
+                reason: err instanceof Error ? err.message : String(err),
+              });
+              shopUnavailable.push(kw);
+            } else {
+              throw err; // 미도달·예산 등 — 기존 실패 경로(환불/자가복구/DLQ 판정)
+            }
+          }
 
           // 트렌드는 한도가 더 빡빡하므로(D1-3 확정 1,000/일) 선택적 — 결측 시 계약이 null 표현
           let trendRaw = null;
@@ -322,9 +344,9 @@ export async function collectSignals(
             }
           }
 
-          const competition = summarizeCompetition(shop);
+          const competition = shop ? summarizeCompetition(shop) : EMPTY_COMPETITION;
           const trend = summarizeTrend(trendRaw);
-          const scores = scoreOpportunity(competition, trend);
+          const scores = scoreOpportunity(competition, trend, Boolean(shop));
           // catId 가 있으면(수집 시도했으면) shoppingTrend 를 실어 성패를 투명화(실패 시 latest=null).
           // catId 없으면 undefined(해당 소스 스코프 아님).
           const shoppingTrend = catId ? summarizeShoppingTrend(shoppingRaw, catId) : undefined;
@@ -338,12 +360,12 @@ export async function collectSignals(
             ...(shoppingTrend ? { shoppingTrend } : {}),
             coverage: {
               sources: [
-                'naver_search_shop',
+                ...(shop ? (['naver_search_shop'] as const) : []),
                 ...(trendRaw ? (['naver_datalab_search'] as const) : []),
                 ...(shoppingRaw ? (['naver_datalab_shopping'] as const) : []),
               ],
               ok: {
-                naver_search_shop: true,
+                naver_search_shop: Boolean(shop),
                 naver_datalab_search: Boolean(trendRaw),
                 ...(catId ? { naver_datalab_shopping: Boolean(shoppingRaw) } : {}),
               },
@@ -429,9 +451,17 @@ export async function collectSignals(
     runId,
     signals: signals.length,
     failures: failures.length,
+    ...(shopUnavailable.length > 0 ? { shopUnavailable: shopUnavailable.length } : {}),
     purgedExpired: purged,
     callsSpent,
   });
+  if (shopUnavailable.length > 0) {
+    // 사람 눈에 보이는 요약 한 줄 — 지표 저하를 조용히 넘기지 않는다
+    console.error(
+      `⚠️ 쇼핑 검색 미수집 ${shopUnavailable.length}건 — 트렌드 신호만 저장(경쟁 지표 null·점수 보수화). ` +
+        'shop API 차단/오류 해소 시 자동 복원.',
+    );
+  }
   return batch;
 }
 
