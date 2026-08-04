@@ -387,12 +387,64 @@ export async function onRequest(context) {
       const slug = topic.normalize('NFC').toLowerCase().replace(/[^a-z0-9가-힣]+/g, '-').replace(/^-+|-+$/g, '');
       const dup = await env.DB.prepare('SELECT slug FROM draft_requests WHERE slug = ?').bind(slug).first();
       if (dup) return json({ error: '이미 요청됨' }, 409);
-      await env.DB.prepare(
-        'INSERT INTO draft_requests (slug, topic, content_type, opportunity, status, requested_at) VALUES (?, ?, ?, ?, ?, ?)',
-      )
-        .bind(slug, topic, contentType, body.opportunity ?? null, 'pending', new Date().toISOString())
-        .run();
+      // 관찰 메모(소재 리서치에서 본 연출 기록) — 대본 작성 시 연출 참고로 전달
+      const memo = typeof body?.memo === 'string' && body.memo.trim() ? body.memo.trim().slice(0, 500) : null;
+      try {
+        await env.DB.prepare(
+          'INSERT INTO draft_requests (slug, topic, content_type, opportunity, status, requested_at, memo) VALUES (?, ?, ?, ?, ?, ?, ?)',
+        )
+          .bind(slug, topic, contentType, body.opportunity ?? null, 'pending', new Date().toISOString(), memo)
+          .run();
+      } catch {
+        // 마이그레이션 0004 미적용 D1 폴백 — memo 없이 저장(요청 자체는 유실 금지)
+        await env.DB.prepare(
+          'INSERT INTO draft_requests (slug, topic, content_type, opportunity, status, requested_at) VALUES (?, ?, ?, ?, ?, ?)',
+        )
+          .bind(slug, topic, contentType, body.opportunity ?? null, 'pending', new Date().toISOString())
+          .run();
+      }
       return json({ ok: true, slug }, 201);
+    }
+
+    // ---------- 소재 리서치: 현지 검색어 변환 캐시 (검색어 문자열만 — 콘텐츠 수집 없음) ----------
+    if (path === 'keyword-research' && method === 'GET') {
+      const topic = (url.searchParams.get('topic') ?? '').trim();
+      if (!topic) return json({ error: 'topic 필수' }, 400);
+      const row = await env.DB.prepare('SELECT data, status FROM keyword_research WHERE topic = ?').bind(topic).first();
+      if (!row) return json({ topic, status: 'none', translations: null });
+      return json({ topic, status: row.status, translations: row.data ? JSON.parse(row.data) : null });
+    }
+    if (path === 'keyword-research/request' && method === 'POST') {
+      const body = await readJson(request);
+      const topic = String(body?.topic ?? '').trim();
+      if (!topic || topic.length > 100) return json({ error: 'topic 필수(100자 이하)' }, 400);
+      await env.DB.prepare(
+        "INSERT INTO keyword_research (topic, status, requested_at) VALUES (?1, 'pending', ?2) ON CONFLICT(topic) DO NOTHING",
+      ).bind(topic, new Date().toISOString()).run();
+      return json({ ok: true });
+    }
+    if (path === 'keyword-research/pending' && method === 'GET') {
+      const { results } = await env.DB.prepare("SELECT topic FROM keyword_research WHERE status = 'pending'").all();
+      return json({ pending: results.map((r) => r.topic) });
+    }
+    if (path === 'keyword-research' && method === 'PUT') {
+      // 변환 생성자(Claude 세션·워커) 전용 — UI 는 request 만 사용
+      if (request.headers.get('x-shopshorts-worker') !== '1') {
+        return json({ error: '생성자 전용 엔드포인트(x-shopshorts-worker 헤더 필요)' }, 403);
+      }
+      const body = await readJson(request);
+      const topic = String(body?.topic ?? '').trim();
+      const t = body?.translations;
+      const strArr = (a) => Array.isArray(a) && a.every((x) => typeof x === 'string' && x.length <= 60);
+      if (!topic || !t || !strArr(t.xhs) || !strArr(t.dy) || !strArr(t.en)) {
+        return json({ error: 'topic + translations{xhs[],dy[],en[]} 필수(문자열 60자 이하)' }, 400);
+      }
+      const now = new Date().toISOString();
+      await env.DB.prepare(
+        "INSERT INTO keyword_research (topic, data, status, requested_at, updated_at) VALUES (?1, ?2, 'ready', ?3, ?3) " +
+          "ON CONFLICT(topic) DO UPDATE SET data = ?2, status = 'ready', updated_at = ?3",
+      ).bind(topic, JSON.stringify({ xhs: t.xhs.slice(0, 4), dy: t.dy.slice(0, 4), en: t.en.slice(0, 4) }), now).run();
+      return json({ ok: true });
     }
 
     const dr = path.match(/^draft-requests\/([a-z0-9가-힣-]+)\/done$/);
@@ -614,6 +666,7 @@ export async function onRequest(context) {
         items,
         requests: reqs.map((r) => ({
           slug: r.slug, topic: r.topic, contentType: r.content_type, status: r.status,
+          ...(r.memo ? { memo: r.memo } : {}),
         })),
       });
     }

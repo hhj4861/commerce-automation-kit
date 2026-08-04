@@ -169,6 +169,17 @@ function saveDraftRequests(rows) {
   writeFileSync(DRAFT_REQ_PATH, JSON.stringify(rows, null, 1), 'utf8');
 }
 
+// ---------- 소재 리서치 저장소 (현지 검색어 변환 캐시 — 검색어 문자열만) ----------
+const RESEARCH_PATH = join(DATA_DIR, 'keyword-research.json');
+function loadResearch() {
+  if (!existsSync(RESEARCH_PATH)) return {};
+  try { return JSON.parse(readFileSync(RESEARCH_PATH, 'utf8')); } catch { return {}; }
+}
+function saveResearch(rows) {
+  mkdirSync(DATA_DIR, { recursive: true });
+  writeFileSync(RESEARCH_PATH, JSON.stringify(rows, null, 1), 'utf8');
+}
+
 // ---------- 핫 키워드 (keyword-intel 연동, 10분 캐시) ----------
 let hotCache = { at: 0, items: [] };
 
@@ -437,6 +448,44 @@ const server = createServer(async (req, res) => {
       return;
     }
 
+    // ---- 소재 리서치: 현지 검색어 변환 캐시(클라우드 D1 대응 로컬 파일판) ----
+    if (url.pathname === '/api/keyword-research' && req.method === 'GET') {
+      const topic = (url.searchParams.get('topic') ?? '').trim();
+      if (!topic) { json(res, 400, { error: 'topic 필수' }); return; }
+      const rows = loadResearch();
+      const row = rows[topic];
+      json(res, 200, row ? { topic, status: row.status, translations: row.data ?? null } : { topic, status: 'none', translations: null });
+      return;
+    }
+    if (url.pathname === '/api/keyword-research/request' && req.method === 'POST') {
+      const body = await readBody(req);
+      const topic = String(body.topic ?? '').trim();
+      if (!topic || topic.length > 100) { json(res, 400, { error: 'topic 필수(100자 이하)' }); return; }
+      const rows = loadResearch();
+      if (!rows[topic]) { rows[topic] = { status: 'pending', requestedAt: new Date().toISOString() }; saveResearch(rows); }
+      json(res, 200, { ok: true });
+      return;
+    }
+    if (url.pathname === '/api/keyword-research/pending' && req.method === 'GET') {
+      const rows = loadResearch();
+      json(res, 200, { pending: Object.keys(rows).filter((t) => rows[t].status === 'pending') });
+      return;
+    }
+    if (url.pathname === '/api/keyword-research' && req.method === 'PUT') {
+      const body = await readBody(req);
+      const topic = String(body.topic ?? '').trim();
+      const t = body.translations;
+      const strArr = (a) => Array.isArray(a) && a.every((x) => typeof x === 'string' && x.length <= 60);
+      if (!topic || !t || !strArr(t.xhs) || !strArr(t.dy) || !strArr(t.en)) {
+        json(res, 400, { error: 'topic + translations{xhs[],dy[],en[]} 필수' }); return;
+      }
+      const rows = loadResearch();
+      rows[topic] = { status: 'ready', data: { xhs: t.xhs.slice(0, 4), dy: t.dy.slice(0, 4), en: t.en.slice(0, 4) }, updatedAt: new Date().toISOString() };
+      saveResearch(rows);
+      json(res, 200, { ok: true });
+      return;
+    }
+
     // 초안 요청 — 콘텐츠 유형 확장형(shorts 활성, ad/blog/music 예약)
     if (req.method === 'POST' && url.pathname === '/api/draft-requests') {
       const body = await readBody(req);
@@ -448,7 +497,8 @@ const server = createServer(async (req, res) => {
       const rows = loadDraftRequests();
       const slug = topic.normalize('NFC').toLowerCase().replace(/[^a-z0-9가-힣]+/g, '-').replace(/^-+|-+$/g, '');
       if (rows.some((r) => r.slug === slug)) { json(res, 409, { error: '이미 요청됨' }); return; }
-      const reqRow = { slug, topic, contentType, opportunity: body.opportunity ?? null, status: 'pending', requestedAt: new Date().toISOString() };
+      const memo = typeof body.memo === 'string' && body.memo.trim() ? body.memo.trim().slice(0, 500) : null;
+      const reqRow = { slug, topic, contentType, opportunity: body.opportunity ?? null, status: 'pending', requestedAt: new Date().toISOString(), ...(memo ? { memo } : {}) };
       rows.push(reqRow);
       saveDraftRequests(rows);
       hotCache = { at: 0, items: [] };

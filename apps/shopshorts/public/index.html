@@ -451,6 +451,44 @@
     .custom-topic-form { grid-template-columns:1fr; }
     .custom-topic-form button { width:100%; }
   }
+
+  /* ---- 소재 리서치 (트렌드 탐색 통합) ---- */
+  .card-actions-row { display:grid; grid-template-columns:1fr auto; gap:8px; }
+  .card-actions-row .detail-cta { margin:0; }
+  .btn-research { border:1px solid var(--line); background:var(--surface); color:var(--ink); border-radius:10px; padding:0 12px; font-size:12px; cursor:pointer; display:flex; align-items:center; gap:6px; }
+  .btn-research:hover { border-color:#d0d3ca; }
+  .page-card.researching { border-color:var(--brand); box-shadow:0 0 0 3px rgba(255,107,74,.12); }
+  .page-card.researching .btn-research { border-color:var(--brand); color:var(--brand); background:var(--brand-soft); }
+  .new-pill { background:var(--brand); color:#fff; font-size:9px; font-weight:800; letter-spacing:.05em; border-radius:99px; padding:2px 7px; }
+  .research { border:1px solid var(--line); border-top:3px solid var(--brand); background:var(--surface); border-radius:16px; margin-top:12px; box-shadow:var(--shadow); overflow:hidden; }
+  .research[hidden] { display:none; }
+  .research-head { display:flex; align-items:center; gap:10px; padding:16px 18px 0; }
+  .research-head h3 { margin:0; font-size:14px; }
+  .badge-observe { background:var(--mint-soft); color:var(--mint); font-size:10px; font-weight:700; border-radius:99px; padding:3px 9px; }
+  .research-close { margin-left:auto; color:var(--faint); font-size:16px; border:0; background:none; cursor:pointer; }
+  .research-grid { display:grid; grid-template-columns:1.1fr 0.9fr 1.2fr; gap:0; padding:14px 6px 16px; }
+  .research-col { padding:4px 14px; min-width:0; }
+  .research-col + .research-col { border-left:1px solid var(--line); }
+  .research-label { color:var(--faint); font-size:10px; font-weight:700; letter-spacing:.09em; margin-bottom:9px; }
+  .lang-group { margin-bottom:10px; }
+  .lang-name { font-size:10px; color:var(--muted); margin-bottom:5px; }
+  .chips { display:flex; flex-wrap:wrap; gap:5px; }
+  .chip { border:1px solid var(--line); background:var(--canvas); border-radius:8px; padding:5px 9px; font-size:12px; display:flex; align-items:center; gap:6px; cursor:pointer; }
+  .chip:hover { border-color:#d0d3ca; }
+  .chip small { color:var(--faint); font-size:9px; }
+  .research-loading { color:var(--muted); font-size:12px; display:flex; align-items:center; gap:8px; padding:6px 0; }
+  .research-loading::before { content:''; width:12px; height:12px; border:2px solid var(--line); border-top-color:var(--brand); border-radius:50%; animation:rspin .8s linear infinite; }
+  @keyframes rspin { to { transform:rotate(360deg); } }
+  .open-btn { display:flex; align-items:center; justify-content:space-between; width:100%; border:1px solid var(--line); background:var(--surface); border-radius:10px; padding:9px 12px; font-size:12px; font-weight:600; color:var(--ink); cursor:pointer; margin-bottom:7px; }
+  .open-btn:hover { border-color:#d0d3ca; }
+  .open-btn span { color:var(--faint); font-weight:500; font-size:10px; }
+  .open-btn b { color:var(--brand); font-weight:700; }
+  .research-memo { width:100%; border:1px solid var(--line); border-radius:10px; padding:10px; font:inherit; font-size:12px; color:var(--ink); background:var(--canvas); min-height:74px; resize:none; }
+  .research-memo::placeholder { color:var(--faint); }
+  .memo-cta { margin-top:8px; width:100%; border:0; border-radius:10px; height:36px; background:var(--brand); color:#fff; font-size:12px; font-weight:700; cursor:pointer; }
+  .memo-note { color:var(--faint); font-size:10px; margin-top:6px; line-height:1.5; }
+  .guardrail { display:flex; gap:9px; align-items:flex-start; background:var(--mint-soft); border-top:1px solid #d3e8de; padding:11px 18px; color:var(--mint); font-size:11px; line-height:1.55; }
+  @media (max-width:900px){ .research-grid{grid-template-columns:1fr} .research-col+.research-col{border-left:0; border-top:1px solid var(--line)} }
 </style>
 </head>
 <body>
@@ -688,13 +726,13 @@ function renderTopics() {
   document.getElementById('topics').innerHTML = pending.map(r => `
     <article class="topic" style="background:var(--yellow-soft);border-color:#edd9a7">
       <div class="topic-rank" style="background:#fff7e7;color:var(--yellow)">···</div>
-      <div class="topic-info"><div class="topic-name">${r.topic}</div><div class="topic-score">초안 작성 대기 중</div></div>
+      <div class="topic-info"><div class="topic-name">${escapeHtml(r.topic)}</div><div class="topic-score">초안 작성 대기 중</div></div>
       <span class="status-pill" style="margin-left:auto">요청됨</span>
     </article>`).join('') + items.map((it,i) => `
-    <article class="topic" data-topic-card="${it.topic}">
+    <article class="topic" data-topic-card="${escapeHtml(it.topic)}">
       <div class="topic-rank">${i+1}</div>
-      <div class="topic-info"><div class="topic-name">${it.topic}</div><div class="topic-score">기회 점수 ${it.opportunity ?? '-'}</div></div>
-      <button aria-label="${it.topic} 초안 만들기" data-topic="${it.topic}" data-score="${it.opportunity ?? ''}">${svg('plus',15)}</button>
+      <div class="topic-info"><div class="topic-name">${escapeHtml(it.topic)}</div><div class="topic-score">기회 점수 ${it.opportunity ?? '-'}</div></div>
+      <button aria-label="${escapeHtml(it.topic)} 초안 만들기" data-topic="${escapeHtml(it.topic)}" data-score="${it.opportunity ?? ''}">${svg('plus',15)}</button>
     </article>`).join('');
   document.querySelectorAll('[data-topic-card]').forEach(card => card.onclick = () => {
     showToast(`“${card.dataset.topicCard}” · 오른쪽 + 버튼을 누르면 초안을 만들 수 있어요.`);
@@ -758,7 +796,7 @@ function renderJobs() {
     const warning = !waiting && isPlaceholder(j.brief?.affiliateUrl) ? '<span class="flag">링크 필요</span>' : '';
     return `<article class="job ${state.selected === j.brief.id ? 'selected' : ''}" data-job="${j.brief.id}">
       <div class="thumb ${categoryClass(j)}">${svg('image',18)}</div>
-      <div><div class="job-title">${j.brief.productName}</div>
+      <div><div class="job-title">${escapeHtml(j.brief.productName)}</div>
       <div class="job-meta"><span>${st.label}</span><span class="dot"></span><span>${waiting ? '초안 작성 중' : (HOOK[j.script?.hookType] || '쇼츠')}</span><span class="dot"></span><span>${fmtTime(j.updatedAt)}</span>${warning}</div></div>
       <div class="job-actions">
         <button class="job-action ${waiting ? 'quiet' : st.cls}" ${waiting ? 'data-request-waiting' : `data-action="${j.brief.id}"`}>${waiting ? '작성 중' : st.action}</button>
@@ -1167,19 +1205,49 @@ function renderPage(name) {
       <div class="custom-topic-form">
         <input data-custom-topic maxlength="100" autocomplete="off" placeholder="예: 장마철 신발 건조기 비교" aria-label="직접 만들 쇼츠 주제">
         <button data-custom-topic-create>쇼츠 초안 만들기</button>
+        <button class="btn-research" data-custom-research type="button">🔎 리서치</button>
       </div>
     </section>
     ${pending.length ? `<div class="section-head"><h2>요청한 초안</h2><span class="section-note">${pending.length}개 작성 대기 중</span></div>
     <div class="page-grid" style="margin-bottom:32px">${pending.map(r => `<article class="page-card" style="background:var(--yellow-soft);border-color:#edd9a7">
       <span class="status-pill">요청됨</span><h3 style="margin-top:13px">${escapeHtml(r.topic)}</h3>
       <p>콘텐츠 큐의 기획 대기 단계에서 대본을 자동으로 작성 중입니다.</p>
+      ${r.memo ? `<p style="color:var(--mint)">👁 관찰 메모: ${escapeHtml(r.memo)}</p>` : ''}
     </article>`).join('')}</div>` : ''}
     <div class="section-head"><h2>쇼츠·트렌드 키워드</h2><span class="section-note">opportunity 기준</span></div>
     <div class="page-grid">${items.length ? items.map((it,i) => `<article class="page-card">
       <div class="topic-rank">${i+1}</div><h3 style="margin-top:13px">${escapeHtml(it.topic)}</h3>
       <p>기회 점수 ${it.opportunity ?? '-'} · 검색 수요와 경쟁도를 종합한 추천입니다.</p>
-      <button class="detail-cta" data-page-topic="${escapeHtml(it.topic)}" data-score="${it.opportunity ?? ''}">초안 요청</button>
+      <div class="card-actions-row">
+        <button class="detail-cta" data-page-topic="${escapeHtml(it.topic)}" data-score="${it.opportunity ?? ''}">초안 요청</button>
+        <button class="btn-research" data-page-research="${escapeHtml(it.topic)}" data-score="${it.opportunity ?? ''}">🔎 리서치 <span class="new-pill">NEW</span></button>
+      </div>
     </article>`).join('') : '<div class="empty-page">선택한 날짜의 트렌드 데이터가 없습니다.</div>'}</div>
+    <section class="research" id="researchPanel" hidden>
+      <div class="research-head">
+        <h3 id="researchTitle">소재 리서치</h3>
+        <span class="badge-observe">👁 관찰 전용</span>
+        <button class="research-close" data-research-close aria-label="닫기">✕</button>
+      </div>
+      <div class="research-grid">
+        <div class="research-col">
+          <div class="research-label">1 · 현지 검색어 변환</div>
+          <div id="researchLangs"></div>
+        </div>
+        <div class="research-col">
+          <div class="research-label">2 · 관찰 창 열기</div>
+          <div id="researchOpens"></div>
+          <div class="memo-note">대시보드 옆에 실검색 창이 뜹니다(모바일은 새 탭) — 자동 수집·다운로드 없음, 눈으로만 봅니다.</div>
+        </div>
+        <div class="research-col">
+          <div class="research-label">3 · 관찰 메모 → 초안 연결</div>
+          <textarea class="research-memo" id="researchMemo" maxlength="500" placeholder="예: 면봉으로 콕 찍는 클로즈업 반응 좋음 · 첫 컷은 제품 없이 고민부터 · 초록 패키지가 눈에 띔"></textarea>
+          <button class="memo-cta" data-research-draft>메모와 함께 초안 요청</button>
+          <div class="memo-note">메모는 기획 대기 큐에 함께 전달되어 대본 작성 시 연출 참고로 쓰입니다.</div>
+        </div>
+      </div>
+      <div class="guardrail">🛡 <span><b>관찰만 가져옵니다.</b> 이 패널은 검색어와 메모만 만듭니다 — 타인 영상·이미지의 다운로드·재가공은 금지선 #1·#2로 차단, 영상은 전량 자체 생성합니다.</span></div>
+    </section>
     <div class="section-head" style="margin-top:32px"><h2>블로그 키워드</h2><span class="section-note">절대 검색량·경쟁도 기준</span></div>
     ${blogs.length ? `<div class="page-grid">${blogs.map((it,i) => `<article class="page-card">
       <div class="topic-rank">${i+1}</div><h3 style="margin-top:13px">${escapeHtml(it.topic)}</h3>
@@ -1276,21 +1344,155 @@ function renderPage(name) {
   view.innerHTML = `<div class="page-head"><div><div class="eyebrow">SHOPSHORTS</div><h1>${title}</h1><p>${copy}</p></div></div>${body}`;
   bindPageActions(name);
 }
-async function requestShortsDraft(topic, opportunity, button) {
+// ---------- 소재 리서치 (트렌드 탐색 통합 — 검색어 변환·관찰 창·메모) ----------
+const RESEARCH_URLS = {
+  'TikTok': t => 'https://www.tiktok.com/search?q=' + encodeURIComponent(t),
+  '샤오홍슈': t => 'https://www.xiaohongshu.com/search_result?keyword=' + encodeURIComponent(t),
+  '도우인': t => 'https://www.douyin.com/search/' + encodeURIComponent(t),
+  '유튜브 쇼츠': t => 'https://www.youtube.com/results?search_query=' + encodeURIComponent(t + ' shorts'),
+};
+const researchState = { topic:null, score:undefined, timer:null, translations:null, memo:'', seq:0, polls:0 };
+
+function copyResearchText(t) {
+  const done = () => showToast(`“${t}” 복사했어요.`);
+  const legacy = () => {
+    const ta = document.createElement('textarea');
+    ta.value = t; ta.style.cssText = 'position:fixed;opacity:0';
+    document.body.appendChild(ta); ta.select();
+    let ok = false; try { ok = document.execCommand('copy'); } catch {}
+    ta.remove();
+    ok ? done() : showToast('복사가 차단됐어요 — 직접 입력해 주세요: ' + t);
+  };
+  navigator.clipboard?.writeText ? navigator.clipboard.writeText(t).then(done).catch(legacy) : legacy();
+}
+
+function openObserveWindow(platform, term) {
+  const url = RESEARCH_URLS[platform](term);
+  const left = Math.max(0, (window.screen?.availWidth ?? 1400) - 440);
+  const win = window.open(url, 'ss-observe', `width=420,height=760,left=${left},top=60,noopener`);
+  if (!win) { showToast('팝업이 차단됐어요 — 브라우저에서 이 사이트의 팝업을 허용해 주세요.'); return; }
+  showToast(`${platform}에서 “${term}” 관찰 창을 열었어요.`);
+}
+
+function renderResearchBody(translations) {
+  const langs = document.getElementById('researchLangs');
+  const opens = document.getElementById('researchOpens');
+  if (!langs || !opens) return; // 페이지 이탈 등으로 패널 DOM 이 없으면 조용히 무시
+  researchState.translations = translations ?? null;
+  if (!translations) {
+    langs.innerHTML = '<div class="research-loading">현지 검색어 생성 중… 약 30초 걸려요.</div>';
+    opens.innerHTML = `<button class="open-btn" data-observe="유튜브 쇼츠" data-term="${escapeHtml(researchState.topic)}">유튜브 쇼츠 검색 <span>관찰 창 <b>▸</b></span></button>
+      <div class="memo-note">한국어로 먼저 볼 수 있어요 — 현지 검색어가 준비되면 틱톡·샤오홍슈 버튼이 열립니다.</div>`;
+  } else {
+    const group = (name, terms) => terms.length ? `<div class="lang-group"><div class="lang-name">${name}</div>
+      <div class="chips">${terms.map(t => `<button class="chip" data-copy-term="${escapeHtml(t)}">${escapeHtml(t)} <small>복사</small></button>`).join('')}</div></div>` : '';
+    langs.innerHTML =
+      group('샤오홍슈 · 중국어', translations.xhs) + group('도우인 · 중국어', translations.dy) + group('TikTok · 영어', translations.en);
+    const rows = [
+      ['TikTok', translations.en[0]], ['샤오홍슈', translations.xhs[0]],
+      ['도우인', translations.dy[0]], ['유튜브 쇼츠', researchState.topic],
+    ].filter(([,term]) => term);
+    opens.innerHTML = rows.map(([p, term]) =>
+      `<button class="open-btn" data-observe="${p}" data-term="${escapeHtml(term)}">${p} 검색 <span>관찰 창 <b>▸</b></span></button>`).join('');
+  }
+  document.querySelectorAll('[data-copy-term]').forEach(b => b.onclick = () => copyResearchText(b.dataset.copyTerm));
+  document.querySelectorAll('[data-observe]').forEach(b => b.onclick = () => openObserveWindow(b.dataset.observe, b.dataset.term));
+}
+
+async function pollResearch() {
+  // 종료 조건: 패널이 닫혔거나(topic null) 트렌드 페이지를 떠났거나(DOM 부재) 시도 상한 도달
+  if (!researchState.topic || !document.getElementById('researchPanel')) {
+    researchState.timer = null; return;
+  }
+  if (researchState.polls >= 36) { // 3분 상한 — 무한 폴링 방지
+    researchState.timer = null;
+    const langs = document.getElementById('researchLangs');
+    if (langs) langs.innerHTML = '<div class="memo-note">검색어 생성이 지연되고 있어요 — 패널을 닫았다가 다시 열면 재시도합니다.</div>';
+    return;
+  }
+  researchState.polls += 1;
+  const topicAtCall = researchState.topic;
+  try {
+    const r = await api('/api/keyword-research?topic=' + encodeURIComponent(topicAtCall));
+    if (researchState.topic !== topicAtCall) { return; } // 그 사이 다른 주제로 전환됨(경쟁 방지)
+    if (r.status === 'ready' && r.translations) {
+      clearTimeout(researchState.timer); researchState.timer = null;
+      renderResearchBody(r.translations);
+      return;
+    }
+  } catch {}
+  researchState.timer = setTimeout(pollResearch, 5000);
+}
+
+async function openResearch(topic, score) {
+  researchState.topic = topic; researchState.score = score;
+  researchState.translations = null; researchState.memo = ''; researchState.polls = 0;
+  const mySeq = ++researchState.seq; // 빠른 A/B 전환 시 늦은 응답이 덮어쓰는 것 방지
+  clearTimeout(researchState.timer); researchState.timer = null;
+  const panel = document.getElementById('researchPanel');
+  if (!panel) return;
+  document.getElementById('researchTitle').textContent = '소재 리서치 — ' + topic;
+  document.getElementById('researchMemo').value = '';
+  panel.hidden = false;
+  document.querySelectorAll('[data-page-research]').forEach(b =>
+    b.closest('.page-card')?.classList.toggle('researching', b.dataset.pageResearch === topic));
+  try {
+    const r = await api('/api/keyword-research?topic=' + encodeURIComponent(topic));
+    if (researchState.seq !== mySeq) return; // 이미 다른 주제 패널로 전환됨
+    if (r.status === 'ready' && r.translations) { renderResearchBody(r.translations); }
+    else {
+      renderResearchBody(null);
+      if (r.status === 'none') await api('/api/keyword-research/request', {
+        method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify({topic})
+      });
+      if (researchState.seq === mySeq) researchState.timer = setTimeout(pollResearch, 5000);
+    }
+  } catch (e) { showToast('리서치 정보를 불러오지 못했어요: ' + e.message); }
+  panel.scrollIntoView({ behavior:'smooth', block:'nearest' });
+}
+
+function closeResearch() {
+  clearTimeout(researchState.timer);
+  researchState.timer = null; researchState.topic = null;
+  researchState.translations = null; researchState.memo = ''; researchState.seq += 1;
+  document.getElementById('researchPanel')?.setAttribute('hidden', '');
+  document.querySelectorAll('.page-card.researching').forEach(c => c.classList.remove('researching'));
+}
+
+/** 자동 새로고침 재렌더 후 열려 있던 리서치 패널·메모 복원 (12초 갱신이 상태를 날리는 것 방지) */
+function restoreResearchPanel() {
+  if (!researchState.topic) return;
+  const panel = document.getElementById('researchPanel');
+  if (!panel) return;
+  document.getElementById('researchTitle').textContent = '소재 리서치 — ' + researchState.topic;
+  panel.hidden = false;
+  renderResearchBody(researchState.translations);
+  const memoEl = document.getElementById('researchMemo');
+  if (memoEl) memoEl.value = researchState.memo;
+  document.querySelectorAll('[data-page-research]').forEach(b =>
+    b.closest('.page-card')?.classList.toggle('researching', b.dataset.pageResearch === researchState.topic));
+  if (!researchState.translations && !researchState.timer && researchState.polls < 36) {
+    researchState.timer = setTimeout(pollResearch, 5000);
+  }
+}
+
+async function requestShortsDraft(topic, opportunity, button, memo) {
   const cleanTopic = String(topic || '').trim();
   if (!cleanTopic) return showToast('만들고 싶은 쇼츠 주제를 입력해 주세요.');
   if (button) button.disabled = true;
   try {
     await api('/api/draft-requests', {
       method:'POST', headers:{'content-type':'application/json'},
-      body:JSON.stringify({topic:cleanTopic, opportunity, contentType:'shorts'})
+      body:JSON.stringify({topic:cleanTopic, opportunity, contentType:'shorts', ...(memo ? {memo} : {})})
     });
     showToast(`“${cleanTopic}” 초안을 요청했어요. 기획 대기에 추가했습니다.`);
     await loadHot();
     renderPage('trends');
+    return true;
   } catch (e) {
     showToast('초안 요청 실패: ' + e.message);
     if (button?.isConnected) button.disabled = false;
+    return false;
   }
 }
 function bindPageActions(name) {
@@ -1357,6 +1559,24 @@ function bindPageActions(name) {
   document.querySelectorAll('[data-page-topic]').forEach(b => b.onclick = () => {
     requestShortsDraft(b.dataset.pageTopic, Number(b.dataset.score) || undefined, b);
   });
+  document.querySelectorAll('[data-page-research]').forEach(b => b.onclick = () =>
+    openResearch(b.dataset.pageResearch, Number(b.dataset.score) || undefined));
+  document.querySelector('[data-research-close]')?.addEventListener('click', closeResearch);
+  document.getElementById('researchMemo')?.addEventListener('input', e => { researchState.memo = e.target.value; });
+  document.querySelector('[data-custom-research]')?.addEventListener('click', () => {
+    const topic = document.querySelector('[data-custom-topic]')?.value.trim();
+    if (!topic) { showToast('리서치할 주제를 먼저 입력해 주세요.'); return; }
+    openResearch(topic, undefined);
+  });
+  document.querySelector('[data-research-draft]')?.addEventListener('click', async () => {
+    if (!researchState.topic) return;
+    const memo = document.getElementById('researchMemo')?.value.trim();
+    if (!memo) { showToast('관찰한 내용을 한 줄이라도 적어주세요 — 대본 연출에 반영됩니다.'); document.getElementById('researchMemo')?.focus(); return; }
+    // 요청이 성공했을 때만 패널을 닫는다 — 실패 시 메모 보존(재시도 가능)
+    const ok = await requestShortsDraft(researchState.topic, researchState.score, null, memo);
+    if (ok) closeResearch();
+  });
+  restoreResearchPanel();
   document.querySelectorAll('[data-page-link]').forEach(b => b.onclick = () => {
     const job = state.jobs.find(j => j.brief.id === b.dataset.pageLink);
     if (job) runTool('set-link', job).then(() => renderPage('links'));
