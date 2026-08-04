@@ -489,6 +489,29 @@
   .memo-note { color:var(--faint); font-size:10px; margin-top:6px; line-height:1.5; }
   .guardrail { display:flex; gap:9px; align-items:flex-start; background:var(--mint-soft); border-top:1px solid #d3e8de; padding:11px 18px; color:var(--mint); font-size:11px; line-height:1.55; }
   @media (max-width:900px){ .research-grid{grid-template-columns:1fr} .research-col+.research-col{border-left:0; border-top:1px solid var(--line)} }
+  /* ---- 관찰 창 (인페이지 오버레이 — 유튜브는 공식 임베드로 페이지 안 재생) ---- */
+  .observe { position:fixed; right:18px; top:74px; bottom:18px; width:min(400px, calc(100vw - 36px)); background:#fff; border:1px solid var(--line); border-radius:16px; box-shadow:0 30px 80px rgba(20,22,18,.35); z-index:70; display:flex; flex-direction:column; overflow:hidden; transform:translateX(30px); opacity:0; pointer-events:none; transition:.28s cubic-bezier(.2,.7,.3,1); }
+  .observe.show { transform:none; opacity:1; pointer-events:auto; }
+  .observe-head { display:flex; align-items:center; gap:8px; background:#20231f; color:#fff; padding:11px 14px; font-size:13px; flex:none; }
+  .observe-head b { font-weight:700; }
+  .observe-head small { color:#8f948c; font-size:11px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .observe-close { margin-left:auto; border:0; background:none; color:#8f948c; font-size:15px; cursor:pointer; }
+  .observe-body { flex:1; overflow-y:auto; background:var(--canvas); padding:10px; }
+  .observe-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:7px; }
+  .observe-thumb { position:relative; border:0; padding:0; aspect-ratio:9/14; border-radius:9px; overflow:hidden; cursor:pointer; background:#dfe2da; }
+  .observe-thumb img { width:100%; height:100%; object-fit:cover; display:block; }
+  .observe-thumb::after { content:'▶'; position:absolute; inset:0; display:grid; place-items:center; color:#ffffffd0; font-size:15px; text-shadow:0 1px 4px rgba(0,0,0,.5); }
+  .observe-thumb span { position:absolute; left:0; right:0; bottom:0; padding:14px 6px 5px; color:#fff; font-size:8.5px; line-height:1.3; background:linear-gradient(transparent,rgba(0,0,0,.65)); text-align:left; }
+  .observe-player { position:relative; }
+  .observe-player iframe { width:100%; aspect-ratio:9/16; border:0; border-radius:12px; background:#000; display:block; }
+  .observe-back { margin:8px auto 0; display:flex; align-items:center; gap:6px; border:1px solid var(--line); background:#fff; border-radius:9px; padding:7px 12px; font-size:12px; cursor:pointer; }
+  .observe-empty { color:var(--muted); font-size:12px; text-align:center; padding:28px 14px; line-height:1.7; }
+  .observe-foot { flex:none; border-top:1px solid var(--line); background:#fff; padding:10px 12px; }
+  .observe-foot-label { color:var(--faint); font-size:9.5px; font-weight:700; letter-spacing:.08em; margin-bottom:7px; }
+  .observe-pops { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; }
+  .observe-pop { border:1px solid var(--line); background:#fff; border-radius:9px; padding:8px 4px; font-size:11px; font-weight:600; color:var(--ink); cursor:pointer; }
+  .observe-pop:hover { border-color:#d0d3ca; }
+  .observe-note { color:var(--faint); font-size:9.5px; line-height:1.5; margin-top:7px; }
 </style>
 </head>
 <body>
@@ -1388,19 +1411,75 @@ function renderResearchBody(translations) {
     opens.innerHTML = `<button class="open-btn" data-observe="유튜브 쇼츠" data-term="${escapeHtml(researchState.topic)}">유튜브 쇼츠 검색 <span>관찰 창 <b>▸</b></span></button>
       <div class="memo-note">한국어로 먼저 볼 수 있어요 — 현지 검색어가 준비되면 틱톡·샤오홍슈 버튼이 열립니다.</div>`;
   } else {
-    const group = (name, terms) => terms.length ? `<div class="lang-group"><div class="lang-name">${name}</div>
+    const group = (name, terms) => (terms ?? []).length ? `<div class="lang-group"><div class="lang-name">${name}</div>
       <div class="chips">${terms.map(t => `<button class="chip" data-copy-term="${escapeHtml(t)}">${escapeHtml(t)} <small>복사</small></button>`).join('')}</div></div>` : '';
     langs.innerHTML =
       group('샤오홍슈 · 중국어', translations.xhs) + group('도우인 · 중국어', translations.dy) + group('TikTok · 영어', translations.en);
-    const rows = [
-      ['TikTok', translations.en[0]], ['샤오홍슈', translations.xhs[0]],
-      ['도우인', translations.dy[0]], ['유튜브 쇼츠', researchState.topic],
-    ].filter(([,term]) => term);
-    opens.innerHTML = rows.map(([p, term]) =>
-      `<button class="open-btn" data-observe="${p}" data-term="${escapeHtml(term)}">${p} 검색 <span>관찰 창 <b>▸</b></span></button>`).join('');
+    const ytCount = (translations.youtube ?? []).length;
+    opens.innerHTML = `<button class="open-btn" data-observe-panel style="border-color:var(--brand);color:var(--brand)">👁 관찰 창 열기 <span>페이지 안 <b>▸</b></span></button>
+      <div class="memo-note">${ytCount ? `유튜브 쇼츠 ${ytCount}편을 페이지 안에서 바로 재생합니다.` : '유튜브 쇼츠 그리드는 수집되는 대로 표시됩니다.'} 틱톡·샤오홍슈·도우인은 창 하단 버튼(팝업)으로 봅니다.</div>`;
   }
   document.querySelectorAll('[data-copy-term]').forEach(b => b.onclick = () => copyResearchText(b.dataset.copyTerm));
-  document.querySelectorAll('[data-observe]').forEach(b => b.onclick = () => openObserveWindow(b.dataset.observe, b.dataset.term));
+  document.querySelector('[data-observe-panel]')?.addEventListener('click', openObservePanel);
+}
+
+// ---- 관찰 창 (인페이지 오버레이) — 재렌더에 안전하게 body 직속으로 1회 생성 ----
+function ensureObserveEl() {
+  let el = document.getElementById('observePanel');
+  if (el) return el;
+  el = document.createElement('aside');
+  el.id = 'observePanel'; el.className = 'observe';
+  el.innerHTML = `
+    <div class="observe-head"><b>관찰 창</b><small id="observeTerm"></small><button class="observe-close" aria-label="닫기">✕</button></div>
+    <div class="observe-body" id="observeBody"></div>
+    <div class="observe-foot">
+      <div class="observe-foot-label">현지 플랫폼 직접 보기 · 팝업</div>
+      <div class="observe-pops" id="observePops"></div>
+      <div class="observe-note">틱톡·샤오홍슈·도우인은 페이지 내 표시를 플랫폼이 차단해 작은 팝업 창으로 열립니다. 유튜브는 공식 임베드라 이 창 안에서 재생됩니다 — 어느 쪽이든 관찰만, 수집 없음.</div>
+    </div>`;
+  document.body.appendChild(el);
+  el.querySelector('.observe-close').onclick = () => el.classList.remove('show');
+  return el;
+}
+
+function renderObserveGrid() {
+  const body = document.getElementById('observeBody');
+  const yt = researchState.translations?.youtube ?? [];
+  if (!yt.length) {
+    body.innerHTML = `<div class="observe-empty">유튜브 쇼츠 수집 중이에요…<br>워커가 채우는 대로 여기에 그리드가 뜹니다.<br><button class="observe-back" data-observe-refresh>새로고침</button></div>`;
+    body.querySelector('[data-observe-refresh]').onclick = async () => {
+      try {
+        const r = await api('/api/keyword-research?topic=' + encodeURIComponent(researchState.topic));
+        if (r.translations) { researchState.translations = r.translations; }
+      } catch {}
+      renderObserveGrid();
+    };
+    return;
+  }
+  body.innerHTML = `<div class="observe-grid">${yt.map(v =>
+    `<button class="observe-thumb" data-yt="${v.id}"><img loading="lazy" src="https://i.ytimg.com/vi/${v.id}/mqdefault.jpg" alt=""><span>${escapeHtml(v.title).slice(0, 40)}</span></button>`).join('')}</div>`;
+  body.querySelectorAll('[data-yt]').forEach(b => b.onclick = () => {
+    body.innerHTML = `<div class="observe-player"><iframe src="https://www.youtube.com/embed/${b.dataset.yt}?autoplay=1&playsinline=1&rel=0" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe></div>
+      <button class="observe-back" data-observe-back>← 목록으로</button>`;
+    body.querySelector('[data-observe-back]').onclick = renderObserveGrid;
+  });
+}
+
+function openObservePanel() {
+  if (!researchState.topic) return;
+  const el = ensureObserveEl();
+  document.getElementById('observeTerm').textContent = '“' + researchState.topic + '”';
+  const t = researchState.translations ?? {};
+  const pops = [
+    ['TikTok', (t.en ?? [])[0] ?? researchState.topic],
+    ['샤오홍슈', (t.xhs ?? [])[0] ?? researchState.topic],
+    ['도우인', (t.dy ?? [])[0] ?? researchState.topic],
+  ];
+  document.getElementById('observePops').innerHTML = pops.map(([pf, term]) =>
+    `<button class="observe-pop" data-obs-pop="${pf}" data-term="${escapeHtml(term)}">${pf} ↗</button>`).join('');
+  document.querySelectorAll('[data-obs-pop]').forEach(b => b.onclick = () => openObserveWindow(b.dataset.obsPop, b.dataset.term));
+  renderObserveGrid();
+  el.classList.add('show');
 }
 
 async function pollResearch() {
@@ -1456,6 +1535,7 @@ async function openResearch(topic, score) {
 }
 
 function closeResearch() {
+  document.getElementById('observePanel')?.classList.remove('show');
   clearTimeout(researchState.timer);
   researchState.timer = null; researchState.topic = null;
   researchState.translations = null; researchState.memo = ''; researchState.seq += 1;

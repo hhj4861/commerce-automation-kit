@@ -31,6 +31,7 @@ import {
   authUrl,
   exchangeCode,
   listChannels,
+  searchShorts,
   uploadVideo,
   updateVideoMeta,
   setPrivacy,
@@ -148,6 +149,18 @@ async function main(): Promise<void> {
       await exchangeCode(client, code, tokenPath());
       const channels = await listChannels(client);
       out({ ok: true, tokenPath: tokenPath(), channels });
+      break;
+    }
+
+    case 'search': {
+      // 소재 리서치용 쇼츠 검색(공식 API·100유닛/호출) — 관찰 창 유튜브 그리드 데이터
+      const o = parse(rest, { query: STR, max: STR });
+      const q = reqStr(o, 'query');
+      const max = Math.min(Math.max(Number(optStr(o, 'max') ?? 9) || 9, 1), 12);
+      // YOUTUBE_API_KEY 가 있으면 키 사용(만료 없음) — 없으면 OAuth(테스트 앱은 7일 만료 주의)
+      const auth = process.env.YOUTUBE_API_KEY || authedClient();
+      const items = await searchShorts(auth, q, max);
+      out({ ok: true, query: q, items });
       break;
     }
 

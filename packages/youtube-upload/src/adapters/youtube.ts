@@ -71,6 +71,31 @@ export async function listChannels(client: OAuthClient): Promise<{ id: string; t
 }
 
 /** 영상 업로드 → videoId 반환. */
+/**
+ * 쇼츠 검색(공식 Data API search.list, 100유닛/호출) — 소재 리서치 관찰 창의 유튜브 그리드용.
+ * 결과는 영상 ID·제목만 반환(임베드는 공식 iframe 플레이어) — 콘텐츠 다운로드 없음.
+ */
+export async function searchShorts(
+  auth: OAuthClient | string, // OAuth 클라이언트 또는 API 키(검색은 키만으로 가능·만료 없음)
+  query: string,
+  maxResults = 9,
+): Promise<{ id: string; title: string }[]> {
+  const youtube = google.youtube({ version: 'v3', auth });
+  const res = await youtube.search.list({
+    part: ['snippet'],
+    q: query,
+    type: ['video'],
+    videoDuration: 'short',
+    regionCode: 'KR',
+    relevanceLanguage: 'ko',
+    order: 'relevance',
+    maxResults,
+  });
+  return (res.data.items ?? [])
+    .map((it) => ({ id: it.id?.videoId ?? '', title: it.snippet?.title ?? '' }))
+    .filter((v) => v.id.length > 0);
+}
+
 export async function uploadVideo(
   client: OAuthClient,
   requestBody: VideoRequestBody,

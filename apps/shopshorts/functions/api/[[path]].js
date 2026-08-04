@@ -427,6 +427,17 @@ export async function onRequest(context) {
       const { results } = await env.DB.prepare("SELECT topic FROM keyword_research WHERE status = 'pending'").all();
       return json({ pending: results.map((r) => r.topic) });
     }
+    // 유튜브 쇼츠 그리드 데이터가 아직 없는 항목(워커가 공식 search.list 로 채움, 틱당 소량)
+    if (path === 'keyword-research/missing-youtube' && method === 'GET') {
+      const { results } = await env.DB.prepare(
+        "SELECT topic, data FROM keyword_research WHERE status = 'ready'",
+      ).all();
+      const topics = results
+        .filter((r) => { try { return !(JSON.parse(r.data)?.youtube?.length); } catch { return false; } })
+        .map((r) => r.topic)
+        .slice(0, 5);
+      return json({ topics });
+    }
     if (path === 'keyword-research' && method === 'PUT') {
       // 변환 생성자(Claude 세션·워커) 전용 — UI 는 request 만 사용
       if (request.headers.get('x-shopshorts-worker') !== '1') {
@@ -435,15 +446,28 @@ export async function onRequest(context) {
       const body = await readJson(request);
       const topic = String(body?.topic ?? '').trim();
       const t = body?.translations;
+      const yt = body?.youtube;
       const strArr = (a) => Array.isArray(a) && a.every((x) => typeof x === 'string' && x.length <= 60);
-      if (!topic || !t || !strArr(t.xhs) || !strArr(t.dy) || !strArr(t.en)) {
-        return json({ error: 'topic + translations{xhs[],dy[],en[]} 필수(문자열 60자 이하)' }, 400);
+      const ytArr = (a) => Array.isArray(a) && a.length <= 12 &&
+        a.every((v) => /^[A-Za-z0-9_-]{11}$/.test(v?.id ?? '') && typeof v?.title === 'string' && v.title.length <= 150);
+      if (!topic) return json({ error: 'topic 필수' }, 400);
+      if (!t && !yt) return json({ error: 'translations 또는 youtube 필요' }, 400);
+      if (t && (!strArr(t.xhs) || !strArr(t.dy) || !strArr(t.en))) {
+        return json({ error: 'translations{xhs[],dy[],en[]} 형식 오류(문자열 60자 이하)' }, 400);
       }
+      if (yt && !ytArr(yt)) return json({ error: 'youtube[{id(11자),title}] 형식 오류(최대 12개)' }, 400);
       const now = new Date().toISOString();
+      const row = await env.DB.prepare('SELECT data FROM keyword_research WHERE topic = ?').bind(topic).first();
+      const cur = row?.data ? JSON.parse(row.data) : {};
+      const next = {
+        ...cur,
+        ...(t ? { xhs: t.xhs.slice(0, 4), dy: t.dy.slice(0, 4), en: t.en.slice(0, 4) } : {}),
+        ...(yt ? { youtube: yt.map((v) => ({ id: v.id, title: v.title.slice(0, 150) })) } : {}),
+      };
       await env.DB.prepare(
         "INSERT INTO keyword_research (topic, data, status, requested_at, updated_at) VALUES (?1, ?2, 'ready', ?3, ?3) " +
           "ON CONFLICT(topic) DO UPDATE SET data = ?2, status = 'ready', updated_at = ?3",
-      ).bind(topic, JSON.stringify({ xhs: t.xhs.slice(0, 4), dy: t.dy.slice(0, 4), en: t.en.slice(0, 4) }), now).run();
+      ).bind(topic, JSON.stringify(next), now).run();
       return json({ ok: true });
     }
 
