@@ -36,11 +36,11 @@ jobs:
           SCRIPT_B64: ${{ inputs.script_b64 }}
         run: |
           printf '%s' "$SCRIPT_B64" | base64 -d > /tmp/script.json
-          npm run --silent cli -w @cak/tts-narration -- script --script /tmp/script.json --outdir vo-out
-          ls -la vo-out
+          npm run --silent cli -w @cak/tts-narration -- script --script /tmp/script.json --outdir "$RUNNER_TEMP/vo-out"
+          ls -la "$RUNNER_TEMP/vo-out"
       - uses: actions/upload-artifact@v4
         with:
           name: narration
-          path: vo-out
+          path: ${{ runner.temp }}/vo-out
           if-no-files-found: error
           retention-days: 1
