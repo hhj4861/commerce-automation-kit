@@ -203,10 +203,12 @@ async function runFinalize(stale) {
 /** 업로드 설명란: 대본 설명 + 제휴 링크 라인(파트너스 고지 블록 앞에 삽입). */
 function uploadDescription(job) {
   const base = job.script?.description ?? '';
-  const url = job.brief?.affiliateUrl;
-  if (!url) return base;
+  const links = Array.isArray(job.affiliateLinks) && job.affiliateLinks.length
+    ? job.affiliateLinks
+    : (job.brief?.affiliateUrl ? [{ label: '제품 보러가기', url: job.brief.affiliateUrl }] : []);
+  if (!links.length) return base;
   const blocks = base.split('\n\n');
-  const linkLine = `🔗 제품 보러가기: ${url}`;
+  const linkLine = links.map((link) => `🔗 ${link.label}: ${link.url}`).join('\n');
   const i = blocks.findIndex((b) => b.includes('파트너스'));
   if (i >= 0) blocks.splice(i, 0, linkLine);
   else blocks.push(linkLine);

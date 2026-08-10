@@ -13,11 +13,12 @@
  * script 결과는 manifest(NarrationBatchResult)를 outdir/narration.json 에 남긴다.
  */
 import { execFile } from 'node:child_process';
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, stat, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { parseArgs, promisify } from 'node:util';
 import type { NarrationBatchResult, NarrationClip, ShortsScript } from '@cak/contracts';
 import { synthesizeNarration } from '../adapters/elevenlabs.js';
+import { resolvePolicy } from '../core/policy.js';
 
 const run = promisify(execFile);
 
@@ -71,7 +72,23 @@ async function cmdScript(args: string[]): Promise<void> {
   const clips: NarrationClip[] = [];
   for (const beat of beats) {
     const outPath = join(outdir, `beat-${String(beat.index).padStart(2, '0')}.mp3`);
-    const clip = await synthesizeNarration({ apiKey: apiKey(), text: beat.narration, outPath });
+    const metaPath = `${outPath}.json`;
+    let clip: NarrationClip | null = null;
+    try {
+      const [fileStat, cached] = await Promise.all([stat(outPath), readFile(metaPath, 'utf8').then(JSON.parse)]);
+      if (fileStat.size > 0 && cached?.text === beat.narration && cached?.file === outPath) clip = cached as NarrationClip;
+    } catch { /* 캐시 없음/불일치 → 공식 API 생성 */ }
+    if (!clip) {
+      clip = await synthesizeNarration({ apiKey: apiKey(), text: beat.narration, outPath });
+      await writeFile(metaPath, JSON.stringify(clip, null, 2));
+    } else {
+      // 정책 변경으로 보이스가 달라졌다면 기존 캐시를 재사용하지 않도록 다음 실행용 메타를 보정한다.
+      const policy = resolvePolicy(beat.narration, process.env);
+      if (clip.voiceId !== policy.voiceId || clip.modelId !== policy.modelId) {
+        clip = await synthesizeNarration({ apiKey: apiKey(), text: beat.narration, outPath });
+        await writeFile(metaPath, JSON.stringify(clip, null, 2));
+      }
+    }
     clips.push(clip);
     console.error(`✓ beat ${beat.index} (${beat.role}) → ${outPath}`);
   }
