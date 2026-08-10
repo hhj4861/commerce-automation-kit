@@ -24,6 +24,7 @@ export const adBeatSchema = z.object({
   index: z.number().int().min(0),
   durationSec: z.number(),
   description: z.string(),
+  emphasis: z.enum(['problem', 'resolution', 'hero']).optional(),
 });
 
 export const adConceptSchema = z.object({

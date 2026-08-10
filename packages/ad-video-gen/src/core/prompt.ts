@@ -97,7 +97,17 @@ export function buildSpotPrompt(concept: AdConcept, opts?: { extraStyle?: string
   for (const [i, beat] of ordered.entries()) {
     const start = t;
     t += beat.durationSec;
-    beatLines.push(`Beat ${i + 1} (${fmtSec(start)}s–${fmtSec(t)}s): ${beat.description}`);
+    // 포커스 연출 극대화(광고적 비주얼 과장) — 사실 주장이 아닌 연출 강도만 증폭한다
+    const DRAMATIZE: Record<string, string> = {
+      problem:
+        ' [DRAMATIZE PROBLEM: push the problem to its visual extreme — severe, overwhelming, uncomfortable intensity; the viewer must feel the pain instantly]',
+      resolution:
+        ' [DRAMATIZE RELIEF: maximum before/after contrast — pristine, perfectly clean, almost surreal clarity and calm]',
+      hero:
+        ' [GLORIFY PRODUCT: luxurious macro detail, sculptural rim light, premium material texture worship]',
+    };
+    const extra = beat.emphasis ? DRAMATIZE[beat.emphasis] ?? '' : '';
+    beatLines.push(`Beat ${i + 1} (${fmtSec(start)}s–${fmtSec(t)}s): ${beat.description}${extra}`);
   }
 
   const style = opts?.extraStyle ? `${STYLE_GUIDE} ${opts.extraStyle}` : STYLE_GUIDE;

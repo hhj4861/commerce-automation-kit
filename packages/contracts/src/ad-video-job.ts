@@ -34,6 +34,12 @@ export interface AdBeat {
   durationSec: number;
   /** 장면 묘사 (소구점이 '보이는' 장면이어야 함) */
   description: string;
+  /**
+   * 포커스 연출 극대화 태그(선택) — 광고적 비주얼 과장을 프롬프트에 자동 주입.
+   * problem=문제를 극한으로, resolution=해소 대비를 극한으로, hero=제품 미화.
+   * 주의: 과장은 "연출(비주얼)"에만 허용 — 문구·수치·기능의 사실 주장은 과장 금지(표시광고법).
+   */
+  emphasis?: 'problem' | 'resolution' | 'hero';
 }
 
 /**
