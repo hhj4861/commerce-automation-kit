@@ -373,12 +373,25 @@
   .affiliate-box { border: 1px solid var(--line); background: #fff; border-radius: 10px; padding: 10px; }
   .affiliate-url { color: var(--muted); font-size: 10px; line-height: 1.5; word-break: break-all; margin-bottom: 8px; }
   .affiliate-url.missing { color: var(--yellow); }
-  .affiliate-input-row { display:grid; grid-template-columns:1fr auto; gap:7px; margin-bottom:8px; }
+  .affiliate-saved-list { display:grid; gap:7px; margin-bottom:9px; }
+  .affiliate-saved-row {
+    display:grid; grid-template-columns:minmax(0,1fr) auto; gap:8px; align-items:center;
+    padding:9px 10px; border:1px solid var(--line); border-radius:9px; background:var(--surface-soft);
+  }
+  .affiliate-saved-row.primary { border-left:3px solid var(--mint); padding-left:8px; background:var(--mint-soft); }
+  .affiliate-saved-main { min-width:0; }
+  .affiliate-saved-title { display:flex; align-items:center; gap:6px; font-size:10px; font-weight:700; }
+  .affiliate-saved-main a { display:block; margin-top:3px; color:var(--muted); font-size:9px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .affiliate-primary { padding:2px 5px; border-radius:5px; background:var(--mint); color:#fff; font-size:8px; letter-spacing:.04em; }
+  .affiliate-link-actions { display:flex; gap:4px; }
+  .affiliate-link-actions button { border:1px solid var(--line); border-radius:7px; background:#fff; color:var(--muted); padding:5px 7px; font-size:9px; cursor:pointer; }
+  .affiliate-link-actions button.danger:hover { color:var(--red); border-color:#e8b5ac; }
+  .affiliate-input-row { display:grid; grid-template-columns:minmax(105px,.5fr) minmax(0,1.4fr) auto; gap:7px; margin-bottom:8px; }
   .affiliate-input-row input, .affiliate-comment {
     width:100%; box-sizing:border-box; border:1px solid var(--line); border-radius:8px; background:#fafbf8;
     color:var(--ink); font:inherit; font-size:11px; padding:9px 10px; outline:none;
   }
-  .affiliate-input-row input:focus { border-color:var(--green); box-shadow:0 0 0 3px rgba(50,113,83,.09); }
+  .affiliate-input-row input:focus { border-color:var(--mint); box-shadow:0 0 0 3px rgba(50,113,83,.09); }
   .affiliate-comment { min-height:82px; resize:vertical; line-height:1.55; margin-top:7px; }
   .comment-head { display:flex; align-items:center; justify-content:space-between; margin-top:11px; color:var(--muted); font-size:10px; }
   .finding-list { margin: 8px 0 0; padding-left: 17px; color: var(--red); font-size: 10px; line-height: 1.6; }
@@ -408,6 +421,8 @@
       display: flex; position: sticky; top: 0; z-index: 10; overflow-x: auto; gap: 5px;
       padding: 8px 12px; background: rgba(32,35,31,.97); scrollbar-width: none;
     }
+    .affiliate-input-row { grid-template-columns:1fr auto; }
+    .affiliate-input-row [data-affiliate-label] { grid-column:1 / -1; }
     .mobile-nav .nav-item { flex: 0 0 auto; height: 35px; padding: 0 10px; font-size: 11px; }
     main { padding: 0 18px 45px; }
     .topbar { display: none; }
@@ -655,21 +670,27 @@ function sampleJobs() {
   ];
 }
 const isPlaceholder = u => /PLACEHOLDER|\/a\/sample/.test(u || '');
-const affiliateComment = job => {
+const affiliateLinksFor = job => {
+  const saved = Array.isArray(job.affiliateLinks)
+    ? job.affiliateLinks.filter(link => link?.id && link?.url && !isPlaceholder(link.url))
+    : [];
+  if (saved.length) return saved;
   const url = job.brief?.affiliateUrl || '';
-  if (!url || isPlaceholder(url)) return '';
-  const disclosure = /coupang|coupa\.ng/.test(url)
-    ? '이 포스팅은 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다.'
-    : '이 링크를 통한 구매 시 일정액의 수수료를 제공받을 수 있습니다.';
-  return job.affiliateComment || `제품 보러가기: ${url}\n\n${disclosure}`;
+  if (!url || isPlaceholder(url)) return [];
+  const partner = AFFILIATE_PARTNERS.find(p => {
+    try { return p.host.test(new URL(url).hostname); } catch { return false; }
+  });
+  return [{id:`legacy-${partner?.key || 'link'}`, platform:partner?.key || 'naverConnect', label:'제품 보러가기', url, primary:true}];
 };
-const affiliateLinkFor = (job, partner) => {
-  const stored = job.platformLinks?.[partner.key];
-  if (stored && !isPlaceholder(stored)) return stored;
-  const primary = job.brief?.affiliateUrl || '';
-  if (!primary || isPlaceholder(primary)) return '';
-  try { return partner.host.test(new URL(primary).hostname) ? primary : ''; }
-  catch { return ''; }
+const affiliateComment = job => {
+  const links = affiliateLinksFor(job);
+  if (!links.length) return '';
+  if (job.affiliateComment && Array.isArray(job.affiliateLinks)) return job.affiliateComment;
+  const rows = links.map(link => `- ${link.label}: ${link.url}`).join('\n');
+  const disclosures = [...new Set(links.map(link => link.platform === 'coupang'
+    ? '이 포스팅은 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다.'
+    : '이 링크를 통한 구매 시 일정액의 수수료를 제공받을 수 있습니다.'))];
+  return `제품 구매 링크\n${rows}\n\n${disclosures.join('\n')}`;
 };
 const categoryClass = j => j.brief?.category === '뷰티' ? 'beauty' : j.brief?.category === '식품' ? 'food' : 'home';
 const fmtTime = value => {
@@ -929,6 +950,7 @@ function renderDetail(force=false) {
   const hasAction = ['draft','generated','assembled','review','rejected'].includes(j.status) && !['requested','running'].includes(j.finalize?.state);
   const findings = j.lintReport?.findings || [];
   const affiliate = j.brief.affiliateUrl || '';
+  const affiliateLinks = affiliateLinksFor(j);
   document.getElementById('detail').innerHTML = `
     <div class="detail-head">
       <div class="detail-kicker"><span>콘텐츠 상세</span><span class="status-pill">${st.label}</span></div>
@@ -962,10 +984,23 @@ function renderDetail(force=false) {
         <div class="detail-section">
           <div class="detail-label">AFFILIATE LINK</div>
           <div class="affiliate-box">
-            <div class="affiliate-url ${isPlaceholder(affiliate) ? 'missing' : ''}">${affiliate ? (isPlaceholder(affiliate) ? '실제 링크로 교체가 필요해요 · ' : '') + affiliate : '아직 제휴 링크가 없어요.'}</div>
+            <div class="affiliate-url ${affiliateLinks.length ? '' : 'missing'}">${affiliateLinks.length ? `${affiliateLinks.length}개 링크 · 대표 링크는 영상 고지와 호환 데이터에 사용됩니다.` : (affiliate && isPlaceholder(affiliate) ? '샘플 링크를 실제 제휴 링크로 교체해 주세요.' : '아직 제휴 링크가 없어요.')}</div>
+            <div class="affiliate-saved-list">
+              ${affiliateLinks.map(link => `<div class="affiliate-saved-row ${link.primary ? 'primary' : ''}">
+                <div class="affiliate-saved-main">
+                  <div class="affiliate-saved-title">${escapeHtml(link.label)} ${link.primary ? '<span class="affiliate-primary">대표</span>' : ''}</div>
+                  <a href="${escapeHtml(link.url)}" target="_blank" rel="noopener">${escapeHtml(link.url)}</a>
+                </div>
+                <div class="affiliate-link-actions">
+                  ${link.primary ? '' : `<button data-affiliate-primary="${escapeHtml(link.id)}">대표로</button>`}
+                  <button class="danger" data-affiliate-delete="${escapeHtml(link.id)}">삭제</button>
+                </div>
+              </div>`).join('')}
+            </div>
             <div class="affiliate-input-row">
-              <input data-affiliate-input type="url" inputmode="url" placeholder="발급한 제휴 링크를 여기에 붙여넣으세요" value="${isPlaceholder(affiliate) ? '' : affiliate}">
-              <button class="tool-btn warm" data-save-link>저장</button>
+              <input data-affiliate-label maxlength="60" placeholder="링크 이름 (예: 본품)">
+              <input data-affiliate-input type="url" inputmode="url" placeholder="발급한 제휴 링크 붙여넣기">
+              <button class="tool-btn warm" data-save-link ${affiliateLinks.length >= 10 ? 'disabled' : ''}>링크 추가</button>
             </div>
             <div class="detail-tools">
               <button class="tool-btn" data-tool="coupang">쿠팡 파트너스</button>
@@ -973,7 +1008,7 @@ function renderDetail(force=false) {
               <button class="tool-btn" data-tool="deeplink">딥링크 변환</button>
             </div>
             <div class="comment-head"><span>댓글 반영 미리보기</span><button class="tool-btn" data-copy-comment ${affiliateComment(j) ? '' : 'disabled'}>댓글 복사</button></div>
-            <textarea class="affiliate-comment" readonly placeholder="링크를 저장하면 고지 문구가 포함된 댓글이 자동 생성됩니다.">${affiliateComment(j)}</textarea>
+            <textarea class="affiliate-comment" readonly placeholder="링크를 추가하면 고지 문구가 포함된 댓글이 자동 생성됩니다.">${escapeHtml(affiliateComment(j))}</textarea>
           </div>
         </div>
         <div class="detail-section">
@@ -994,8 +1029,9 @@ function renderDetail(force=false) {
   document.querySelectorAll('[data-tool]').forEach(b => b.onclick = () => runTool(b.dataset.tool, j));
   document.querySelector('[data-save-link]')?.addEventListener('click', () => {
     const url = document.querySelector('[data-affiliate-input]')?.value.trim();
+    const label = document.querySelector('[data-affiliate-label]')?.value.trim();
     if (!url) return showToast('발급한 제휴 링크를 입력해 주세요.');
-    saveAffiliateLink(j, url);
+    saveAffiliateLink(j, url, label);
   });
   document.querySelector('[data-affiliate-input]')?.addEventListener('keydown', e => {
     if (e.key === 'Enter') document.querySelector('[data-save-link]')?.click();
@@ -1006,13 +1042,31 @@ function renderDetail(force=false) {
     try { await navigator.clipboard.writeText(text); showToast('댓글 문구를 복사했어요.'); }
     catch { showToast('댓글을 선택해서 복사해 주세요.'); }
   });
+  document.querySelectorAll('[data-affiliate-primary]').forEach(b => b.onclick = async () => {
+    b.disabled = true;
+    try {
+      await api(`/api/jobs/${j.brief.id}/links/${encodeURIComponent(b.dataset.affiliatePrimary)}/primary`, {method:'POST'});
+      showToast('대표 링크를 변경했어요.');
+      await load(true);
+    } catch (e) { showToast('대표 링크 변경 실패: ' + e.message); b.disabled = false; }
+  });
+  document.querySelectorAll('[data-affiliate-delete]').forEach(b => b.onclick = async () => {
+    const link = affiliateLinks.find(link => link.id === b.dataset.affiliateDelete);
+    if (!link || !confirm(`“${link.label}” 링크를 삭제할까요?`)) return;
+    b.disabled = true;
+    try {
+      await api(`/api/jobs/${j.brief.id}/links/${encodeURIComponent(link.id)}`, {method:'DELETE'});
+      showToast('제휴 링크를 삭제했어요.');
+      await load(true);
+    } catch (e) { showToast('링크 삭제 실패: ' + e.message); b.disabled = false; }
+  });
 }
 
-async function saveAffiliateLink(j, url) {
+async function saveAffiliateLink(j, url, label='') {
   const platform = /coupang|coupa\.ng/.test(url) ? 'coupang' : 'naverConnect';
   try {
-    const r = await api(`/api/jobs/${j.brief.id}/set-link`, {method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({platform,url})});
-    showToast('링크를 저장하고 댓글 문구에 반영했어요' + (r.lint ? ` · lint ${r.lint.ok ? '통과' : '위반'}` : ''));
+    const r = await api(`/api/jobs/${j.brief.id}/set-link`, {method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({platform,url,label})});
+    showToast('링크를 추가하고 댓글 문구에 반영했어요' + (r.lint ? ` · lint ${r.lint.ok ? '통과' : '위반'}` : ''));
     await load(true);
   } catch (e) { showToast('링크 저장 실패: ' + e.message); }
 }
@@ -1298,7 +1352,9 @@ function renderPage(name) {
   if (name === 'links') {
     const linkedIds = new Set();
     const partnerSections = AFFILIATE_PARTNERS.map(partner => {
-      const rows = state.jobs.map(job => ({job, link:affiliateLinkFor(job, partner)})).filter(row => row.link);
+      const rows = state.jobs.flatMap(job => affiliateLinksFor(job)
+        .filter(link => link.platform === partner.key)
+        .map(link => ({job, link})));
       rows.forEach(row => linkedIds.add(row.job.brief.id));
       return `<section class="affiliate-partner">
         <div class="affiliate-partner-head">
@@ -1309,9 +1365,9 @@ function renderPage(name) {
           <span class="affiliate-count">${rows.length}개</span>
         </div>
         ${rows.length ? rows.map(({job, link}) => `<div class="affiliate-link-row">
-          <strong>${escapeHtml(job.brief.productName)}</strong>
-          <a href="${escapeHtml(link)}" target="_blank" rel="noopener">${escapeHtml(link)}</a>
-          <button data-page-link="${escapeHtml(job.brief.id)}">링크 변경</button>
+          <strong>${escapeHtml(job.brief.productName)} · ${escapeHtml(link.label)}${link.primary ? ' (대표)' : ''}</strong>
+          <a href="${escapeHtml(link.url)}" target="_blank" rel="noopener">${escapeHtml(link.url)}</a>
+          <button data-page-link="${escapeHtml(job.brief.id)}">링크 관리</button>
         </div>`).join('') : '<div class="empty-page">이 제휴사에 연결된 콘텐츠가 없습니다.</div>'}
       </section>`;
     }).join('');
@@ -1579,7 +1635,10 @@ function bindPageActions(name) {
   restoreResearchPanel();
   document.querySelectorAll('[data-page-link]').forEach(b => b.onclick = () => {
     const job = state.jobs.find(j => j.brief.id === b.dataset.pageLink);
-    if (job) runTool('set-link', job).then(() => renderPage('links'));
+    if (!job) return;
+    state.selected = job.brief.id;
+    navigate('dashboard'); renderJobs(); renderDetail(true);
+    document.querySelector('[data-section="content"]')?.scrollIntoView({behavior:'smooth',block:'start'});
   });
   document.querySelectorAll('[data-setting]').forEach(b => b.onclick = () => {
     b.classList.toggle('on');

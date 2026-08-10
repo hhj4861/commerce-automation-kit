@@ -86,16 +86,47 @@ function affiliateDisclosure(platform) {
     : '이 링크를 통한 구매 시 일정액의 수수료를 제공받을 수 있습니다.';
 }
 
-function buildAffiliateComment(platform, url) {
-  const disclosure = affiliateDisclosure(platform);
-  return `제품 보러가기: ${url}\n\n${disclosure}`;
+function readAffiliateLinks(job) {
+  if (Array.isArray(job.affiliateLinks) && job.affiliateLinks.length > 0) {
+    return job.affiliateLinks.filter((link) => link?.id && link?.platform && link?.url);
+  }
+  const url = job.brief?.affiliateUrl;
+  if (!url || isPlaceholderLink(url)) return [];
+  const platform = Object.entries(job.platformLinks ?? {}).find(([, value]) => value === url)?.[0]
+    ?? (/coupang|coupa\.ng/.test(url) ? 'coupang' : 'naverConnect');
+  return [{ id: `legacy-${platform}`, platform, label: LINK_PLATFORMS[platform]?.label ?? '제품 보러가기', url, primary: true }];
 }
 
-function ensureDescriptionDisclosure(job, platform) {
-  const description = job.script?.description ?? '';
-  if (/파트너스.{0,20}(수수료|대가)|수수료.{0,20}(제공|지급|받을)/s.test(description)) return;
+function buildAffiliateComment(links) {
+  if (!links.length) return '';
+  const rows = links.map((link) => `- ${link.label}: ${link.url}`).join('\n');
+  const disclosures = [...new Set(links.map((link) => affiliateDisclosure(link.platform)))];
+  return `제품 구매 링크\n${rows}\n\n${disclosures.join('\n')}`;
+}
+
+function syncDescriptionDisclosures(job, links) {
+  const known = new Set(Object.keys(LINK_PLATFORMS).map(affiliateDisclosure));
+  const description = String(job.script?.description ?? '')
+    .split('\n')
+    .filter((line) => !known.has(line.trim()))
+    .join('\n')
+    .trimEnd();
+  const disclosures = [...new Set(links.map((link) => affiliateDisclosure(link.platform)))];
   job.script ??= {};
-  job.script.description = `${description}${description.trim() ? '\n\n' : ''}${affiliateDisclosure(platform)}`;
+  job.script.description = `${description}${description && disclosures.length ? '\n\n' : ''}${disclosures.join('\n')}`;
+}
+
+function syncAffiliateState(job, links) {
+  const primaryId = links.find((link) => link.primary === true)?.id ?? links[0]?.id;
+  const normalized = links.map((link) => ({ ...link, primary: link.id === primaryId }));
+  const primary = normalized.find((link) => link.primary) ?? normalized[0] ?? null;
+  job.affiliateLinks = normalized;
+  job.brief.affiliateUrl = primary?.url ?? '';
+  job.platformLinks = {};
+  for (const link of normalized) job.platformLinks[link.platform] ??= link.url;
+  job.affiliateComment = buildAffiliateComment(normalized);
+  syncDescriptionDisclosures(job, normalized);
+  return normalized;
 }
 
 function validateAffiliateUrl(platform, urlStr) {
@@ -293,14 +324,41 @@ export async function onRequest(context) {
         let validated;
         try { validated = validateAffiliateUrl(body?.platform, body?.url); }
         catch (e) { return json({ error: String(e.message) }, 400); }
-        job.brief.affiliateUrl = validated;
-        job.platformLinks = { ...(job.platformLinks ?? {}), [body.platform]: validated };
-        job.affiliateComment = buildAffiliateComment(body.platform, validated);
-        ensureDescriptionDisclosure(job, body.platform);
+        const links = readAffiliateLinks(job);
+        if (links.length >= 10) return json({ error: '콘텐츠당 제휴 링크는 최대 10개까지 저장할 수 있습니다.' }, 409);
+        if (links.some((link) => link.url === validated)) return json({ error: '이미 등록된 제휴 링크입니다.' }, 409);
+        const label = String(body?.label ?? '').trim().slice(0, 60)
+          || `${LINK_PLATFORMS[body.platform].label} ${links.filter((link) => link.platform === body.platform).length + 1}`;
+        if (body?.primary === true) links.forEach((link) => { link.primary = false; });
+        links.push({ id: crypto.randomUUID(), platform: body.platform, label, url: validated, primary: body?.primary === true || links.length === 0 });
+        syncAffiliateState(job, links);
         delete job.lintChecked;
         job.lintRequested = true;
         await saveJob(env, job);
-        return json({ ok: true, affiliateUrl: validated });
+        return json({ ok: true, affiliateUrl: job.brief.affiliateUrl, affiliateLinks: job.affiliateLinks });
+      }
+
+      const affiliateLinkAction = sub?.match(/^links\/([^/]+)(?:\/(primary))?$/);
+      if (affiliateLinkAction && method === 'DELETE' && !affiliateLinkAction[2]) {
+        const linkId = decodeURIComponent(affiliateLinkAction[1]);
+        const links = readAffiliateLinks(job);
+        if (!links.some((link) => link.id === linkId)) return json({ error: '제휴 링크를 찾을 수 없습니다.' }, 404);
+        syncAffiliateState(job, links.filter((link) => link.id !== linkId));
+        delete job.lintChecked;
+        job.lintRequested = true;
+        await saveJob(env, job);
+        return json({ ok: true, affiliateUrl: job.brief.affiliateUrl, affiliateLinks: job.affiliateLinks });
+      }
+      if (affiliateLinkAction && method === 'POST' && affiliateLinkAction[2] === 'primary') {
+        const linkId = decodeURIComponent(affiliateLinkAction[1]);
+        const links = readAffiliateLinks(job);
+        if (!links.some((link) => link.id === linkId)) return json({ error: '제휴 링크를 찾을 수 없습니다.' }, 404);
+        links.forEach((link) => { link.primary = link.id === linkId; });
+        syncAffiliateState(job, links);
+        delete job.lintChecked;
+        job.lintRequested = true;
+        await saveJob(env, job);
+        return json({ ok: true, affiliateUrl: job.brief.affiliateUrl, affiliateLinks: job.affiliateLinks });
       }
 
       // 쿠팡 딥링크 자동 변환(시크릿 키 있을 때만)
@@ -311,14 +369,16 @@ export async function onRequest(context) {
         }
         try {
           const link = await coupangDeeplink(env, body.productUrl);
-          job.brief.affiliateUrl = link;
-          job.platformLinks = { ...(job.platformLinks ?? {}), coupang: link };
-          job.affiliateComment = buildAffiliateComment('coupang', link);
-          ensureDescriptionDisclosure(job, 'coupang');
+          const links = readAffiliateLinks(job);
+          if (links.length >= 10) return json({ error: '콘텐츠당 제휴 링크는 최대 10개까지 저장할 수 있습니다.' }, 409);
+          if (!links.some((item) => item.url === link)) {
+            links.push({ id: crypto.randomUUID(), platform: 'coupang', label: `쿠팡 파트너스 ${links.filter((item) => item.platform === 'coupang').length + 1}`, url: link, primary: links.length === 0 });
+          }
+          syncAffiliateState(job, links);
           delete job.lintChecked;
           job.lintRequested = true;
           await saveJob(env, job);
-          return json({ ok: true, affiliateUrl: link });
+          return json({ ok: true, affiliateUrl: job.brief.affiliateUrl, affiliateLinks: job.affiliateLinks });
         } catch (e) {
           return json({ error: String(e.message ?? e) }, e.status ?? 502);
         }
