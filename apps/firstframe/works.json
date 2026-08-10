@@ -224,7 +224,7 @@
       "en": {
         "cat": "Auto · Product",
         "meta": "Auto · Product · 2026",
-        "runtime": "0:15 · 3 cuts",
+        "runtime": "0:17 · 4 cuts",
         "h3": "The glare disappears.",
         "p": "A before/after film for AlphaGear's suede dashboard cover — windshield glare fades into a clean, quiet cabin. Real customer reviews carry the proof.",
         "chips": [
@@ -233,12 +233,12 @@
           "Suede texture hero"
         ],
         "how": "<b>How we made it:</b> Style-referenced text-to-video (no source imagery reused), three 1080p cuts cut together with post-only typography — labels, review quotes, and the brand title are all compositor overlays, never AI-generated text.",
-        "sub": "Auto · Product · 2026 · 3 cuts"
+        "sub": "Auto · Product · 2026 · v2"
       },
       "ko": {
         "cat": "자동차 · 제품",
         "meta": "자동차 · 제품 · 2026",
-        "runtime": "0:15 · 3컷",
+        "runtime": "0:17 · 4컷",
         "h3": "반사가 사라지는 15초.",
         "p": "알파기어 스웨이드 대쉬보드커버의 전/후 필름 — 앞유리 반사가 걷히고 조용하고 깔끔한 실내로. 실구매 리뷰 인용이 근거를 싣습니다.",
         "chips": [
@@ -247,19 +247,31 @@
           "스웨이드 질감 히어로"
         ],
         "how": "<b>제작 방식:</b> 실사진은 스타일 참고로만 쓰고 텍스트-투-비디오로 3컷(1080p) 생성. 라벨·리뷰 인용·브랜드 타이틀은 전부 후반 합성 — AI 생성 글씨를 쓰지 않았습니다.",
-        "sub": "자동차 · 제품 · 2026 · 3컷"
+        "sub": "자동차 · 제품 · 2026 · v2"
       },
       "clips": [
         {
           "poster": "media/poster-alphagear.jpg",
           "src": "media/alphagear.mp4",
           "en": {
-            "label": "Full film",
-            "cap": "Before / After / Suede hero — 15s"
+            "label": "v2 · Final (17s)",
+            "cap": "Driving-glare scenario — before 3.5s / install 3.5s / after 5s / hero 5s"
           },
           "ko": {
-            "label": "풀 필름",
-            "cap": "장착 전 / 후 / 스웨이드 히어로 — 15초"
+            "label": "v2 · 최종 (17초)",
+            "cap": "주행 난반사 시나리오 — 장착 전 3.5s / 설치 3.5s / 장착 후 5s / 히어로 5s"
+          }
+        },
+        {
+          "poster": "media/poster-alphagear-v1.jpg",
+          "src": "media/alphagear-v1.mp4",
+          "en": {
+            "label": "v1 (15s)",
+            "cap": "First cut — static before / suede unfurl / hero"
+          },
+          "ko": {
+            "label": "v1 (15초)",
+            "cap": "첫 버전 — 정차 반사 / 커버 / 히어로"
           }
         }
       ]
