@@ -627,6 +627,18 @@
 <div class="viewer" id="viewer" hidden></div>
 
 <script>
+// 모바일 백지 진단용 — 초기 구동 오류를 화면에 표시(원인 확인 후 제거 예정)
+window.addEventListener('error', function (e) { window.__showFatal && window.__showFatal(e.message + ' @' + (e.filename||'').split('/').pop() + ':' + e.lineno); });
+window.addEventListener('unhandledrejection', function (e) { window.__showFatal && window.__showFatal('Promise: ' + (e.reason && e.reason.message || e.reason)); });
+window.__showFatal = function (msg) {
+  var d = document.getElementById('fatal') || document.createElement('div');
+  d.id = 'fatal';
+  d.style.cssText = 'position:fixed;left:8px;right:8px;top:8px;z-index:99999;background:#b54b42;color:#fff;padding:12px;border-radius:10px;font:12px -apple-system,sans-serif;white-space:pre-wrap;word-break:break-all';
+  d.textContent = '오류: ' + msg;
+  document.body ? document.body.appendChild(d) : addEventListener('DOMContentLoaded', function(){ document.body.appendChild(d); });
+};
+</script>
+<script>
 const ICONS = {
   spark:'<path d="M12 2.7c.5 4.7 2.7 7 7.3 7.5-4.6.5-6.8 2.8-7.3 7.5-.5-4.7-2.7-7-7.3-7.5 4.6-.5 6.8-2.8 7.3-7.5Z" fill="currentColor"/><path d="M19 15.5c.2 2 1.2 3 3 3.2-1.8.2-2.8 1.2-3 3.1-.2-1.9-1.2-2.9-3-3.1 1.8-.2 2.8-1.2 3-3.2Z" fill="currentColor"/>',
   grid:'<rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/>',
@@ -846,6 +858,8 @@ function renderJobs() {
       <div><div class="job-title">${escapeHtml(j.brief.productName)}</div>
       <div class="job-meta"><span>${st.label}</span><span class="dot"></span><span>${waiting ? '초안 작성 중' : (HOOK[j.script?.hookType] || '쇼츠')}</span><span class="dot"></span><span>${fmtTime(j.updatedAt)}</span>${warning}</div></div>
       <div class="job-actions">
+        ${(j.upload?.results || []).filter(r => r.url).map(r =>
+          `<a class="job-action quiet" href="${r.url}" target="_blank" rel="noopener" onclick="event.stopPropagation()">${r.platform === 'youtube' ? '▶ YT' : r.platform === 'instagram' ? '📷 IG' : r.platform}</a>`).join('')}
         <button class="job-action ${waiting ? 'quiet' : st.cls}" ${waiting ? 'data-request-waiting' : `data-action="${j.brief.id}"`}>${waiting ? '작성 중' : st.action}</button>
         <button class="job-delete" aria-label="${escapeHtml(j.brief.productName)} 삭제" ${waiting
           ? `data-delete-request="${escapeHtml(j._requestSlug || '')}"`
@@ -1004,9 +1018,24 @@ function renderDetail(force=false) {
           ${j.finalize?.state === 'error' ? `<div class="finalize-note">조립 실패: ${j.finalize.error}</div>` : ''}
           ${j.upload?.state === 'requested' ? '<div class="finalize-note">발행 확정 — 로컬 워커가 업로드를 가져가길 기다리고 있어요…</div>' : ''}
           ${['running','uploaded'].includes(j.upload?.state) ? '<div class="finalize-note">유튜브·인스타그램에 업로드하고 있어요…</div>' : ''}
-          ${j.upload?.state === 'done' ? `<div class="finalize-note">업로드 완료 ✓ ${(j.upload.results||[]).filter(r=>r.url).map(r=>`<a href="${r.url}" target="_blank" rel="noopener">${r.platform}</a>`).join(' · ')}</div>` : ''}
+          ${j.upload?.state === 'done' ? `<div class="finalize-note">업로드 완료 ✓</div>` : ''}
           ${j.upload?.state === 'failed' ? `<div class="finalize-note">업로드 실패: ${j.upload.error || ''}</div>` : ''}
         </div>
+        ${j.status === 'published' ? `<div class="detail-section">
+          <div class="detail-label">발행 위치</div>
+          ${(j.upload?.results || []).filter(r => r.url).length ? `
+            <div style="display:grid;gap:7px">${j.upload.results.filter(r => r.url).map(r => `
+              <a href="${r.url}" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:10px;padding:9px 12px;font-size:12px;font-weight:600;color:var(--ink);text-decoration:none">
+                ${r.platform === 'youtube' ? '▶ YouTube (BetterrShop)' : r.platform === 'instagram' ? '📷 Instagram (ttangkong_pom)' : r.platform}
+                <span style="margin-left:auto;color:var(--faint);font-weight:400;font-size:10px">열기 ↗</span></a>`).join('')}
+            </div>
+            <div class="memo-note" style="margin-top:7px">업로드 ${j.upload.at ? new Date(j.upload.at).toLocaleString('ko-KR') : ''} · 요청 ID ${j.publishRef || '-'}</div>`
+          : ['requested','running','uploaded'].includes(j.upload?.state)
+            ? '<div class="finalize-note">플랫폼에 업로드 중이에요… 완료되면 여기에 링크가 표시됩니다(보통 1~2분).</div>'
+            : j.upload?.state === 'failed'
+              ? `<div class="finalize-note">업로드 실패: ${j.upload.error || ''} — 아래 도구의 재시도를 눌러주세요.</div>`
+              : `<div class="memo-note">자동 업로드 기록이 없습니다${j.publishRef ? ` · 수동 기록 요청 ID: ${j.publishRef}` : ' — 이 잡은 자동 업로드 도입 전에 발행됐습니다.'}</div>`}
+        </div>` : ''}
         <div class="detail-section">
           <div class="detail-label">AFFILIATE LINK</div>
           <div class="affiliate-box">
