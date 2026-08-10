@@ -204,3 +204,11 @@ Cloudflare 인증 우선순위: ① 환경변수 `CLOUDFLARE_API_TOKEN` → ② 
 - **실존 브랜드(OLIPOP·Allbirds 등)는 데모 전용.** 공개 배포에는 가공 브랜드나 계약 고객 제품으로만. 상표·초상 리스크.
 - **AI 출처 서명(C2PA)은 제거하지 않는다**(provenance 은폐로 오해). AI 사용은 숨기지 말고 밝히는 게 방어 포지션.
 - 음악은 힉스필드로 못 만든다 → 상업 납품 음악은 외부 라이선스(Epidemic Sound 등).
+
+## 실측 노트 (2026-08-10, 알파기어 광고)
+
+- **kling3_0 은 16:9 에서 720p 고정** — width/height 1920x1080 을 넘겨도 무시된다(9:16 은 1080x1920 가능). 1080p 16:9 가 필요하면 seedance(45cr) 또는 후반 란초스 1.5× 업스케일(웹 재생 기준 양호). kling3_0 t2v 는 10cr/5s 로 seedance 의 1/4.5.
+- **seedance 큐 정체 시 kling3_0 우회** — 30분+ in_progress 면 갈아타라. 같은 프롬프트로 kling 이 1~2분에 나온다. 정체된 잡은 완료돼도 미사용 보관(실패 시 환불).
+- **i2v(start_image)는 t2v 보다 단가가 높고, 소스 이미지의 글씨가 영상에 새겨진다** — 상세페이지 크롭을 입력으로 쓰지 말 것. 실사진은 **스타일 참고(프롬프트 서술)로만** 쓰고, 프롬프트에 `no text, no letters anywhere` 명시.
+- **회사망 ElevenLabs 차단 우회**: `.github/workflows/tts-remote.yml`(내레이션) / `music-remote.yml`(BGM, ai-music elevenlabs 백엔드) — base64 브리프 디스패치 → 아티팩트 회수. 로컬 mix 는 ffmpeg 라 차단 무관.
+- **실구매 리뷰 인용** 은 원문 그대로 + "실구매 리뷰 · 쿠팡 구매평" 출처 표기(각색 금지 — 가짜 경험담 금지선과 구분). 효능 수치가 없을 때 리뷰 증언이 합법적 대체재.
