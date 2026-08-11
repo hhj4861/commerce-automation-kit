@@ -23,6 +23,10 @@ class Statement {
   }
 
   async run() {
+    if (this.sql.startsWith('INSERT INTO jobs')) {
+      this.db.jobs.set(this.args[0], JSON.parse(this.args[1]));
+      return { meta: { changes: 1 } };
+    }
     if (this.sql.startsWith('DELETE FROM jobs')) {
       const changed = this.db.jobs.delete(this.args[0]) ? 1 : 0;
       return { meta: { changes: changed } };
@@ -134,4 +138,51 @@ test('잘못된 아카이브 날짜는 DB 변경 전에 거부한다', async () 
   });
 
   assert.equal(response.status, 400);
+});
+
+test('콘텐츠 하나에 여러 제휴 링크를 추가하고 대표 링크를 변경·삭제할 수 있다', async () => {
+  const job = {
+    brief: { id: 'multi-link', affiliateUrl: '' },
+    script: { description: '' },
+    status: 'draft',
+  };
+  const { env } = envWith(job);
+  const request = (path, init = {}) => onRequest({
+    request: new Request(`https://example.test/api/jobs/multi-link/${path}`, init),
+    env,
+  });
+  const add = (platform, url, label) => request('set-link', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ platform, url, label }),
+  });
+
+  const first = await add('coupang', 'https://link.coupang.com/a/first', '본품');
+  const second = await add('naverConnect', 'https://naver.me/second', '리필');
+  assert.equal(first.status, 200);
+  assert.equal(second.status, 200);
+
+  let stored = env.DB.jobs.get('multi-link');
+  assert.equal(stored.affiliateLinks.length, 2);
+  assert.equal(stored.affiliateLinks[0].primary, true);
+  assert.match(stored.affiliateComment, /본품: https:\/\/link\.coupang\.com\/a\/first/);
+  assert.match(stored.affiliateComment, /리필: https:\/\/naver\.me\/second/);
+  assert.match(stored.script.description, /쿠팡 파트너스 활동/);
+  assert.match(stored.script.description, /이 링크를 통한 구매 시/);
+
+  const secondId = stored.affiliateLinks[1].id;
+  const primary = await request(`links/${encodeURIComponent(secondId)}/primary`, { method: 'POST' });
+  assert.equal(primary.status, 200);
+  stored = env.DB.jobs.get('multi-link');
+  assert.equal(stored.brief.affiliateUrl, 'https://naver.me/second');
+  assert.equal(stored.affiliateLinks.filter((link) => link.primary).length, 1);
+
+  const firstId = stored.affiliateLinks[0].id;
+  const removed = await request(`links/${encodeURIComponent(firstId)}`, { method: 'DELETE' });
+  assert.equal(removed.status, 200);
+  stored = env.DB.jobs.get('multi-link');
+  assert.deepEqual(stored.affiliateLinks.map((link) => link.label), ['리필']);
+  assert.doesNotMatch(stored.affiliateComment, /본품/);
+  assert.doesNotMatch(stored.script.description, /쿠팡 파트너스 활동/);
+  assert.match(stored.script.description, /이 링크를 통한 구매 시/);
 });

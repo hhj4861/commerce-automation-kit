@@ -20,7 +20,19 @@ export interface NarrationOpts {
   outputFormat?: string;
   /** 생략 시 env(ELEVENLABS_*) → 검증된 기본값 순 */
   env?: Record<string, string | undefined>;
+  /** 테스트/제한 재시도 주입용. */
+  fetchFn?: typeof fetch;
+  sleep?: (ms: number) => Promise<void>;
+  maxAttempts?: number;
 }
+
+const SAFE_RETRY_CODES = new Set(['ENOTFOUND', 'EAI_AGAIN', 'ECONNREFUSED', 'EHOSTUNREACH', 'ENETUNREACH', 'UND_ERR_CONNECT_TIMEOUT']);
+const delay = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+const errorCode = (e: unknown): string => String(
+  (e as { code?: string } | null)?.code
+  ?? (e as { cause?: { code?: string } } | null)?.cause?.code
+  ?? '',
+);
 
 /** 한국어 내레이션 1건 생성 → outPath 저장. */
 export async function synthesizeNarration(o: NarrationOpts): Promise<NarrationClip> {
@@ -31,24 +43,47 @@ export async function synthesizeNarration(o: NarrationOpts): Promise<NarrationCl
   const policy = resolvePolicy(text, o.env ?? process.env);
   const format = o.outputFormat ?? DEFAULT_OUTPUT_FORMAT;
 
-  let res: Response;
-  try {
-    res = await fetch(
-      `${ENDPOINT}/${policy.voiceId}?output_format=${encodeURIComponent(format)}`,
-      {
-        method: 'POST',
-        headers: { 'xi-api-key': o.apiKey, 'Content-Type': 'application/json' },
-        body: JSON.stringify(buildRequestBody(text, policy)),
-      },
-    );
-  } catch (e) {
-    throw new Error(`ElevenLabs fetch 실패(네트워크): ${e instanceof Error ? e.message : String(e)}`);
+  const fetchFn = o.fetchFn ?? fetch;
+  const sleep = o.sleep ?? delay;
+  const maxAttempts = Math.max(1, Math.min(o.maxAttempts ?? 3, 3));
+  let res: Response | null = null;
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      res = await fetchFn(
+        `${ENDPOINT}/${policy.voiceId}?output_format=${encodeURIComponent(format)}`,
+        {
+          method: 'POST',
+          headers: { 'xi-api-key': o.apiKey, 'Content-Type': 'application/json' },
+          body: JSON.stringify(buildRequestBody(text, policy)),
+        },
+      );
+    } catch (e) {
+      const code = errorCode(e);
+      // POST 응답 유실은 이중 과금 가능성이 있어 재시도하지 않는다. DNS·연결 수립 실패처럼
+      // 서버가 요청을 처리하지 않았다고 판단할 수 있는 코드만 제한적으로 재시도한다.
+      if (attempt < maxAttempts && SAFE_RETRY_CODES.has(code)) {
+        await sleep(500 * 2 ** (attempt - 1));
+        continue;
+      }
+      const suffix = code ? ` [${code}]` : '';
+      throw new Error(`ElevenLabs fetch 실패(네트워크)${suffix}: ${e instanceof Error ? e.message : String(e)}`);
+    }
+    if (res.status === 429 && attempt < maxAttempts) {
+      const retryAfter = Number(res.headers.get('retry-after'));
+      await sleep(Number.isFinite(retryAfter) && retryAfter > 0 ? Math.min(retryAfter * 1000, 10_000) : 500 * 2 ** (attempt - 1));
+      res = null;
+      continue;
+    }
+    break;
   }
+  if (!res) throw new Error('ElevenLabs 재시도 후 응답 없음');
   if (!res.ok) {
     const detail = await res.text().catch(() => '');
     throw new Error(`ElevenLabs HTTP ${res.status}: ${detail.slice(0, 300)}`);
   }
-  const buf = Buffer.from(await res.arrayBuffer());
+  let buf: Buffer;
+  try { buf = Buffer.from(await res.arrayBuffer()); }
+  catch (e) { throw new Error(`ElevenLabs 오디오 수신 실패(자동 재시도 안 함): ${e instanceof Error ? e.message : String(e)}`); }
   if (buf.length === 0) throw new Error('ElevenLabs 응답이 비어있음(오디오 없음)');
   await writeFile(o.outPath, buf);
 
