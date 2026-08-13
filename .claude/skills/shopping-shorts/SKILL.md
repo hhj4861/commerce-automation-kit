@@ -60,9 +60,34 @@ curl -s -X POST http://127.0.0.1:5178/api/jobs -H 'content-type: application/jso
 
 ## 5. 클립 생성 (승인된 잡만)
 
-- 비트별 `visualPrompt` → `generate_video` **aspect_ratio "9:16"**, duration=비트 길이.
+### 5.1 프롬프트는 손으로 쓰지 않는다 — 광고와 같은 공통 엔진을 쓴다 (필수)
+
+쇼츠 품질이 광고보다 떨어졌던 원인은 비율이 아니라 **프롬프트 밀도**였다(실측 2026-08).
+광고는 `buildSpotPrompt` 가 시네마틱 스타일·조명·렌즈·연출 극대화를 항상 주입하는데,
+쇼츠는 세션이 매번 손으로 써서 잡마다 문구가 제각각이었다.
+→ **쇼츠도 같은 조립기를 쓰되 `--aspect 9:16` 만 다르게 준다.**
+
+컨셉 JSON(`AdConcept` 형태 — 소구점·근거·고유성·비트·사람승인)을 만들고:
+
+```bash
+npm run --silent cli -w @cak/ad-video-gen -- check-concept --concept concept.json      # 3중 게이트
+npm run --silent cli -w @cak/ad-video-gen -- build-prompt --concept concept.json --aspect 9:16
+```
+
+- 게이트 미통과(`humanApproved=false`·고유성 실패 등)면 프롬프트를 **발급하지 않는다**(exit 1).
+- 출력 `prompt` 를 비트별 `visualPrompt` 로 쓴다. 컨셉·연출 강도는 광고와 완전히 동일하고
+  마지막 줄의 프레이밍 지시만 세로 구도·세이프존으로 갈린다.
+- 비트에 `emphasis`(`problem`|`resolution`|`hero`)를 달면 연출 극대화가 자동 주입된다.
+  **과장은 연출(비주얼)에만** — 문구·수치·효능의 사실 주장 과장은 금지(표시광고법·금지선 #3).
+- 9:16 프레이밍은 상/하단을 비워두게 지시한다 — 그 자리에 자막·**대가성 고지**가 번인되기 때문.
+
+### 5.2 생성 호출
+
+- `generate_video` **aspect_ratio "9:16"**, duration=비트 길이.
 - 첫 배치는 **시안 1편**(kling std)을 먼저 보여주고 톤 확정 후 나머지 배치.
 - 사람 신체 클로즈업 NSFW 오탐·tv_spot 아바타 자동삽입 등 연출 규칙은 ad-video 스킬 §2 실측 표를 따른다.
+- **해상도 실측**: kling3_0 는 16:9 가 720p 고정인 반면 **9:16 은 1080x1920 네이티브**다.
+  쇼츠는 업스케일 없이 그대로 쓴다(광고 16:9 만 후반 lanczos 1.5x 필요).
 - 다운로드 후 대시보드 전이: `{to:"generated", clipPaths:[...]}`.
 
 ## 6. TTS 내레이션 (기본 포함)

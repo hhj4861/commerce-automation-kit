@@ -8,11 +8,30 @@
  *    텍스트는 생성이 아니라 후반 오버레이(ffargs.buildTitleArgs)로 넣는다.
  *    단 "no on-screen text" 같은 부정형은 위반이 아니다 — 매치 직전의 부정어를 확인한다.
  */
-import type { AdConcept } from '@cak/contracts';
+import type { AdConcept, AdVideoAspectRatio } from '@cak/contracts';
 
 /** 항상 포함되는 시네마틱 스타일 가이드 (다큐/홈비디오 톤 방지) */
 export const STYLE_GUIDE =
   'High-end cinematic TV commercial. High-contrast cinematic grade, shallow depth of field, anamorphic feel, sculptural dramatic lighting with rim light, smooth dolly/gimbal moves, subtle speed ramps, no camera shake, no on-screen text.';
+
+/**
+ * 화면비별 구도 지시 — 품질 엔진(STYLE_GUIDE)은 공통이고 프레이밍만 갈린다.
+ *
+ * 9:16 실측 근거: 가로 구도를 그대로 세로로 쓰면 피사체가 작아지고 여백이 죽는다.
+ * 또한 상/하단은 후반 자막·고지 오버레이와 플랫폼 UI(계정명·버튼)가 덮으므로
+ * 핵심 피사체를 중앙 안전 영역에 두도록 강제한다.
+ */
+export const FRAMING_GUIDE: Record<AdVideoAspectRatio, string> = {
+  '16:9':
+    'Framed for 16:9 widescreen: cinematic horizontal composition, let the environment breathe around the subject.',
+  '9:16':
+    'Framed for 9:16 vertical: tall portrait composition built for mobile full-screen. Fill the vertical frame — keep the hero subject large and centered, stack depth top-to-bottom rather than left-to-right, and use tighter framing than a widescreen equivalent. Keep the key subject inside the central safe area; leave the top and bottom margins visually simple, with no critical detail there, since post-production graphics occupy those bands.',
+  '1:1':
+    'Framed for 1:1 square: centered balanced composition, hero subject large and central, minimal dead space at the edges.',
+};
+
+/** 기본 화면비 — 기존 호출부(광고)의 동작을 그대로 유지 */
+const DEFAULT_ASPECT: AdVideoAspectRatio = '16:9';
 
 /** 힉스필드 NSFW 필터 오탐 실측 사례 — 검출 시 생성 전에 차단한다 */
 export const FORBIDDEN_PHRASES: readonly string[] = [
@@ -81,10 +100,16 @@ function fmtSec(n: number): string {
 }
 
 /**
- * 스팟 프롬프트 조립: 컨셉 요약 문장 + 비트별 시간 구간 + STYLE_GUIDE(+extraStyle).
+ * 스팟 프롬프트 조립: 컨셉 요약 문장 + 비트별 시간 구간 + STYLE_GUIDE + 화면비 구도(+extraStyle).
  * 비트 초 구간은 durationSec 를 누적해 "Beat 1 (0s–2s): ..." 식으로 표기한다.
+ *
+ * 화면비 우선순위: opts.aspectRatio > concept.aspectRatio > 16:9.
+ * 광고(16:9)와 쇼핑쇼츠(9:16)가 이 함수를 공유한다 — 컨셉·연출 품질은 동일하고 구도만 갈린다.
  */
-export function buildSpotPrompt(concept: AdConcept, opts?: { extraStyle?: string }): string {
+export function buildSpotPrompt(
+  concept: AdConcept,
+  opts?: { extraStyle?: string; aspectRatio?: AdVideoAspectRatio },
+): string {
   const totalSec = concept.beats.reduce((sum, b) => sum + b.durationSec, 0);
   const category = concept.category ? ` (${concept.category})` : '';
   const summary =
@@ -110,6 +135,8 @@ export function buildSpotPrompt(concept: AdConcept, opts?: { extraStyle?: string
     beatLines.push(`Beat ${i + 1} (${fmtSec(start)}s–${fmtSec(t)}s): ${beat.description}${extra}`);
   }
 
-  const style = opts?.extraStyle ? `${STYLE_GUIDE} ${opts.extraStyle}` : STYLE_GUIDE;
+  const aspect = opts?.aspectRatio ?? concept.aspectRatio ?? DEFAULT_ASPECT;
+  const base = `${STYLE_GUIDE} ${FRAMING_GUIDE[aspect]}`;
+  const style = opts?.extraStyle ? `${base} ${opts.extraStyle}` : base;
   return [summary, ...beatLines, style].join('\n');
 }

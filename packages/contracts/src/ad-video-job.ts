@@ -26,6 +26,12 @@ export type AdVideoTier = 'draft' | 'standard' | 'broadcast';
 
 export type AdVideoResolution = '480p' | '720p' | '1080p' | '4k';
 
+/**
+ * 출력 화면비 — 소비 앱이 고른다(광고=16:9, 쇼핑쇼츠/릴스=9:16).
+ * 프롬프트 조립기는 이 값에 따라 구도·세이프존 지시를 바꾼다(품질은 공통 엔진 유지).
+ */
+export type AdVideoAspectRatio = '16:9' | '9:16' | '1:1';
+
 /** 15초 스팟의 장면 비트 (4~5개 권장) */
 export interface AdBeat {
   /** 0부터 시작하는 순서 */
@@ -70,6 +76,11 @@ export interface AdConcept {
   narrativeComplete: boolean;
   /** 사람 게이트 — 사용자가 컨셉을 승인했는가. false면 생성 트리거 금지 */
   humanApproved: boolean;
+  /**
+   * 출력 화면비(선택, 기본 16:9) — 소비 앱이 지정한다.
+   * 컨셉·소구점·연출 강도는 비율과 무관하게 공통이고, 구도 지시만 달라진다.
+   */
+  aspectRatio?: AdVideoAspectRatio;
 }
 
 /** 생성 1건의 명세 (MCP 호출 직전 상태의 스냅샷) */
