@@ -1,0 +1,26 @@
+{
+  "name": "@cak/meta-paid-reach",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Meta 공식 Marketing API로 PAUSED 광고를 생성하고, 사람 승인 뒤 제한적으로 집행하며, 1,000 impressions 또는 지출 상한에서 자동 PAUSE하는 PoC.",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "cli": "tsx src/cli/index.ts"
+  },
+  "dependencies": {
+    "@cak/contracts": "*",
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "tsx": "^4.16.0",
+    "typescript": "^5.5.0",
+    "vitest": "^2.0.0"
+  }
+}

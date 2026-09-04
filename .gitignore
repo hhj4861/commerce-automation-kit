@@ -17,3 +17,7 @@ coverage/
 
 # 쇼츠/영상 생성 산출물(대용량, 세션별)
 docs/out/
+
+# Meta paid-reach PoC 실행 상태(광고 객체 ID/성과 스냅샷)
+*.paid-reach-state.json
+*.paid-reach-state.json.tmp

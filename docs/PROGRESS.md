@@ -2,7 +2,7 @@
 
 > **이 파일의 목적:** 새 IDE/새 Claude 세션이 이 문서 하나만 읽고 곧바로 이어서 작업할 수 있게 한다.
 > 설계 근거는 각 문서에, **"지금 어디까지 왔고 다음에 뭘 하나"는 여기에** 기록한다.
-> 최종 갱신: **2026-07-24**
+> 최종 갱신: **2026-09-04**
 
 ---
 
@@ -27,6 +27,7 @@ cd packages/keyword-intel && npm test     # 81개 통과하면 정상
 | 원자 | 상태 |
 |---|---|
 | **contracts** | `KeywordSignal` / `IntelBatch` 계약 확정. append-only 유지 중 |
+| **meta-paid-reach (PoC)** | ✅ **착수(09-04)** — Meta 공식 Marketing API Campaign→Ad Set→Video→Creative→Ad 경로. 기본 dry-run, 실제 생성도 전량 PAUSED, 사람 승인+라이브 이중잠금+하드 예산 상한. impressions/spend/status 폴링 후 1,000회 또는 지출 상한에서 Campaign 우선 PAUSE. 설정/권한 가이드와 단위 테스트 포함. **실계정 호출·과금은 아직 미수행** |
 | **keyword-intel (#1)** | ✅ **Phase 1·2 완료 + G1·G2 실호출 통과 + 일일 자동화 가동 중**. 남은 것: Phase 3(사람 판단) |
 | slide-renderer (#2) | 미착수 스캐폴드 |
 | coupang-connector (#3) | 미착수 스캐폴드 |

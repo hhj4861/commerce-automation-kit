@@ -1,0 +1,35 @@
+{
+  "name": "CAK Meta 1000 impressions PoC",
+  "creative": {
+    "source": {
+      "kind": "meta-video-id",
+      "value": "REPLACE_WITH_META_VIDEO_ID"
+    },
+    "pageId": "REPLACE_WITH_FACEBOOK_PAGE_ID",
+    "landingPageUrl": "https://example.com/products/replace-me",
+    "message": "사람 검수를 마친 테스트용 상품 소개 문구로 교체하세요.",
+    "headline": "테스트 상품 보기",
+    "callToAction": "LEARN_MORE"
+  },
+  "targeting": {
+    "countries": ["KR"],
+    "ageMin": 25,
+    "ageMax": 44,
+    "publisherPlatforms": ["facebook"]
+  },
+  "budget": {
+    "lifetimeBudgetMinorUnits": 15000,
+    "pauseAtSpendAccountCurrency": 15000,
+    "startTime": "2026-09-05T09:00:00+09:00",
+    "endTime": "2026-09-06T09:00:00+09:00"
+  },
+  "limits": {
+    "targetImpressions": 1000
+  },
+  "specialAdCategories": [],
+  "compliance": {
+    "creativeRightsConfirmed": false,
+    "humanApproved": false,
+    "notes": "dry-run 예제. 실제 생성 전 true로 바꾸고 approvedBy/approvedAt을 기록하세요."
+  }
+}
