@@ -1,0 +1,38 @@
+# 회사망 ElevenLabs 차단 시 BGM 생성 우회 — tts-remote 와 동일 패턴(ai-music 원자).
+name: music-remote
+on:
+  workflow_dispatch:
+    inputs:
+      brief_b64:
+        description: "MusicBrief JSON (base64)"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  music:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+      - run: npm install --no-package-lock --no-audit --no-fund
+      - name: Generate music
+        env:
+          ELEVENLABS_API_KEY: ${{ secrets.ELEVENLABS_API_KEY }}
+          BRIEF_B64: ${{ inputs.brief_b64 }}
+        run: |
+          printf '%s' "$BRIEF_B64" | base64 -d > /tmp/brief.json
+          npm run --silent cli -w @cak/ai-music -- generate --brief /tmp/brief.json --backend elevenlabs --out "$RUNNER_TEMP/bgm.mp3"
+          ls -la "$RUNNER_TEMP/bgm.mp3"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bgm
+          path: ${{ runner.temp }}/bgm.mp3
+          if-no-files-found: error
+          retention-days: 1

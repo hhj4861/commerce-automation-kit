@@ -4,7 +4,7 @@
  *
  * 사용:
  *   npm run cli -- check-concept --concept concept.json        # 3중 게이트 → {ok,problems,warnings}
- *   npm run cli -- build-prompt --concept concept.json [--extra-style "..."]
+ *   npm run cli -- build-prompt --concept concept.json [--extra-style "..."] [--aspect 16:9|9:16|1:1]
  *   npm run cli -- lint-prompt --text "..." | --file prompt.txt
  *   npm run cli -- estimate --model seedance_2_0 --resolution 1080p --duration 15
  *   npm run cli -- tier --tier standard
@@ -24,6 +24,7 @@ import { readFileSync, writeFileSync, unlinkSync } from 'node:fs';
 import { isAbsolute, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 import type { ParseArgsConfig } from 'node:util';
+import type { AdVideoAspectRatio } from '@cak/contracts';
 import { checkConcept } from '../core/concept.js';
 import { buildSpotPrompt, lintPrompt } from '../core/prompt.js';
 import { estimateCredits, pickTierDefaults } from '../core/cost.js';
@@ -126,6 +127,8 @@ async function runFfmpegOrFail(args: string[], outPath: string): Promise<void> {
 const STR = { type: 'string' } as const;
 const STR_MULTI = { type: 'string', multiple: true } as const;
 
+const ASPECT_RATIOS: readonly AdVideoAspectRatio[] = ['16:9', '9:16', '1:1'];
+
 async function main(): Promise<void> {
   const [cmd, ...rest] = process.argv.slice(2);
 
@@ -138,7 +141,7 @@ async function main(): Promise<void> {
       break;
     }
     case 'build-prompt': {
-      const o = parse(rest, { concept: STR, 'extra-style': STR });
+      const o = parse(rest, { concept: STR, 'extra-style': STR, aspect: STR });
       const concept = readConcept(o);
       const gate = checkConcept(concept);
       if (!gate.ok) {
@@ -147,9 +150,17 @@ async function main(): Promise<void> {
         process.exit(1);
       }
       const extraStyle = optStr(o, 'extra-style');
-      const prompt = buildSpotPrompt(concept, extraStyle !== undefined ? { extraStyle } : undefined);
+      const aspectArg = optStr(o, 'aspect');
+      if (aspectArg !== undefined && !ASPECT_RATIOS.includes(aspectArg as AdVideoAspectRatio)) {
+        throw new UsageError(`--aspect 는 ${ASPECT_RATIOS.join(' | ')} 중 하나`);
+      }
+      const promptOpts: { extraStyle?: string; aspectRatio?: AdVideoAspectRatio } = {};
+      if (extraStyle !== undefined) promptOpts.extraStyle = extraStyle;
+      if (aspectArg !== undefined) promptOpts.aspectRatio = aspectArg as AdVideoAspectRatio;
+      const prompt = buildSpotPrompt(concept, promptOpts);
       const { violations } = lintPrompt(prompt);
-      out({ ok: violations.length === 0, prompt, violations, warnings: gate.warnings });
+      const aspectRatio = aspectArg ?? concept.aspectRatio ?? '16:9';
+      out({ ok: violations.length === 0, prompt, aspectRatio, violations, warnings: gate.warnings });
       if (violations.length > 0) process.exit(1);
       break;
     }

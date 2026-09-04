@@ -3,7 +3,7 @@
  * 부정형("no on-screen text")은 통과.
  */
 import { describe, it, expect } from 'vitest';
-import { STYLE_GUIDE, buildSpotPrompt, lintPrompt } from '../src/core/prompt.js';
+import { STYLE_GUIDE, FRAMING_GUIDE, buildSpotPrompt, lintPrompt } from '../src/core/prompt.js';
 import type { AdConcept } from '@cak/contracts';
 
 function concept(): AdConcept {
@@ -29,9 +29,45 @@ describe('buildSpotPrompt', () => {
     expect(buildSpotPrompt(concept())).toContain(STYLE_GUIDE);
   });
 
-  it('extraStyle 은 STYLE_GUIDE 뒤에 붙는다', () => {
+  it('화면비 미지정이면 16:9 프레이밍 (기존 광고 동작 유지)', () => {
+    const p = buildSpotPrompt(concept());
+    expect(p).toContain(FRAMING_GUIDE['16:9']);
+    expect(p).not.toContain(FRAMING_GUIDE['9:16']);
+  });
+
+  it('9:16 은 세로 프레이밍 + 세이프존 지시로 갈린다 (품질 엔진은 공통)', () => {
+    const p = buildSpotPrompt(concept(), { aspectRatio: '9:16' });
+    expect(p).toContain(STYLE_GUIDE); // 시네마틱 품질 지시는 비율과 무관하게 동일
+    expect(p).toContain(FRAMING_GUIDE['9:16']);
+    expect(p).toContain('safe area');
+    expect(p).not.toContain(FRAMING_GUIDE['16:9']);
+  });
+
+  it('비율만 다르면 컨셉·비트 본문은 완전히 동일하다', () => {
+    const wide = buildSpotPrompt(concept(), { aspectRatio: '16:9' }).split('\n');
+    const tall = buildSpotPrompt(concept(), { aspectRatio: '9:16' }).split('\n');
+    // 마지막 줄(스타일+프레이밍)만 다르고 요약·비트 줄은 1:1 일치해야 한다
+    expect(tall.slice(0, -1)).toEqual(wide.slice(0, -1));
+    expect(tall[tall.length - 1]).not.toEqual(wide[wide.length - 1]);
+  });
+
+  it('concept.aspectRatio 를 읽고, opts 가 우선한다', () => {
+    const c = { ...concept(), aspectRatio: '9:16' as const };
+    expect(buildSpotPrompt(c)).toContain(FRAMING_GUIDE['9:16']);
+    expect(buildSpotPrompt(c, { aspectRatio: '16:9' })).toContain(FRAMING_GUIDE['16:9']);
+  });
+
+  it('모든 화면비의 프레이밍 지시가 자체 lint 를 통과한다', () => {
+    for (const aspect of ['16:9', '9:16', '1:1'] as const) {
+      const p = buildSpotPrompt(concept(), { aspectRatio: aspect });
+      expect(lintPrompt(p).violations, `${aspect} 위반`).toEqual([]);
+    }
+  });
+
+  it('extraStyle 은 스타일·프레이밍 가이드 뒤에 붙는다', () => {
     const p = buildSpotPrompt(concept(), { extraStyle: 'Teal and amber palette.' });
-    expect(p).toContain(`${STYLE_GUIDE} Teal and amber palette.`);
+    expect(p).toContain(`${FRAMING_GUIDE['16:9']} Teal and amber palette.`);
+    expect(p.indexOf(STYLE_GUIDE)).toBeLessThan(p.indexOf('Teal and amber palette.'));
   });
 
   it('비트 초 구간이 누적 계산된다 (0–2, 2–5.5, 5.5–10.5, 10.5–15)', () => {

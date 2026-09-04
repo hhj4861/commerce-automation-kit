@@ -1,0 +1,46 @@
+# 회사망이 ElevenLabs TLS 를 SSL 검사로 차단할 때의 우회 경로 —
+# TTS 만 GitHub 러너에서 생성해 아티팩트로 회수한다(조립은 로컬 ffmpeg).
+# workflow_dispatch 전용: 쓰기 권한자만 실행 가능(공개 레포에서도 시크릿 안전).
+name: tts-remote
+on:
+  workflow_dispatch:
+    inputs:
+      script_b64:
+        description: "ShortsScript JSON (base64)"
+        required: true
+        type: string
+      voice_id:
+        description: "ElevenLabs voice id"
+        required: false
+        default: "n2fbxG88jqAoaVPUy3IG"  # Yooni
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  tts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+      - run: npm install --no-package-lock --no-audit --no-fund
+      - name: Generate narration
+        env:
+          ELEVENLABS_API_KEY: ${{ secrets.ELEVENLABS_API_KEY }}
+          ELEVENLABS_VOICE_ID: ${{ inputs.voice_id }}
+          SCRIPT_B64: ${{ inputs.script_b64 }}
+        run: |
+          printf '%s' "$SCRIPT_B64" | base64 -d > /tmp/script.json
+          npm run --silent cli -w @cak/tts-narration -- script --script /tmp/script.json --outdir "$RUNNER_TEMP/vo-out"
+          ls -la "$RUNNER_TEMP/vo-out"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: narration
+          path: ${{ runner.temp }}/vo-out
+          if-no-files-found: error
+          retention-days: 1

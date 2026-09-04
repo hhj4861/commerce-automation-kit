@@ -6,7 +6,7 @@
  * 계약 타입(`field?: T`)으로 그대로 대입할 수 없어, parse 후 정규화 함수로 변환한다.
  */
 import { z } from 'zod';
-import type { AdConcept, AdVideoModel, AdVideoResolution, AdVideoTier } from '@cak/contracts';
+import type { AdBeat, AdConcept, AdVideoModel, AdVideoResolution, AdVideoTier } from '@cak/contracts';
 
 export const adVideoModelSchema: z.ZodType<AdVideoModel> = z.enum([
   'seedance_2_0',
@@ -24,6 +24,7 @@ export const adBeatSchema = z.object({
   index: z.number().int().min(0),
   durationSec: z.number(),
   description: z.string(),
+  emphasis: z.enum(['problem', 'resolution', 'hero']).optional(),
 });
 
 export const adConceptSchema = z.object({
@@ -38,6 +39,7 @@ export const adConceptSchema = z.object({
   beats: z.array(adBeatSchema),
   narrativeComplete: z.boolean(),
   humanApproved: z.boolean(),
+  aspectRatio: z.enum(['16:9', '9:16', '1:1']).optional(),
 });
 
 /** unknown(JSON 파일 내용) → AdConcept. 스키마 불일치는 zod 에러로 throw. */
@@ -48,10 +50,17 @@ export function parseAdConcept(input: unknown): AdConcept {
     sellingPoints: r.sellingPoints,
     evidence: r.evidence,
     uniqueness: r.uniqueness,
-    beats: r.beats,
+    // exactOptionalPropertyTypes: zod 의 optional 은 `emphasis?: T | undefined` 를 만들어
+    // `emphasis?: T` 와 호환되지 않는다 — 값이 있을 때만 얹어 명시적 undefined 를 제거한다.
+    beats: r.beats.map((b) => {
+      const beat: AdBeat = { index: b.index, durationSec: b.durationSec, description: b.description };
+      if (b.emphasis !== undefined) beat.emphasis = b.emphasis;
+      return beat;
+    }),
     narrativeComplete: r.narrativeComplete,
     humanApproved: r.humanApproved,
   };
   if (r.category !== undefined) concept.category = r.category;
+  if (r.aspectRatio !== undefined) concept.aspectRatio = r.aspectRatio;
   return concept;
 }
