@@ -10,6 +10,20 @@ import type { ShopSearchResult, DatalabResult, ShoppingInsightResult } from '../
 
 const asRel = (n: number): RelativeIndex => n as RelativeIndex;
 
+/**
+ * 쇼핑 검색 소스가 응답하지 않을 때의 자리표시 블록(계약상 competition 은 필수).
+ * 값이 "0 경쟁" 이라는 주장이 아니라 미수집 표시다 — 반드시 coverage.ok.naver_search_shop=false 와
+ * 함께 저장하고, 스코어는 competitionKnown=false 로 경쟁항 기여를 0 으로 둔다(부풀림 방지).
+ */
+export const EMPTY_COMPETITION: KeywordSignal['competition'] = {
+  totalProducts: 0,
+  priceLow: null,
+  priceHigh: null,
+  priceMedian: null,
+  distinctSellers: 0,
+  brandedRatio: 0,
+};
+
 /** 쇼핑 검색 응답 → competition 블록 */
 export function summarizeCompetition(shop: ShopSearchResult): KeywordSignal['competition'] {
   const prices = shop.items
@@ -77,14 +91,23 @@ export function summarizeShoppingTrend(
 export function scoreOpportunity(
   competition: KeywordSignal['competition'],
   trend: KeywordSignal['trend'],
+  /** false = 쇼핑 검색 소스 미수집(soft-fail) — 경쟁항을 "빈 시장"으로 오독해 점수를 부풀리지 않는다 */
+  competitionKnown = true,
 ): KeywordSignal['scores'] {
   const demand = trend.latest ?? 0; // 0~100
+  const hasTrend = trend.latest !== null;
+  if (!competitionKnown) {
+    // 경쟁 미상: 경쟁항 기여 0(보수적), 신뢰도는 트렌드 단독 상한 0.5
+    return {
+      opportunity: Math.round(clamp(demand * 0.6, 0, 100)),
+      confidence: Math.min((hasTrend ? 0.5 : 0) + 0.2, 0.5),
+    };
+  }
   // 경쟁 밀도: 상품수 많을수록 붐빔 (log 스케일)
   const density = Math.log10(Math.max(competition.totalProducts, 1)); // 대략 0~7
   const competitionPenalty = Math.min(density / 7, 1) * 100; // 0~100
   const raw = demand * 0.6 + (100 - competitionPenalty) * 0.4;
 
-  const hasTrend = trend.latest !== null;
   const hasComp = competition.totalProducts > 0;
   const confidence = (hasTrend ? 0.5 : 0) + (hasComp ? 0.3 : 0) + 0.2 /* v0 상한 */ * 1;
 

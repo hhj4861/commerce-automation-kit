@@ -504,6 +504,32 @@
   .memo-note { color:var(--faint); font-size:10px; margin-top:6px; line-height:1.5; }
   .guardrail { display:flex; gap:9px; align-items:flex-start; background:var(--mint-soft); border-top:1px solid #d3e8de; padding:11px 18px; color:var(--mint); font-size:11px; line-height:1.55; }
   @media (max-width:900px){ .research-grid{grid-template-columns:1fr} .research-col+.research-col{border-left:0; border-top:1px solid var(--line)} }
+  /* ---- 관찰 창 (인페이지 오버레이 — 유튜브는 공식 임베드로 페이지 안 재생) ---- */
+  .observe { position:fixed; right:18px; top:74px; bottom:18px; width:min(400px, calc(100vw - 36px)); background:#fff; border:1px solid var(--line); border-radius:16px; box-shadow:0 30px 80px rgba(20,22,18,.35); z-index:70; display:flex; flex-direction:column; overflow:hidden; transform:translateX(30px); opacity:0; pointer-events:none; transition:.28s cubic-bezier(.2,.7,.3,1); }
+  .observe.show { transform:none; opacity:1; pointer-events:auto; }
+  .observe-head { display:flex; align-items:center; gap:8px; background:#20231f; color:#fff; padding:11px 14px; font-size:13px; flex:none; }
+  .observe-head b { font-weight:700; }
+  .observe-head small { color:#8f948c; font-size:11px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .observe-close { margin-left:auto; border:0; background:none; color:#8f948c; font-size:15px; cursor:pointer; }
+  .observe-body { flex:1; overflow-y:auto; background:var(--canvas); padding:10px; }
+  .observe-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:7px; }
+  .observe-thumb { position:relative; border:0; padding:0; aspect-ratio:9/14; border-radius:9px; overflow:hidden; cursor:pointer; background:#dfe2da; }
+  .observe-thumb img { width:100%; height:100%; object-fit:cover; display:block; }
+  .observe-thumb::after { content:'▶'; position:absolute; inset:0; display:grid; place-items:center; color:#ffffffd0; font-size:15px; text-shadow:0 1px 4px rgba(0,0,0,.5); }
+  .observe-thumb span { position:absolute; left:0; right:0; bottom:0; padding:14px 6px 5px; color:#fff; font-size:8.5px; line-height:1.3; background:linear-gradient(transparent,rgba(0,0,0,.65)); text-align:left; }
+  .observe-player { position:relative; }
+  .observe-player iframe { width:100%; aspect-ratio:9/16; border:0; border-radius:12px; background:#000; display:block; }
+  .observe-back { margin:8px auto 0; display:flex; align-items:center; gap:6px; border:1px solid var(--line); background:#fff; border-radius:9px; padding:7px 12px; font-size:12px; cursor:pointer; }
+  .observe-empty { color:var(--muted); font-size:12px; text-align:center; padding:28px 14px; line-height:1.7; }
+  .observe-tabs { flex:none; display:flex; gap:4px; background:#2a2e29; padding:6px 8px; }
+  .observe-tabs button { flex:1; border:0; border-radius:8px; background:transparent; color:#aeb3ab; font-size:10.5px; padding:6px 2px; cursor:pointer; }
+  .observe-tabs button.on { background:#fff; color:var(--ink); font-weight:700; }
+  .observe-foot { flex:none; border-top:1px solid var(--line); background:#fff; padding:10px 12px; }
+  .observe-foot-label { color:var(--faint); font-size:9.5px; font-weight:700; letter-spacing:.08em; margin-bottom:7px; }
+  .observe-pops { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; }
+  .observe-pop { border:1px solid var(--line); background:#fff; border-radius:9px; padding:8px 4px; font-size:11px; font-weight:600; color:var(--ink); cursor:pointer; }
+  .observe-pop:hover { border-color:#d0d3ca; }
+  .observe-note { color:var(--faint); font-size:9.5px; line-height:1.5; margin-top:7px; }
 </style>
 </head>
 <body>
@@ -600,6 +626,18 @@
 <div class="toast" id="toast"></div>
 <div class="viewer" id="viewer" hidden></div>
 
+<script>
+// 모바일 백지 진단용 — 초기 구동 오류를 화면에 표시(원인 확인 후 제거 예정)
+window.addEventListener('error', function (e) { window.__showFatal && window.__showFatal(e.message + ' @' + (e.filename||'').split('/').pop() + ':' + e.lineno); });
+window.addEventListener('unhandledrejection', function (e) { window.__showFatal && window.__showFatal('Promise: ' + (e.reason && e.reason.message || e.reason)); });
+window.__showFatal = function (msg) {
+  var d = document.getElementById('fatal') || document.createElement('div');
+  d.id = 'fatal';
+  d.style.cssText = 'position:fixed;left:8px;right:8px;top:8px;z-index:99999;background:#b54b42;color:#fff;padding:12px;border-radius:10px;font:12px -apple-system,sans-serif;white-space:pre-wrap;word-break:break-all';
+  d.textContent = '오류: ' + msg;
+  document.body ? document.body.appendChild(d) : addEventListener('DOMContentLoaded', function(){ document.body.appendChild(d); });
+};
+</script>
 <script>
 const ICONS = {
   spark:'<path d="M12 2.7c.5 4.7 2.7 7 7.3 7.5-4.6.5-6.8 2.8-7.3 7.5-.5-4.7-2.7-7-7.3-7.5 4.6-.5 6.8-2.8 7.3-7.5Z" fill="currentColor"/><path d="M19 15.5c.2 2 1.2 3 3 3.2-1.8.2-2.8 1.2-3 3.1-.2-1.9-1.2-2.9-3-3.1 1.8-.2 2.8-1.2 3-3.2Z" fill="currentColor"/>',
@@ -820,6 +858,8 @@ function renderJobs() {
       <div><div class="job-title">${escapeHtml(j.brief.productName)}</div>
       <div class="job-meta"><span>${st.label}</span><span class="dot"></span><span>${waiting ? '초안 작성 중' : (HOOK[j.script?.hookType] || '쇼츠')}</span><span class="dot"></span><span>${fmtTime(j.updatedAt)}</span>${warning}</div></div>
       <div class="job-actions">
+        ${(j.upload?.results || []).filter(r => r.url).map(r =>
+          `<a class="job-action quiet" href="${r.url}" target="_blank" rel="noopener" onclick="event.stopPropagation()">${r.platform === 'youtube' ? '▶ YT' : r.platform === 'instagram' ? '📷 IG' : r.platform}</a>`).join('')}
         <button class="job-action ${waiting ? 'quiet' : st.cls}" ${waiting ? 'data-request-waiting' : `data-action="${j.brief.id}"`}>${waiting ? '작성 중' : st.action}</button>
         <button class="job-delete" aria-label="${escapeHtml(j.brief.productName)} 삭제" ${waiting
           ? `data-delete-request="${escapeHtml(j._requestSlug || '')}"`
@@ -978,9 +1018,25 @@ function renderDetail(force=false) {
           ${j.finalize?.state === 'error' ? `<div class="finalize-note">조립 실패: ${j.finalize.error}</div>` : ''}
           ${j.upload?.state === 'requested' ? '<div class="finalize-note">발행 확정 — 로컬 워커가 업로드를 가져가길 기다리고 있어요…</div>' : ''}
           ${['running','uploaded'].includes(j.upload?.state) ? '<div class="finalize-note">유튜브·인스타그램에 업로드하고 있어요…</div>' : ''}
-          ${j.upload?.state === 'done' ? `<div class="finalize-note">업로드 완료 ✓ ${(j.upload.results||[]).filter(r=>r.url).map(r=>`<a href="${r.url}" target="_blank" rel="noopener">${r.platform}</a>`).join(' · ')}</div>` : ''}
+          ${j.upload?.state === 'done' ? `<div class="finalize-note">업로드 완료 ✓</div>` : ''}
           ${j.upload?.state === 'failed' ? `<div class="finalize-note">업로드 실패: ${j.upload.error || ''}</div>` : ''}
         </div>
+        ${j.status === 'published' ? `<div class="detail-section">
+          <div class="detail-label">발행 위치</div>
+          ${(j.upload?.results || []).filter(r => r.url).length ? `
+            <div style="display:grid;gap:7px">${j.upload.results.filter(r => r.url).map(r => `
+              <a href="${r.url}" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:10px;padding:9px 12px;font-size:12px;font-weight:600;color:var(--ink);text-decoration:none">
+                ${r.platform === 'youtube' ? '▶ YouTube (BetterrShop)' : r.platform === 'instagram' ? '📷 Instagram (ttangkong_pom)' : r.platform === 'naver-clip' ? '🎬 네이버클립' : r.platform === 'tiktok' ? '🎵 TikTok' : r.platform}${r.manual ? ' <span style="color:var(--faint);font-weight:400;font-size:9px">수동 기록</span>' : ''}
+                <span style="margin-left:auto;color:var(--faint);font-weight:400;font-size:10px">열기 ↗</span></a>`).join('')}
+            </div>
+            <div class="memo-note" style="margin-top:7px">업로드 ${j.upload.at ? new Date(j.upload.at).toLocaleString('ko-KR') : ''} · 요청 ID ${j.publishRef || '-'}</div>
+            <button class="tool-btn" data-record-publish style="margin-top:7px">+ 수동 발행 기록 (네이버클립 등)</button>`
+          : ['requested','running','uploaded'].includes(j.upload?.state)
+            ? '<div class="finalize-note">플랫폼에 업로드 중이에요… 완료되면 여기에 링크가 표시됩니다(보통 1~2분).</div>'
+            : j.upload?.state === 'failed'
+              ? `<div class="finalize-note">업로드 실패: ${j.upload.error || ''} — 아래 도구의 재시도를 눌러주세요.</div>`
+              : `<div class="memo-note">자동 업로드 기록이 없습니다${j.publishRef ? ` · 수동 기록 요청 ID: ${j.publishRef}` : ' — 이 잡은 자동 업로드 도입 전에 발행됐습니다.'}</div><button class="tool-btn" data-record-publish style="margin-top:7px">+ 수동 발행 기록 (네이버클립 등)</button>`}
+        </div>` : ''}
         <div class="detail-section">
           <div class="detail-label">AFFILIATE LINK</div>
           <div class="affiliate-box">
@@ -1035,6 +1091,18 @@ function renderDetail(force=false) {
   });
   document.querySelector('[data-affiliate-input]')?.addEventListener('keydown', e => {
     if (e.key === 'Enter') document.querySelector('[data-save-link]')?.click();
+  });
+  document.querySelector('[data-record-publish]')?.addEventListener('click', async () => {
+    const platform = (prompt('플랫폼 입력: naver-clip / tiktok / youtube / instagram / other', 'naver-clip') || '').trim();
+    if (!platform) return;
+    const url = (prompt('발행된 게시물 URL (https://…)') || '').trim();
+    if (!url) return;
+    try {
+      await api(`/api/jobs/${j.brief.id}/record-publish`, {
+        method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify({platform, url})
+      });
+      showToast('발행 위치에 기록했어요.'); await load(true); renderDetail(true);
+    } catch (e) { showToast('기록 실패: ' + e.message); }
   });
   document.querySelector('[data-copy-comment]')?.addEventListener('click', async () => {
     const text = affiliateComment(j);
@@ -1406,6 +1474,7 @@ const RESEARCH_URLS = {
   '샤오홍슈': t => 'https://www.xiaohongshu.com/search_result?keyword=' + encodeURIComponent(t),
   '도우인': t => 'https://www.douyin.com/search/' + encodeURIComponent(t),
   '유튜브 쇼츠': t => 'https://www.youtube.com/results?search_query=' + encodeURIComponent(t + ' shorts'),
+  '릴스': t => 'https://www.instagram.com/explore/tags/' + encodeURIComponent(t.replace(/\s+/g, '')) + '/',
 };
 const researchState = { topic:null, score:undefined, timer:null, translations:null, memo:'', seq:0, polls:0 };
 
@@ -1425,8 +1494,12 @@ function copyResearchText(t) {
 function openObserveWindow(platform, term) {
   const url = RESEARCH_URLS[platform](term);
   const left = Math.max(0, (window.screen?.availWidth ?? 1400) - 440);
-  const win = window.open(url, 'ss-observe', `width=420,height=760,left=${left},top=60,noopener`);
+  // 주의: features 에 noopener 를 넣으면 크롬이 크기 지정을 무시하고 일반 탭으로 연다 —
+  // 크기 지정 팝업으로 열고 opener 는 코드로 끊는다(역방향 내비게이션 방지).
+  const win = window.open(url, 'ss-observe', `width=420,height=760,left=${left},top=60,resizable=yes,scrollbars=yes`);
   if (!win) { showToast('팝업이 차단됐어요 — 브라우저에서 이 사이트의 팝업을 허용해 주세요.'); return; }
+  try { win.opener = null; } catch {}
+  try { win.focus(); } catch {}
   showToast(`${platform}에서 “${term}” 관찰 창을 열었어요.`);
 }
 
@@ -1440,20 +1513,98 @@ function renderResearchBody(translations) {
     opens.innerHTML = `<button class="open-btn" data-observe="유튜브 쇼츠" data-term="${escapeHtml(researchState.topic)}">유튜브 쇼츠 검색 <span>관찰 창 <b>▸</b></span></button>
       <div class="memo-note">한국어로 먼저 볼 수 있어요 — 현지 검색어가 준비되면 틱톡·샤오홍슈 버튼이 열립니다.</div>`;
   } else {
-    const group = (name, terms) => terms.length ? `<div class="lang-group"><div class="lang-name">${name}</div>
+    const group = (name, terms) => (terms ?? []).length ? `<div class="lang-group"><div class="lang-name">${name}</div>
       <div class="chips">${terms.map(t => `<button class="chip" data-copy-term="${escapeHtml(t)}">${escapeHtml(t)} <small>복사</small></button>`).join('')}</div></div>` : '';
     langs.innerHTML =
       group('샤오홍슈 · 중국어', translations.xhs) + group('도우인 · 중국어', translations.dy) + group('TikTok · 영어', translations.en);
-    const rows = [
-      ['TikTok', translations.en[0]], ['샤오홍슈', translations.xhs[0]],
-      ['도우인', translations.dy[0]], ['유튜브 쇼츠', researchState.topic],
-    ].filter(([,term]) => term);
-    opens.innerHTML = rows.map(([p, term]) =>
-      `<button class="open-btn" data-observe="${p}" data-term="${escapeHtml(term)}">${p} 검색 <span>관찰 창 <b>▸</b></span></button>`).join('');
+    const ytCount = (translations.youtube ?? []).length;
+    const tabs = [['유튜브 쇼츠', ytCount ? `그리드 ${ytCount}편` : '그리드'], ['릴스', '팝업'], ['TikTok', '팝업'], ['샤오홍슈', '팝업'], ['도우인', '팝업']];
+    opens.innerHTML = tabs.map(([pf, hint]) =>
+      `<button class="open-btn" data-observe-tab="${pf}">${pf} 검색 <span>관찰 창 · ${hint} <b>▸</b></span></button>`).join('') +
+      `<div class="memo-note">유튜브는 페이지 안 재생(공식 임베드). 나머지는 검색 결과 임베드를 플랫폼이 막아 관찰 창에서 팝업으로 엽니다.</div>`;
   }
   document.querySelectorAll('[data-copy-term]').forEach(b => b.onclick = () => copyResearchText(b.dataset.copyTerm));
-  document.querySelectorAll('[data-observe]').forEach(b => b.onclick = () => openObserveWindow(b.dataset.observe, b.dataset.term));
+  document.querySelectorAll('[data-observe-tab]').forEach(b => b.onclick = () => openObservePanel(b.dataset.observeTab));
 }
+
+// ---- 관찰 창 (인페이지 오버레이) — 재렌더에 안전하게 body 직속으로 1회 생성 ----
+function ensureObserveEl() {
+  let el = document.getElementById('observePanel');
+  if (el) return el;
+  el = document.createElement('aside');
+  el.id = 'observePanel'; el.className = 'observe';
+  el.innerHTML = `
+    <div class="observe-head"><b>관찰 창</b><small id="observeTerm"></small><button class="observe-close" aria-label="닫기">✕</button></div>
+    <div class="observe-tabs" id="observeTabs"></div>
+    <div class="observe-body" id="observeBody"></div>`;
+  document.body.appendChild(el);
+  el.querySelector('.observe-close').onclick = () => el.classList.remove('show');
+  return el;
+}
+
+const OBSERVE_PLATFORMS = ['유튜브 쇼츠', '릴스', 'TikTok', '샤오홍슈', '도우인'];
+function observeTermFor(platform) {
+  const t = researchState.translations ?? {};
+  if (platform === 'TikTok') return (t.en ?? [])[0] ?? researchState.topic;
+  if (platform === '샤오홍슈') return (t.xhs ?? [])[0] ?? researchState.topic;
+  if (platform === '도우인') return (t.dy ?? [])[0] ?? researchState.topic;
+  return researchState.topic;
+}
+
+function renderObserveTab(platform) {
+  const el = document.getElementById('observePanel');
+  el.dataset.tab = platform;
+  document.querySelectorAll('#observeTabs button').forEach(b =>
+    b.classList.toggle('on', b.dataset.tab === platform));
+  const body = document.getElementById('observeBody');
+  if (platform === '유튜브 쇼츠') { renderObserveGrid(); return; }
+  const term = observeTermFor(platform);
+  const why = platform === '릴스'
+    ? '인스타그램은 검색 결과 임베드를 차단합니다. 공식 해시태그 검색 API(메타 앱 심사)가 승인되면 이 자리에 그리드가 뜹니다 — 예약 슬롯.'
+    : `${platform}는 검색 결과를 페이지 안에 넣는 공식 통로가 없어(임베드 차단 · 검색 API 미제공) 팝업 창으로 봅니다. 긁어와서 표시하는 방식은 저작권·약관 금지선이라 쓰지 않습니다.`;
+  body.innerHTML = `<div class="observe-empty">
+      <div style="font-size:26px;margin-bottom:8px">🪟</div>
+      “${escapeHtml(term)}”<br>${why}<br>
+      <button class="observe-back" data-obs-open style="margin-top:12px;border-color:var(--brand);color:var(--brand)">${platform} 팝업으로 열기 ↗</button>
+    </div>`;
+  body.querySelector('[data-obs-open]').onclick = () => openObserveWindow(platform, term);
+}
+
+function openObservePanel(platform = '유튜브 쇼츠') {
+  if (!researchState.topic) return;
+  const el = ensureObserveEl();
+  document.getElementById('observeTerm').textContent = '“' + researchState.topic + '”';
+  document.getElementById('observeTabs').innerHTML = OBSERVE_PLATFORMS.map(pf =>
+    `<button data-tab="${pf}">${pf === '유튜브 쇼츠' ? '유튜브' : pf}</button>`).join('');
+  document.querySelectorAll('#observeTabs button').forEach(b => b.onclick = () => renderObserveTab(b.dataset.tab));
+  renderObserveTab(platform);
+  el.classList.add('show');
+}
+
+function renderObserveGrid() {
+  const body = document.getElementById('observeBody');
+  const yt = researchState.translations?.youtube ?? [];
+  if (!yt.length) {
+    body.innerHTML = `<div class="observe-empty">유튜브 쇼츠 수집 중이에요…<br>워커가 채우는 대로 여기에 그리드가 뜹니다.<br><button class="observe-back" data-observe-refresh>새로고침</button></div>`;
+    body.querySelector('[data-observe-refresh]').onclick = async () => {
+      try {
+        const r = await api('/api/keyword-research?topic=' + encodeURIComponent(researchState.topic));
+        if (r.translations) { researchState.translations = r.translations; }
+      } catch {}
+      renderObserveGrid();
+    };
+    return;
+  }
+  body.innerHTML = `<div class="memo-note" style="margin:0 2px 8px">유튜브 쇼츠 · 최근 90일 · 조회수순</div><div class="observe-grid">${yt.map(v =>
+    `<button class="observe-thumb" data-yt="${v.id}"><img loading="lazy" src="https://i.ytimg.com/vi/${v.id}/mqdefault.jpg" alt=""><span>${escapeHtml(v.title).slice(0, 40)}</span></button>`).join('')}</div>`;
+  body.querySelectorAll('[data-yt]').forEach(b => b.onclick = () => {
+    body.innerHTML = `<div class="observe-player"><iframe src="https://www.youtube.com/embed/${b.dataset.yt}?autoplay=1&playsinline=1&rel=0" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe></div>
+      <button class="observe-back" data-observe-back>← 목록으로</button>`;
+    body.querySelector('[data-observe-back]').onclick = renderObserveGrid;
+  });
+}
+
+
 
 async function pollResearch() {
   // 종료 조건: 패널이 닫혔거나(topic null) 트렌드 페이지를 떠났거나(DOM 부재) 시도 상한 도달
@@ -1508,6 +1659,7 @@ async function openResearch(topic, score) {
 }
 
 function closeResearch() {
+  document.getElementById('observePanel')?.classList.remove('show');
   clearTimeout(researchState.timer);
   researchState.timer = null; researchState.topic = null;
   researchState.translations = null; researchState.memo = ''; researchState.seq += 1;

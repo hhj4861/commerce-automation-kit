@@ -289,6 +289,27 @@ export async function onRequest(context) {
         return json({ ok: true, job });
       }
 
+      // 수동 발행 기록(네이버클립 등 자동 업로드 미지원 플랫폼) — 사람이 URL 을 붙여넣어 발행 위치에 추가
+      if (sub === 'record-publish' && method === 'POST') {
+        if (job.status !== 'published') return json({ error: 'published 상태에서만 가능' }, 400);
+        const body = await readJson(request);
+        const platform = String(body?.platform ?? '').trim().toLowerCase();
+        const urlStr = String(body?.url ?? '').trim();
+        const ALLOWED = ['naver-clip', 'tiktok', 'youtube', 'instagram', 'other'];
+        if (!ALLOWED.includes(platform)) return json({ error: `platform 은 ${ALLOWED.join('|')}` }, 400);
+        let u;
+        try { u = new URL(urlStr); } catch { return json({ error: 'URL 형식이 아님' }, 400); }
+        if (u.protocol !== 'https:') return json({ error: 'https 링크만 허용' }, 400);
+        job.upload = job.upload ?? { state: 'done', at: new Date().toISOString() };
+        job.upload.results = [
+          ...(job.upload.results ?? []).filter((r) => !(r.manual && r.platform === platform)),
+          { platform, url: u.toString(), success: true, manual: true, at: new Date().toISOString() },
+        ];
+        if (!['requested', 'running', 'uploaded'].includes(job.upload.state)) job.upload.state = 'done';
+        await saveJob(env, job);
+        return json({ ok: true, results: job.upload.results });
+      }
+
       // 업로드 재요청(실패 후 사람이 다시 시도) — published 상태에서만
       if (sub === 'request-upload' && method === 'POST') {
         if (job.status !== 'published') return json({ error: `published 상태에서만 가능(현재 ${job.status})` }, 400);
@@ -487,6 +508,17 @@ export async function onRequest(context) {
       const { results } = await env.DB.prepare("SELECT topic FROM keyword_research WHERE status = 'pending'").all();
       return json({ pending: results.map((r) => r.topic) });
     }
+    // 유튜브 쇼츠 그리드 데이터가 아직 없는 항목(워커가 공식 search.list 로 채움, 틱당 소량)
+    if (path === 'keyword-research/missing-youtube' && method === 'GET') {
+      const { results } = await env.DB.prepare(
+        "SELECT topic, data FROM keyword_research WHERE status = 'ready'",
+      ).all();
+      const topics = results
+        .filter((r) => { try { return !(JSON.parse(r.data)?.youtube?.length); } catch { return false; } })
+        .map((r) => r.topic)
+        .slice(0, 5);
+      return json({ topics });
+    }
     if (path === 'keyword-research' && method === 'PUT') {
       // 변환 생성자(Claude 세션·워커) 전용 — UI 는 request 만 사용
       if (request.headers.get('x-shopshorts-worker') !== '1') {
@@ -495,15 +527,28 @@ export async function onRequest(context) {
       const body = await readJson(request);
       const topic = String(body?.topic ?? '').trim();
       const t = body?.translations;
+      const yt = body?.youtube;
       const strArr = (a) => Array.isArray(a) && a.every((x) => typeof x === 'string' && x.length <= 60);
-      if (!topic || !t || !strArr(t.xhs) || !strArr(t.dy) || !strArr(t.en)) {
-        return json({ error: 'topic + translations{xhs[],dy[],en[]} 필수(문자열 60자 이하)' }, 400);
+      const ytArr = (a) => Array.isArray(a) && a.length <= 12 &&
+        a.every((v) => /^[A-Za-z0-9_-]{11}$/.test(v?.id ?? '') && typeof v?.title === 'string' && v.title.length <= 150);
+      if (!topic) return json({ error: 'topic 필수' }, 400);
+      if (!t && !yt) return json({ error: 'translations 또는 youtube 필요' }, 400);
+      if (t && (!strArr(t.xhs) || !strArr(t.dy) || !strArr(t.en))) {
+        return json({ error: 'translations{xhs[],dy[],en[]} 형식 오류(문자열 60자 이하)' }, 400);
       }
+      if (yt && !ytArr(yt)) return json({ error: 'youtube[{id(11자),title}] 형식 오류(최대 12개)' }, 400);
       const now = new Date().toISOString();
+      const row = await env.DB.prepare('SELECT data FROM keyword_research WHERE topic = ?').bind(topic).first();
+      const cur = row?.data ? JSON.parse(row.data) : {};
+      const next = {
+        ...cur,
+        ...(t ? { xhs: t.xhs.slice(0, 4), dy: t.dy.slice(0, 4), en: t.en.slice(0, 4) } : {}),
+        ...(yt ? { youtube: yt.map((v) => ({ id: v.id, title: v.title.slice(0, 150) })) } : {}),
+      };
       await env.DB.prepare(
         "INSERT INTO keyword_research (topic, data, status, requested_at, updated_at) VALUES (?1, ?2, 'ready', ?3, ?3) " +
           "ON CONFLICT(topic) DO UPDATE SET data = ?2, status = 'ready', updated_at = ?3",
-      ).bind(topic, JSON.stringify({ xhs: t.xhs.slice(0, 4), dy: t.dy.slice(0, 4), en: t.en.slice(0, 4) }), now).run();
+      ).bind(topic, JSON.stringify(next), now).run();
       return json({ ok: true });
     }
 
@@ -660,6 +705,15 @@ export async function onRequest(context) {
           'INSERT INTO keyword_feed_archive(snapshot_date, channel, topic, score, payload, updated_at) ' +
           'VALUES (?, ?, ?, ?, ?, ?)',
         ).bind(snapshotDate, channel, it.topic, it.score, JSON.stringify(it.payload), now));
+      }
+      // 트렌드 피드 갱신 시 상위 키워드의 현지 검색어 변환을 미리 대기열에 넣는다 —
+      // Claude 세션 모니터가 클릭 전에 생성해두므로 리서치 패널이 항상 즉시 뜬다(지연 체감 제거).
+      if (channel === 'trend' && !archiveOnly) {
+        for (const it of items.slice(0, 10)) {
+          stmts.push(env.DB.prepare(
+            "INSERT INTO keyword_research (topic, status, requested_at) VALUES (?1, 'pending', ?2) ON CONFLICT(topic) DO NOTHING",
+          ).bind(it.topic, now));
+        }
       }
       await env.DB.batch(stmts);
       return json({ ok: true, channel, count: items.length, snapshotDate, archiveOnly, updatedAt: now });

@@ -283,6 +283,35 @@ async function pollUpload(job) {
   // pending/processing → 다음 폴링 주기에 재확인
 }
 
+// ---------- 소재 리서치: 유튜브 쇼츠 그리드 채움(공식 search.list, 관찰 창 인페이지용) ----------
+
+let lastYtFill = 0;
+async function fillYoutubeGrids() {
+  if (Date.now() - lastYtFill < 60_000) return; // 1분 주기
+  lastYtFill = Date.now();
+  if (shouldSkip('global', 'yt-search')) return;
+  try {
+    const { topics } = await api('/api/keyword-research/missing-youtube');
+    for (const topic of (topics ?? []).slice(0, 3)) {
+      const r = await runCli(['-w', '@cak/youtube-upload', '--', 'search', '--query', topic, '--max', '9']);
+      if (r.data?.ok !== true || !Array.isArray(r.data.items)) {
+        throw new Error(`search 실패: ${JSON.stringify(r.data?.problems ?? null).slice(0, 120)}`);
+      }
+      await api('/api/keyword-research', {
+        method: 'PUT',
+        headers: { 'content-type': 'application/json', 'x-shopshorts-worker': '1' },
+        body: JSON.stringify({ topic, youtube: r.data.items }),
+      });
+      log('yt-grid.filled', { topic, count: r.data.items.length });
+    }
+    clearFailure('global', 'yt-search');
+  } catch (e) {
+    // 인증 만료(invalid_grant)·키 미설정 등 — 백오프로 조용히 대기(관찰 창은 팝업 버튼으로 동작 지속)
+    recordFailure('global', 'yt-search');
+    log('yt-grid.error', { error: String(e?.message ?? e).slice(0, 160) });
+  }
+}
+
 // ---------- 메인 루프 ----------
 
 let busy = false;
@@ -356,6 +385,7 @@ async function tick() {
     for (const job of jobs) {
       await handleJob(job); // 잡별 예외는 handleJob 내부에서 격리
     }
+    await fillYoutubeGrids();
   } catch (e) {
     log('tick.error', { error: String(e?.message ?? e) });
   } finally {

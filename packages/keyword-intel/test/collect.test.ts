@@ -708,3 +708,39 @@ describe('isWholesaleFailure — 빈 최신 피드 게시 방지', () => {
     expect(isWholesaleFailure(batch(0, 0))).toBe(false);
   });
 });
+
+describe('쇼핑 검색 soft-fail (앱 단위 SE05 차단 대응, 2026-08-04 실측)', () => {
+  it('shop 이 NaverApiError(404 SE05)여도 트렌드 신호로 수집 성립 + coverage 로 투명화 + 점수 보수화', async () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.mocked(searchShop).mockRejectedValue(new NaverApiError('search_shop', 404, 'SE05 Invalid search api'));
+    vi.mocked(searchTrend).mockResolvedValue(trendOk());
+
+    const batch = await collectSignals(['루테인'], deps());
+
+    expect(batch.signals).toHaveLength(1);
+    expect(batch.failures).toHaveLength(0);
+    const sig = batch.signals[0]!;
+    expect(sig.coverage.ok.naver_search_shop).toBe(false);
+    expect(sig.coverage.sources).not.toContain('naver_search_shop');
+    expect(sig.competition.totalProducts).toBe(0);
+    expect(sig.trend.latest).toBe(80);
+    expect(sig.scores.opportunity).toBe(48); // demand 80 * 0.6 — 경쟁항 기여 0(부풀림 방지)
+    expect(sig.scores.confidence).toBeLessThanOrEqual(0.5);
+    // 요약 경고가 사람 눈에 표면화된다(silent drop 금지)
+    expect(spy.mock.calls.some((c) => String(c[0]).includes('쇼핑 검색 미수집'))).toBe(true);
+    spy.mockRestore();
+  });
+
+  it('shop 네트워크 미도달(ENOTFOUND)은 기존대로 키워드 실패(부분 재수집 자가복구 경로 보존)', async () => {
+    vi.mocked(searchShop).mockRejectedValue(
+      Object.assign(new Error('getaddrinfo ENOTFOUND openapi.naver.com'), { code: 'ENOTFOUND' }),
+    );
+    vi.mocked(searchTrend).mockResolvedValue(trendOk());
+
+    const batch = await collectSignals(['루테인'], deps());
+
+    expect(batch.signals).toHaveLength(0);
+    expect(batch.failures).toHaveLength(1);
+    expect(batch.failures[0]!.reason).toContain('ENOTFOUND');
+  });
+});
