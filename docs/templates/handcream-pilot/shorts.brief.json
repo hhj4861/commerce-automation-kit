@@ -1,0 +1,14 @@
+{
+  "id": "handcream-pilot-001",
+  "productName": "REPLACE_소싱한_상품_정식명칭",
+  "sponsored": true,
+  "keyword": "핸드크림",
+  "category": "화장품/핸드케어",
+  "appealPoints": [
+    "REPLACE_라벨·공급사 자료로 확인된 소구점 1(예: 끈적임 적은 빠른 흡수)",
+    "REPLACE_소구점 2(예: 무향/저자극 — 표시사항 근거 필요)",
+    "REPLACE_소구점 3(예: 휴대용 용량)"
+  ],
+  "isHealthFunctional": false,
+  "createdAt": "2026-09-06T00:00:00+09:00"
+}

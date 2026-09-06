@@ -1,0 +1,32 @@
+{
+  "id": "handcream-pilot-001",
+  "keyword": "핸드크림",
+  "productName": "REPLACE_소싱한_상품_정식명칭",
+  "brand": "REPLACE_브랜드명(책임판매업자 표기 그대로)",
+  "market": "naver-smartstore",
+  "tone": "clean-derma",
+  "locale": "ko",
+  "volume": "REPLACE_용량(예: 50ml)",
+  "ingredients": [],
+  "claims": [
+    {
+      "text": "REPLACE_제품 라벨·공급사 자료에서 확인한 사실만(예: 시어버터 함유)",
+      "sourceUrl": "https://REPLACE_공급사_자료_또는_제품_표시사항_출처",
+      "verified": false
+    }
+  ],
+  "images": [
+    {
+      "slot": "hero",
+      "path": "REPLACE_본인_촬영_사진_경로.jpg",
+      "origin": "user",
+      "licenseNote": "본인 촬영(2026-09-XX, 실제 소싱 제품)"
+    },
+    {
+      "slot": "texture",
+      "path": "REPLACE_제형_클로즈업.jpg",
+      "origin": "user",
+      "licenseNote": "본인 촬영"
+    }
+  ]
+}

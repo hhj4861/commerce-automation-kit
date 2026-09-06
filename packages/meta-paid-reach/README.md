@@ -63,6 +63,9 @@ Insights는 실시간 계수기가 아니므로 1,000에서 정확히 멈추지 
 
 ## Meta 쪽 사전 준비
 
+처음이라 아래 목록이 낯설면 [docs/SETUP-GUIDE.md](./docs/SETUP-GUIDE.md)가 계정 만들기부터
+토큰·`.env`·`preflight`까지 클릭 단위로 안내한다.
+
 ### 필수
 
 - Meta Developer 계정과 Meta 앱

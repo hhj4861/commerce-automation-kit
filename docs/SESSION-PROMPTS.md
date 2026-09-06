@@ -91,6 +91,20 @@ blueprint-review 재설계 문서(LEGAL-MINIMAL-ARCHITECTURE.md)의 해당 keep-
 
 ---
 
+## 6. meta-paid-reach — 실계정 검증 (PoC 코드 완료 후, 사람 자산 준비 뒤)
+
+```
+packages/meta-paid-reach 의 Meta 1,000회 유료 노출 PoC를 실계정으로 검증하려고 해.
+README 「검증 순서」를 그대로 따르되, 아래 순서를 지켜줘:
+1. 무과금 dry-run(plan) → preflight(읽기 전용)로 계정 통화·시간대·Page 연결을 확인하고 결과를 나에게 보여줘
+2. 설정 파일의 예산 단위(lifetimeBudgetMinorUnits / pauseAtSpendAccountCurrency)를 preflight 통화 기준으로 내가 확인할 때까지 create 를 실행하지 마
+3. create 는 --execute --confirm CREATE_PAUSED 까지만. 활성화(run --execute --confirm LIVE_SPEND)는 내가 Ads Manager 에서 검수한 뒤 별도로 지시할 때만
+4. 상태 파일·impressions/spend 결과는 그대로 보고하고, 지출 상한 도달·조회 실패·PAUSE 실패는 숨기지 말고 투명하게 알려줘
+토큰·앱 시크릿은 출력하지 말고, .env 는 셸 export 로만 주입해.
+```
+
+---
+
 ## 참고 자료 위치 (별도 저장소 venture-studio)
 
 - 감사 결론: `venture-studio/ventures/market/coupang-supplement-brand/blueprint-review/BLUEPRINT-REVIEW.md`
