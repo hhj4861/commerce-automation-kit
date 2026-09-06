@@ -1,0 +1,60 @@
+{
+  "brief": {
+    "id": "handcream-pilot-001",
+    "productName": "핸드크림 파일럿(REPLACE_정식명칭)",
+    "sponsored": true,
+    "keyword": "핸드크림",
+    "category": "화장품/핸드케어",
+    "appealPoints": [
+      "끈적임 적은 빠른 흡수(라벨·공급사 자료 확인 후 유지)",
+      "휴대용 용량"
+    ],
+    "isHealthFunctional": false,
+    "createdAt": "2026-09-06T00:00:00+09:00"
+  },
+  "script": {
+    "briefId": "handcream-pilot-001",
+    "hookType": "problem-solution",
+    "title": "핸드크림 바르고 10초, 손등이 이렇게 됩니다 (광고)",
+    "beats": [
+      {
+        "index": 0,
+        "role": "hook",
+        "durationSec": 3,
+        "narration": "가을만 되면 손등이 이렇게 갈라지죠",
+        "caption": "환절기 손등",
+        "visualPrompt": "Extreme close-up of a dry, slightly flaky back of a hand under soft window light, vertical 9:16, muted autumn tones, macro lens"
+      },
+      {
+        "index": 1,
+        "role": "body",
+        "durationSec": 4,
+        "narration": "핸드크림 파일럿 콩알만큼 덜어 손등에 펴 바르면",
+        "caption": "콩알 크기, 손등 전체",
+        "visualPrompt": "Hands squeezing a pea-sized dab of white hand cream from a tube onto the back of a hand and spreading it with fingertips, top-down macro, clean studio light, vertical 9:16"
+      },
+      {
+        "index": 2,
+        "role": "body",
+        "durationSec": 4,
+        "narration": "열까지 세는 동안 스며들고, 종이를 눌러도 붙지 않아요",
+        "caption": "10초 뒤 종이 테스트",
+        "visualPrompt": "The same hand pressing a sheet of white paper and lifting it cleanly, cream fully absorbed, subtle sheen, vertical 9:16, macro"
+      },
+      {
+        "index": 3,
+        "role": "cta",
+        "durationSec": 4,
+        "narration": "핸드크림 파일럿, 자세한 성분과 용량은 설명란 링크에서 확인하세요",
+        "caption": "성분·용량은 설명란 링크",
+        "visualPrompt": "Hero shot of the hand cream tube standing on a light wooden table beside a small autumn leaf, soft rim light, vertical 9:16"
+      }
+    ],
+    "hashtags": [
+      "#핸드크림",
+      "#환절기손관리",
+      "#광고"
+    ],
+    "description": "(광고) 핸드크림 파일럿 — 판매자가 직접 소개하는 영상입니다. 전성분·용량·주의사항과 구매는 아래 링크에서.\nREPLACE_스마트스토어_상품_URL"
+  }
+}

@@ -6,7 +6,8 @@
 | 파일 | 소비자 | 검증 명령 |
 |---|---|---|
 | `product-page.brief.json` | product-page-gen(상품상세, `market: naver-smartstore`, `locale: ko`) | `npm run cli -w @cak/product-page-gen -- validate --brief <path>` |
-| `shorts.brief.json` | shopping-shorts(대본 lint·조립, `sponsored: true` → "(광고)" 오버레이·설명란 표기 강제) | 잡 파일(brief+script) 구성 후 `npm run cli -w @cak/shopping-shorts -- lint --job <path>` |
+| `shorts.brief.json` | shopping-shorts 브리프만(참고). 실제 실행 단위는 아래 잡 파일 | — |
+| `shorts.job.hook{A,B,C}.json` | shopping-shorts 잡(brief+script). 훅만 다른 3종, 바디·CTA 공유. 상품명 자리표시자 교체 후 사용 | `npm run cli -w @cak/shopping-shorts -- lint --job <path>` |
 
 채울 때 주의:
 - `ingredients`는 라벨의 **전성분 전체**를 순서대로. 비우면 렌더가 경고하고 자리표시자가 들어간다.
