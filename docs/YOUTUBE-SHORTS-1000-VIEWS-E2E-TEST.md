@@ -28,7 +28,7 @@
 | 1 | 상품정보 접수 → 브리프 JSON | `docs/templates/handcream-pilot/` | 템플릿 2종(product-page·shorts) + 체크리스트 `docs/HANDCREAM-PILOT-CHECKLIST.md` | `brief.json` |
 | 2 | 상품상세 생성 | `product-page-gen` | `market: naver-smartstore` + `locale: ko` 지원(2026-09-06 append, ko 자리표시자). 한국 화장품법 lint 11규칙 적용. 스마트에디터 HTML 입력 여부는 미확인(체크리스트 §4) | HTML+텍스트+컴플라이언스 리포트 |
 | 3 | 상세 호스팅(광고 랜딩) | `showcase-site`(Cloudflare Pages) 또는 고객 스토어 | Pages 배포 경로는 있음(firstframe). 상품상세용 프로젝트는 별도 | `https://…/products/<slug>` |
-| 4 | 쇼츠 대본 + 표현 lint | `shopping-shorts` lint + `apps/shopshorts` 승인 게이트 | 있음 | `ShortsScript`, lint 리포트 |
+| 4 | 쇼츠 대본 + 표현 lint + **효율 스코어** | `shopping-shorts` lint·`score` + `apps/shopshorts` 승인 게이트 | 있음(score 2026-09-06). 생성 전 깔때기 3층 = 대본 스코어(0cr) → std 시안+Virality Predictor(0cr) → 광고 실측 | `ShortsScript`, lint·score 리포트 |
 | 5 | 클립 생성(9:16) | `.claude/skills/ad-video`(힉스필드) | 있음(`--aspect 9:16`) | 클립 mp4 |
 | 6 | 내레이션 | `tts-narration`(Yooni) | 있음 | VO mp3 |
 | 7 | 조립(자막·BGM·오버레이) | `shopping-shorts` assemble | 있음. 브리프 `sponsored: true` 면 제휴 링크 없어도 "(광고)" 오버레이·설명란 표기 강제(2026-09-06) | 최종 9:16 mp4 |

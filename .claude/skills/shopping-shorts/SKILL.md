@@ -50,8 +50,21 @@ WebSearch 2~4회로 **근거 있는 소구점**을 도출한다(리뷰에서 반
 ```bash
 npm run --silent cli -w @cak/shopping-shorts -- lint --job job.json          # block 0 확인
 npm run --silent cli -w @cak/shopping-shorts -- estimate --job job.json --model kling3_0-pro
+npm run --silent cli -w @cak/shopping-shorts -- score --jobs a.json,b.json,c.json   # 생성 전 효율 참고 점수(총점순)
 curl -s -X POST http://127.0.0.1:5178/api/jobs -H 'content-type: application/json' -d @job.json
 ```
+
+### 3.5 생성 전 깔때기 — 효율 판단은 3층으로 (2026-09-06)
+
+생성 전에 "어느 대본이 조회 효율이 좋을지"를 정확히 예측하는 방법은 없다. 대신 층마다 싸게 거른다:
+
+1. **대본 스코어러(0cr)** — `score --jobs …`. Google ABCD(주목·브랜딩·공감·행동유도)+Shorts 권장(첫 3초 움직임·
+   10초 페이오프·자막 한 줄·CTA 한 문장·10초 이상)을 규칙 점수로. 훅 후보 5~6개를 쓰고 상위만 시안으로 보낸다.
+   **참고용**(자동 선정 금지) — 감점 사유를 대본에 반영하는 용도가 본질.
+2. **시안 예측기(std 시안 4.5cr/훅 + 힉스필드 Virality Predictor, 2026-09-06 실측 0cr)** — 생성 완료 job_id로
+   `virality_predictor(action:create)` → `job_status` 폴링 → `analysis.scores`(hook_score·overall·viral_potential·sustain).
+   3초 훅 클립 단위로 비교 가능. 예측 프록시이며 성과 보장 아님(도구 disclaimer).
+3. **광고 실측** — 광고그룹 1개에 훅별 광고 여러 개, 조회율·CPV로 판정. 이 실측표가 1·2층의 가중치를 고치는 유일한 데이터.
 
 ## 4. 사람 게이트 1 — 기획 승인
 
