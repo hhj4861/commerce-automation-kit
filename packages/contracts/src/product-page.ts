@@ -13,8 +13,11 @@
  * - 이미지는 경로/출처만 계약에 담는다. 타사 이미지 스크래핑은 금지선 #1.
  */
 
-/** 대상 마켓. v0.1 은 큐텐재팬만 구현, 이후 append. */
-export type PageMarket = 'qoo10-jp';
+/**
+ * 대상 마켓. v0.1 은 큐텐재팬. 'naver-smartstore' 는 2026-09-06 append(한국 시장 핸드크림 파일럿) —
+ * 한국어 상세 렌더 전용이며 Qxpress 물류·JPY 마진 게이트는 적용되지 않는다.
+ */
+export type PageMarket = 'qoo10-jp' | 'naver-smartstore';
 
 /** 시안 톤 3종 (2026-07-26 사용자 시안 확인 기준). */
 export type PageTone = 'clean-derma' | 'premium-amber' | 'vivid-pop';

@@ -27,7 +27,7 @@ export const productPageBriefSchema = z.object({
   keyword: z.string().min(1),
   productName: z.string().min(1),
   brand: z.string().min(1),
-  market: z.literal('qoo10-jp'),
+  market: z.enum(['qoo10-jp', 'naver-smartstore']),
   tone: z.enum(['clean-derma', 'premium-amber', 'vivid-pop']),
   locale: z.enum(['ja', 'ko']),
   volume: z.string().optional(),

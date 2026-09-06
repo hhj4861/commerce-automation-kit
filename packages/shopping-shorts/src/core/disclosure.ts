@@ -25,6 +25,19 @@ export function overlayTextForUrl(_affiliateUrl: string | undefined): string {
   return DISCLOSURE_OVERLAY_TEXT_AD;
 }
 
+/**
+ * 조립 시 영상 오버레이 결정 — 제휴 링크가 있거나 sponsored(유료 의뢰·자체 판매)면 "(광고)" 번인.
+ * CLI 두 조립 경로가 이 한 함수만 본다(우회 경로 없음).
+ */
+export function overlaySpecFor(brief: {
+  affiliateUrl?: string;
+  sponsored?: boolean;
+}): { overlay: boolean; text: string } {
+  const hasAffiliate = typeof brief.affiliateUrl === 'string' && brief.affiliateUrl.length > 0;
+  const overlay = hasAffiliate || brief.sponsored === true;
+  return { overlay, text: overlayTextForUrl(brief.affiliateUrl) };
+}
+
 /** 쿠팡 파트너스 링크 여부 — 설명란에 파트너스 표준 문구(약관 의무)가 필요한 경우. */
 export function requiresPartnersPhrase(affiliateUrl: string | undefined): boolean {
   return affiliateUrl !== undefined && /coupang\.com|coupa\.ng/.test(affiliateUrl);

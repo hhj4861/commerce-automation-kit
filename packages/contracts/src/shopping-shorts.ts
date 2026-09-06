@@ -34,6 +34,11 @@ export interface ShoppingShortsBrief {
    * TODO(D1): 파트너스 딥링크 API 어댑터는 약관 실측 후 예약 슬롯.
    */
   affiliateUrl?: string;
+  /**
+   * 유료 의뢰·자체 판매 상품 홍보물(2026-09-06 append). 제휴 링크가 없어도 경제적 대가가 있는
+   * 콘텐츠이므로 영상 오버레이·설명란에 "(광고)" 표기를 강제한다(공정위 추천·보증 심사지침).
+   */
+  sponsored?: boolean;
   /** keyword-intel 연동 소재 키워드(출처 추적용) */
   keyword?: string;
   category?: string;

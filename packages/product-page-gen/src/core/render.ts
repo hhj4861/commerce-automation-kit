@@ -182,7 +182,12 @@ function renderSection(s: PageSection, brief: ProductPageBrief, t: ToneTokens): 
       );
     }
     case 'full-ingredients': {
-      const list = brief.ingredients.length > 0 ? brief.ingredients.join(', ') : '（全成分は登録前に必ず記載）';
+      const list =
+        brief.ingredients.length > 0
+          ? brief.ingredients.join(', ')
+          : brief.locale === 'ko'
+            ? '(전성분은 등록 전 반드시 기재)'
+            : '（全成分は登録前に必ず記載）';
       const cautions = (s.items ?? [])
         .map((it) => `<div style="font-size:12.5px;color:${t.dim};margin-top:5px;">・${escapeHtml(it.text)}</div>`)
         .join('');

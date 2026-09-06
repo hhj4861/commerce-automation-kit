@@ -19,7 +19,7 @@ import { parseArgs } from 'node:util';
 import type { ParseArgsConfig } from 'node:util';
 import type { ShoppingShortsAssembleSpec } from '@cak/contracts';
 import { lintScript } from '../core/lint.js';
-import { hasDisclosure, overlayTextForUrl, withDisclosure } from '../core/disclosure.js';
+import { hasDisclosure, overlaySpecFor, withDisclosure } from '../core/disclosure.js';
 import { estimateShort } from '../core/estimate.js';
 import { buildAssembleArgs, buildSyncedAssembleArgs, chunkTimings, cuesFromBeats, splitSubtitleChunks, type SyncedSegment } from '../core/ffargs.js';
 import { probe, probeAudioDuration, runFfmpegOrThrow } from '../adapters/ffmpeg.js';
@@ -185,10 +185,9 @@ async function main(): Promise<void> {
         const args = buildSyncedAssembleArgs(segments, outPath, {
           width: 1080,
           height: 1920,
-          disclosureOverlay:
-            typeof job.brief.affiliateUrl === 'string' && job.brief.affiliateUrl.length > 0,
-          // 링크 플랫폼에 맞는 오버레이(쿠팡=파트너스 문구 / 그 외 제휴="(광고)")
-          disclosureText: overlayTextForUrl(job.brief.affiliateUrl),
+          // 제휴 링크 또는 sponsored(유료 의뢰·자체 판매)면 "(광고)" 번인 — 판단은 overlaySpecFor 한 곳.
+          disclosureOverlay: overlaySpecFor(job.brief).overlay,
+          disclosureText: overlaySpecFor(job.brief).text,
           narrationPadSec: pad,
           ...(music !== undefined ? { music: resolvePath(music) } : {}),
           fontFile: optStr(o, 'font') ?? defaultVrewFont,
@@ -205,9 +204,8 @@ async function main(): Promise<void> {
         captions: cuesFromBeats(job.script.beats),
         width: 1080,
         height: 1920,
-        // 제휴 링크가 있으면 영상 내 고지 오버레이 강제.
-        disclosureOverlay:
-          typeof job.brief.affiliateUrl === 'string' && job.brief.affiliateUrl.length > 0,
+        // 제휴 링크 또는 sponsored 면 영상 내 고지 오버레이 강제(overlaySpecFor 단일 판단).
+        disclosureOverlay: overlaySpecFor(job.brief).overlay,
         ...(narration !== undefined ? { narrationAudio: resolvePath(narration) } : {}),
         ...(music !== undefined ? { music: resolvePath(music) } : {}),
       };

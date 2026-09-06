@@ -176,6 +176,15 @@ export function lintScript(brief: ShoppingShortsBrief, script: ShortsScript): Sc
         reason: '제휴 발행물에 대가성 고지 누락 — "(광고)" 표기 또는 수수료 고지 문구 필요',
       });
     }
+  } else if (brief.sponsored === true && !hasDisclosure(script.description)) {
+    // 유료 의뢰·자체 판매 홍보물: 링크가 없어도 경제적 대가 표시 대상(공정위 심사지침).
+    findings.push({
+      rule: 'disclosure-missing',
+      severity: 'block',
+      field: 'description',
+      matched: '(없음)',
+      reason: '유료 의뢰·자체 판매 홍보물에 "(광고)" 표기 누락 — 설명란에 "(광고)" 필요',
+    });
   }
 
   // 영상 속 상품과 링크 상품의 일치는 코드로 확정 불가 → 제목·대본에 상품명 부재 시 경고.
