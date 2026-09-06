@@ -56,3 +56,12 @@ src/cli/       index.ts (lint | disclosure | estimate | assemble | probe)
 - 비용 견적은 실측 단가만 사용 — 미실측 모델은 `null` (get_cost 프리플라이트로 실측 후 추가).
 - 영상 속 상품 ≠ 링크 상품 불일치는 코드로 확정 판정 불가 → `product-mismatch-risk` 경고 +
   발행 검수(사람)에서 확인.
+
+## score — 생성 전 효율 참고 점수 (2026-09-06)
+
+```bash
+npm run cli -- score --jobs a.json,b.json,c.json
+```
+
+대본 구조 규칙 점수(0~100, 9차원: 훅 움직임·훅 길이·훅 밀도·10초 페이오프·내레이션 밀도·자막 가독성·브랜딩 시점·CTA·길이).
+Google ABCD+Shorts 권장을 번역한 것으로 **참고용**이다. block 하지 않으며 자동 선정에 쓰지 않는다. 감점 사유를 대본에 반영하는 용도. 계약 `ScriptScoreReport`.

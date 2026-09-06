@@ -19,6 +19,7 @@ import { parseArgs } from 'node:util';
 import type { ParseArgsConfig } from 'node:util';
 import type { ShoppingShortsAssembleSpec } from '@cak/contracts';
 import { lintScript } from '../core/lint.js';
+import { rankScripts } from '../core/score.js';
 import { hasDisclosure, overlaySpecFor, withDisclosure } from '../core/disclosure.js';
 import { estimateShort } from '../core/estimate.js';
 import { buildAssembleArgs, buildSyncedAssembleArgs, chunkTimings, cuesFromBeats, splitSubtitleChunks, type SyncedSegment } from '../core/ffargs.js';
@@ -100,6 +101,30 @@ async function main(): Promise<void> {
       } else {
         out({ hasDisclosure: hasDisclosure(text) });
       }
+      break;
+    }
+
+    case 'score': {
+      // 생성 전 효율 참고 점수 — 후보 잡 여러 개를 총점순으로. block 없음, 사람 선택 보조.
+      const o = parse(rest, { jobs: STR });
+      const paths = reqStr(o, 'jobs')
+        .split(',')
+        .map((x) => x.trim())
+        .filter((x) => x.length > 0);
+      if (paths.length === 0) throw new UsageError('--jobs a.json[,b.json,...] 필요');
+      const ranked = rankScripts(paths.map((pth) => loadJob(pth)));
+      out({
+        ok: true,
+        advisory: '참고 점수 — 자동 선정 금지, 최종 선택은 사람(CLAUDE.md)',
+        ranked: ranked.map((r) => ({
+          briefId: r.script.briefId,
+          hookType: r.script.hookType,
+          title: r.script.title,
+          total: r.total,
+          dimensions: r.dimensions,
+          notes: r.notes,
+        })),
+      });
       break;
     }
 
@@ -225,7 +250,7 @@ async function main(): Promise<void> {
     }
 
     default:
-      throw new UsageError('명령: lint | disclosure | estimate | assemble | probe');
+      throw new UsageError('명령: lint | disclosure | score | estimate | assemble | probe');
   }
 }
 

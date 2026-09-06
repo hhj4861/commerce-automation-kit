@@ -94,6 +94,26 @@ export interface ScriptLintReport {
   findings: ScriptLintFinding[];
 }
 
+/**
+ * 대본 효율 참고 점수(2026-09-06 append) — 생성 전 후보를 거르는 깔때기 1층.
+ * Google ABCD(주목·브랜딩·공감·행동유도)+Shorts 권장(첫 3초·10초 페이오프·세로·사운드)을
+ * 대본 항목으로 번역한 규칙 점수. **참고용**이며 자동 선정 트리거로 쓰지 않는다(CLAUDE.md 개발 규칙).
+ */
+export interface ScriptScoreDimension {
+  id: string;
+  score: number;
+  max: number;
+  reason: string;
+}
+
+export interface ScriptScoreReport {
+  /** 0~100, dimensions.score 합 */
+  total: number;
+  dimensions: ScriptScoreDimension[];
+  /** 세트 비교 시 남기는 메모(훅 유형 중복 등) */
+  notes: string[];
+}
+
 /** 번인 자막 한 줄. */
 export interface CaptionCue {
   text: string;
