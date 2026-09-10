@@ -11,6 +11,7 @@ export * from './shorts-job.js';       // shorts-publish ↔ 소비자 (원자 #
 export * from './music-job.js';        // ai-music ↔ 소비자 (원자 #8)
 export * from './longform-mix.js';     // longform-mix ↔ 소비자 (원자 #9)
 export * from './blog-export.js';      // keyword-intel → wp-auto-blog 브릿지 (§8 단방향 JSON)
+export * from './blog-keyword-candidates.js'; // measured candidates, separate from legacy opportunity
 export * from './product-page.js';     // product-page-gen ↔ 소비자 (원자 #10)
 export * from './youtube-upload.js';   // youtube-upload ↔ 소비자 (원자 #11)
 export * from './shopping-shorts.js';  // shopping-shorts ↔ 소비자 (원자 #12)
