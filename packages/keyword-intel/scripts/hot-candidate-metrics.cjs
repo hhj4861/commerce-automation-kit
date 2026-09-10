@@ -30,6 +30,8 @@ function dailyMetrics(trend) {
     byDay.set(period, point.ratio);
   }
   const latestDay = Math.max(...byDay.keys());
+  // Missing observations are allowed only inside a fully requested seven-day window.
+  if (start > latestDay - 7 * DAY) return { excluded: 'invalidSeries' };
   const previousDay = latestDay - DAY;
   if (!byDay.has(previousDay)) return { excluded: 'missingPreviousDay' };
   const observed = Array.from({ length: 7 }, (_, i) => latestDay - (i + 1) * DAY)

@@ -56,6 +56,13 @@ describe('daily observed metrics', () => {
     const input = trend(); input.series.splice(0, 3);
     expect(dailyMetrics(input)).toEqual({ excluded: 'insufficientBaseline' });
   });
+  it('requires the full seven-day baseline request window even when five observations exist', () => {
+    const input = trend(); input.series.splice(0, 2);
+    input.startDate = input.series[0]!.period;
+    expect(dailyMetrics(input)).toEqual({ excluded: 'invalidSeries' });
+    input.startDate = '2026-09-02';
+    expect(dailyMetrics(input).trend).toMatchObject({ observedBaselineDays: 5, hotScore: 97 });
+  });
   it('sorts valid dates rather than treating array order as chronology', () => {
     const input = trend(); input.series.reverse();
     expect(dailyMetrics(input).trend).toMatchObject({ latestPeriod: '2026-09-09', latestRatio: 80, hotScore: 97 });
