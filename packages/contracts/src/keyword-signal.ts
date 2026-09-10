@@ -47,6 +47,10 @@ export interface KeywordSignal {
    * 데이터가 없으면 null (호출 한도/미수집 구분은 `coverage` 로).
    */
   trend: {
+    /** Provider response metadata; absent on legacy snapshots, never inferred from dates. */
+    timeUnit?: 'date' | 'week' | 'month';
+    startDate?: string;
+    endDate?: string;
     /** 최근 기간 상대 검색량 (0~100) */
     latest: RelativeIndex | null;
     /** 직전 동일 기간 대비 변화율 (%) — 양수=상승. null=계산 불가 */

@@ -15,6 +15,7 @@
 import { createHmac } from 'node:crypto';
 import { request } from 'undici';
 import { z } from 'zod';
+import type { MonthlyMeasurementStatus } from '@cak/contracts';
 
 const API_BASE = 'https://api.searchad.naver.com';
 const KEYWORDSTOOL_URI = '/keywordstool';
@@ -64,12 +65,18 @@ function normCompIdx(v: unknown): 'low' | 'mid' | 'high' | null {
  * 검색수 파싱: 숫자거나 "< 10"(월 10회 미만 마스킹) 문자열. 마스킹은 진짜 0 과 구분해야
  * 하므로(계약 absoluteVolume.masked) null + masked=true 로 반환한다.
  */
-function parseQc(v: unknown): { value: number | null; masked: boolean } {
-  if (typeof v === 'number' && Number.isFinite(v)) return { value: v, masked: false };
-  const s = String(v ?? '').trim();
-  if (s.startsWith('<')) return { value: null, masked: true };
-  const n = Number(s.replace(/[^0-9]/g, ''));
-  return Number.isFinite(n) && s !== '' ? { value: n, masked: false } : { value: null, masked: false };
+export function parseQc(v: unknown): { value: number | null; status: MonthlyMeasurementStatus } {
+  if (v === undefined || v === null || (typeof v === 'string' && !v.trim())) {
+    return { value: null, status: 'missing' };
+  }
+  if (typeof v === 'string' && /^<\s*10$/.test(v.trim())) {
+    return { value: null, status: 'masked' };
+  }
+  const numeric = typeof v === 'number' ? v
+    : typeof v === 'string' && /^(?:\d+|\d{1,3}(?:,\d{3})+)$/.test(v.trim())
+      ? Number(v.trim().replace(/,/g, '')) : NaN;
+  return Number.isSafeInteger(numeric) && numeric >= 0
+    ? { value: numeric, status: 'measured' } : { value: null, status: 'invalid' };
 }
 
 const keywordToolSchema = z.object({
@@ -77,8 +84,9 @@ const keywordToolSchema = z.object({
     .array(
       z.object({
         relKeyword: z.string(),
-        monthlyPcQcCnt: z.union([z.number(), z.string()]).optional(),
-        monthlyMobileQcCnt: z.union([z.number(), z.string()]).optional(),
+        // Preserve per-device invalid/missing states instead of coercing them to zero.
+        monthlyPcQcCnt: z.unknown().optional(),
+        monthlyMobileQcCnt: z.unknown().optional(),
         compIdx: z.string().optional(),
         plAvgDepth: z.union([z.number(), z.string()]).optional(),
       }),
@@ -93,6 +101,9 @@ export interface KeywordToolRow {
   monthlyPc: number | null;
   /** 최근 30일 모바일 검색수. 마스킹 시 null */
   monthlyMobile: number | null;
+  /** Optional additions preserve callers that construct legacy rows. */
+  monthlyPcStatus?: MonthlyMeasurementStatus;
+  monthlyMobileStatus?: MonthlyMeasurementStatus;
   /** PC 또는 모바일이 마스킹됐는지 — 진짜 0 과 구분 */
   masked: boolean;
   /** 광고 경쟁도 */
@@ -140,7 +151,9 @@ export async function keywordTool(
       relKeyword: k.relKeyword,
       monthlyPc: pc.value,
       monthlyMobile: mo.value,
-      masked: pc.masked || mo.masked,
+      monthlyPcStatus: pc.status,
+      monthlyMobileStatus: mo.status,
+      masked: pc.status === 'masked' || mo.status === 'masked',
       compIdx: normCompIdx(k.compIdx),
     };
   });

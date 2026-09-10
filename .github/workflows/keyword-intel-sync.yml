@@ -8,6 +8,10 @@ on:
     - cron: "0 0,6 * * *"
   workflow_dispatch:
     inputs:
+      export_only:
+        description: "Collect and export blog keyword candidates only (no Telegram or D1)"
+        type: boolean
+        default: false
       send_telegram:
         description: "Send trend and blog Top 10 reports to Telegram"
         required: true
@@ -65,13 +69,17 @@ jobs:
         run: |
           missing=()
           for key in NAVER_CLIENT_ID NAVER_CLIENT_SECRET \
-            NAVER_AD_CUSTOMER_ID NAVER_AD_API_KEY NAVER_AD_SECRET_KEY \
-            SHOPSHORTS_CLOUD_URL SHOPSHORTS_TOKEN; do
+            NAVER_AD_CUSTOMER_ID NAVER_AD_API_KEY NAVER_AD_SECRET_KEY; do
             if [[ -z "${!key:-}" ]]; then
               missing+=("$key")
             fi
           done
-          if [[ "${{ inputs.send_telegram }}" == "true" ]]; then
+          if [[ "${{ inputs.export_only }}" != "true" ]]; then
+            for key in SHOPSHORTS_CLOUD_URL SHOPSHORTS_TOKEN; do
+              if [[ -z "${!key:-}" ]]; then missing+=("$key"); fi
+            done
+          fi
+          if [[ "${{ inputs.send_telegram }}" == "true" && "${{ inputs.export_only }}" != "true" ]]; then
             for key in TELEGRAM_BOT_TOKEN TELEGRAM_CHAT_ID; do
               if [[ -z "${!key:-}" ]]; then
                 missing+=("$key")
@@ -87,14 +95,15 @@ jobs:
         run: npm run -s collect -- --file seeds/g2-seeds.txt
 
       - name: Build trend D1 feed
+        if: ${{ !inputs.export_only }}
         run: npm run -s analyze -- --top 20 --feed-file trend-feed.json
 
       - name: Build trend Top 10 without sending
-        if: ${{ !inputs.send_telegram }}
+        if: ${{ !inputs.send_telegram && !inputs.export_only }}
         run: npm run -s report -- --top 10 --dry-run
 
       - name: Send trend Top 10 to Telegram
-        if: ${{ inputs.send_telegram }}
+        if: ${{ inputs.send_telegram && !inputs.export_only }}
         run: npm run -s report -- --top 10
 
       - name: Build calendar-correct hot candidates
@@ -103,8 +112,16 @@ jobs:
       - name: Build calibrated trend and blog recommendations
         run: npx tsx scripts/blog-hot-report.ts
 
+      - name: Export short-lived blog keyword candidates
+        uses: actions/upload-artifact@v4
+        with:
+          name: blog-keyword-candidates
+          path: packages/keyword-intel/blog-keyword-candidates.json
+          if-no-files-found: error
+          retention-days: 1
+
       - name: Send calibrated trend hot Top 10 to Telegram
-        if: ${{ inputs.send_telegram }}
+        if: ${{ inputs.send_telegram && !inputs.export_only }}
         shell: bash
         run: |
           jq -n \
@@ -117,7 +134,7 @@ jobs:
             "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage"
 
       - name: Send today's blog recommendations Top 10 to Telegram
-        if: ${{ inputs.send_telegram }}
+        if: ${{ inputs.send_telegram && !inputs.export_only }}
         shell: bash
         run: |
           jq -n \
@@ -130,9 +147,11 @@ jobs:
             "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage"
 
       - name: Build blog Top 10
+        if: ${{ !inputs.export_only }}
         run: npm run -s analyze -- --blog --top 10 --feed-file blog-feed.json | tee blog-report.txt
 
       - name: Refuse empty feeds
+        if: ${{ !inputs.export_only }}
         shell: bash
         run: |
           trend_count="$(jq '.items | length' trend-feed.json)"
@@ -144,6 +163,7 @@ jobs:
           echo "피드 검증 통과: trend=${trend_count}, blog=${blog_count}"
 
       - name: Publish trend and blog feeds to D1
+        if: ${{ !inputs.export_only }}
         shell: bash
         run: |
           base="${SHOPSHORTS_CLOUD_URL%/}"
@@ -157,7 +177,7 @@ jobs:
           done
 
       - name: Send blog Top 10 to Telegram
-        if: ${{ inputs.send_telegram }}
+        if: ${{ inputs.send_telegram && !inputs.export_only }}
         shell: bash
         run: |
           jq -n \
