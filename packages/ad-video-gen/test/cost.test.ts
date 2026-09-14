@@ -48,7 +48,7 @@ describe('pickTierDefaults', () => {
   it('draft → seedance_2_0_fast / 480p / 5s (시안은 싸게)', () => {
     const d = pickTierDefaults('draft');
     expect(d).toMatchObject({ model: 'seedance_2_0_fast', resolution: '480p', durationSec: 5 });
-    expect(d.rationale).toContain('시안은 싸게');
+    expect(d.rationale).toContain('TODO(D1)');
   });
 
   it('standard → seedance_2_0 / 1080p / 15s', () => {
@@ -62,6 +62,6 @@ describe('pickTierDefaults', () => {
   it('broadcast → veo3_1 / 4k / 15s (TV 송출급 최종 1컷만)', () => {
     const d = pickTierDefaults('broadcast');
     expect(d).toMatchObject({ model: 'veo3_1', resolution: '4k', durationSec: 15 });
-    expect(d.rationale).toContain('TV 송출급 최종 1컷만');
+    expect(d.rationale).toContain('TODO(D1)');
   });
 });

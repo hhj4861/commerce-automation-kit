@@ -18,6 +18,8 @@ export interface VideoGenerationClip {
   beatIndices: number[];
   prompt: string;
   durationSec: number;
+  /** 공급자에게 요청할 길이. durationSec는 편집 후 사용할 길이로 유지한다. */
+  generationDurationSec?: number;
   model: AdVideoModel;
   resolution: AdVideoResolution;
   aspectRatio: AdVideoAspectRatio;

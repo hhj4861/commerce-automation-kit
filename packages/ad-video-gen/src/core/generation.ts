@@ -3,6 +3,7 @@ import type { AdVideoTier, VideoGenerationPlan, VideoGenerationRequest } from '@
 import { checkConcept } from './concept.js';
 import { buildSpotPrompt, lintPrompt } from './prompt.js';
 import { estimateCredits, pickTierDefaults } from './cost.js';
+import { generationDuration, STANDARD_DURATION_LIMITS } from './video-policy.js';
 
 export type GenerationPlanResult =
   | { ok: true; plan: VideoGenerationPlan }
@@ -13,7 +14,10 @@ export function estimateGeneration(tier: AdVideoTier, durations: number[]) {
   const quality = pickTierDefaults(tier);
   const clips = durations.map((durationSec) => ({
     durationSec,
-    ...estimateCredits(quality.model, quality.resolution, durationSec),
+    generationDurationSec: generationDuration(tier, durationSec),
+    ...(tier === 'standard' && durationSec > STANDARD_DURATION_LIMITS.max
+      ? { credits: null, usd: null, note: '모델 최대 15초 초과 — 장면을 분할하세요.' }
+      : estimateCredits(quality.model, quality.resolution, generationDuration(tier, durationSec))),
   }));
   const known = clips.length > 0 && clips.every((c) => c.credits !== null);
   return {
@@ -22,6 +26,7 @@ export function estimateGeneration(tier: AdVideoTier, durations: number[]) {
     resolution: quality.resolution,
     referenceCredits: known ? Math.round(clips.reduce((n, c) => n + c.credits!, 0) * 100) / 100 : null,
     costPreflightRequired: true as const,
+    warnings: tier === 'standard' ? [] : [quality.rationale],
     clips,
   };
 }
@@ -54,8 +59,14 @@ export function buildVideoGenerationPlan(request: VideoGenerationRequest): Gener
   const aspectRatio = request.target === 'shorts' ? '9:16' : concept.aspectRatio ?? '16:9';
   const splitByBeat = request.splitByBeat ?? request.target === 'shorts';
   const groups = splitByBeat ? beats.map((b) => [b]) : [beats];
+  const warnings = [...gate.warnings, ...(tier === 'standard' ? [] : [quality.rationale])];
   const clips = groups.map((group, index) => {
     const durationSec = group.reduce((sum, beat) => sum + beat.durationSec, 0);
+    const generationDurationSec = generationDuration(tier, durationSec);
+    if (tier === 'standard' && durationSec > STANDARD_DURATION_LIMITS.max) {
+      problems.push(`clip ${index}: 모델 최대 15초 초과. splitByBeat 또는 장면 분할이 필요합니다.`);
+    }
+    if (generationDurationSec !== durationSec) warnings.push(`clip ${index}: ${generationDurationSec}초 생성 후 ${durationSec}초로 편집합니다. 참고 비용은 생성 길이 기준입니다.`);
     const prompt = buildSpotPrompt({ ...concept, beats: group }, {
       aspectRatio,
       ...(request.extraStyle !== undefined ? { extraStyle: request.extraStyle } : {}),
@@ -66,11 +77,12 @@ export function buildVideoGenerationPlan(request: VideoGenerationRequest): Gener
       beatIndices: group.map((b) => b.index),
       prompt,
       durationSec,
+      generationDurationSec,
       model: quality.model,
       resolution: quality.resolution,
       aspectRatio,
       generateAudio: false as const,
-      referenceCredits: estimateCredits(quality.model, quality.resolution, durationSec).credits,
+      referenceCredits: estimateCredits(quality.model, quality.resolution, generationDurationSec).credits,
     };
   });
   // 한 장면이라도 실패하면 부분 계획을 내보내지 않는다(무검증 클립 생성 방지).
@@ -81,7 +93,7 @@ export function buildVideoGenerationPlan(request: VideoGenerationRequest): Gener
       engine: 'ad-cinematic-v1', target: request.target, subject: concept.subject, tier, splitByBeat, clips,
       referenceCredits: estimateGeneration(tier, clips.map((c) => c.durationSec)).referenceCredits,
       costPreflightRequired: true,
-      warnings: [...gate.warnings, '요청 모델·해상도·길이 지원과 실제 비용은 생성 전 get_cost로 확인한다. 임의 품질 하향 금지.'],
+      warnings: [...warnings, '요청 모델·해상도·길이 지원과 실제 비용은 생성 전 get_cost로 확인한다. 임의 품질 하향 금지.'],
     },
   };
 }

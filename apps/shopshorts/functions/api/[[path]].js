@@ -11,7 +11,7 @@
  * draft 로 자동 반려(사유 기록) — "lint 게이트" 는 시점만 뒤로 이동, 우회는 불가.
  */
 
-import { clearVideoGeneration, videoGenerationProblem, videoInputFingerprint } from '../../lib/video-generation.js';
+import { clearVideoGeneration, videoGenerationProblem, approvedInputFingerprint } from '../../lib/video-generation.js';
 
 const TRANSITIONS = {
   draft: ['script-approved', 'rejected'],
@@ -267,7 +267,7 @@ export async function onRequest(context) {
         const body = await readJson(request);
         if (!body?.brief?.id || body.brief.id !== id) return json({ error: 'id 불일치' }, 400);
         if (body.updatedAt !== job.updatedAt) return json({ error: '오래된 워커 결과입니다. 최신 작업을 다시 읽어 주세요.' }, 409);
-        const inputChanged = await videoInputFingerprint(body) !== await videoInputFingerprint(job);
+        const inputChanged = await approvedInputFingerprint(body) !== await approvedInputFingerprint(job);
         if (inputChanged) {
           if (!['draft', 'rejected'].includes(job.status) || !['draft', 'rejected'].includes(body.status)) {
             return json({ error: '승인된 기획은 초안으로 되돌린 후 수정해야 합니다.' }, 409);

@@ -32,7 +32,7 @@ cd packages/keyword-intel && npm test     # 128개 통과하면 정상(2026-09-0
 | slide-renderer (#2) | 미착수 스캐폴드 |
 | coupang-connector (#3) | 미착수 스캐폴드 |
 | manychat-reply (#4) | 미착수 스캐폴드 |
-| ad-video-gen (#5) | ✅ **광고·쇼츠 공통 생성기 통합(09-14)** — 기존 광고 컨셉 게이트·시네마틱 프롬프트·품질 정책을 `video:plan`으로 통합. 양쪽 기본 standard(Seedance 2.0/1080p), 쇼츠 비트별 9:16 계획을 로컬 서버/워커에 연결. 테스트 71 + shopshorts 15 통과. 실제 MCP 실행은 Codex·Claude 스킬이 공통 계획을 소비한다. **코드 검증 완료, 클라우드 배포·운영 프로세스 재시작·실영상 비교 미수행**. 절차: `docs/VIDEO-GENERATION.md` |
+| ad-video-gen (#5) | ✅ **광고·쇼츠 공통 생성기 통합(09-14)** — 기존 광고 컨셉 게이트·시네마틱 프롬프트·품질 정책을 `video:plan`으로 통합. 양쪽 기본 standard(Seedance 2.0/1080p), 쇼츠 비트별 9:16 계획을 로컬 서버/워커에 연결. Claude PID 48311 독립 검토 수신 후 지문·품질 검사·CAS/재시도·4초 최소 길이 보완. 광고 72 + 앱 22 + 쇼츠 회귀 51 통과. draft/broadcast 사양은 TODO(D1). **운영 배포·재시작·실영상 비교 미수행, 수정본 Claude 재검토 대기**. 절차: `docs/VIDEO-GENERATION.md`, 검증: `docs/qa/20260914-common-video-review.md` |
 | showcase-site (#6) | ✅ 착수(07-24) — works.json 단일소스·CRUD·CF Pages 배포. `apps/firstframe` 관리 |
 | shorts-publish (#7) | ✅ **착수(07-25) + 실계정 첫 업로드 성공(07-28)** — 광고영상(16:9)→쇼츠(9:16) 로컬 ffmpeg 렌더(기본 blur-brand)→upload-post 통합 업로드. 테스트 42·타입체크. **실측(07-28)**: 프로필 `commerce_account`(YT=BetterrShop·IG=ttangkong_pom)로 바쿠치올 쇼츠 YT+IG 동시 업로드·비동기 poll 스키마 검증 완료. 결함 수정: 인스타는 global description 무시·`instagram_title`이 캡션 전문(문서 실측) → description 있으면 `instagram_title=제목+설명` 전송(제휴 링크·대가성 고지 탈락 방지). 파트너스 링크 영상은 shopping-shorts 고지 번인+lint 선행 필수 |
 | ai-music (#8) | ✅ **착수(07-25)** — 컨셉→음악 브리프→프롬프트→트랙을 광고에 믹스(더킹·-14 LUFS). 백엔드 교체형: elevenlabs(공식 API·광고 clear), suno-manual(사람 게이트), suno-auto(가드 스텁—공식 API 부재, 비공식 미지원). 테스트 24·타입체크. 실생성은 ElevenLabs 키/Suno 유료 필요 |

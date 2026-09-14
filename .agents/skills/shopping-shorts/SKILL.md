@@ -51,6 +51,9 @@ WebSearch 2~4회로 **근거 있는 소구점**을 도출한다(리뷰에서 반
 
 잡 JSON(`{brief, script, videoDirection, videoTier?}`) 생성 → 검증·등록.
 `videoDirection`에는 실제 근거 `evidence`, 고유성 검토 `uniqueness`, 서사 확인 `narrativeComplete`를 넣는다.
+기존 잡에 이 필드가 없으면 `draft`/`rejected`에서 `PUT /api/jobs/:id/video-direction`으로
+`{videoDirection, videoTier:"standard"}`를 보완한 후 사람 승인을 받는다. 기획 근거를 임의로 채우지 않는다.
+`visualPrompt`에는 장면만 작성한다. 자막·caption·subtitle 삽입 지시는 후반 작업 입력으로 분리한다.
 필요한 비트의 연출 강조는 `emphasis: {"2":"hero"}`처럼 지정한다(공통 문서의 입력 예제 참조).
 ```bash
 npm run --silent cli -w @cak/shopping-shorts -- lint --job job.json          # block 0 확인

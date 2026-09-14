@@ -57,7 +57,7 @@ test('격리된 로컬 API에서 초안 승인 시 공통 생성 계획을 저�
     assert.equal((await call('jobs', job)).status, 201);
     const estimate = await call(`jobs/${job.brief.id}/estimate`, {});
     assert.equal(estimate.data.model, 'seedance_2_0');
-    assert.equal(estimate.data.referenceCredits, 117);
+    assert.equal(estimate.data.referenceCredits, 126);
     const other = structuredClone(job);
     other.brief.id = 'concurrent-mug';
     other.script.briefId = other.brief.id;
@@ -69,6 +69,7 @@ test('격리된 로컬 API에서 초안 승인 시 공통 생성 계획을 저�
     const jobs = await (await fetch(`http://127.0.0.1:${port}/api/jobs`)).json();
     assert.equal(jobs.jobs.length, 2, '승인 중 등록된 다른 잡을 보존한다');
     assert.equal((await call(`jobs/${job.brief.id}/transition`, { to: 'generated', clipPaths: ['one.mp4'] })).status, 422);
+    assert.equal((await call(`jobs/${job.brief.id}/set-link`, { platform: 'coupang', url: 'https://link.coupang.com/a/test123' })).status, 200);
     assert.equal((await call(`jobs/${job.brief.id}/transition`, { to: 'generated', clipPaths: ['a.mp4', 'b.mp4', 'c.mp4'] })).status, 200);
     const conflict = await approveDuring(other.brief.id, async () => {
       const edit = await fetch(`http://127.0.0.1:${port}/api/jobs/${other.brief.id}/video-direction`, {
@@ -80,6 +81,12 @@ test('격리된 로컬 API에서 초안 승인 시 공통 생성 계획을 저�
     assert.equal(conflict.status, 409, '승인 도중 수정한 기획을 덮어쓰지 않는다');
     const after = await (await fetch(`http://127.0.0.1:${port}/api/jobs`)).json();
     assert.equal(after.jobs.find((j) => j.brief.id === other.brief.id).status, 'draft');
+    const invalid = structuredClone(job);
+    invalid.brief.id = 'no-beats';
+    invalid.script.briefId = 'no-beats';
+    delete invalid.script.beats;
+    assert.equal((await call('jobs', invalid)).status, 201);
+    assert.equal((await call('jobs/no-beats/estimate', {})).status, 422);
   } finally {
     if (child.exitCode === null) { child.kill('SIGTERM'); await once(child, 'exit'); }
     await rm(dir, { recursive: true, force: true });

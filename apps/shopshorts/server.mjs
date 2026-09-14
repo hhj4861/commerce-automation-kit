@@ -793,6 +793,11 @@ const server = createServer(async (req, res) => {
       }
 
       if (action === 'estimate') {
+        if (!Array.isArray(job.script?.beats) || !job.script.beats.length
+          || job.script.beats.some((b) => !Number.isFinite(b?.durationSec) || b.durationSec <= 0)) {
+          json(res, 422, { error: '유효한 길이를 가진 대본 장면이 필요합니다.' });
+          return;
+        }
         const r = await runVideoCli(['video-estimate', '--tier', job.videoTier ?? 'standard',
           '--durations', job.script.beats.map((b) => b.durationSec).join(',')]);
         json(res, 200, r.data);

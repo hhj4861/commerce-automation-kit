@@ -19,7 +19,8 @@ import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { prepareShortsVideo } from './video-generation.mjs';
-import { videoGenerationProblem, videoInputFingerprint } from './lib/video-generation.js';
+import { videoGenerationProblem, videoInputFingerprint, approvedInputFingerprint } from './lib/video-generation.js';
+import { updateJobWithRetry } from './lib/job-updates.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const KIT_ROOT = resolve(__dirname, '..', '..');
@@ -57,7 +58,7 @@ async function api(path, opts = {}) {
   const text = await res.text();
   let data;
   try { data = JSON.parse(text); } catch { data = { raw: text }; }
-  if (!res.ok) throw new Error(`${path} → ${res.status}: ${data.error ?? text.slice(0, 200)}`);
+  if (!res.ok) throw Object.assign(new Error(`${path} → ${res.status}: ${data.error ?? text.slice(0, 200)}`), { status: res.status });
   return data;
 }
 
@@ -98,47 +99,37 @@ async function uploadVideo(id, which, filePath) {
 
 /** 최신 잡을 다시 읽어 patch 를 적용 후 PUT (경합 방지 원칙). */
 async function updateJob(id, patch) {
-  const { jobs } = await api('/api/jobs');
-  const fresh = jobs.find((j) => j.brief.id === id);
-  if (!fresh) throw new Error(`잡 소실: ${id}`);
-  const delta = await patch(fresh);
-  if (delta === null) return fresh;
-  const next = { ...fresh, ...delta };
-  if (next.status === 'script-approved' && next.videoGeneration && await videoGenerationProblem(next)) {
-    delete next.videoGeneration;
-  }
-  await api(`/api/jobs/${id}`, {
-    method: 'PUT',
-    headers: { 'content-type': 'application/json', 'x-shopshorts-worker': '1' },
-    body: JSON.stringify(next),
-  });
-  return next;
+  return updateJobWithRetry(api, id, patch);
 }
 
 // ---------- 작업 핸들러 ----------
 
 async function lintApproved(job) {
   const id = job.brief.id;
+  const input = await approvedInputFingerprint(job);
+  // 링크 고지나 대본이 바뀐 경우 이전 입력의 lint 결과를 재시도로 붙이지 않는다.
+  const saveLint = (delta) => updateJob(id, async (fresh) => fresh.status === job.status
+    && await approvedInputFingerprint(fresh) === input ? delta : null);
   const tmp = join(WORK_DIR, id, 'lint-job.json');
   await mkdir(dirname(tmp), { recursive: true });
   await writeFile(tmp, JSON.stringify({ brief: job.brief, script: job.script }));
   const r = await runCli(['-w', '@cak/shopping-shorts', '--', 'lint', '--job', tmp]);
   if (r.data === null) throw new Error('lint 출력 없음(CLI 크래시)');
   if (r.data.ok === true) {
-    await updateJob(id, () => ({ lintChecked: true, lintRequested: false, lintReport: r.data }));
+    await saveLint({ lintChecked: true, lintRequested: false, lintReport: r.data });
     log('lint.pass', { id });
   } else if (job.status === 'script-approved') {
-    await updateJob(id, () => ({
+    await saveLint({
       status: 'draft',
       lintChecked: false,
       lintRequested: false,
       lintReport: r.data,
       note: `자동 반려: lint 위반 ${r.data.findings?.filter((f) => f.severity === 'block').length ?? '?'}건 — 대본 수정 필요`,
-    }));
+    });
     log('lint.block-revert', { id });
   } else {
     // 재검증 요청(request-lint/set-link)이 draft 등 다른 상태에서 위반이면 상태는 두고 리포트만 갱신
-    await updateJob(id, () => ({ lintChecked: false, lintRequested: false, lintReport: r.data }));
+    await saveLint({ lintChecked: false, lintRequested: false, lintReport: r.data });
     log('lint.block-report', { id, status: job.status });
   }
 }

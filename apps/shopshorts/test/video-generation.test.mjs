@@ -98,6 +98,32 @@ test('JSON 키 순서만 바뀐 입력은 같은 계획으로 인식한다', asy
   assert.equal(await videoInputFingerprint(job), await videoInputFingerprint(reversed));
 });
 
+test('제휴 링크와 고지 변경은 영상 계획을 유지하고 표현 검증은 다시 요구한다', async () => {
+  const db = new Db({ ...sampleJob(), videoGeneration: prepared });
+  const linked = await call(db, 'jobs/quality-mug/set-link', 'POST', { platform: 'coupang', url: 'https://link.coupang.com/a/test123' });
+  assert.equal(linked.status, 200, await linked.text());
+  assert.equal(await videoGenerationProblem(db.job), null);
+  assert.notEqual(db.job.lintChecked, true);
+  assert.equal((await call(db, 'jobs/quality-mug/transition', 'POST', { to: 'generated', clipPaths: ['a', 'b', 'c'] })).status, 422);
+  assert.equal((await call(db, 'jobs/quality-mug', 'PUT', { ...db.job, lintChecked: true }, true)).status, 200);
+  assert.equal((await call(db, 'jobs/quality-mug/transition', 'POST', { to: 'generated', clipPaths: ['a', 'b', 'c'] })).status, 200);
+});
+
+test('클라우드는 티어 이름만 유지한 품질 하향과 비용 확인 생략을 거부한다', async () => {
+  for (const change of [
+    (p) => { p.clips[0].model = 'kling3_0'; },
+    (p) => { p.clips[0].resolution = '480p'; },
+    (p) => { p.clips[0].generateAudio = true; },
+    (p) => { p.costPreflightRequired = false; },
+    (p) => { p.clips[0].generationDurationSec = 3; },
+  ]) {
+    const db = new Db(sampleJob());
+    const modified = structuredClone(prepared);
+    change(modified.plan);
+    assert.equal((await call(db, 'jobs/quality-mug', 'PUT', { ...db.job, videoGeneration: modified }, true)).status, 422);
+  }
+});
+
 test('클라우드 등록 → 승인 → 공통 계획 수신 → 생성 완료가 연결된다', async () => {
   const db = new Db();
   const input = sampleJob();

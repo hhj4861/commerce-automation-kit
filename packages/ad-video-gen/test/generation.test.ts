@@ -40,7 +40,9 @@ describe('광고 기반 공통 영상 생성', () => {
       expect(clip.beatIndices).toEqual([i]);
     }
     expect(shorts.plan.clips[2]!.prompt).toContain('GLORIFY PRODUCT');
-    expect(shorts.plan.referenceCredits).toBe(117);
+    expect(shorts.plan.referenceCredits).toBe(126);
+    expect(shorts.plan.clips[0]).toMatchObject({ durationSec: 3, generationDurationSec: 4, referenceCredits: 36 });
+    expect(shorts.plan.warnings.join()).toContain('4초 생성 후 3초');
     expect(shorts.plan.costPreflightRequired).toBe(true);
   });
 
@@ -86,11 +88,22 @@ describe('광고 기반 공통 영상 생성', () => {
     if (!r.ok) throw new Error(r.problems.join());
     expect(r.plan.clips[0]!.model).toBe('seedance_2_0_fast');
     expect(r.plan.referenceCredits).toBeNull();
+    expect(r.plan.warnings.join()).toContain('TODO(D1)');
     expect(estimateGeneration('draft', [3, 5, 5]).referenceCredits).toBeNull();
   });
 
   it('JSON 경계에서 잘못된 티어와 개별 모델 우회를 거부한다', () => {
     expect(() => parseVideoGenerationRequest({ target: 'shorts', concept: concept(), tier: 'cheap' })).toThrow();
     expect(() => parseVideoGenerationRequest({ target: 'shorts', concept: concept(), model: 'kling3_0' })).toThrow();
+  });
+
+  it('최대 길이를 넘는 스팟은 분할을 요구하고 견적을 지어내지 않는다', () => {
+    const c = concept();
+    c.beats[0]!.durationSec = 10;
+    const r = buildVideoGenerationPlan({ target: 'ad', concept: c });
+    expect(r.ok).toBe(false);
+    expect(buildVideoGenerationPlan({ target: 'ad', concept: c, splitByBeat: true }).ok).toBe(true);
+    expect(estimateGeneration('standard', [16]).referenceCredits).toBeNull();
+    for (const invalid of [0, -1, NaN, Infinity]) expect(estimateGeneration('standard', [invalid]).referenceCredits).toBeNull();
   });
 });
