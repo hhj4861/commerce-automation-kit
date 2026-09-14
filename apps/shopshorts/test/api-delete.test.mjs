@@ -23,6 +23,12 @@ class Statement {
   }
 
   async run() {
+    if (this.sql.startsWith('UPDATE jobs SET data')) {
+      const current = this.db.jobs.get(this.args[0]);
+      if (!current || JSON.stringify(current) !== this.args[4]) return { meta: { changes: 0 } };
+      this.db.jobs.set(this.args[0], JSON.parse(this.args[1]));
+      return { meta: { changes: 1 } };
+    }
     if (this.sql.startsWith('INSERT INTO jobs')) {
       this.db.jobs.set(this.args[0], JSON.parse(this.args[1]));
       return { meta: { changes: 1 } };

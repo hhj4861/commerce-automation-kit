@@ -29,10 +29,20 @@ class Db {
     const db = this;
     return {
       bind(...args) { this.args = args; return this; },
-      async first() { return db.job ? { data: JSON.stringify(db.job) } : null; },
+      async first() {
+        const snapshot = db.job ? { data: JSON.stringify(db.job) } : null;
+        if (db.afterRead) { const pause = db.afterRead; delete db.afterRead; await pause(); }
+        return snapshot;
+      },
       async run() {
+        if (sql.startsWith('UPDATE jobs SET data')) {
+          if (!db.job || JSON.stringify(db.job) !== this.args[4]) return { meta: { changes: 0 } };
+          db.job = JSON.parse(this.args[1]);
+          return { meta: { changes: 1 } };
+        }
         if (!sql.startsWith('INSERT INTO jobs')) throw new Error(sql);
         db.job = JSON.parse(this.args[1]);
+        return { meta: { changes: 1 } };
       },
     };
   }
@@ -128,4 +138,30 @@ test('순서가 뒤섞인 대본과 장면 수가 다른 결과를 거부한다'
   assert.throws(() => shortsGenerationRequest(job), /순서/);
   const valid = { ...sampleJob(), videoGeneration: prepared };
   assert.match(await videoGenerationProblem(valid, ['one.mp4']), /클립 파일 수/);
+});
+
+test('클라우드 워커 저장 도중 사람 반려가 발생하면 승인을 되살리지 않는다', async () => {
+  const db = new Db({ ...sampleJob(), videoGeneration: prepared });
+  const stale = structuredClone(db.job);
+  let release, started;
+  const read = new Promise((r) => { started = r; });
+  const resume = new Promise((r) => { release = r; });
+  db.afterRead = async () => { started(); await resume; };
+  const workerSave = call(db, 'jobs/quality-mug', 'PUT', stale, true);
+  await read;
+  try {
+    assert.equal((await call(db, 'jobs/quality-mug/transition', 'POST', { to: 'rejected' })).status, 200);
+  } finally { release(); }
+  assert.equal((await workerSave).status, 409);
+  assert.equal(db.job.status, 'rejected');
+  assert.equal(db.job.videoGeneration, undefined);
+});
+
+test('요청 시작 전에도 오래된 워커 스냅샷은 최신 작업 내용을 덮어쓸 수 없다', async () => {
+  const db = new Db({ ...sampleJob(), updatedAt: '2026-09-14T01:00:00Z' });
+  const stale = structuredClone(db.job);
+  db.job.updatedAt = '2026-09-14T01:01:00Z';
+  db.job.note = '사람이 추가한 검수 의견';
+  assert.equal((await call(db, 'jobs/quality-mug', 'PUT', stale, true)).status, 409);
+  assert.equal(db.job.note, '사람이 추가한 검수 의견');
 });

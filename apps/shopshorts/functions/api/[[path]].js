@@ -41,19 +41,40 @@ async function readJson(request) {
   }
 }
 
+const jobSnapshots = new WeakMap();
+
 async function getJob(env, id) {
   const row = await env.DB.prepare('SELECT data FROM jobs WHERE id = ?').bind(id).first();
-  return row ? JSON.parse(row.data) : null;
+  if (!row) return null;
+  const job = JSON.parse(row.data);
+  jobSnapshots.set(job, row.data);
+  return job;
 }
 
-async function saveJob(env, job) {
+async function saveJob(env, job, source = job) {
+  const expected = jobSnapshots.get(source);
   job.updatedAt = new Date().toISOString();
+  const data = JSON.stringify(job);
+  if (expected !== undefined) {
+    // 조회 후 발생한 반려/수정을 오래된 결과로 덮어쓰지 않게 DB에서 비교와 갱신을 한 번에 수행한다.
+    const result = await env.DB.prepare(
+      'UPDATE jobs SET data = ?2, status = ?3, updated_at = ?4 WHERE id = ?1 AND data = ?5',
+    ).bind(job.brief.id, data, job.status, job.updatedAt, expected).run();
+    if (result.meta?.changes !== 1) {
+      const error = new Error('처리 중 작업이 변경됐습니다. 최신 상태를 다시 읽어 주세요.');
+      error.status = 409;
+      throw error;
+    }
+    jobSnapshots.set(job, data);
+    return job;
+  }
   await env.DB.prepare(
     'INSERT INTO jobs (id, data, status, updated_at) VALUES (?1, ?2, ?3, ?4) ' +
       'ON CONFLICT(id) DO UPDATE SET data = ?2, status = ?3, updated_at = ?4',
   )
-    .bind(job.brief.id, JSON.stringify(job), job.status, job.updatedAt)
+    .bind(job.brief.id, data, job.status, job.updatedAt)
     .run();
+  jobSnapshots.set(job, data);
   return job;
 }
 
@@ -245,6 +266,7 @@ export async function onRequest(context) {
         }
         const body = await readJson(request);
         if (!body?.brief?.id || body.brief.id !== id) return json({ error: 'id 불일치' }, 400);
+        if (body.updatedAt !== job.updatedAt) return json({ error: '오래된 워커 결과입니다. 최신 작업을 다시 읽어 주세요.' }, 409);
         const inputChanged = await videoInputFingerprint(body) !== await videoInputFingerprint(job);
         if (inputChanged) {
           if (!['draft', 'rejected'].includes(job.status) || !['draft', 'rejected'].includes(body.status)) {
@@ -267,7 +289,7 @@ export async function onRequest(context) {
           const problem = await videoGenerationProblem(body);
           if (problem) return json({ error: problem }, 422);
         }
-        await saveJob(env, body);
+        await saveJob(env, body, job);
         return json({ ok: true });
       }
 
