@@ -1013,6 +1013,9 @@ function renderDetail(force=false) {
           <div class="detail-label">QUALITY CHECK</div>
           <div class="checkline">${svg('check',15)} ${j.lintReport?.ok === false ? `확인할 표현이 ${findings.length}건 있어요` : '필수 고지와 표현 검사를 통과했어요'}</div>
           ${findings.length ? `<ul class="finding-list">${findings.map(f => `<li>[${f.severity}] ${f.rule} — ${f.matched}</li>`).join('')}</ul>` : ''}
+          ${j.status === 'script-approved' && j.videoGenerationError ? `<div class="finalize-note">영상 기획 확인 필요: ${escapeHtml(j.videoGenerationError)}</div>` : ''}
+          ${j.status === 'script-approved' && !j.videoGeneration && !j.videoGenerationError ? '<div class="finalize-note">승인한 기획으로 영상 생성 계획을 준비하고 있어요…</div>' : ''}
+          ${j.videoGeneration?.plan ? `<div class="memo-note">제작 품질: ${j.videoGeneration.plan.tier === 'draft' ? '시안' : j.videoGeneration.plan.tier === 'broadcast' ? '방송용' : '광고 확정본'} · ${j.videoGeneration.plan.clips.length}개 클립</div>` : ''}
           ${j.finalize?.state === 'requested' ? '<div class="finalize-note">로컬 워커가 작업을 가져가길 기다리고 있어요…</div>' : ''}
           ${j.finalize?.state === 'running' ? '<div class="finalize-note">내레이션과 자막을 조립하고 있어요…</div>' : ''}
           ${j.finalize?.state === 'error' ? `<div class="finalize-note">조립 실패: ${j.finalize.error}</div>` : ''}
@@ -1183,8 +1186,9 @@ async function runTool(tool, j) {
   if (tool === 'estimate') {
     if (state.isCloud) { showToast('생성 견적은 로컬 운영 화면에서 확인할 수 있어요.'); return; }
     try {
-      const r = await api(`/api/jobs/${j.brief.id}/estimate?model=kling3_0-pro`, {method:'POST'});
-      showToast(`예상 비용 · 클립 ${r.clipsTotal}cr + TTS ${r.ttsCredits}cr = ${r.grandTotal}cr`);
+      const r = await api(`/api/jobs/${j.brief.id}/estimate`, {method:'POST'});
+      const amount = r.referenceCredits === null ? '미확인' : `${r.referenceCredits}cr`;
+      showToast(`영상 참고 비용 · ${amount} (음성 별도, 생성 전 재확인)`);
     } catch (e) { showToast('견적 실패: ' + e.message); }
   }
   if (tool === 'previous') {

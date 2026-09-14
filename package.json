@@ -12,6 +12,8 @@
     "node": ">=20"
   },
   "scripts": {
+    "video:plan": "npm run --silent cli -w @cak/ad-video-gen -- video-plan",
+    "video:estimate": "npm run --silent cli -w @cak/ad-video-gen -- video-estimate",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
     "build": "npm run build --workspaces --if-present"

@@ -2,7 +2,7 @@
 
 > **이 파일의 목적:** 새 IDE/새 Claude 세션이 이 문서 하나만 읽고 곧바로 이어서 작업할 수 있게 한다.
 > 설계 근거는 각 문서에, **"지금 어디까지 왔고 다음에 뭘 하나"는 여기에** 기록한다.
-> 최종 갱신: **2026-09-04**
+> 최종 갱신: **2026-09-14**
 
 ---
 
@@ -32,7 +32,7 @@ cd packages/keyword-intel && npm test     # 128개 통과하면 정상(2026-09-0
 | slide-renderer (#2) | 미착수 스캐폴드 |
 | coupang-connector (#3) | 미착수 스캐폴드 |
 | manychat-reply (#4) | 미착수 스캐폴드 |
-| ad-video-gen (#5) | ✅ 착수(07-24) — 컨셉 게이트·프롬프트·비용·ffmpeg 후반. 실제 생성은 `.claude/skills/ad-video` 스킬 |
+| ad-video-gen (#5) | ✅ **광고·쇼츠 공통 생성기 통합(09-14)** — 기존 광고 컨셉 게이트·시네마틱 프롬프트·품질 정책을 `video:plan`으로 통합. 양쪽 기본 standard(Seedance 2.0/1080p), 쇼츠 비트별 9:16 계획을 로컬 서버/워커에 연결. 테스트 71 + shopshorts 15 통과. 실제 MCP 실행은 Codex·Claude 스킬이 공통 계획을 소비한다. **코드 검증 완료, 클라우드 배포·운영 프로세스 재시작·실영상 비교 미수행**. 절차: `docs/VIDEO-GENERATION.md` |
 | showcase-site (#6) | ✅ 착수(07-24) — works.json 단일소스·CRUD·CF Pages 배포. `apps/firstframe` 관리 |
 | shorts-publish (#7) | ✅ **착수(07-25) + 실계정 첫 업로드 성공(07-28)** — 광고영상(16:9)→쇼츠(9:16) 로컬 ffmpeg 렌더(기본 blur-brand)→upload-post 통합 업로드. 테스트 42·타입체크. **실측(07-28)**: 프로필 `commerce_account`(YT=BetterrShop·IG=ttangkong_pom)로 바쿠치올 쇼츠 YT+IG 동시 업로드·비동기 poll 스키마 검증 완료. 결함 수정: 인스타는 global description 무시·`instagram_title`이 캡션 전문(문서 실측) → description 있으면 `instagram_title=제목+설명` 전송(제휴 링크·대가성 고지 탈락 방지). 파트너스 링크 영상은 shopping-shorts 고지 번인+lint 선행 필수 |
 | ai-music (#8) | ✅ **착수(07-25)** — 컨셉→음악 브리프→프롬프트→트랙을 광고에 믹스(더킹·-14 LUFS). 백엔드 교체형: elevenlabs(공식 API·광고 clear), suno-manual(사람 게이트), suno-auto(가드 스텁—공식 API 부재, 비공식 미지원). 테스트 24·타입체크. 실생성은 ElevenLabs 키/Suno 유료 필요 |
@@ -229,6 +229,7 @@ src/
 
 | 날짜 | 내용 |
 |---|---|
+| 2026-09-14 (공통 영상 생성기) | **광고 품질을 광고·쇼츠에 공통 적용** — `@cak/ad-video-gen`의 기존 기획 게이트·`buildSpotPrompt`·티어 정책을 단일 `video:plan`/`video:estimate` 경로로 조합. 계약 `VideoGenerationRequest/Plan`, 쇼츠 `videoDirection/videoTier/videoGeneration` append. 로컬 승인/클라우드 워커가 계획 생성, 입력 지문으로 수정된 기획의 이전 계획 거부, 계획·클립 수 검증 후 생성 완료 기록. 승인 중 동시 수정/다른 잡 추가 보존, CLI 실패 시 이전 출력 계획 교체. Codex·Claude 광고/쇼츠 스킬 4개는 `docs/VIDEO-GENERATION.md`의 같은 MCP 실행 절차를 참조한다. 검증: ad-video-gen 71·shopshorts 15 테스트, contracts/ad-video-gen 타입 검사, 클라우드 라우터 브라우저 번들·UI 스크립트 문법·스킬 4개 검증 통과. **실제 영상 생성/과금/배포/운영 재시작 없음**. 다음 운영 반영은 클라우드 Functions 배포와 로컬 워커 재시작을 함께 적용한 뒤 승인된 샘플로 실영상 비교 |
 | 2026-07-23 | D1 실측(D1-1~4 확정) · Phase 1(zod 검증·상수 확정) · Phase 2(store/budget/obs·analyze/dlq CLI) · G1·G2 실호출 통과 · 시드 182개 확정 · 일일 자동화+텔레그램 리포트 구축 · 리뷰 3회 31건 수정 |
 | 2026-07-24 | 저장소 경로 이동(TCC 대응) · 첫 자동실행 DNS 실패 진단 → 결함 4건 수정(DNS 재시도·**예산 환불**·네트워크 대기·타임아웃 완화+재시도코드 보강) · 다른 세션 산출물 조사·통합 · 이 문서 작성 |
 | 2026-07-24 (2세션) | PROGRESS 실측 검증(테스트·git·자동화·문서 드리프트) → **09:37 예약 실행 재발** 분석: 분류 결함은 이미 커밋돼 있었고 남은 갭 = **자가복구 부재**. 준비 프로브 getaddrinfo 연속2회+타임아웃, 전량 미도달 CLI **exit 75**, 스크립트 75-한정 3회 재수집, 다이제스트 🚨 배너, 실패 reason `[코드]` 태그화(연결타임아웃 누락 수정). 적대적 검증 2회로 자체 수정의 오탐 2건 발견·수정. 회귀 테스트 +10(71→81). 문서 드리프트 정정(git 커밋·`.idea`·README·테스트수) |

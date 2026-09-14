@@ -11,6 +11,8 @@
  * draft 로 자동 반려(사유 기록) — "lint 게이트" 는 시점만 뒤로 이동, 우회는 불가.
  */
 
+import { clearVideoGeneration, videoGenerationProblem, videoInputFingerprint } from '../../lib/video-generation.js';
+
 const TRANSITIONS = {
   draft: ['script-approved', 'rejected'],
   'script-approved': ['generated', 'rejected', 'draft'],
@@ -201,6 +203,8 @@ export async function onRequest(context) {
       const job = {
         brief: body.brief,
         script: body.script,
+        ...(body.videoDirection !== undefined ? { videoDirection: body.videoDirection } : {}),
+        ...(body.videoTier !== undefined ? { videoTier: body.videoTier } : {}),
         status: 'draft',
         ...(body.lintReport !== undefined ? { lintReport: body.lintReport } : {}),
       };
@@ -241,9 +245,41 @@ export async function onRequest(context) {
         }
         const body = await readJson(request);
         if (!body?.brief?.id || body.brief.id !== id) return json({ error: 'id 불일치' }, 400);
-        if (JSON.stringify(body.script) !== JSON.stringify(job.script)) delete body.lintChecked;
+        const inputChanged = await videoInputFingerprint(body) !== await videoInputFingerprint(job);
+        if (inputChanged) {
+          if (!['draft', 'rejected'].includes(job.status) || !['draft', 'rejected'].includes(body.status)) {
+            return json({ error: '승인된 기획은 초안으로 되돌린 후 수정해야 합니다.' }, 409);
+          }
+          delete body.lintChecked;
+          clearVideoGeneration(body);
+        }
+        if (body.status !== job.status) {
+          // 워커는 사람 승인/발행을 대신하지 않는다. 자동 반려·클립 완료·조립만 허용한다.
+          const workerTransitions = { 'script-approved': ['draft', 'generated'], generated: ['assembled'] };
+          if (!workerTransitions[job.status]?.includes(body.status)) return json({ error: '이 전이는 사람 확인이 필요합니다.' }, 422);
+          if (body.status === 'generated') {
+            const problem = job.lintChecked !== true ? 'lint 검증이 필요합니다.' : await videoGenerationProblem(job, body.clipPaths ?? []);
+            if (problem) return json({ error: problem }, 422);
+          }
+          if (body.status === 'draft') clearVideoGeneration(body);
+        }
+        if (body.videoGeneration && body.status === 'script-approved') {
+          const problem = await videoGenerationProblem(body);
+          if (problem) return json({ error: problem }, 422);
+        }
         await saveJob(env, body);
         return json({ ok: true });
+      }
+
+      if (sub === 'video-direction' && method === 'PUT') {
+        if (!['draft', 'rejected'].includes(job.status)) return json({ error: '기획을 수정하려면 초안으로 되돌려 주세요.' }, 409);
+        const body = await readJson(request);
+        if (!body?.videoDirection) return json({ error: 'videoDirection 필수' }, 400);
+        job.videoDirection = body.videoDirection;
+        job.videoTier = body.videoTier ?? 'standard';
+        clearVideoGeneration(job);
+        await saveJob(env, job);
+        return json({ ok: true, job });
       }
 
       if (sub === 'transition' && method === 'POST') {
@@ -256,6 +292,13 @@ export async function onRequest(context) {
         // 게이트(리뷰 확정 결함 수정): lint 통과 없이는 생성·발행 단계로 못 감 — 워커 오프라인 우회 차단
         if (to === 'generated' && job.lintChecked !== true) {
           return json({ error: 'lint 검증 대기 중(워커) — 통과 전에는 생성 단계로 갈 수 없음' }, 422);
+        }
+        if (to === 'script-approved' && !job.videoDirection) {
+          return json({ error: '영상 기획 근거(videoDirection)를 초안에 추가해야 합니다.' }, 422);
+        }
+        if (to === 'generated' && job.status === 'script-approved') {
+          const problem = await videoGenerationProblem(job, body.clipPaths ?? job.clipPaths ?? []);
+          if (problem) return json({ error: problem }, 422);
         }
         if (to === 'review' && !job.mediaUploaded?.final) {
           return json({ error: '최종 영상 없이 review 로 갈 수 없음(자막+TTS 먼저)' }, 422);
@@ -274,7 +317,8 @@ export async function onRequest(context) {
         if (typeof body.previewVideo === 'string') job.previewVideo = body.previewVideo;
         if (typeof body.outputVideo === 'string') job.outputVideo = body.outputVideo;
         // 승인 전이 → 워커 lint 재검증 대기. 그 외 전이 → 미실행 finalize 요청은 취소(유령 조립 방지)
-        if (to === 'script-approved') delete job.lintChecked;
+        if (to === 'script-approved') { delete job.lintChecked; clearVideoGeneration(job); }
+        if (to === 'draft' || to === 'rejected') clearVideoGeneration(job);
         if (job.finalize?.state === 'requested') delete job.finalize;
         // 발행 확인(사람 게이트 2) → 로컬 워커가 실제 업로드 실행. 이미 참조가 있으면(수동 업로드) 건너뜀
         if (to === 'published' && !job.publishRef) {

@@ -18,6 +18,8 @@ import { existsSync, readFileSync } from 'node:fs';
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { prepareShortsVideo } from './video-generation.mjs';
+import { videoGenerationProblem, videoInputFingerprint } from './lib/video-generation.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const KIT_ROOT = resolve(__dirname, '..', '..');
@@ -99,7 +101,12 @@ async function updateJob(id, patch) {
   const { jobs } = await api('/api/jobs');
   const fresh = jobs.find((j) => j.brief.id === id);
   if (!fresh) throw new Error(`잡 소실: ${id}`);
-  const next = { ...fresh, ...patch(fresh) };
+  const delta = await patch(fresh);
+  if (delta === null) return fresh;
+  const next = { ...fresh, ...delta };
+  if (next.status === 'script-approved' && next.videoGeneration && await videoGenerationProblem(next)) {
+    delete next.videoGeneration;
+  }
   await api(`/api/jobs/${id}`, {
     method: 'PUT',
     headers: { 'content-type': 'application/json', 'x-shopshorts-worker': '1' },
@@ -133,6 +140,27 @@ async function lintApproved(job) {
     // 재검증 요청(request-lint/set-link)이 draft 등 다른 상태에서 위반이면 상태는 두고 리포트만 갱신
     await updateJob(id, () => ({ lintChecked: false, lintRequested: false, lintReport: r.data }));
     log('lint.block-report', { id, status: job.status });
+  }
+}
+
+async function prepareApprovedVideo(job) {
+  const id = job.brief.id;
+  const fingerprint = await videoInputFingerprint(job);
+  try {
+    const videoGeneration = await prepareShortsVideo(job);
+    // CLI 실행 중 수정/반려된 잡에는 이전 계획을 붙이지 않는다.
+    const { jobs } = await api('/api/jobs');
+    const fresh = jobs.find((j) => j.brief.id === id);
+    if (!fresh || fresh.status !== 'script-approved' || await videoInputFingerprint(fresh) !== fingerprint) return;
+    await updateJob(id, async (current) => current.status === 'script-approved'
+      && await videoInputFingerprint(current) === fingerprint
+      ? { videoGeneration, videoGenerationError: null } : null);
+    log('video-plan.ready', { id, tier: videoGeneration.plan.tier, clips: videoGeneration.plan.clips.length });
+  } catch (e) {
+    await updateJob(id, async (current) => current.status === 'script-approved'
+      && await videoInputFingerprint(current) === fingerprint
+      ? { videoGenerationError: String(e?.message ?? e) } : null);
+    throw e;
   }
 }
 
@@ -345,6 +373,12 @@ async function handleJob(job) {
       log('lint.error', { id, attempt: n, error: String(e?.message ?? e) });
       if (n >= 3) await updateJob(id, () => ({ note: `워커 lint 실행 실패 ${n}회 — 로그 확인 필요` })).catch(() => {});
     }
+    return;
+  }
+  if (job.status === 'script-approved' && await videoGenerationProblem(job)) {
+    if (shouldSkip(id, 'video-plan')) return;
+    try { await prepareApprovedVideo(job); clearFailure(id, 'video-plan'); }
+    catch (e) { recordFailure(id, 'video-plan'); log('video-plan.error', { id, error: String(e?.message ?? e) }); }
     return;
   }
   if (job.finalize?.state === 'requested') {

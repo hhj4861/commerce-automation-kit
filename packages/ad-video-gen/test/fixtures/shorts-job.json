@@ -1,0 +1,12 @@
+{
+  "brief": { "id": "quality-mug", "productName": "테스트 머그", "appealPoints": ["분리형 손잡이"], "createdAt": "2026-09-14T00:00:00Z" },
+  "script": {
+    "briefId": "quality-mug", "title": "테스트 머그 구조 소개", "hookType": "demo", "hashtags": [], "description": "테스트 머그의 구조를 소개합니다.",
+    "beats": [
+      { "index": 0, "role": "hook", "durationSec": 3, "narration": "테스트 머그를 살펴보세요", "caption": "분리형 손잡이", "visualPrompt": "A travel mug on a sculptural stone surface." },
+      { "index": 1, "role": "body", "durationSec": 5, "narration": "손잡이를 분리하고 다시 끼워요", "caption": "손잡이 분리", "visualPrompt": "The handle detaches and locks back into place." },
+      { "index": 2, "role": "cta", "durationSec": 5, "narration": "제품 정보를 확인하세요", "caption": "제품 정보 확인", "visualPrompt": "A close-up of the finished product." }
+    ]
+  },
+  "videoDirection": { "evidence": ["테스트용 제품 명세"], "uniqueness": { "passed": true, "rationale": "Detachable handle shown in a single continuous motion." }, "narrativeComplete": true, "emphasis": { "2": "hero" } }
+}

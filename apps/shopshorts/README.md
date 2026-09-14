@@ -3,6 +3,13 @@
 공용 UI, 로컬 실행 서버·워커, Cloudflare Pages Functions·D1·R2 구성을 한 디렉터리에서 관리한다.
 UI·상태는 클라우드에서도 사용할 수 있고, ffmpeg·TTS·클립 생성 같은 무거운 실행은 로컬 Mac 워커가 담당한다.
 
+영상의 기획 검증·프롬프트·품질 설정은 **광고 기반 공통 생성기**를 사용한다.
+초안의 `videoDirection`(근거·고유성·서사)과 `videoTier`(기본 `standard`)를 받아,
+승인 후 `videoGeneration.plan`을 발급한다. 로컬 서버와 클라우드 워커가 같은 CLI를 호출한다.
+실제 힉스필드 호출은 이 계획을 읽는 제작 세션이 담당한다.
+계획 누락/입력 변경/클립 수 불일치는 `generated` 전이를 거부한다.
+[입력 예제·공통 실행 절차](../../docs/VIDEO-GENERATION.md)
+
 ```
 [Pages 공용 UI + Functions API + D1 큐 + R2 영상]
              ▲ 결과 업로드          │ 사람 승인·작업 요청
@@ -15,6 +22,8 @@ UI·상태는 클라우드에서도 사용할 수 있고, ffmpeg·TTS·클립 �
 - `functions/` — Cloudflare Pages API와 인증 미들웨어
 - `server.mjs` — 로컬 API와 정적 UI 서버
 - `worker.mjs` — 클라우드 큐의 lint·TTS·조립 실행자
+- `video-generation.mjs` — 공통 생성기 CLI 브릿지
+- `lib/video-generation.js` — 로컬/클라우드의 생성 입력 매핑·계획 신선도 검사
 - `schema.sql` — D1 스키마
 - `migrations/` — 기존 D1에 적용하는 증분 스키마
 - `wrangler.toml` — Pages·D1·R2 배포 설정
@@ -27,6 +36,7 @@ npm start -w @cak/app-shopshorts     # http://127.0.0.1:5178 (127.0.0.1 바인�
 ```
 
 데이터: `apps/shopshorts/data/jobs.json` (gitignore — 운영 데이터).
+검증용 데이터 경로는 `SHOPSHORTS_DATA_DIR`, 포트는 `SHOPSHORTS_PORT`로 격리할 수 있다.
 
 ## Cloudflare 실행·배포
 
@@ -84,7 +94,8 @@ draft ──(게이트1: lint 재검증+사람 승인)──> script-approved �
 | POST | `/api/jobs` | 잡 등록(draft 고정, 등록 시 lint 자동 실행) — 스킬의 입구 |
 | POST | `/api/jobs/:id/transition` | `{to, note?, clipPaths?, previewVideo?, outputVideo?, publishRef?}` — 허용 전이만 |
 | POST | `/api/jobs/:id/lint` | 원자 lint 재실행 + 리포트 저장 |
-| POST | `/api/jobs/:id/estimate?model=` | 원자 견적 |
+| POST | `/api/jobs/:id/estimate` | 공통 생성기의 videoTier 기준 참고 견적(실제 비용은 MCP 프리플라이트) |
+| PUT | `/api/jobs/:id/video-direction` | `{videoDirection, videoTier?}` — 초안/반려 상태에서 공통 생성 기획 보완 |
 | GET | `/api/hot-keywords` | keyword-intel 상위 후보 3개(큐 중복 제외, 10분 캐시) + 초안 요청 목록 |
 | POST | `/api/draft-requests` | `{topic, contentType, opportunity?}` — 초안 요청 큐. **contentType: shorts 활성 / ad·blog·music 예약 슬롯**(콘텐츠 유형 확장 심). Claude 세션 모니터가 감지해 대본 작성→잡 등록 |
 | POST | `/api/draft-requests/:slug/done` | 초안 완료 처리(요청 제거) |

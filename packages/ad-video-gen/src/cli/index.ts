@@ -28,6 +28,7 @@ import type { AdVideoAspectRatio } from '@cak/contracts';
 import { checkConcept } from '../core/concept.js';
 import { buildSpotPrompt, lintPrompt } from '../core/prompt.js';
 import { estimateCredits, pickTierDefaults } from '../core/cost.js';
+import { buildVideoGenerationPlan, estimateGeneration, type GenerationPlanResult } from '../core/generation.js';
 import {
   buildConcatArgs,
   buildGridArgs,
@@ -46,6 +47,7 @@ import {
   adVideoResolutionSchema,
   adVideoTierSchema,
   parseAdConcept,
+  parseVideoGenerationRequest,
 } from '../adapters/schemas.js';
 import { createLogger } from '../obs/logger.js';
 
@@ -133,6 +135,33 @@ async function main(): Promise<void> {
   const [cmd, ...rest] = process.argv.slice(2);
 
   switch (cmd) {
+    case 'video-plan': {
+      const o = parse(rest, { request: STR, out: STR });
+      let result: GenerationPlanResult;
+      try {
+        const request = parseVideoGenerationRequest(JSON.parse(readFileSync(resolvePath(reqStr(o, 'request')), 'utf8')));
+        result = buildVideoGenerationPlan(request);
+      } catch (e) {
+        result = { ok: false, problems: [e instanceof Error ? e.message : String(e)], warnings: [] };
+      }
+      if (optStr(o, 'out')) {
+        // 실패 결과로도 갱신해 같은 경로에 남은 이전 승인 계획의 오사용을 막는다.
+        writeFileSync(resolvePath(reqStr(o, 'out')), JSON.stringify(result.ok ? result.plan : result, null, 2) + '\n');
+      }
+      out(result);
+      if (!result.ok) process.exitCode = 1;
+      break;
+    }
+    case 'video-estimate': {
+      const o = parse(rest, { tier: STR, durations: STR });
+      const tier = adVideoTierSchema.parse(optStr(o, 'tier') ?? 'standard');
+      const durations = reqStr(o, 'durations').split(',').map(Number);
+      if (!durations.length || durations.some((n) => !Number.isFinite(n) || n <= 0)) {
+        throw new UsageError('--durations 는 0 초과의 초 단위 목록(예: 3,5,4)');
+      }
+      out({ ok: true, ...estimateGeneration(tier, durations) });
+      break;
+    }
     case 'check-concept': {
       const o = parse(rest, { concept: STR });
       const result = checkConcept(readConcept(o));
@@ -301,7 +330,7 @@ async function main(): Promise<void> {
     }
     default:
       console.error(
-        '명령: check-concept | build-prompt | lint-prompt | estimate | tier | probe | poster | grid | title | concat | splice | mix-vo | download',
+        '명령: video-plan | video-estimate | check-concept | build-prompt | lint-prompt | estimate | tier | probe | poster | grid | title | concat | splice | mix-vo | download',
       );
       process.exit(1);
   }

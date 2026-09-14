@@ -6,6 +6,7 @@
  */
 export * from './keyword-signal.js';
 export * from './ad-video-job.js';     // ad-video-gen ↔ 소비자 (원자 #5)
+export * from './video-generation.js'; // 광고 기반 공통 영상 생성 ↔ 광고/쇼츠 소비자
 export * from './showcase-entry.js';   // showcase-site ↔ 소비자 (원자 #6)
 export * from './shorts-job.js';       // shorts-publish ↔ 소비자 (원자 #7)
 export * from './music-job.js';        // ai-music ↔ 소비자 (원자 #8)

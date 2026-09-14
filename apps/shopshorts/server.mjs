@@ -17,10 +17,12 @@ import { mkdirSync, readFileSync, writeFileSync, existsSync, statSync, createRea
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { tmpdir } from 'node:os';
+import { prepareShortsVideo, runVideoCli } from './video-generation.mjs';
+import { clearVideoGeneration, videoGenerationProblem } from './lib/video-generation.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const KIT_ROOT = resolve(__dirname, '..', '..');
-const DATA_DIR = join(__dirname, 'data');
+const DATA_DIR = process.env.SHOPSHORTS_DATA_DIR ? resolve(process.env.SHOPSHORTS_DATA_DIR) : join(__dirname, 'data');
 const JOBS_PATH = join(DATA_DIR, 'jobs.json');
 const DRAFT_REQ_PATH = join(DATA_DIR, 'draft-requests.json');
 const PORT = Number(process.env.SHOPSHORTS_PORT ?? 5178);
@@ -573,6 +575,8 @@ const server = createServer(async (req, res) => {
       const job = {
         brief: body.brief,
         script: body.script,
+        ...(body.videoDirection !== undefined ? { videoDirection: body.videoDirection } : {}),
+        ...(body.videoTier !== undefined ? { videoTier: body.videoTier } : {}),
         status: 'draft',
         updatedAt: new Date().toISOString(),
       };
@@ -585,6 +589,23 @@ const server = createServer(async (req, res) => {
       jobs.push(job);
       saveJobs(jobs);
       json(res, 201, { ok: true, job });
+      return;
+    }
+
+    const directionRoute = url.pathname.match(/^\/api\/jobs\/([a-z0-9-]+)\/video-direction$/);
+    if (directionRoute && req.method === 'PUT') {
+      const body = await readBody(req);
+      if (!body?.videoDirection) { json(res, 400, { error: 'videoDirection 필수' }); return; }
+      const jobs = loadJobs();
+      const job = findJob(jobs, directionRoute[1]);
+      if (!job) { json(res, 404, { error: '잡 없음' }); return; }
+      if (!['draft', 'rejected'].includes(job.status)) { json(res, 409, { error: '기획을 수정하려면 초안으로 되돌려 주세요.' }); return; }
+      job.videoDirection = body.videoDirection;
+      job.videoTier = body.videoTier ?? 'standard';
+      clearVideoGeneration(job);
+      job.updatedAt = new Date().toISOString();
+      saveJobs(jobs);
+      json(res, 200, { ok: true, job });
       return;
     }
 
@@ -748,18 +769,32 @@ const server = createServer(async (req, res) => {
         return;
       }
 
+      // CLI 실행 중 다른 요청이 저장한 잡을 오래된 jobs 배열로 덮어쓰지 않는다.
+      const original = JSON.stringify(job);
+      const saveCurrentJob = () => {
+        const latest = loadJobs();
+        const index = latest.findIndex((j) => j.brief.id === id);
+        if (index < 0 || JSON.stringify(latest[index]) !== original) {
+          json(res, 409, { error: '처리 중 기획이 변경됐습니다. 다시 확인해 주세요.' });
+          return false;
+        }
+        latest[index] = job;
+        saveJobs(latest);
+        return true;
+      };
+
       if (action === 'lint') {
         const r = await withJobFile(job, (p) => runAtomCli(['lint', '--job', p]));
         job.lintReport = r.data;
         job.updatedAt = new Date().toISOString();
-        saveJobs(jobs);
+        if (!saveCurrentJob()) return;
         json(res, 200, r.data);
         return;
       }
 
       if (action === 'estimate') {
-        const model = url.searchParams.get('model') ?? 'kling3_0-pro';
-        const r = await withJobFile(job, (p) => runAtomCli(['estimate', '--job', p, '--model', model]));
+        const r = await runVideoCli(['video-estimate', '--tier', job.videoTier ?? 'standard',
+          '--durations', job.script.beats.map((b) => b.durationSec).join(',')]);
         json(res, 200, r.data);
         return;
       }
@@ -778,11 +813,21 @@ const server = createServer(async (req, res) => {
         const r = await withJobFile(job, (p) => runAtomCli(['lint', '--job', p]));
         job.lintReport = r.data;
         if (r.data.ok !== true) {
-          saveJobs(jobs);
+          if (!saveCurrentJob()) return;
           json(res, 422, { error: 'lint block — 전이 거부', report: r.data });
           return;
         }
       }
+      if (to === 'script-approved') {
+        try { job.videoGeneration = await prepareShortsVideo({ ...job, status: to }); }
+        catch (e) { json(res, 422, { error: String(e?.message ?? e) }); return; }
+        delete job.videoGenerationError;
+      }
+      if (to === 'generated' && job.status === 'script-approved') {
+        const problem = await videoGenerationProblem(job, body.clipPaths ?? job.clipPaths ?? []);
+        if (problem) { json(res, 422, { error: problem }); return; }
+      }
+      if (to === 'draft' || to === 'rejected') clearVideoGeneration(job);
       // 발행 검수 진입 시 조립 산출물이 있어야 한다.
       if (to === 'review' && !body.outputVideo && !job.outputVideo) {
         json(res, 422, { error: 'outputVideo 없이 review 로 갈 수 없음(조립 먼저)' });
@@ -796,7 +841,7 @@ const server = createServer(async (req, res) => {
       if (typeof body.outputVideo === 'string') job.outputVideo = body.outputVideo;
       if (typeof body.publishRef === 'string') job.publishRef = body.publishRef;
       job.updatedAt = new Date().toISOString();
-      saveJobs(jobs);
+      if (!saveCurrentJob()) return;
       json(res, 200, { ok: true, job });
       return;
     }
@@ -810,5 +855,5 @@ const server = createServer(async (req, res) => {
 });
 
 server.listen(PORT, '127.0.0.1', () => {
-  console.log(`[shopshorts] http://127.0.0.1:${PORT} (로컬 전용, jobs=${JOBS_PATH})`);
+  console.log(`[shopshorts] http://127.0.0.1:${server.address().port} (로컬 전용, jobs=${JOBS_PATH})`);
 });
