@@ -1,5 +1,6 @@
+import { FPS, FONTS, frameCount } from '../public/editor-model.js';
 export const CATEGORIES = ['심리학', '건축학', '상품광고', '막장드라마', '역사', '과학', '직접 입력'];
-export const VOICES = [{ id: 'none', name: '내레이션 없음' }, { id: 'n2fbxG88jqAoaVPUy3IG', name: 'Yooni · 밝고 또렷한 한국어' }, { id: 'ZRJMGKt2Okf3o9C38eSq', name: 'Claire · 차분한 한국어' }];
+export const VOICES = [{ id: 'none', name: '내레이션 없음' }, { id: 'n2fbxG88jqAoaVPUy3IG', name: 'Yooni · 밝고 또렷한 한국어', previewUrl: 'https://storage.googleapis.com/eleven-public-prod/database/workspace/dc9d42698272443c82f44e26ea1c9263/voices/n2fbxG88jqAoaVPUy3IG/kVgVODaebcaz7AEHhgDo.mp3' }, { id: 'ZRJMGKt2Okf3o9C38eSq', name: 'Claire · 차분한 한국어', previewUrl: 'https://storage.googleapis.com/eleven-public-prod/database/workspace/87db1f27d31f4bdd85e5e0c1028eae76/voices/ZRJMGKt2Okf3o9C38eSq/V7F37Ap0MTHMEuvlf9be.mp3' }];
 export const PLATFORMS = ['youtube', 'instagram', 'tiktok'];
 export const busy = job => ['queued', 'running'].includes(job.task?.state);
 export function fail(message, status = 400) { throw Object.assign(new Error(message), { status }); }
@@ -25,6 +26,7 @@ export function validateScenes(scenes) {
   });
 }
 export function validateEdit(input, job) {
+  if(input.version===2)return validateTimeline(input,job);
   const order = input.order;
   if (!Array.isArray(order) || order.length !== job.scenes.length || new Set(order).size !== order.length || order.some(id => !job.scenes.some(s => s.id === id))) fail('타임라인에는 모든 장면이 한 번씩 포함되어야 합니다.');
   if (!VOICES.some(v => v.id === input.voice)) fail('지원하는 목소리를 선택하세요.');
@@ -39,6 +41,31 @@ export function validateEdit(input, job) {
   const total = Object.values(durations).reduce((a, b) => a + b, 0);
   if (total > (job.brief.format === 'short' ? 180 : 600)) fail('선택한 영상 형식의 최대 길이를 넘었습니다.');
   return { order, durations, voice: input.voice, music: input.music || null, musicVolume };
+}
+export function validateTimeline(input, job) {
+  if(input.version!==2 || input.fps!==FPS || !Array.isArray(input.clips) || !input.clips.length || input.clips.length>300)fail('30fps 타임라인에 1~300개 클립이 필요합니다.');
+  const ids=new Set();
+  const clips=input.clips.map(c=>{
+    if(!/^[a-zA-Z0-9-]{1,80}$/.test(c.id||'')||ids.has(c.id)||!job.scenes.some(s=>s.id===c.sceneId))fail('클립 ID 또는 원본 장면을 확인하세요.');
+    ids.add(c.id);
+    if(!Number.isInteger(c.inFrame)||!Number.isInteger(c.outFrame)||c.inFrame<0||c.outFrame<=c.inFrame||c.outFrame>900)fail('클립은 1프레임 이상, 원본 범위는 0~900프레임입니다.');
+    return {id:c.id,sceneId:c.sceneId,inFrame:c.inFrame,outFrame:c.outFrame};
+  });
+  if(frameCount({clips})>(job.brief.format==='short'?180:600)*FPS)fail('선택한 영상 형식의 최대 길이를 넘었습니다.');
+  if(!VOICES.some(v=>v.id===input.voice))fail('지원하는 목소리를 선택하세요.');
+  if(input.music&&job.assets[input.music]?.kind!=='audio')fail('배경음 파일을 다시 선택하세요.');
+  if(!Number.isFinite(input.musicVolume)||input.musicVolume<0||input.musicVolume>1)fail('배경음 음량은 0~100%입니다.');
+  if(!Array.isArray(input.captions)||input.captions.length>300)fail('자막은 최대 300개입니다.');
+  const textIds=new Set();
+  const captions=input.captions.map(c=>{
+    const clip=clips.find(x=>x.id===c.clipId);
+    if(!/^[a-zA-Z0-9-]{1,120}$/.test(c.id||'')||textIds.has(c.id)||!clip)fail('자막 ID 또는 연결된 클립을 확인하세요.');textIds.add(c.id);
+    if(!text(c.text,500)||/[\x00-\x08\x0B-\x1F]/.test(c.text))fail('자막은 1~500자 텍스트로 입력하세요.');
+    if(!Number.isInteger(c.startFrame)||!Number.isInteger(c.endFrame)||c.startFrame<0||c.endFrame<=c.startFrame||c.endFrame>clip.outFrame-clip.inFrame)fail('자막 시간은 연결된 클립 안에 있어야 합니다.');
+    if(!FONTS.some(f=>f.id===c.font)||!Number.isInteger(c.size)||c.size<20||c.size>120||!/^#[0-9a-f]{6}$/i.test(c.color)||!['top','middle','bottom'].includes(c.position)||typeof c.background!=='boolean')fail('자막 폰트·크기·색상·위치를 확인하세요.');
+    return {id:c.id,clipId:c.clipId,text:c.text,startFrame:c.startFrame,endFrame:c.endFrame,font:c.font,size:c.size,color:c.color,position:c.position,background:c.background};
+  });
+  return {version:2,fps:FPS,clips,captions,voice:input.voice,music:input.music||null,musicVolume:input.musicVolume};
 }
 export function createProject(input) {
   return { id: crypto.randomUUID(), revision: 0, title: input.topic?.slice(0, 100), brief: validateBrief(input), scenes: [], assets: {}, edit: null, approved: false, render: null, upload: null, task: null, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
@@ -64,7 +91,7 @@ export function changeProject(original, action, body) {
     if (body.approved !== true || !job.scenes.length) fail('대본을 검수하고 승인하세요.');
     job.approved = true; job.render = null; job.task = { action, state: 'queued' };
   } else if (action === 'render') {
-    if (!job.approved || !job.edit || job.scenes.some(s => !job.assets[s.id])) fail('대본 승인·장면 생성·편집 저장을 먼저 완료하세요.');
+    if (!job.approved || !job.edit || (job.edit.version===2?job.edit.clips.some(c=>!job.assets[c.sceneId]):job.scenes.some(s => !job.assets[s.id]))) fail('대본 승인·장면 생성·편집 저장을 먼저 완료하세요.');
     job.render = null; job.task = { action, state: 'queued' };
   } else if (action === 'publish') {
     if (body.reviewed !== true || !job.render || !job.approved) fail('최종 영상을 생성하고 검수 확인을 체크하세요.');

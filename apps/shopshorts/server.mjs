@@ -460,7 +460,7 @@ const server = createServer(async (req, res) => {
       return;
     }
     if (url.pathname.startsWith('/api/studio')) { await handleLocalStudio(req, res, origin, STUDIO_ENV, studioStore); return; }
-    const studioFiles = { '/app-shell.css': ['app-shell.css','text/css'], '/studio': ['studio.html','text/html'], '/studio.html': ['studio.html','text/html'], '/studio.js': ['studio.js','text/javascript'], '/studio.css': ['studio.css','text/css'] };
+    const studioFiles = { '/editor.js': ['editor.js','text/javascript'], '/editor-model.js': ['editor-model.js','text/javascript'], '/NanumGothic-Regular.ttf': ['NanumGothic-Regular.ttf','font/ttf'], '/NanumMyeongjo-Regular.ttf': ['NanumMyeongjo-Regular.ttf','font/ttf'], '/NanumPenScript-Regular.ttf': ['NanumPenScript-Regular.ttf','font/ttf'], '/app-shell.css': ['app-shell.css','text/css'], '/studio': ['studio.html','text/html'], '/studio.html': ['studio.html','text/html'], '/studio.js': ['studio.js','text/javascript'], '/studio.css': ['studio.css','text/css'] };
     if (req.method === 'GET' && studioFiles[url.pathname]) {
       const [file, type] = studioFiles[url.pathname];
       res.writeHead(200, { 'content-type': type + '; charset=utf-8', 'cache-control': 'no-store' });

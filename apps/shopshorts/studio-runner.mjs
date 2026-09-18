@@ -3,6 +3,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { join, resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { FPS, FONTS, normalizeEdit, frameCount } from './public/editor-model.js';
 import { validateScenes } from './lib/studio.js';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
@@ -40,32 +41,46 @@ export async function generateScenario(brief, env, fetcher = fetch) {
 }
 async function lintProject(job, work, env, publication = false) {
   // Reuse the atom via its public CLI; chunking preserves the 12-beat contract for longform.
-  for (let offset = 0; offset < job.scenes.length; offset += 12) {
+  const contentScenes = [...job.scenes, ...(job.edit?.captions || []).map(c=>({narration:c.text,prompt:'Original caption overlay',duration:Math.max(1,(c.endFrame-c.startFrame)/FPS)}))];
+  for (let offset = 0; offset < contentScenes.length; offset += 12) {
     const brief = { id: job.id, productName: job.brief.topic, category: job.brief.category, appealPoints: [job.brief.direction || job.brief.topic], createdAt: job.createdAt, sponsored: job.brief.category === '상품광고' };
     const description = `${brief.sponsored ? '(광고)\n' : ''}${publication ? job.publication.description : ''}\nAI 생성 콘텐츠`;
-    const script = { briefId: job.id, hookType: 'info-tip', title: publication ? job.publication.title : job.title, description, hashtags: [], beats: job.scenes.slice(offset, offset + 12).map((s, i) => ({ index: i, role: i === 0 ? 'hook' : 'body', durationSec: s.duration, narration: s.narration, caption: s.narration, visualPrompt: s.prompt })) };
+    const script = { briefId: job.id, hookType: 'info-tip', title: publication ? job.publication.title : job.title, description, hashtags: [], beats: contentScenes.slice(offset, offset + 12).map((s, i) => ({ index: i, role: i === 0 ? 'hook' : 'body', durationSec: s.duration, narration: s.narration, caption: s.narration, visualPrompt: s.prompt })) };
     const path = join(work, 'lint.json');
     await writeFile(path, JSON.stringify({ brief, script }));
     const result = await cli('@cak/shopping-shorts', ['lint', '--job', path], env);
     if (result.ok !== true) throw new Error('대본 검증에 실패했습니다. 과장·효능·가짜 경험 표현을 수정하세요.');
   }
 }
-export function sceneFfmpegArgs(source, target, scene, edit, aspect, narration, actualDuration, sponsored) {
-  const duration = edit.durations[scene.id];
+export function sceneFfmpegArgs(source, target, scene, edit, aspect, narration, actualDuration, sponsored, clip = null, captions = []) {
+  const duration = clip ? (clip.outFrame-clip.inFrame)/FPS : edit.durations[scene.id];
   const [w, h] = aspect === '9:16' ? [1080, 1920] : [1920, 1080];
   const args = ['-y', '-hide_banner', '-loglevel', 'error', ...(scene.kind === 'image' ? ['-loop', '1'] : ['-stream_loop', '-1']), '-i', source];
   if (narration) args.push('-i', narration);
   else args.push('-f', 'lavfi', '-i', 'anullsrc=r=44100:cl=stereo');
-  // Speech is never silently truncated: make the user lengthen a scene instead.
-  if (narration && actualDuration > duration + .1) throw new Error(`장면 ${scene.id}: 목소리가 ${actualDuration.toFixed(1)}초입니다. 장면 길이를 늘려주세요.`);
+  // Legacy scenes require full speech; timeline clips deliberately trim speech with video.
+  if (!clip && narration && actualDuration > duration + .1) throw new Error(`장면 ${scene.id}: 목소리가 ${actualDuration.toFixed(1)}초입니다. 장면 길이를 늘려주세요.`);
   let vf = `scale=${w}:${h}:force_original_aspect_ratio=decrease,pad=${w}:${h}:(ow-iw)/2:(oh-ih)/2,setsar=1,fps=30`;
+  if (clip) vf += `,trim=start_frame=${clip.inFrame}:end_frame=${clip.outFrame},setpts=PTS-STARTPTS`;
+  if (captions.length) vf += ',' + captions.join(',');
   if (sponsored) vf += ",drawtext=text='(광고)':fontsize=36:fontcolor=white:box=1:boxcolor=black@0.7:x=40:y=60";
-  args.push('-map', '0:v:0', '-map', '1:a:0', '-vf', vf, '-af', 'apad', '-t', String(duration), '-c:v', 'libx264', '-preset', 'veryfast', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-ar', '44100', '-ac', '2', '-movflags', '+faststart', target);
+  args.push('-map', '0:v:0', '-map', '1:a:0', '-vf', vf, '-af', clip ? `atrim=start=${clip.inFrame/FPS}:end=${clip.outFrame/FPS},asetpts=PTS-STARTPTS,apad` : 'apad', '-t', String(duration), '-c:v', 'libx264', '-preset', 'veryfast', ...(clip ? ['-bf','0'] : []), '-pix_fmt', 'yuv420p', '-c:a', clip ? 'pcm_s16le' : 'aac', '-ar', '44100', '-ac', '2', '-movflags', '+faststart', target);
   return args;
+}
+// Text is stored in a file with expansion disabled, never interpolated into filter code.
+export function captionFilter(caption, textPath) {
+  const font=FONTS.find(f=>f.id===caption.font);
+  if(!font)throw new Error('지원하지 않는 자막 폰트입니다.');
+  const escapePath=p=>p.replaceAll('\\','/').replaceAll(':','\\:').replaceAll("'", "'\\\\''");
+  const fontPath=join(ROOT,'apps/shopshorts/public',font.file);
+  const y={top:'h*0.08',middle:'(h-text_h)/2',bottom:'h*0.92-text_h'}[caption.position];
+  return `drawtext=fontfile='${escapePath(fontPath)}':textfile='${escapePath(textPath)}':expansion=none:fontsize=${caption.size}:fontcolor=${caption.color}:borderw=2:bordercolor=black:box=${caption.background?1:0}:boxcolor=black@0.65:boxborderw=8:x=(w-text_w)/2:y=${y}:enable='gte(n,${caption.startFrame})*lt(n,${caption.endFrame})'`;
 }
 async function renderProject(job, work, env, io) {
   const segments = [];
-  for (const id of job.edit.order) {
+  const timeline=normalizeEdit(job);
+  for (const clip of timeline.clips) {
+    const id=clip.sceneId;
     const scene = job.scenes.find(s => s.id === id), source = join(work, `${id}.source`);
     await writeFile(source, await io.readAsset(job.assets[id].key));
     let vo = null, voDuration = 0;
@@ -78,21 +93,29 @@ async function renderProject(job, work, env, io) {
       voDuration = Number(await command('ffprobe', ['-v', 'error', '-show_entries', 'format=duration', '-of', 'default=noprint_wrappers=1:nokey=1', vo], env));
       if (!Number.isFinite(voDuration)) throw new Error('음성 길이를 확인할 수 없습니다.');
     }
-    const target = join(work, `${id}.mp4`);
-    await command('ffmpeg', sceneFfmpegArgs(source, target, scene, job.edit, job.brief.aspect, vo, voDuration, job.brief.category === '상품광고'), env);
+    const captionFilters=[];
+    for(const [index,caption] of timeline.captions.filter(c=>c.clipId===clip.id).entries()) {
+      const textPath=join(work,`${clip.id}-caption-${index}.txt`);
+      await writeFile(textPath,caption.text);
+      captionFilters.push(captionFilter(caption,textPath));
+    }
+    // PCM intermediates avoid AAC padding changing frame boundaries during concatenation.
+    const target = join(work, `${clip.id}.${job.edit.version===2?'mov':'mp4'}`);
+    await command('ffmpeg', sceneFfmpegArgs(source, target, scene, job.edit, job.brief.aspect, vo, voDuration, job.brief.category === '상품광고', job.edit.version===2?clip:null,captionFilters), env);
     segments.push(target);
   }
-  const list = join(work, 'concat.txt'), joined = join(work, 'joined.mp4'), final = join(work, 'final.mp4');
+  const list = join(work, 'concat.txt'), joined = join(work, job.edit.version===2?'joined.mov':'joined.mp4'), final = join(work, 'final.mp4');
   await writeFile(list, segments.map(s => `file '${s.replaceAll("'", "'\\''")}'`).join('\n'));
   await command('ffmpeg', ['-y', '-hide_banner', '-loglevel', 'error', '-f', 'concat', '-safe', '0', '-i', list, '-c', 'copy', '-movflags', '+faststart', joined], env);
   if (job.edit.music) {
     const music = join(work, 'bgm.source');
     await writeFile(music, await io.readAsset(job.assets[job.edit.music].key));
     await command('ffmpeg', ['-y', '-hide_banner', '-loglevel', 'error', '-i', joined, '-stream_loop', '-1', '-i', music, '-filter_complex', `[1:a]volume=${job.edit.musicVolume}[bg];[0:a][bg]amix=inputs=2:duration=first:normalize=0,alimiter=limit=0.95[a]`, '-map', '0:v', '-map', '[a]', '-c:v', 'copy', '-c:a', 'aac', '-movflags', '+faststart', final], env);
-  } else await writeFile(final, await readFile(joined));
+  } else if(job.edit.version===2) await command('ffmpeg', ['-y','-hide_banner','-loglevel','error','-i',joined,'-c:v','copy','-c:a','aac','-movflags','+faststart',final],env);
+  else await writeFile(final, await readFile(joined));
   const key = `studio/${job.id}/${job.task.id}-final.mp4`;
   await io.writeAsset(key, await readFile(final), 'video/mp4');
-  return { render: { key, type: 'video/mp4', createdAt: new Date().toISOString(), duration: job.edit.order.reduce((n, id) => n + job.edit.durations[id], 0) } };
+  return { render: { key, type: 'video/mp4', createdAt: new Date().toISOString(), duration: frameCount(timeline)/FPS } };
 }
 export async function executeStudioTask(job, env, io, checkpoint, { fetcher = fetch, runCli = cli } = {}) {
   const work = join(io.workDir, job.id);

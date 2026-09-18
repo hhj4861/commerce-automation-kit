@@ -1,3 +1,6 @@
+import {createEditor} from './editor.js';
+import {frameCount,FPS} from './editor-model.js';
+let editor=null;
 'use strict';
 const $ = s => document.querySelector(s);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -6,7 +9,7 @@ const names = ['기획','시나리오','이미지 · 영상','편집','업로드
 const platformNames = {youtube:'YouTube',instagram:'Instagram',tiktok:'TikTok'};
 const taskNames = {scenario:'시나리오 생성',media:'이미지·영상 생성',render:'최종 영상 만들기',publish:'플랫폼 업로드'};
 const taskBusy = () => ['queued','running'].includes(state.project?.task?.state);
-const total = p => p.edit ? p.edit.order.reduce((sum,id) => sum + p.edit.durations[id],0) : p.scenes.reduce((sum,s) => sum+s.duration,0);
+const total = p => p.edit?.version===2 ? Math.round(frameCount(p.edit)/FPS*100)/100 : p.edit ? p.edit.order.reduce((sum,id) => sum + p.edit.durations[id],0) : p.scenes.reduce((sum,s) => sum+s.duration,0);
 const assetUrl = (id, asset) => `/api/studio/${id}/assets/${encodeURIComponent(asset)}?v=${state.project?.revision || 0}`;
 function toast(text){ $('#toast').textContent=text;$('#toast').hidden=false;clearTimeout(toast.timer);toast.timer=setTimeout(()=>$('#toast').hidden=true,5000); }
 async function api(path='', options={}) {
@@ -42,7 +45,7 @@ function heading(){
  $('#intro').textContent=p?`${p.brief.category} · ${p.brief.format==='short'?'숏폼 9:16':'롱폼 16:9'} · ${p.scenes.length?p.scenes.length+'장면 / '+total(p)+'초':p.brief.duration+'초 목표'}`:'주제와 영상 형식을 정하면 AI가 시나리오를 작성합니다.';
  $('#newProject').hidden=false;
 }
-function start(){state.project=null;state.step=1;state.dirty=false;$('#modes').hidden=true;$('#workspace').hidden=false;$('#projects').hidden=true;history.replaceState(null,'','/studio?new=1');heading();progress();renderBrief();}
+function start(){editor?.destroy();editor=null;state.project=null;state.step=1;state.dirty=false;$('#modes').hidden=true;$('#workspace').hidden=false;$('#projects').hidden=true;history.replaceState(null,'','/studio?new=1');heading();progress();renderBrief();}
 function renderBrief(){
  const p=state.project, brief=p?.brief;
  const cats=state.config?.categories || ['심리학','건축학','상품광고','막장드라마','역사','과학','직접 입력'];
@@ -55,7 +58,7 @@ function renderBrief(){
  $('#create').onclick=()=>run(async()=>{if(!p){const r=await post('',{category:state.category,format:state.format,topic:$('#topic').value,direction:$('#direction').value,duration:Number($('#duration').value)});state.project=r.project;state.dirty=false;history.replaceState(null,'',`/studio?id=${r.project.id}`);}state.step=2;render();});
 }
 function render(){
- stopPreview();heading();progress();note();
+ editor?.destroy();editor=null;heading();progress();note();
  if(state.step===1)renderBrief();if(state.step===2)renderScenario();if(state.step===3)renderMedia();if(state.step===4)renderEditor();if(state.step===5)renderPublish();
  if(taskBusy() || state.project?.upload)document.querySelectorAll('#stage button,#stage input,#stage textarea,#stage select').forEach(b=>b.disabled=true);
 
@@ -92,29 +95,16 @@ async function uploadFile(file,kind,scene){
  const params=new URLSearchParams({rights:'confirmed',kind,name:file.name,...(scene?{scene}:{})});
  const data=await api(`/${state.project.id}/assets?${params}`,{method:'POST',headers:{'content-type':file.type|| (file.name.endsWith('.mp3')?'audio/mpeg':'application/octet-stream')},body:file});state.project=data.project;state.dirty=false;toast('파일을 등록했습니다.');
 }
-function editValue(){
- const p=state.project;return p.edit||{order:p.scenes.map(s=>s.id),durations:Object.fromEntries(p.scenes.map(s=>[s.id,s.duration])),voice:'none',music:null,musicVolume:.15};
-}
 function renderEditor(){
- const p=state.project,e=editValue();if(!state.selected||!p.scenes.some(s=>s.id===state.selected))state.selected=e.order[0];
- const selected=p.scenes.find(s=>s.id===state.selected),voices=state.config?.voices||[];
- $('#stage').innerHTML=`<section class="panel"><div class="panel-head"><div><h2>장면을 연결하고, 목소리를 더하세요</h2><p>타임라인을 끌어 순서를 바꾸거나 화살표 버튼으로 이동하세요.</p></div><span class="badge">4 / 5 편집</span></div><div class="editor"><aside class="media-bin"><h3>내 장면 <span class="muted">${p.scenes.length}</span></h3>${e.order.map((id,i)=>`<button class="bin-item ${id===state.selected?'selected':''}" data-select="${id}">${mediaHTML(p,p.scenes.find(s=>s.id===id))}<span>장면 ${i+1}</span></button>`).join('')}</aside><div><div class="preview" id="preview">${mediaHTML(p,selected,true)}</div><div class="preview-controls"><button class="quiet" id="play">▶ 순서 미리보기</button><span>${total({...p,edit:e})}초 · ${p.brief.aspect}</span></div><p class="hint" style="text-align:center">미리보기는 장면 순서 확인용입니다. 음성과 배경음은 최종 영상에 적용됩니다.</p></div><aside class="inspector"><h3>장면 설정</h3><label class="field"><span>선택 장면 길이 (초)</span><input id="sceneDuration" type="number" min="1" max="30" step="0.1" value="${e.durations[state.selected]}"></label><label class="field"><span>목소리</span><select id="voice">${voices.map(v=>`<option value="${v.id}" ${e.voice===v.id?'selected':''}>${esc(v.name)}</option>`).join('')}</select><small class="hint">목소리 생성 시 ElevenLabs 사용료가 발생합니다.</small></label><label class="field"><span>배경음</span><select id="music"><option value="">배경음 없음</option>${Object.entries(p.assets).filter(([,a])=>a.kind==='audio').map(([id,a])=>`<option value="${id}" ${id===e.music?'selected':''}>${esc(a.name)}</option>`).join('')}</select></label><label class="file-label">+ 배경음 파일 등록<input id="musicFile" type="file" accept="audio/mpeg,audio/wav,audio/x-wav,audio/mp4"></label><label class="field" style="margin-top:20px"><span>배경음 음량 <output id="volumeLabel">${Math.round(e.musicVolume*100)}%</output></span><input id="musicVolume" type="range" min="0" max="100" value="${Math.round(e.musicVolume*100)}"></label><p class="hint">영상의 원래 소리는 제거하고 선택한 목소리와 배경음을 넣습니다.</p></aside></div><div class="timeline"><div class="timeline-head"><strong>타임라인</strong><span>${e.order.length}장면 · 전체 ${total({...p,edit:e})}초</span></div><div class="track">${e.order.map((id,i)=>{const s=p.scenes.find(s=>s.id===id);return `<article draggable="true" class="clip ${id===state.selected?'selected':''}" data-clip="${id}" tabindex="0" aria-label="장면 ${i+1}, ${e.durations[id]}초"><span>${i+1}. ${esc(s.narration)}</span><div class="clip-foot"><span>${e.durations[id]}초</span><div><button data-move="${id}" data-delta="-1" aria-label="장면 ${i+1} 앞으로" ${i===0?'disabled':''}>←</button><button data-move="${id}" data-delta="1" aria-label="장면 ${i+1} 뒤로" ${i===e.order.length-1?'disabled':''}>→</button></div></div></article>`;}).join('')}</div><div class="audio-track">♫ ${e.music?esc(p.assets[e.music]?.name):'배경음 없음'}</div><div class="audio-track voice-track">◖ ${esc(voices.find(v=>v.id===e.voice)?.name||'내레이션 없음')}</div></div><div class="actions"><button class="secondary" id="back">미디어 선택</button><div><button class="secondary" id="saveEdit">편집 저장</button><button class="primary" id="render">${p.render?'최종 영상 다시 만들기':'최종 영상 만들기'}</button>${p.render?'<button class="primary" id="next">업로드 준비</button>':''}</div></div></section>`;
- $('#musicVolume').oninput=()=>{$('#volumeLabel').textContent=$('#musicVolume').value+'%';};
- const select=async id=>{await saveEdit();state.selected=id;render();};
- document.querySelectorAll('[data-select]').forEach(b=>b.onclick=()=>run(()=>select(b.dataset.select)));
- document.querySelectorAll('[data-clip]').forEach(clip=>{clip.onclick=event=>{if(event.target.closest('button'))return;run(()=>select(clip.dataset.clip));};clip.onkeydown=event=>{if(event.target!==clip)return;if(event.key==='Enter'||event.key===' '){event.preventDefault();run(()=>select(clip.dataset.clip));}};clip.ondragstart=event=>event.dataTransfer.setData('text/plain',clip.dataset.clip);clip.ondragover=event=>{event.preventDefault();clip.classList.add('drag-over');};clip.ondragleave=()=>clip.classList.remove('drag-over');clip.ondrop=event=>{event.preventDefault();const source=event.dataTransfer.getData('text/plain');if(!e.order.includes(source))return;run(async()=>{await saveEdit();const order=[...editValue().order];order.splice(order.indexOf(source),1);order.splice(order.indexOf(clip.dataset.clip),0,source);await action('edit',{...editValue(),order});});};});
- document.querySelectorAll('[data-move]').forEach(b=>b.onclick=()=>run(async()=>{await saveEdit();const edit=editValue(),order=[...edit.order],from=order.indexOf(b.dataset.move),to=from+Number(b.dataset.delta);if(to<0||to>=order.length)return;[order[from],order[to]]=[order[to],order[from]];await action('edit',{...edit,order});}));
- $('#musicFile').onchange=()=>run(async()=>{const file=$('#musicFile').files[0];await saveEdit();const before=Object.keys(state.project.assets);await uploadFile(file,'audio');const id=Object.keys(state.project.assets).find(k=>!before.includes(k));if(id)await action('edit',{...editValue(),music:id});});
- $('#saveEdit').onclick=()=>run(async()=>{await saveEdit();toast('편집을 저장했습니다.');});
- $('#render').onclick=()=>run(async()=>{await saveEdit();await action('render');});
- $('#back').onclick=()=>run(async()=>{await saveEdit();state.step=3;});if($('#next'))$('#next').onclick=()=>run(async()=>{await saveEdit();if(!state.project.render)throw Error('편집 내용이 변경되어 최종 영상을 다시 만들어야 합니다.');state.step=5;});
- $('#play').onclick=()=>{if(state.previewTimer){stopPreview();$('#play').textContent='▶ 순서 미리보기';return;}let index=0;const play=()=>{const id=e.order[index],scene=p.scenes.find(s=>s.id===id);$('#preview').innerHTML=mediaHTML(p,scene,false);const video=$('#preview video');if(video){video.loop=true;video.muted=true;video.play().catch(()=>{});}$('#play').textContent='■ 미리보기 정지';state.previewTimer=setTimeout(()=>{index++;if(index<e.order.length)play();else{stopPreview();$('#play').textContent='▶ 순서 미리보기';}},e.durations[id]*1000);};play();};
+ editor=createEditor($('#stage'),state.project,state.config,{
+  toast,dirty:value=>state.dirty=value,
+  save:edit=>action('edit',edit),
+  upload:async file=>{const before=Object.keys(state.project.assets);await uploadFile(file,'audio');const id=Object.keys(state.project.assets).find(k=>!before.includes(k));return id?{project:state.project,id}:null;},
+  render:async()=>{await action('render');render();},
+  navigate:step=>{state.step=step;render();},
+ });
 }
-function stopPreview(){clearTimeout(state.previewTimer);state.previewTimer=null;}
-async function saveEdit(){
- const e=editValue(),next={...e,durations:{...e.durations,[state.selected]:Number($('#sceneDuration').value)},voice:$('#voice').value,music:$('#music').value||null,musicVolume:Number($('#musicVolume').value)/100};
- if(!state.project.edit||JSON.stringify(e)!==JSON.stringify(next))await action('edit',next);else state.dirty=false;
-}
+async function saveEdit(){if(editor)await editor.save();}
 function renderPublish(){
  const p=state.project;
  $('#stage').innerHTML=`<section class="panel"><div class="panel-head"><div><h2>마지막 확인, 그리고 업로드</h2><p>최종 영상을 확인하고 게시할 플랫폼을 선택하세요.</p></div><span class="badge">5 / 5 업로드</span></div>${p.upload?`<div class="upload-results"><strong>${p.upload.state==='done'?'업로드 완료':p.upload.state==='failed'?'일부 또는 전체 업로드 실패':p.upload.state==='submitting'?'업로드 전송 중 · 접수 여부 확인 필요':'업로드 접수 완료 · 플랫폼 처리 중'}</strong><p class="hint">${esc(p.upload.message||'')}${p.upload.requestId?'요청 ID: '+esc(p.upload.requestId):''}</p>${(p.upload.results||[]).map(r=>`<p>${esc(platformNames[r.platform]||r.platform)}: ${r.url&&/^https:\/\//.test(r.url)?`<a href="${esc(r.url)}" target="_blank" rel="noopener noreferrer">게시 영상 열기 ↗</a>`:esc(r.error|| (r.success?'완료':'실패'))}</p>`).join('')}</div>`:''}<div class="publish-grid"><div><div class="final-preview">${p.render?`<video src="${assetUrl(p.id,'final')}" controls playsinline preload="metadata"></video>`:'최종 영상을 먼저 만들어주세요.'}</div><p class="hint">${p.brief.aspect} · ${p.render?.duration||0}초 · AI 생성 콘텐츠</p></div><div><span class="label">업로드 플랫폼</span><div class="platforms">${['youtube','instagram','tiktok'].map(key=>`<label class="platform"><input type="checkbox" name="platform" value="${key}" ${p.publication?.platforms.includes(key)||(!p.publication&&key==='youtube')?'checked':''} ${p.brief.format==='long'&&key!=='youtube'?'disabled':''}> ${platformNames[key]}</label>`).join('')}</div><p class="hint" style="margin-bottom:22px">${p.brief.format==='long'?'롱폼은 YouTube 연결 계정으로 업로드합니다.':'제작 워커에 연결된 Upload-Post 계정으로 업로드합니다. Instagram·TikTok 공개 범위는 해당 플랫폼 계정 설정을 따릅니다.'}<br>Google 로그인 계정과 업로드 채널은 별도입니다.</p><label class="field"><span>게시 제목</span><input id="publishTitle" maxlength="100" value="${esc(p.publication?.title||p.title)}"></label><label class="field"><span>설명</span><textarea id="description" maxlength="4000">${esc(p.publication?.description||p.brief.topic)}</textarea><small class="hint">AI 생성 고지${p.brief.category==='상품광고'?'와 (광고) 표기':''}가 자동으로 추가됩니다.</small></label><label class="field"><span>YouTube 공개 범위</span><select id="privacy">${[['private','비공개'],['unlisted','일부 공개'],['public','전체 공개']].map(([v,n])=>`<option value="${v}" ${p.publication?.privacy===v?'selected':''}>${n}</option>`).join('')}</select></label><label class="check"><input id="reviewed" type="checkbox">최종 영상·음원 사용권·표현·게시 계정을 확인했습니다. 선택한 플랫폼으로 업로드합니다.</label></div></div><div class="actions"><button class="secondary" id="back">편집으로 돌아가기</button><button class="primary" id="publish" ${!p.render||p.upload?'disabled':''}>선택한 플랫폼에 업로드</button></div></section>`;
@@ -128,7 +118,7 @@ async function openProject(id){
 }
 async function loadList(){const {projects}=await api();$('#projectList').innerHTML=projects.length?projects.map(p=>`<button class="project-entry" data-project="${p.id}"><span><strong>${esc(p.title)}</strong><small>${esc(p.brief.category)} · ${p.brief.format==='short'?'숏폼':'롱폼'} · ${new Date(p.updatedAt).toLocaleDateString('ko-KR')}</small></span><span class="badge">${p.upload?.state==='done'?'업로드 완료':p.task?.state==='failed'?'작업 확인 필요':p.task&&['running','queued'].includes(p.task.state)?taskNames[p.task.action]+' 중':p.render?'업로드 준비':p.scenes.length?'제작 중':'기획 완료'}</span></button>`).join(''):'<div class="empty"><h3>첫 번째 이야기를 기다리고 있어요</h3><p>위에서 자동 또는 수동 제작을 선택하세요.</p></div>';document.querySelectorAll('[data-project]').forEach(b=>b.onclick=()=>run(()=>openProject(b.dataset.project)));}
 $('#manual').onclick=()=>{if(!state.config){toast('서버 연결 상태를 먼저 확인하세요.');return;}start();};$('#newProject').onclick=()=>{if(state.pending)return;if(state.dirty&&!confirm('저장하지 않은 변경이 있습니다. 새 프로젝트를 시작할까요?'))return;start();};
-$('#stage').addEventListener('input',()=>{state.dirty=true;});
+$('#stage').addEventListener('input',()=>{if(state.step!==4)state.dirty=true;});
 window.addEventListener('beforeunload',e=>{if(state.dirty){e.preventDefault();e.returnValue='';}});
 (async()=>{try{state.config=await api('/config');const auth=await(await fetch('/auth/status')).json();if(auth.user)$('#account').textContent=auth.user.name||auth.user.email;const id=new URLSearchParams(location.search).get('id');if(id)await openProject(id);else if(new URLSearchParams(location.search).has('new'))start();else await loadList();}catch(e){$('#notice').innerHTML=`<div class="status-note error">${esc(e.message)}</div>`;}})();
 setInterval(async()=>{if(state.pending||state.dirty)return;try{if(state.project&&taskBusy()){const p=(await api('/'+state.project.id)).project;if(p.revision!==state.project.revision){const previous=state.project.task;state.project=p;if(p.task?.state==='done'&&previous?.state!=='done'){if(p.task.action==='scenario')state.step=2;if(p.task.action==='render'||p.task.action==='publish')state.step=5;}render();}}}catch(e){toast(e.message);}},4000);
