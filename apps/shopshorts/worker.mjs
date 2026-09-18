@@ -14,6 +14,7 @@
  * 실행: node apps/shopshorts/worker.mjs   (환경: kit .env 의 SHOPSHORTS_TOKEN, SHOPSHORTS_CLOUD_URL)
  */
 import { spawn } from 'node:child_process';
+import { startStudioWorker } from './studio-worker.mjs';
 import { existsSync, readFileSync } from 'node:fs';
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
@@ -443,6 +444,7 @@ async function recoverStuck() {
 }
 
 log('worker.start', { cloud: CLOUD });
+startStudioWorker({ env: ENV, cloud: CLOUD, token: TOKEN, workDir: join(WORK_DIR, 'studio') });
 await recoverStuck();
 setInterval(tick, 5000);
 tick();

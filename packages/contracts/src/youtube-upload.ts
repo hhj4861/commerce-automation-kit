@@ -25,6 +25,8 @@ export interface YoutubeUploadJob {
   chapters?: string;
   /** 아동용 여부(기본 false) */
   madeForKids?: boolean;
+  /** 사실적으로 합성·생성된 미디어임을 YouTube에 고지 */
+  containsSyntheticMedia?: boolean;
 }
 
 export interface YoutubeUploadResult {

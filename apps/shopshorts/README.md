@@ -131,3 +131,60 @@ LLM 이 필요한 단계(대본·클립 생성)는 Claude 세션 모니터가, �
 - **변환 생성자는 Claude 세션 모니터**다: `/api/keyword-research/pending` 을 감지해 변환을 만들어
   PUT(`x-shopshorts-worker` 헤더)으로 채운다. 세션이 없으면 pending 이 유지되며 UI 는 3분 후 폴링을 멈추고
   재시도를 안내한다(무한 폴링 방지). 상위 트렌드 키워드는 미리 시드되어 즉시 뜬다.
+
+## 영상 제작실 (2026-09-18)
+
+대시보드의 **새 쇼츠 만들기**, 또는 `/studio`에서 시작한다.
+
+- **자동**: 기존 `/trends`의 네이버 소재 추천·초안·기존 제작 큐를 유지한다.
+- **수동**: 기획 → 시나리오 → 이미지·영상 → 편집 → 업로드. 프로젝트는 자동 큐와 별도 저장한다.
+- 카테고리: 심리학, 건축학, 상품광고, 막장드라마, 역사, 과학, 직접 입력. 숏폼은 9:16/최대 180초, 롱폼은 16:9/최대 600초.
+- 장면 단위 대본 편집, 이미지/영상 혼합, 직접 제작하거나 사용권이 있는 파일 등록(50MB), 드래그/키보드 버튼 순서 조절, 장면 길이, 배경음 파일·음량, Yooni/Claire/무음 선택을 지원한다.
+- 브라우저 미리보기는 장면 순서를 보여준다. 선택한 음성/BGM은 **최종 영상 만들기**로 ffmpeg 결과에 반영된다. 캡컷의 모든 기능(다중 영상 레이어·전환 효과·키프레임·정밀 트리밍)을 구현한 것은 아니다.
+- 대본 검수 후 생성, 최종 영상 검수 후 업로드하는 두 사람 게이트를 유지한다. 편집이 바뀌면 최종 영상을 무효화한다. 영상 원본 오디오는 제거하며 목소리 길이가 장면보다 길면 잘라내지 않고 편집을 요청한다.
+- 광고 카테고리는 기존 shopping-shorts CLI의 표현 lint를 생성·조립·발행 전에 다시 호출하며 `(광고)`를 영상과 설명에 추가한다. 긴 시나리오는 기존 계약의 12비트 단위로 lint한다. 설명과 API에 AI 생성 표시를 전달한다.
+
+### Google 로그인 / 계정 등록
+
+`/login`에서 가입·로그인 및 OAuth 등록 상태를 확인한다. 첫 로그인도 동일한 Google 인증으로 처리하며, 별도 비밀번호를 받지 않는다. **현재 하나의 공유 운영 워크스페이스**로, 허용된 계정끼리 프로젝트를 공유한다. 불특정 사용자의 공개 가입이나 사용자별 테넌트 격리를 제공하지 않는다.
+
+로컬은 kit `.env` 또는 프로세스 환경, Pages는 배포 환경의 secret/변수에 다음을 설정한다. 실제 비밀값은 저장소에 넣지 않는다.
+
+```text
+GOOGLE_CLIENT_ID=<웹 애플리케이션 OAuth 클라이언트>
+GOOGLE_CLIENT_SECRET=<서버 비밀>
+SHOPSHORTS_ORIGIN=https://shopshorts-dash.pages.dev
+SHOPSHORTS_SESSION_SECRET=<무작위 32자 이상 문자열>
+SHOPSHORTS_GOOGLE_ALLOWED_EMAILS=owner@example.com,editor@example.com
+```
+
+Google Cloud의 승인된 리디렉션 URI: `${SHOPSHORTS_ORIGIN}/auth/google/callback`.
+로컬은 `http://127.0.0.1:5178`을 origin으로 사용할 수 있다. state·PKCE 검증, Google userinfo의 이메일 인증 여부·허용 목록 검사 후 24시간 HttpOnly/SameSite 쿠키를 발급한다. HTTPS에서는 Secure 쿠키를 사용한다. Google 토큰은 저장하지 않는다. 로그아웃은 브라우저 쿠키를 삭제하며, 허용 목록에서 제거하거나 서명 비밀을 회전하면 기존 세션을 차단한다. 기존 `SHOPSHORTS_TOKEN` 워커와 관리자 링크도 호환된다.
+
+OAuth가 미설정인 로컬은 기존과 같이 loopback 전용 접근을 허용한다. `GOOGLE_CLIENT_ID`를 설정하면 로컬도 로그인한다. 원격은 인증 없이 접근할 수 없다. Google 로그인은 **운영 앱 인증**이며 YouTube 업로드 권한을 주지 않는다.
+
+### 생성/편집 워커 설정
+
+기존 자동 모드의 Seedance/힉스필드 흐름은 변경하지 않는다. 수동 모드는 서버에서 호출할 수 있는 공식 Gemini REST API를 사용한다. 모델별 계정 권한·지원 여부·과금은 공급자에서 확인해야 하며 미실측 단가를 UI에 추정 표시하지 않는다.
+
+| 기능 | 제작 서버/워커 환경 |
+|---|---|
+| 대본 | `GEMINI_API_KEY`, `SHOPSHORTS_TEXT_MODEL` (기본 `gemini-2.5-flash`) |
+| 이미지 | 같은 키, `SHOPSHORTS_IMAGE_MODEL` (기본 `gemini-2.5-flash-image`) |
+| 영상 | 같은 키, `SHOPSHORTS_VIDEO_MODEL` (기본 `veo-3.1-generate-preview`) |
+| 음성 | `ELEVENLABS_API_KEY`; 선택 보이스가 해당 계정에서 사용 가능해야 함 |
+| 숏폼 업로드 | `UPLOAD_POST_API_KEY`, `UPLOAD_POST_USER`; 플랫폼 연결 완료 필요 |
+| 롱폼 업로드 | `YOUTUBE_CLIENT_SECRET`, 기존 youtube-upload OAuth 인증 토큰 |
+
+영상은 1080p/8초 클립을 생성하고 편집 시 지정 길이에 맞춰 반복/자른다. 영상 생성 요청 ID와 음성 결과를 로컬에 저장해 재시도 시 재사용한다. 실패는 프로젝트에 기록한다. 업로드는 실제 전송 직전에 `submitting` 기록을 남기고 중복 실행을 차단한다. 플랫폼 응답이 불명확하면 재전송하지 말고 플랫폼과 요청 ID를 먼저 확인한다. 접수된 Upload-Post 작업은 최대 10분까지 폴링하며, 이후 계속 처리 중이면 접수 상태와 요청 ID를 표시한다.
+
+- 로컬 서버: 자체 제작 루프, `data/studio-projects.json`, `data/studio-media`, `data/studio-work`. 로컬 데이터 디렉터리당 서버 하나를 실행한다. 재시작 시 중단된 작업을 실패로 표시하고 자동 재과금하지 않는다.
+- Pages: `migrations/0005_studio.sql`을 D1에 적용 후 UI/Functions를 배포한다. `worker.mjs`를 같은 소스로 갱신·재시작해야 수동 큐를 처리한다. D1의 `studio_projects`, R2의 `studio/` prefix를 사용한다. 기존 워커 토큰으로만 작업 claim/결과 저장/미디어 전송을 허용하고 revision CAS로 중복 처리를 막는다.
+- 클라우드 워커가 강제 종료되면 실행 중 작업은 운영자가 실제 프로세스 종료와 외부 API 접수 여부를 확인한 후 복구해야 한다. 임의의 시간 초과로 유료 작업/업로드를 재실행하지 않는다.
+- 검증 서버: `SHOPSHORTS_STUDIO_RUNNER=off`로 유료 작업 실행을 끌 수 있다. 운영 데이터와 분리하려면 `SHOPSHORTS_DATA_DIR`와 `SHOPSHORTS_PORT`도 지정한다.
+
+### 검증 범위
+
+`npm test -w @cak/app-shopshorts`는 인증 state/PKCE/허용 목록/쿠키 변조, 사람 게이트, 작업 CAS, 편집 무효화, 로컬 영속화·복구, Range 전송, **실제 ffmpeg 이미지+영상+BGM 조립**, 기존 자동 제작 회귀를 검증한다. 외부 OAuth·유료 Gemini/ElevenLabs 실호출·실계정 게시와 운영 배포는 이 테스트에 포함하지 않는다.
+
+공식 참고: [Google 서버 OAuth](https://developers.google.com/identity/protocols/oauth2/web-server), [Google userinfo](https://developers.google.com/identity/openid-connect/openid-connect), [Gemini generateContent](https://ai.google.dev/api/generate-content), [이미지 생성](https://ai.google.dev/gemini-api/docs/image-generation), [Veo 영상 생성](https://ai.google.dev/gemini-api/docs/veo), [YouTube 합성 미디어 표시](https://developers.google.com/youtube/v3/docs/videos#status.containsSyntheticMedia).

@@ -176,7 +176,7 @@ async function main(): Promise<void> {
       const o = parse(rest, {
         video: STR, title: STR, description: STR, 'description-file': STR,
         tags: STR, hashtags: STR, category: STR, privacy: STR, thumbnail: STR,
-        chapters: STR, 'chapters-file': STR, 'made-for-kids': BOOL,
+        chapters: STR, 'chapters-file': STR, 'made-for-kids': BOOL, 'synthetic-media': BOOL,
       });
       const privacyRaw = optStr(o, 'privacy') ?? 'private';
       const privacy = youtubePrivacySchema.safeParse(privacyRaw);
@@ -188,6 +188,7 @@ async function main(): Promise<void> {
         description: strOrFile(o, 'description') ?? '',
         privacyStatus: privacy.data,
         madeForKids: flag(o, 'made-for-kids'),
+        ...(flag(o, 'synthetic-media') ? { containsSyntheticMedia: true } : {}),
       };
       const tags = optStr(o, 'tags');
       const hashtags = optStr(o, 'hashtags');

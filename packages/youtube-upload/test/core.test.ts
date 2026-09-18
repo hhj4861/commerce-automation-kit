@@ -95,3 +95,10 @@ describe('validateCommentText — 제휴 링크 댓글의 대가성 고지 강�
     expect(validateCommentText('a'.repeat(10_001))).toHaveLength(1);
   });
 });
+
+describe('합성 미디어 고지', () => {
+  it('선택적으로 추가하며 기존 업로드 기본값은 바꾸지 않는다', () => {
+    expect(buildVideoRequestBody(job, '').status.containsSyntheticMedia).toBeUndefined();
+    expect(buildVideoRequestBody({ ...job, containsSyntheticMedia: true }, '').status.containsSyntheticMedia).toBe(true);
+  });
+});

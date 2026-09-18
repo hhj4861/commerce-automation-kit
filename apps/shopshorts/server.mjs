@@ -12,6 +12,8 @@
  * 대시보드는 그 결과(requestId)를 기록할 뿐이다. (완전 무인화 금지 — 저관여+사람 감시)
  */
 import { createServer } from 'node:http';
+import { authRoute, googleUser, legacyAuthorized, sameOrigin } from './lib/google-auth.js';
+import { localStudioStore, startLocalStudio, handleLocalStudio, sendResponse } from './studio-local.mjs';
 import { spawn } from 'node:child_process';
 import { mkdirSync, readFileSync, writeFileSync, existsSync, statSync, createReadStream } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
@@ -423,28 +425,46 @@ function serveJobVideo(req, res, job, which) {
 // 로컬(127.0.0.1/localhost Host)은 무인증 유지, 터널 호스트로 들어온 요청만 토큰 요구.
 const REMOTE_TOKEN = kitEnv().SHOPSHORTS_TOKEN ?? null;
 
+const STUDIO_ENV = kitEnv();
+const studioStore = localStudioStore(DATA_DIR, STUDIO_ENV);
+if (process.env.SHOPSHORTS_STUDIO_RUNNER !== 'off') {
+  const runner = startLocalStudio(studioStore, STUDIO_ENV);
+  await runner.recover();
+}
+
 const server = createServer(async (req, res) => {
   const url = new URL(req.url ?? '/', `http://localhost:${PORT}`);
   try {
     const host = req.headers.host ?? '';
-    const isLocal = host.startsWith('127.0.0.1') || host.startsWith('localhost');
-    if (!isLocal) {
-      if (!REMOTE_TOKEN) { res.writeHead(403, { 'content-type': 'text/plain; charset=utf-8' }); res.end('원격 접속 비활성(SHOPSHORTS_TOKEN 미설정)'); return; }
-      const q = url.searchParams.get('token');
-      if (q === REMOTE_TOKEN) {
-        res.writeHead(302, {
-          'set-cookie': `ss=${REMOTE_TOKEN}; Path=/; HttpOnly; SameSite=Lax; Max-Age=2592000`,
-          location: url.pathname,
-        });
-        res.end();
-        return;
+    const actualPort = server.address()?.port ?? PORT;
+    const localHosts = [`127.0.0.1:${actualPort}`, `localhost:${actualPort}`];
+    const isLocal = localHosts.includes(host);
+    const origin = isLocal ? `http://${host}` : (STUDIO_ENV.SHOPSHORTS_ORIGIN || `https://${host}`);
+    const authRequest = new Request(new URL(req.url, origin), { method: req.method, headers: req.headers });
+    const authResponse = await authRoute(authRequest, STUDIO_ENV);
+    if (authResponse) { await sendResponse(res, authResponse); return; }
+    if (req.method === 'GET' && ['/login', '/login.html'].includes(url.pathname)) {
+      res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' });
+      res.end(readFileSync(join(__dirname, 'public/login.html'))); return;
+    }
+    if (!['GET', 'HEAD'].includes(req.method) && !sameOrigin(authRequest)) {
+      json(res, 403, { error: '다른 사이트에서 요청할 수 없습니다.' }); return;
+    }
+    const googleEnabled = !!STUDIO_ENV.GOOGLE_CLIENT_ID;
+    if ((!isLocal || googleEnabled) && !legacyAuthorized(authRequest, STUDIO_ENV) && !await googleUser(authRequest, STUDIO_ENV)) {
+      if (REMOTE_TOKEN && url.searchParams.get('token') === REMOTE_TOKEN) {
+        res.writeHead(302, { 'set-cookie': `ss=${REMOTE_TOKEN}; Path=/; HttpOnly; SameSite=Lax; Max-Age=2592000${isLocal ? '' : '; Secure'}`, location: url.pathname }); res.end(); return;
       }
-      const cookie = /(?:^|;\s*)ss=([^;]+)/.exec(req.headers.cookie ?? '')?.[1];
-      if (cookie !== REMOTE_TOKEN) {
-        res.writeHead(401, { 'content-type': 'text/plain; charset=utf-8' });
-        res.end('인증 필요 — 발급받은 ?token= 링크로 접속하세요');
-        return;
-      }
+      if (url.pathname.startsWith('/api/')) json(res, 401, { error: '로그인이 필요합니다.' });
+      else { res.writeHead(302, { location: '/login' }); res.end(); }
+      return;
+    }
+    if (url.pathname.startsWith('/api/studio')) { await handleLocalStudio(req, res, origin, STUDIO_ENV, studioStore); return; }
+    const studioFiles = { '/studio': ['studio.html','text/html'], '/studio.html': ['studio.html','text/html'], '/studio.js': ['studio.js','text/javascript'], '/studio.css': ['studio.css','text/css'] };
+    if (req.method === 'GET' && studioFiles[url.pathname]) {
+      const [file, type] = studioFiles[url.pathname];
+      res.writeHead(200, { 'content-type': type + '; charset=utf-8', 'cache-control': 'no-store' });
+      res.end(readFileSync(join(__dirname, 'public', file))); return;
     }
     // 정적 UI
     const appPages = ['/', '/index.html', '/contents', '/trends', '/blog', '/performance', '/affiliate-links', '/settings'];

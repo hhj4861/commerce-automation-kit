@@ -1,0 +1,12 @@
+<!doctype html>
+<html lang="ko">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>영상 제작실 · Shopshorts</title><link rel="stylesheet" href="/studio.css"><script src="/studio.js" defer></script></head>
+<body>
+<header class="top"><a class="brand" href="/">▥ <strong>Shopshorts</strong></a><nav aria-label="주 메뉴"><a href="/">대시보드</a><a href="/trends">트렌드 탐색</a><a href="/studio" aria-current="page">영상 제작실</a></nav><a class="account" href="/login" id="account">Google 계정</a></header>
+<main><div class="heading"><div><a class="back" href="/contents">콘텐츠 목록</a><h1>어떤 이야기를 만들까요?</h1><p id="intro">소재를 발견하는 순간부터, 한 편의 영상이 되기까지.</p></div><button class="secondary" id="newProject" hidden>새 프로젝트</button></div>
+<div id="notice" role="status" aria-live="polite"></div>
+<div id="modes" class="mode-grid"><a class="mode automatic" href="/trends"><span class="mode-icon">↗</span><h2>자동 · 트렌드에서 시작</h2><p>네이버 검색 트렌드에서 소재를 발견하고<br>기존 제작 흐름으로 진행하세요.</p><span class="mode-link">트렌드 탐색 열기 ↗</span></a><button class="mode manual" id="manual"><span class="mode-icon">▤</span><h2>수동 · 내 이야기로 시작</h2><p>카테고리와 형식을 정하고, AI와 함께<br>시나리오부터 편집까지 완성하세요.</p><span class="mode-link">새 영상 기획하기 →</span></button></div>
+<div id="workspace" hidden><nav id="steps" class="steps" aria-label="제작 단계"></nav><section id="stage"></section></div>
+<section id="projects" class="projects"><div class="section-title"><h2>이어서 만들기</h2><span>프로젝트는 서버에 저장됩니다</span></div><div id="projectList" class="project-list"><p class="muted">프로젝트를 불러오는 중입니다.</p></div></section>
+</main><div id="toast" role="alert" hidden></div>
+</body></html>
