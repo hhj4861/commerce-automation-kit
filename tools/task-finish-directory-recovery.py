@@ -42,7 +42,27 @@ FUNCTION = '''def cancel_empty_track(store, sid, root, paths, reason):
 
 '''
 
+def patch_trailing_polls(source):
+    """Recognize rejection before multiple unexecuted, read-only polls."""
+    marker = '# Multiple trailing polls were first supported in dispatch version 11.'
+    if marker in source:
+        return source
+    replacements = {
+        "return steps if len(steps) == 2 and steps[0][0] in ('Bash', 'apply_patch') and steps[1][0] == 'poll' else None":
+        "return steps if len(steps) >= 2 and steps[0][0] in ('Bash', 'apply_patch') and all(step[0] == 'poll' for step in steps[1:]) else None",
+        "        known = call.get(binding)\n        if call.get('dispatch_version', 0) >= introduced and not known:":
+        "        known = call.get(binding)\n        " + marker + "\n        if parser is trailing_poll_batch and len(steps) > 2:\n            introduced = 11\n        if call.get('dispatch_version', 0) >= introduced and not known:",
+        "'dispatch_checked': True, 'dispatch_version': 10}":
+        "'dispatch_checked': True, 'dispatch_version': 11}",
+    }
+    for old, new in replacements.items():
+        if source.count(old) != 1:
+            raise ValueError('Unexpected dispatch parser version; no changes applied')
+        source = source.replace(old, new)
+    return source
+
 def patch(source):
+    source = patch_trailing_polls(source)
     if 'def cancel_empty_track(' in source:
         if NEW not in source:
             raise ValueError('Partial repair; inspect manually')
