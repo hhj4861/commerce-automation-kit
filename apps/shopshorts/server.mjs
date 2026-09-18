@@ -460,7 +460,7 @@ const server = createServer(async (req, res) => {
       return;
     }
     if (url.pathname.startsWith('/api/studio')) { await handleLocalStudio(req, res, origin, STUDIO_ENV, studioStore); return; }
-    const studioFiles = { '/studio': ['studio.html','text/html'], '/studio.html': ['studio.html','text/html'], '/studio.js': ['studio.js','text/javascript'], '/studio.css': ['studio.css','text/css'] };
+    const studioFiles = { '/app-shell.css': ['app-shell.css','text/css'], '/studio': ['studio.html','text/html'], '/studio.html': ['studio.html','text/html'], '/studio.js': ['studio.js','text/javascript'], '/studio.css': ['studio.css','text/css'] };
     if (req.method === 'GET' && studioFiles[url.pathname]) {
       const [file, type] = studioFiles[url.pathname];
       res.writeHead(200, { 'content-type': type + '; charset=utf-8', 'cache-control': 'no-store' });
@@ -469,7 +469,7 @@ const server = createServer(async (req, res) => {
     // 정적 UI
     const appPages = ['/', '/index.html', '/contents', '/trends', '/blog', '/performance', '/affiliate-links', '/settings'];
     if (req.method === 'GET' && appPages.includes(url.pathname)) {
-      res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
+      res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' });
       res.end(readFileSync(join(__dirname, 'public', 'index.html')));
       return;
     }
