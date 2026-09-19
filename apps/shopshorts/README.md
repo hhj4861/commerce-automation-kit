@@ -208,10 +208,14 @@ SHOPSHORTS_GOOGLE_ALLOW_SIGNUPS=1
 
 새 프로젝트 1단계의 **어떤 이야기를 만들까요?** / **분위기와 요청사항** 옆 `LLM 추천`을 누르면 선택한 카테고리·형식·길이·입력 내용을 바탕으로 후보 3개를 만든다. 주제 추천은 주제만 또는 주제+분위기를, 분위기 추천은 현재 주제를 유지하고 분위기만 적용할 수 있다. 적용 전에는 입력 내용을 변경하지 않으며, 저장된 프로젝트 기획은 기존처럼 읽기 전용이다.
 
-- 서버의 `GEMINI_API_KEY`와 `SHOPSHORTS_RECOMMEND_MODEL`(미설정 시 `SHOPSHORTS_TEXT_MODEL`, 기본 `gemini-2.5-flash`)을 사용한다. Pages에서는 제작 워커뿐 아니라 Functions 환경에도 키가 필요하다. 키를 브라우저에 전달하지 않는다.
-- `POST /api/studio/recommendations`가 공식 Gemini `generateContent` + `googleSearch.timeRangeFilter`로 요청 시점 이전 30일을 조회한다. 검색 출처·질의 메타데이터가 없거나 응답이 불완전하면 실패를 표시한다. 인기 순위/검색량 수치를 만들어 표시하지 않는다. 기존 자동 모드의 네이버 트렌드 경로는 유지한다.
-- 추천 근거·참고 링크와 공급자가 반환한 검색 제안을 함께 표시한다. 검색 결과는 DB나 로컬 파일에 보관하지 않는다. 사용자가 선택한 주제/연출 문구만 기존 기획 저장에 들어간다. 카테고리·형식·입력이 바뀌면 이전 추천을 폐기하고 늦게 도착한 응답의 적용을 막는다.
-- 추천 버튼은 명시적 유료 API 요청이다. `SHOPSHORTS_STUDIO_RUNNER=off`에서도 이 요청은 동작한다. 실패 시 자동 재시도하지 않고 입력 내용을 보존한다.
-- 단위/API 테스트는 검색 기간·근거 유무·응답 검증·인증 오류·동일 출처 요청 제한을 확인한다. 현재 로컬 설정 실호출은 `401 UNAUTHENTICATED / ACCESS_TOKEN_TYPE_UNSUPPORTED`로 실패했다. 실제 추천 사용에는 유효한 Gemini API 키 설정이 필요하며, 기존 인증 값을 임의로 바꾸지는 않았다.
+- 로컬 서버가 공식 `codex exec`를 실행해 이 Mac의 **기존 ChatGPT/Codex 구독 로그인**을 재사용한다. `codex login status`가 `Logged in using ChatGPT`여야 하며 미로그인 상태에서는 터미널에서 `codex login`한다. 인증 파일을 직접 읽거나 토큰을 복사하지 않고 CLI가 갱신을 관리한다. Gemini 키나 별도 OpenAI API 키는 추천 기능에 필요하지 않다.
+- 모델은 Codex의 현재 설정을 따른다. 추천 전용 모델을 지정하려면 `SHOPSHORTS_CODEX_MODEL`을 설정한다. API 키 환경변수는 자식 프로세스에 전달하지 않고 `forced_login_method="chatgpt"`로 구독 로그인을 사용한다.
+- `POST /api/studio/recommendations` → 로컬 Codex → 내장 실시간 웹 검색 → JSON 추천 3개 순서다. 최근 30일 자료를 우선 검색하도록 요청하며, 기간 강제 필터나 검색량 순위를 보장하지 않는다. 실제 검색 완료 이벤트·출처·완성된 응답이 없으면 실패로 표시한다. 링크는 모델이 검색 후 반환한 참고 자료이며, 별도 진위 검증기는 아니다. 기존 자동 모드의 네이버 트렌드 경로는 유지한다.
+- 빈 임시 디렉터리에서 읽기 전용으로 실행한다. 셸·브라우저 조작·앱·하위 에이전트·이미지 생성 기능을 제한하고, CLI의 MCP 목록을 조회해 각 도구를 해당 실행에서 비활성화한 뒤 다시 확인한다. 기존 훅·신뢰·인증 설정은 유지한다. 완료 후 임시 디렉터리는 삭제한다.
+- 한 번에 추천 1개 요청만 실행한다. 중복 요청은 429, 생성 3분 초과는 504, 취소/페이지 이탈은 프로세스 종료로 처리한다. 실패 시 자동 재시도하거나 다른 유료 API로 전환하지 않는다. `SHOPSHORTS_STUDIO_RUNNER=off`에서도 추천 버튼의 명시적 요청은 실행되며 Codex 구독 사용 한도를 소비한다.
+- 적용 전에는 입력을 보존한다. 카테고리·형식·입력이 바뀌면 이전 추천을 취소하고 늦게 도착한 응답을 무시한다. 앱은 추천 검색 결과를 저장하지 않고, 사용자가 선택한 주제/연출만 기획에 저장한다. Codex는 `--ephemeral`로 실행한다.
+- Cloudflare Pages Functions에서는 로컬 CLI를 실행할 수 없으므로 503과 로컬 제작 서버 안내를 반환한다. 개인 구독 인증을 클라우드에 복사하지 않는다. 이번 연결 범위는 **1단계 기획 추천**이며, 시나리오·이미지·영상 생성의 기존 공급자 설정과는 별개다.
 
-공식 참고: [Google Search grounding](https://ai.google.dev/gemini-api/docs/google-search), [generateContent의 GoogleSearch/시간 범위](https://ai.google.dev/api/generate-content#GoogleSearch), [검색 결과 표시 조건](https://ai.google.dev/gemini-api/terms#grounding-with-google-search).
+검증(2026-09-19): 앱 테스트 73개 및 Pages Functions 빌드 통과. 로컬 5198 브라우저에서 실제 Codex 주제/분위기 추천, 출처 표시, 적용 전 입력 보존, 분위기 적용 시 주제 유지, 모바일 레이아웃 및 기획 저장을 확인했다. 테스트 프로젝트는 `/private/tmp/shopshorts-studio-ui`의 격리 데이터에만 저장했다.
+
+공식 참고: [Codex 비대화형 실행 및 저장된 로그인 재사용](https://developers.openai.com/codex/noninteractive), [인증](https://developers.openai.com/codex/auth), [웹 검색·로그인 방식 설정](https://developers.openai.com/codex/config-reference).

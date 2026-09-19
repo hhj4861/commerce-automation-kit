@@ -1,5 +1,6 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync, renameSync } from 'node:fs';
 import { resolve, join, dirname, extname, sep } from 'node:path';
+import { generateCodexRecommendation } from './studio-codex.mjs';
 import { studioApi } from './lib/studio-api.js';
 import { executeStudioTask, capabilities } from './studio-runner.mjs';
 
@@ -77,9 +78,14 @@ export function startLocalStudio(store, env, execute = executeStudioTask) {
 export async function handleLocalStudio(req, res, origin, env, store) {
   const chunks = []; let size = 0;
   for await (const chunk of req) { size += chunk.length; if (size > 51 * 1024 * 1024) { res.writeHead(413); res.end(); return; } chunks.push(chunk); }
-  const request = new Request(new URL(req.url, origin), { method: req.method, headers: req.headers, ...(['GET', 'HEAD'].includes(req.method) ? {} : { body: Buffer.concat(chunks) }) });
-  const result = await studioApi(request, env, store);
-  await sendResponse(res, result);
+  const controller = new AbortController();
+  const abort = () => { if (!res.writableEnded) controller.abort(); };
+  res.once('close', abort);
+  const request = new Request(new URL(req.url, origin), { method: req.method, headers: req.headers, signal: controller.signal, ...(['GET', 'HEAD'].includes(req.method) ? {} : { body: Buffer.concat(chunks) }) });
+  try {
+    const result = await studioApi(request, env, store, {recommendationGenerate:generateCodexRecommendation});
+    if (!res.destroyed) await sendResponse(res, result);
+  } finally { res.off('close', abort); }
 }
 export async function sendResponse(res, response) {
   const headers = Object.fromEntries(response.headers);

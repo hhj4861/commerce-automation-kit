@@ -2,13 +2,13 @@ import { CATEGORIES, VOICES, PLATFORMS, createProject, changeProject, busy, fail
 import { sameOrigin, workerAuthorized } from './google-auth.js';
 import { recommendBrief } from './studio-recommendations.js';
 const json = (data, status = 200) => Response.json(data, { status, headers: { 'cache-control': 'no-store' } });
-export async function studioApi(request, env, store, { localWorker = false, recommendationFetch = fetch } = {}) {
+export async function studioApi(request, env, store, { localWorker = false, recommendationGenerate } = {}) {
   const url = new URL(request.url), parts = url.pathname.replace(/^\/api\/studio\/?/, '').split('/').filter(Boolean);
   const worker = localWorker || workerAuthorized(request, env);
   try {
     if (!['GET', 'HEAD'].includes(request.method) && !sameOrigin(request)) fail('다른 사이트에서 요청할 수 없습니다.', 403);
-    if (parts[0] === 'config' && request.method === 'GET') return json({ categories: CATEGORIES, voices: VOICES, platforms: PLATFORMS, execution: store.execution, capabilities: await store.capabilities(), recommendations: !!env.GEMINI_API_KEY });
-    if (parts.length===1 && parts[0]==='recommendations' && request.method==='POST') return json(await recommendBrief(await request.json(),env,{fetcher:recommendationFetch}));
+    if (parts[0] === 'config' && request.method === 'GET') return json({ categories: CATEGORIES, voices: VOICES, platforms: PLATFORMS, execution: store.execution, capabilities: await store.capabilities(), recommendations: !!recommendationGenerate, recommendationProvider: recommendationGenerate ? 'codex' : null });
+    if (parts.length===1 && parts[0]==='recommendations' && request.method==='POST') return json(await recommendBrief(await request.json(),env,{generate:recommendationGenerate,signal:request.signal}));
     if (!parts.length) {
       if (request.method === 'GET') return json({ projects: await store.list() });
       if (request.method === 'POST') {
