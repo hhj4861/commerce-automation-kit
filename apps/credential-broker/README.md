@@ -16,11 +16,14 @@
   binding resolves central credentials. The blog token was migrated, compared
   with the source, and verified with a read-only GitHub request. Both duplicate
   Pages secrets and the sealed migration copy were removed; import mode is closed.
-- Google GIS mode and the production origin are configured. Google admission
-  remains closed until the operator supplies allowed account emails. Existing
-  administrator-token access remains available.
-- Existing GitHub secrets remain for default-branch scheduled jobs. Removing them
-  requires the workflow changes to reach `main`; PR merge needs explicit approval.
+- Google GIS mode, the production origin and all-account admission are configured
+  per explicit operator approval. Google still rejects the production origin:
+  add `https://shopshorts-dash.pages.dev` to the OAuth client's authorized JavaScript
+  origins in Google Cloud Console. Existing administrator-token access works.
+- PR #10 was merged into `main` on explicit operator approval (merge `8fffe46`).
+  Main's keyword, TTS and music OIDC reads all passed. The 10 duplicate GitHub
+  secrets were deleted; the repository secret inventory is empty. See the cutover
+  record below for post-deletion verification runs.
 - Local port 5198 and the production queue worker now run together under one
   central-credential wrapper/lease. Existing local projects and notification data
   remain in `/private/tmp/shopshorts-studio-ui`. Cloud worker heartbeat was verified.
@@ -40,8 +43,8 @@ route accepts GitHub OIDC only, bound to this repository's immutable IDs, approv
 refs, workflow path, subject, event and GitHub-hosted runner. Each workflow receives
 only its own keys. Forks, pull requests, tags and reusable-workflow substitution are
 rejected. After default-branch cutover, GitHub needs only the non-secret
-`CAK_SECRETS_URL` repository variable. Existing GitHub secrets are retained until
-that cutover is approved and verified.
+`CAK_SECRETS_URL` repository variable. The cutover record tracks verification and
+deletion of the former GitHub secrets.
 
 Codex and YouTube auth records are AES-256-GCM encrypted in D1 `credential_vault`.
 The separate `CAK_VAULT_KEY` Secrets Store key never enters GitHub or the runner.

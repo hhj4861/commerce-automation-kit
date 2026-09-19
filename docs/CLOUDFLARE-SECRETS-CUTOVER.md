@@ -30,15 +30,28 @@
   관리 대상 키와 큐 토큰을 이 파일에서 대체 조회하지 않는다.
 - 현재 실행기는 이 Mac의 프로세스다. 호스트 재부팅 자동 기동이나 별도 서버 이전은 미적용이다.
 
-## 남은 운영 전환 조건
+## 운영 전환 결과와 남은 항목
 
-1. [PR #10](https://github.com/hhj4861/commerce-automation-kit/pull/10) 머지는 명시적 승인 대기.
-   main의 예약 작업이 아직 이전 GitHub Secrets를 사용하므로 원본 10개를 유지한다.
-   승인 후 main에서 키워드 `secrets_mode=verify, send_telegram=false`, TTS·음악
-   `verify_secrets_only=true`를 검증하고 이전된 이름만 삭제한다.
-2. 운영 Google 로그인 허용 이메일이 필요하다. `GOOGLE_AUTH_MODE=gis`와 운영 origin은
-   적용했지만 공용 프로젝트에 임의 Google 계정을 허용하지 않는다. 이메일 설정 후
-   Google OAuth 승인 origin 등록과 실제 계정 로그인을 검증해야 한다.
+1. [PR #10](https://github.com/hhj4861/commerce-automation-kit/pull/10)은 명시적 승인 후
+   main에 머지했다(`8fffe463690bf3ce0c831ddd0ed2939bb0e27a00`, 2026-09-19 18:05 KST).
+   main의 기존 블로그 후보 export와 중앙 시크릿 검증 입력을 모두 보존해 충돌을 해결했다.
+   쇼츠·브로커 119개와 키워드 189개, 통합 테스트 총 308개가 통과했다.
+   main에서 키워드 `secrets_mode=verify, send_telegram=false`, TTS·음악
+   `verify_secrets_only=true`의 실제 OIDC 조회가 모두 통과했다.
+   이전된 GitHub 시크릿 10개를 삭제했고 저장소 시크릿 목록이 빈 배열임을 확인했다.
+   최초 main 검증: [키워드](https://github.com/hhj4861/commerce-automation-kit/actions/runs/35433771541),
+   [TTS](https://github.com/hhj4861/commerce-automation-kit/actions/runs/35433772895),
+   [음악](https://github.com/hhj4861/commerce-automation-kit/actions/runs/35433774054).
+   **원본 삭제 후 재검증도 모두 성공**:
+   [키워드](https://github.com/hhj4861/commerce-automation-kit/actions/runs/35433928010),
+   [TTS](https://github.com/hhj4861/commerce-automation-kit/actions/runs/35433929579),
+   [음악](https://github.com/hhj4861/commerce-automation-kit/actions/runs/35433931003).
+2. 사용자가 **모든 Google 계정 허용**을 명시적으로 요청해
+   `SHOPSHORTS_GOOGLE_ALLOW_SIGNUPS=1`을 운영 배포했다. `/auth/status`는
+   `ready=true`, `allowSignups=true`, 누락 설정 없음으로 응답한다.
+   실제 Google GIS는 `The given origin is not allowed for the given client ID` 오류를 반환한다.
+   Google Cloud Console의 웹 OAuth 클라이언트에서 승인된 JavaScript 원본에
+   `https://shopshorts-dash.pages.dev`를 추가해야 한다. 실제 계정 로그인은 아직 미검증이다.
 3. Pages의 LLM 추천은 아직 원격 Codex 실행기에 연결되지 않았다. 로컬 5198에서는 Codex를 사용한다.
    시나리오·이미지·영상의 기존 Gemini 키는 등록 사실과 공급자 인증 성공을 구분한다.
 4. Claude 구독 인증은 통합하지 않았다. 지원되는 인증 방식이 필요한 별도 연동이다.
@@ -62,5 +75,6 @@ node apps/credential-broker/runner-bootstrap.mjs --input-type=module -e \
 
 - 중앙 브로커: `b34316c4-0342-459a-890d-68958f9d5bbc` (이전 모드 종료, 큐 토큰 바인딩 포함).
 - 운영 Pages: https://bbeff74e.shopshorts-dash.pages.dev (주소 루프 수정 포함).
+- Google 전체 계정 허용 적용: https://af47631f.shopshorts-dash.pages.dev.
 - 전환 전 Pages: `db330cc3-32a7-4f79-89a5-40c4b023598a`.
   이전 배포는 중앙 연결 전 구성이므로 단순 롤백만으로 현재 시크릿 구성이 복구된다고 가정하지 않는다.
