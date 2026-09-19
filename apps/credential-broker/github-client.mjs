@@ -50,5 +50,9 @@ export async function run(env = process.env, fetcher = fetch) {
 }
 
 if (process.argv[1] && import.meta.url === new URL(`file://${process.argv[1]}`).href) {
-  run().catch(() => { console.error('Cloudflare credential operation failed; values suppressed.'); process.exitCode = 1; });
+  run().catch(error => {
+    const safe = ['Invalid broker URL', 'Invalid GitHub OIDC endpoint', 'GitHub OIDC request failed', 'GitHub OIDC token missing', 'Migration requires all GitHub secrets', 'Empty credentials', 'Invalid credential response', 'GITHUB_ENV missing'];
+    console.error(safe.includes(error.message) || /^Cloudflare credential request failed \(\d{3}\)$/.test(error.message) ? error.message : 'Cloudflare credential operation failed; values suppressed.');
+    process.exitCode = 1;
+  });
 }
