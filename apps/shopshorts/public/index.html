@@ -6,7 +6,13 @@
 <title>Shopshorts — Content Studio</title>
 <link rel="stylesheet" href="/app-shell.css">
 <style>
-  .view[hidden] { display: none; }
+  .view[hidden], .account-actions[hidden], [data-signin][hidden] { display: none; }
+  .account-actions { display: flex; align-items: center; gap: 10px; }
+  .account-name { max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; color: var(--muted); }
+  .account-logout { min-height: 38px; cursor: pointer; }
+  .account-logout:disabled { opacity: .6; cursor: wait; }
+  .mobile-head .account-name { color: #d2d7cd; max-width: 80px; }
+  @media (max-width: 380px) { .mobile-head .account-name { display: none; } }
   .page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; margin: 31px 0 24px; }
   .page-head h1 { margin-top: 5px; }
   .page-head p { color: var(--muted); margin: 8px 0 0; }
@@ -461,11 +467,11 @@
 </head>
 <body>
 <div class="mobile-head">
-  <div class="brand">
+  <a class="brand" href="/" aria-label="Shopshorts 홈">
     <div class="brand-mark" data-icon="spark"></div>
     <div class="brand-name">Shopshorts</div>
-  </div>
-  <div class="avatar">SS</div>
+  </a>
+  <a class="account" href="/login" data-signin hidden>로그인</a><div class="account-actions" data-account hidden><span class="account-name" data-account-name></span><button class="account account-logout" type="button" data-logout>로그아웃</button></div>
 </div>
 <nav class="mobile-nav" aria-label="모바일 메뉴">
   <button class="nav-item active" data-nav="dashboard">대시보드</button>
@@ -477,10 +483,10 @@
 
 <div class="app">
   <aside class="sidebar">
-    <div class="brand">
+    <a class="brand" href="/" aria-label="Shopshorts 홈">
       <div class="brand-mark" data-icon="spark"></div>
       <div class="brand-name">Shopshorts<span>CONTENT STUDIO</span></div>
-    </div>
+    </a>
     <div class="nav-label">WORKSPACE</div>
     <nav>
       <button class="nav-item active" data-icon-before="grid" data-nav="dashboard">대시보드 <span class="count" id="navCount">0</span></button>
@@ -509,7 +515,7 @@
       <div class="top-actions">
         <button class="icon-btn" aria-label="검색" data-icon="search" data-top-action="search"></button>
         <button class="icon-btn" aria-label="알림" data-icon="bell" data-top-action="notifications"></button>
-        <div class="avatar">SS</div>
+        <a class="account" href="/login" data-signin hidden>로그인</a><div class="account-actions" data-account hidden><span class="account-name" data-account-name></span><button class="account account-logout" type="button" data-logout>로그아웃</button></div>
       </div>
     </div>
 
@@ -560,9 +566,12 @@
 <div class="viewer" id="viewer" hidden></div>
 
 <script>
-// 모바일 백지 진단용 — 초기 구동 오류를 화면에 표시(원인 확인 후 제거 예정)
-window.addEventListener('error', function (e) { window.__showFatal && window.__showFatal(e.message + ' @' + (e.filename||'').split('/').pop() + ':' + e.lineno); });
-window.addEventListener('unhandledrejection', function (e) { window.__showFatal && window.__showFatal('Promise: ' + (e.reason && e.reason.message || e.reason)); });
+// Keep application failures visible; the app does not use MetaMask.
+function isMetaMaskExtensionError(reason) {
+  return /^(?:Error: )?Failed to connect to MetaMask\.?$/i.test(String(reason?.message || reason || '').trim());
+}
+window.addEventListener('error', function (e) { if (isMetaMaskExtensionError(e.error || e.message)) return; window.__showFatal && window.__showFatal(e.message + ' @' + (e.filename||'').split('/').pop() + ':' + e.lineno); });
+window.addEventListener('unhandledrejection', function (e) { if (isMetaMaskExtensionError(e.reason)) return; window.__showFatal && window.__showFatal('Promise: ' + (e.reason && e.reason.message || e.reason)); });
 window.__showFatal = function (msg) {
   var d = document.getElementById('fatal') || document.createElement('div');
   d.id = 'fatal';
@@ -570,6 +579,43 @@ window.__showFatal = function (msg) {
   d.textContent = '오류: ' + msg;
   document.body ? document.body.appendChild(d) : addEventListener('DOMContentLoaded', function(){ document.body.appendChild(d); });
 };
+</script>
+<script>
+(() => {
+  const buttons = [...document.querySelectorAll('[data-logout]')];
+  const showAccountError = message => {
+    if (typeof showToast === 'function') showToast(message);
+    else window.__showFatal(message);
+  };
+  async function loadAccount() {
+    try {
+      const response = await fetch('/auth/status', { cache: 'no-store', signal: AbortSignal.timeout(10000) });
+      if (!response.ok) throw new Error('status');
+      const data = await response.json();
+      const authenticated = data.authenticated || !!data.user;
+      if (!authenticated) { location.replace('/login'); return; }
+      document.querySelectorAll('[data-account]').forEach(el => { el.hidden = !authenticated; });
+      document.querySelectorAll('[data-signin]').forEach(el => { el.hidden = authenticated; });
+      document.querySelectorAll('[data-account-name]').forEach(el => { el.textContent = data.user?.name || data.user?.email || '관리자'; });
+    } catch {
+      // Logout remains available even when the account status request fails.
+      document.querySelectorAll('[data-account]').forEach(el => { el.hidden = false; });
+      showAccountError('로그인 상태를 확인하지 못했어요. 새로고침해 주세요.');
+    }
+  }
+  buttons.forEach(button => button.addEventListener('click', async () => {
+    buttons.forEach(el => { el.disabled = true; el.textContent = '로그아웃 중…'; });
+    try {
+      const response = await fetch('/auth/logout', { method: 'POST', signal: AbortSignal.timeout(10000) });
+      if (!response.ok) throw new Error('logout');
+      location.replace('/login');
+    } catch {
+      showAccountError('로그아웃하지 못했어요. 연결 상태를 확인하고 다시 시도해 주세요.');
+      buttons.forEach(el => { el.disabled = false; el.textContent = '로그아웃'; });
+    }
+  }));
+  window.addEventListener('pageshow', loadAccount);
+})();
 </script>
 <script>
 const ICONS = {

@@ -5,6 +5,33 @@ import { onRequest } from '../functions/_middleware.js';
 const env={GOOGLE_CLIENT_ID:'test.apps.googleusercontent.com',GOOGLE_CLIENT_SECRET:'not-real',SHOPSHORTS_ORIGIN:'https://studio.test',SHOPSHORTS_SESSION_SECRET:'a'.repeat(40),SHOPSHORTS_GOOGLE_ALLOWED_EMAILS:'owner@example.com',SHOPSHORTS_TOKEN:'worker-token'};
 test('configuration is fail closed and does not expose client secrets',async()=>{const r=await authRoute(new Request('https://studio.test/auth/status'),env);const text=await r.text();assert.doesNotMatch(text,/not-real|worker-token/);assert.equal(authConfig({}).ready,false);assert.equal(authConfig({...env,SHOPSHORTS_ORIGIN:'http://public.test'}).ready,false);});
 test('signed sessions reject tampering, expiration and changed allowlists',async()=>{const value=await signSession({type:'user',email:'owner@example.com',sub:'123',exp:Date.now()+10000},env);assert.ok(await readSession(value,env));assert.equal(await readSession(value+'a',env),null);const req=new Request('https://studio.test',{headers:{cookie:`ss_google=${value}`}});assert.equal((await googleUser(req,env)).sub,'123');assert.equal(await googleUser(req,{...env,SHOPSHORTS_GOOGLE_ALLOWED_EMAILS:'else@example.com'}),null);assert.equal(await readSession(await signSession({exp:Date.now()-1},env),env),null);});
-test('OAuth uses state and PKCE, allowlisted verified Google account becomes HttpOnly session',async()=>{const start=await authRoute(new Request('https://studio.test/auth/google/start'),env);const target=new URL(start.headers.get('location'));assert.equal(target.searchParams.get('scope'),'openid email profile');assert.equal(target.searchParams.get('code_challenge_method'),'S256');const state=target.searchParams.get('state'),cookie=start.headers.get('set-cookie').split(';')[0];let calls=0;const mock=async(url,options)=>{calls++;if(url.includes('/token')){assert.ok(options.body.get('code_verifier'));return Response.json({access_token:'private-access'});}return Response.json({sub:'123',email:'owner@example.com',email_verified:true,name:'Owner'});};const r=await authRoute(new Request(`https://studio.test/auth/google/callback?state=${state}&code=test`,{headers:{cookie}}),env,mock);assert.equal(calls,2);assert.equal(r.headers.get('location'),'/studio');const set=r.headers.getSetCookie();assert.match(set.find(v=>v.startsWith('ss_google=')),/HttpOnly; SameSite=Lax.*Secure/);assert.doesNotMatch(set.join(''),/private-access/);});
+test('OAuth uses state and PKCE, allowlisted verified Google account becomes HttpOnly session',async()=>{const start=await authRoute(new Request('https://studio.test/auth/google/start'),env);const target=new URL(start.headers.get('location'));assert.equal(target.searchParams.get('scope'),'openid email profile');assert.equal(target.searchParams.get('code_challenge_method'),'S256');const state=target.searchParams.get('state'),cookie=start.headers.get('set-cookie').split(';')[0];let calls=0;const mock=async(url,options)=>{calls++;if(url.includes('/token')){assert.ok(options.body.get('code_verifier'));return Response.json({access_token:'private-access'});}return Response.json({sub:'123',email:'owner@example.com',email_verified:true,name:'Owner'});};const r=await authRoute(new Request(`https://studio.test/auth/google/callback?state=${state}&code=test`,{headers:{cookie}}),env,mock);assert.equal(calls,2);assert.equal(r.headers.get('location'),'/');const set=r.headers.getSetCookie();assert.match(set.find(v=>v.startsWith('ss_google=')),/HttpOnly; SameSite=Lax.*Secure/);assert.doesNotMatch(set.join(''),/private-access/);});
 test('OAuth mismatched state never exchanges code; unverified account never signs in',async()=>{const r=await authRoute(new Request('https://studio.test/auth/google/callback?state=forged&code=test'),env,()=>assert.fail('must not call Google'));assert.equal(r.headers.get('location'),'/login?error=cancelled');const flow=await signSession({type:'flow',state:'valid',verifier:'test',exp:Date.now()+10000},env);const denied=await authRoute(new Request('https://studio.test/auth/google/callback?state=valid&code=x',{headers:{cookie:`ss_oauth=${flow}`}}),env,async url=>Response.json(url.includes('/token')?{access_token:'x'}:{sub:'123',email:'owner@example.com',email_verified:false}));assert.equal(denied.headers.get('location'),'/login?error=access');assert.ok(!denied.headers.getSetCookie().some(c=>c.startsWith('ss_google=')));});
 test('Pages gates UI and media; worker authorization and login page stay available',async()=>{const call=(path,headers={})=>onRequest({request:new Request(`https://studio.test${path}`,{headers}),env,next:()=>new Response('ok')});assert.equal((await call('/studio')).headers.get('location'),'/login');assert.equal((await call('/api/studio')).status,401);assert.equal((await call('/api/studio',{authorization:'Bearer worker-token'})).status,200);assert.equal((await call('/login')).status,200);assert.equal(sameOrigin(new Request('https://studio.test',{headers:{origin:'https://evil.test'}})),false);});
+
+test('signed-in login visits go home and status supports Google and existing admin sessions', async () => {
+  const value = await signSession({ type: 'user', email: 'owner@example.com', name: 'Owner', exp: Date.now() + 10000 }, env);
+  for (const cookie of [`ss_google=${value}`, 'ss=worker-token']) {
+    for (const path of ['/login', '/login.html']) {
+      const response = await authRoute(new Request(`https://studio.test${path}`, { headers: { cookie } }), env);
+      assert.equal(response.status, 302);
+      assert.equal(response.headers.get('location'), '/');
+      assert.equal(response.headers.get('cache-control'), 'no-store');
+    }
+    const status = await authRoute(new Request('https://studio.test/auth/status', { headers: { cookie } }), env);
+    assert.equal((await status.json()).authenticated, true);
+  }
+  assert.equal(await authRoute(new Request('https://studio.test/login'), env), null);
+  assert.equal((await (await authRoute(new Request('https://studio.test/auth/status'), env)).json()).authenticated, false);
+});
+
+test('logout clears both session cookies, rejects cross-site requests, and leaves home protected', async () => {
+  const response = await authRoute(new Request('https://studio.test/auth/logout', { method: 'POST', headers: { origin: 'https://studio.test' } }), env);
+  const cookies = response.headers.getSetCookie();
+  assert.equal(cookies.length, 2);
+  for (const name of ['ss_google', 'ss']) assert.ok(cookies.some(value => value.startsWith(`${name}=;`) && value.includes('Max-Age=0')));
+  const denied = await authRoute(new Request('https://studio.test/auth/logout', { method: 'POST', headers: { origin: 'https://other.test' } }), env);
+  assert.equal(denied.status, 403);
+  const home = await onRequest({ request: new Request('https://studio.test/'), env, next: () => assert.fail('must stay protected') });
+  assert.equal(home.headers.get('location'), '/login');
+});

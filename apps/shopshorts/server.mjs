@@ -45,7 +45,7 @@ function kitEnv() {
       if (m) extra[m[1]] = m[2];
     }
   }
-  return { ...process.env, ...extra };
+  return { ...extra, ...process.env };
 }
 
 const STATUSES = [
@@ -422,7 +422,7 @@ function serveJobVideo(req, res, job, which) {
 }
 
 // 원격 접속 토큰(Cloudflare Tunnel 경유용) — .env SHOPSHORTS_TOKEN.
-// 로컬(127.0.0.1/localhost Host)은 무인증 유지, 터널 호스트로 들어온 요청만 토큰 요구.
+// 로컬과 원격 모두 로그인 필요. 워커의 Bearer 토큰 인증은 유지한다.
 const REMOTE_TOKEN = kitEnv().SHOPSHORTS_TOKEN ?? null;
 
 const STUDIO_ENV = kitEnv();
@@ -440,7 +440,17 @@ const server = createServer(async (req, res) => {
     const localHosts = [`127.0.0.1:${actualPort}`, `localhost:${actualPort}`];
     const isLocal = localHosts.includes(host);
     const origin = isLocal ? `http://${host}` : (STUDIO_ENV.SHOPSHORTS_ORIGIN || `https://${host}`);
-    const authRequest = new Request(new URL(req.url, origin), { method: req.method, headers: req.headers });
+    let authBody;
+    if (url.pathname === '/auth/google/credential' && req.method === 'POST') {
+      const chunks = []; let size = 0;
+      for await (const chunk of req) {
+        size += chunk.length;
+        if (size > 16000) { json(res, 413, { error: '로그인 요청이 너무 큽니다.' }); return; }
+        chunks.push(chunk);
+      }
+      authBody = Buffer.concat(chunks);
+    }
+    const authRequest = new Request(new URL(req.url, origin), { method: req.method, headers: req.headers, ...(authBody ? { body: authBody } : {}) });
     const authResponse = await authRoute(authRequest, STUDIO_ENV);
     if (authResponse) { await sendResponse(res, authResponse); return; }
     if (req.method === 'GET' && ['/login', '/login.html'].includes(url.pathname)) {
@@ -450,8 +460,7 @@ const server = createServer(async (req, res) => {
     if (!['GET', 'HEAD'].includes(req.method) && !sameOrigin(authRequest)) {
       json(res, 403, { error: '다른 사이트에서 요청할 수 없습니다.' }); return;
     }
-    const googleEnabled = !!STUDIO_ENV.GOOGLE_CLIENT_ID;
-    if ((!isLocal || googleEnabled) && !legacyAuthorized(authRequest, STUDIO_ENV) && !await googleUser(authRequest, STUDIO_ENV)) {
+    if (!legacyAuthorized(authRequest, STUDIO_ENV) && !await googleUser(authRequest, STUDIO_ENV)) {
       if (REMOTE_TOKEN && url.searchParams.get('token') === REMOTE_TOKEN) {
         res.writeHead(302, { 'set-cookie': `ss=${REMOTE_TOKEN}; Path=/; HttpOnly; SameSite=Lax; Max-Age=2592000${isLocal ? '' : '; Secure'}`, location: url.pathname }); res.end(); return;
       }

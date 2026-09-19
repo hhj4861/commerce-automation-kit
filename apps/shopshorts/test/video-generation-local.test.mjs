@@ -12,7 +12,7 @@ test('격리된 로컬 API에서 초안 승인 시 공통 생성 계획을 저�
   const dir = await mkdtemp(join(tmpdir(), 'cak-common-video-test-'));
   const app = fileURLToPath(new URL('..', import.meta.url));
   const child = spawn(process.execPath, ['server.mjs'], {
-    cwd: app, env: { ...process.env, SHOPSHORTS_PORT: '0', SHOPSHORTS_DATA_DIR: dir }, stdio: ['ignore', 'pipe', 'pipe'],
+    cwd: app, env: { ...process.env, SHOPSHORTS_PORT: '0', SHOPSHORTS_DATA_DIR: dir, SHOPSHORTS_TOKEN: 'local-test-worker' }, stdio: ['ignore', 'pipe', 'pipe'],
   });
   let output = '';
   let errors = '';
@@ -29,7 +29,7 @@ test('격리된 로컬 API에서 초안 승인 시 공통 생성 계획을 저�
       });
     });
     const call = async (path, body) => {
-      const res = await fetch(`http://127.0.0.1:${port}/api/${path}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+      const res = await fetch(`http://127.0.0.1:${port}/api/${path}`, { method: 'POST', headers: { 'content-type': 'application/json', authorization: 'Bearer local-test-worker' }, body: JSON.stringify(body) });
       return { status: res.status, data: await res.json() };
     };
     // 100 Continue 이후 본문을 보류해 서버가 잡을 읽은 뒤 다른 요청이 저장하는 경합을 재현한다.
@@ -37,7 +37,7 @@ test('격리된 로컬 API에서 초안 승인 시 공통 생성 계획을 저�
       let req;
       const response = new Promise((resolve, reject) => {
         req = request(`http://127.0.0.1:${port}/api/jobs/${id}/transition`, {
-          method: 'POST', headers: { expect: '100-continue', 'content-type': 'application/json' },
+          method: 'POST', headers: { expect: '100-continue', 'content-type': 'application/json', authorization: 'Bearer local-test-worker' },
         }, (res) => {
           let text = '';
           res.on('data', (d) => { text += d; });
@@ -52,6 +52,12 @@ test('격리된 로컬 API에서 초안 승인 시 공통 생성 계획을 저�
       finally { req.end(JSON.stringify({ to: 'script-approved' })); }
       return response;
     };
+    for (const path of ['/', '/studio', '/settings', '/contents']) {
+      const response = await fetch(`http://127.0.0.1:${port}${path}`, { redirect: 'manual' });
+      assert.equal(response.status, 302);
+      assert.equal(response.headers.get('location'), '/login');
+    }
+    assert.equal((await fetch(`http://127.0.0.1:${port}/api/jobs`)).status, 401);
     // 실제 광고 컨셉과 같은 형태의 기획을 사용하되 외부 API/TTS/ffmpeg는 호출하지 않는다.
     const job = JSON.parse(await readFile(new URL('../../../packages/ad-video-gen/test/fixtures/shorts-job.json', import.meta.url), 'utf8'));
     assert.equal((await call('jobs', job)).status, 201);
@@ -66,20 +72,20 @@ test('격리된 로컬 API에서 초안 승인 시 공통 생성 계획을 저�
     });
     assert.equal(approval.status, 200, JSON.stringify(approval.data));
     assert.equal(approval.data.job.videoGeneration.plan.clips[0].model, 'seedance_2_0');
-    const jobs = await (await fetch(`http://127.0.0.1:${port}/api/jobs`)).json();
+    const jobs = await (await fetch(`http://127.0.0.1:${port}/api/jobs`, { headers: { authorization: 'Bearer local-test-worker' } })).json();
     assert.equal(jobs.jobs.length, 2, '승인 중 등록된 다른 잡을 보존한다');
     assert.equal((await call(`jobs/${job.brief.id}/transition`, { to: 'generated', clipPaths: ['one.mp4'] })).status, 422);
     assert.equal((await call(`jobs/${job.brief.id}/set-link`, { platform: 'coupang', url: 'https://link.coupang.com/a/test123' })).status, 200);
     assert.equal((await call(`jobs/${job.brief.id}/transition`, { to: 'generated', clipPaths: ['a.mp4', 'b.mp4', 'c.mp4'] })).status, 200);
     const conflict = await approveDuring(other.brief.id, async () => {
       const edit = await fetch(`http://127.0.0.1:${port}/api/jobs/${other.brief.id}/video-direction`, {
-        method: 'PUT', headers: { 'content-type': 'application/json' },
+        method: 'PUT', headers: { 'content-type': 'application/json', authorization: 'Bearer local-test-worker' },
         body: JSON.stringify({ videoDirection: { ...other.videoDirection, extraStyle: 'Soft studio palette.' } }),
       });
       assert.equal(edit.status, 200);
     });
     assert.equal(conflict.status, 409, '승인 도중 수정한 기획을 덮어쓰지 않는다');
-    const after = await (await fetch(`http://127.0.0.1:${port}/api/jobs`)).json();
+    const after = await (await fetch(`http://127.0.0.1:${port}/api/jobs`, { headers: { authorization: 'Bearer local-test-worker' } })).json();
     assert.equal(after.jobs.find((j) => j.brief.id === other.brief.id).status, 'draft');
     const invalid = structuredClone(job);
     invalid.brief.id = 'no-beats';

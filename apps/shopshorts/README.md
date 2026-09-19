@@ -150,22 +150,29 @@ LLM 이 필요한 단계(대본·클립 생성)는 Claude 세션 모니터가, �
 
 ### Google 로그인 / 계정 등록
 
-`/login`에서 가입·로그인 및 OAuth 등록 상태를 확인한다. 첫 로그인도 동일한 Google 인증으로 처리하며, 별도 비밀번호를 받지 않는다. **현재 하나의 공유 운영 워크스페이스**로, 허용된 계정끼리 프로젝트를 공유한다. 불특정 사용자의 공개 가입이나 사용자별 테넌트 격리를 제공하지 않는다.
+`/login`이 로그인 전 홈이며 로고도 `/login`으로 연결된다. Google 로그인 성공 후 홈은 `/`이다. 로그인된 사용자가 `/login`에 접근하면 `/`로 이동하며, 데스크톱·모바일 홈 상단의 로그아웃 버튼은 세션 쿠키를 삭제하고 `/login`으로 돌아간다. `/login`에서 가입·로그인 및 OAuth 등록 상태를 확인한다. 첫 로그인도 동일한 Google 인증으로 처리하며, 별도 비밀번호를 받지 않는다. **현재 하나의 공유 운영 워크스페이스**로, 로그인한 계정끼리 프로젝트를 공유한다. 전체 계정 가입은 아래 설정으로 허용하며 사용자별 테넌트 격리는 제공하지 않는다.
 
-로컬은 kit `.env` 또는 프로세스 환경, Pages는 배포 환경의 secret/변수에 다음을 설정한다. 실제 비밀값은 저장소에 넣지 않는다.
+로컬은 kit `.env` 또는 프로세스 환경(프로세스 설정 우선), Pages는 배포 환경의 secret/변수에 다음을 설정한다. 실제 비밀값은 저장소에 넣지 않는다.
 
 ```text
-GOOGLE_CLIENT_ID=<웹 애플리케이션 OAuth 클라이언트>
-GOOGLE_CLIENT_SECRET=<서버 비밀>
-SHOPSHORTS_ORIGIN=https://shopshorts-dash.pages.dev
+GOOGLE_AUTH_MODE=gis
+GOOGLE_CLIENT_ID=<웹 애플리케이션 OAuth 클라이언트 ID>
+SHOPSHORTS_ORIGIN=http://127.0.0.1:5198
 SHOPSHORTS_SESSION_SECRET=<무작위 32자 이상 문자열>
-SHOPSHORTS_GOOGLE_ALLOWED_EMAILS=owner@example.com,editor@example.com
+SHOPSHORTS_GOOGLE_ALLOW_SIGNUPS=1
 ```
 
-Google Cloud의 승인된 리디렉션 URI: `${SHOPSHORTS_ORIGIN}/auth/google/callback`.
-로컬은 `http://127.0.0.1:5178`을 origin으로 사용할 수 있다. state·PKCE 검증, Google userinfo의 이메일 인증 여부·허용 목록 검사 후 24시간 HttpOnly/SameSite 쿠키를 발급한다. HTTPS에서는 Secure 쿠키를 사용한다. Google 토큰은 저장하지 않는다. 로그아웃은 브라우저 쿠키를 삭제하며, 허용 목록에서 제거하거나 서명 비밀을 회전하면 기존 세션을 차단한다. 기존 `SHOPSHORTS_TOKEN` 워커와 관리자 링크도 호환된다.
+`replay-live-poc`과 같은 Google Identity Services 버튼/팝업 방식이다. Client Secret은 필요 없다. Google Cloud의 해당 웹 클라이언트 **승인된 JavaScript 원본**에 `http://127.0.0.1:5198`을 등록한다. `localhost`로도 사용할 경우 `http://localhost`와 `http://localhost:5198`도 등록한다. 기존 다른 앱의 원본은 유지한다. 클라이언트 ID를 연결한 것과 Google 콘솔의 출처 등록·실제 사용자 로그인 성공은 별개다.
 
-OAuth가 미설정인 로컬은 기존과 같이 loopback 전용 접근을 허용한다. `GOOGLE_CLIENT_ID`를 설정하면 로컬도 로그인한다. 원격은 인증 없이 접근할 수 없다. Google 로그인은 **운영 앱 인증**이며 YouTube 업로드 권한을 주지 않는다.
+`SHOPSHORTS_GOOGLE_ALLOW_SIGNUPS=1`이면 이메일 허용 목록 없이 검증된 모든 Google 계정이 로그인한다. 기본값은 `0`이며 그 경우 `SHOPSHORTS_GOOGLE_ALLOWED_EMAILS`를 설정한다. 현재 앱은 **공유 워크스페이스**이므로 모든 로그인 사용자가 같은 콘텐츠에 접근한다. 사용자별 테넌트·데이터 격리는 제공하지 않는다. 공개 가입 설정은 운영 배포에 자동 적용되지 않는다.
+
+서버가 발급한 5분 nonce를 HttpOnly 서명 쿠키에 연결하고, ID 토큰은 `jose`와 Google 공식 JWKS로 RS256 서명·issuer·audience·만료·nonce·검증된 이메일을 검사한다. 성공하면 24시간 HttpOnly/SameSite 앱 세션 쿠키를 발급한다. HTTPS에서는 Secure를 적용한다. Google 토큰은 보관하지 않는다. 세션 서명키는 앱별로 따로 발급하며, 로그아웃은 앱 쿠키를 제거한다.
+
+로컬에서도 로그인 없이 내부 페이지에 접근하면 `/login`으로 이동하며 API는 401을 반환한다. 기존 `SHOPSHORTS_TOKEN` 워커 Bearer 인증과 관리자 링크는 유지한다. Google 로그인은 운영 앱 인증이며 YouTube 업로드 권한을 주지 않는다.
+
+기존 authorization-code 방식을 유지하려면 `GOOGLE_AUTH_MODE=code`와 `GOOGLE_CLIENT_SECRET`을 설정하고 `${SHOPSHORTS_ORIGIN}/auth/google/callback`을 승인된 리디렉션 URI에 등록한다. 이 경로의 state·PKCE·userinfo 검증과 로그인 후 `/` 이동도 유지된다.
+
+근거: [Google GIS 설정](https://developers.google.com/identity/gsi/web/guides/get-google-api-clientid), [서버 ID 토큰 검증](https://developers.google.com/identity/gsi/web/guides/verify-google-id-token).
 
 ### 생성/편집 워커 설정
 

@@ -13,5 +13,8 @@
     "test": "node --test test/*.test.mjs",
     "cloud:dev": "npx wrangler pages dev public",
     "cloud:deploy": "npx wrangler pages deploy public --project-name shopshorts-dash"
+  },
+  "dependencies": {
+    "jose": "6.2.3"
   }
 }
