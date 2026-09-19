@@ -196,3 +196,15 @@ OAuth가 미설정인 로컬은 기존과 같이 loopback 전용 접근을 허�
 ### 완료 훅의 잘못된 폴더 등록 복구
 
 `tools/task-finish-directory-recovery.py`는 설치된 전역 훅의 폴더 추적 오류 복구 패치다. `--apply`는 백업 후 적용하며, `cancel-empty-track --path <경로> --reason <근거>` 명령은 최초 등록부터 변경이 없고 현재도 존재하지 않는 경로만 감사 기록을 남겨 취소한다. 폴더에 파일이 생겼다면 본인 파일만 보존·이동한 후 비어 있는 폴더를 제거하고 취소한다. 완료 검증·도구 실행 기록·다른 경로 추적은 유지한다. 훅을 끄거나 상태 DB를 직접 수정하지 않는다. 검증: `python3 tools/test-task-finish-directory-recovery.py`.
+
+### 기획 LLM 추천 (2026-09-19)
+
+새 프로젝트 1단계의 **어떤 이야기를 만들까요?** / **분위기와 요청사항** 옆 `LLM 추천`을 누르면 선택한 카테고리·형식·길이·입력 내용을 바탕으로 후보 3개를 만든다. 주제 추천은 주제만 또는 주제+분위기를, 분위기 추천은 현재 주제를 유지하고 분위기만 적용할 수 있다. 적용 전에는 입력 내용을 변경하지 않으며, 저장된 프로젝트 기획은 기존처럼 읽기 전용이다.
+
+- 서버의 `GEMINI_API_KEY`와 `SHOPSHORTS_RECOMMEND_MODEL`(미설정 시 `SHOPSHORTS_TEXT_MODEL`, 기본 `gemini-2.5-flash`)을 사용한다. Pages에서는 제작 워커뿐 아니라 Functions 환경에도 키가 필요하다. 키를 브라우저에 전달하지 않는다.
+- `POST /api/studio/recommendations`가 공식 Gemini `generateContent` + `googleSearch.timeRangeFilter`로 요청 시점 이전 30일을 조회한다. 검색 출처·질의 메타데이터가 없거나 응답이 불완전하면 실패를 표시한다. 인기 순위/검색량 수치를 만들어 표시하지 않는다. 기존 자동 모드의 네이버 트렌드 경로는 유지한다.
+- 추천 근거·참고 링크와 공급자가 반환한 검색 제안을 함께 표시한다. 검색 결과는 DB나 로컬 파일에 보관하지 않는다. 사용자가 선택한 주제/연출 문구만 기존 기획 저장에 들어간다. 카테고리·형식·입력이 바뀌면 이전 추천을 폐기하고 늦게 도착한 응답의 적용을 막는다.
+- 추천 버튼은 명시적 유료 API 요청이다. `SHOPSHORTS_STUDIO_RUNNER=off`에서도 이 요청은 동작한다. 실패 시 자동 재시도하지 않고 입력 내용을 보존한다.
+- 단위/API 테스트는 검색 기간·근거 유무·응답 검증·인증 오류·동일 출처 요청 제한을 확인한다. 현재 로컬 설정 실호출은 `401 UNAUTHENTICATED / ACCESS_TOKEN_TYPE_UNSUPPORTED`로 실패했다. 실제 추천 사용에는 유효한 Gemini API 키 설정이 필요하며, 기존 인증 값을 임의로 바꾸지는 않았다.
+
+공식 참고: [Google Search grounding](https://ai.google.dev/gemini-api/docs/google-search), [generateContent의 GoogleSearch/시간 범위](https://ai.google.dev/api/generate-content#GoogleSearch), [검색 결과 표시 조건](https://ai.google.dev/gemini-api/terms#grounding-with-google-search).

@@ -1,6 +1,6 @@
 import {createEditor} from './editor.js';
 import {frameCount,FPS} from './editor-model.js';
-let editor=null;
+let editor=null, recommendationController=null;
 'use strict';
 const $ = s => document.querySelector(s);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -45,17 +45,60 @@ function heading(){
  $('#intro').textContent=p?`${p.brief.category} · ${p.brief.format==='short'?'숏폼 9:16':'롱폼 16:9'} · ${p.scenes.length?p.scenes.length+'장면 / '+total(p)+'초':p.brief.duration+'초 목표'}`:'주제와 영상 형식을 정하면 AI가 시나리오를 작성합니다.';
  $('#newProject').hidden=false;
 }
-function start(){editor?.destroy();editor=null;state.project=null;state.step=1;state.dirty=false;$('#modes').hidden=true;$('#workspace').hidden=false;$('#projects').hidden=true;history.replaceState(null,'','/studio?new=1');heading();progress();renderBrief();}
+function start(){recommendationController?.abort();editor?.destroy();editor=null;state.project=null;state.step=1;state.dirty=false;$('#modes').hidden=true;$('#workspace').hidden=false;$('#projects').hidden=true;history.replaceState(null,'','/studio?new=1');heading();progress();renderBrief();}
 function renderBrief(){
+ recommendationController?.abort();
  const p=state.project, brief=p?.brief;
  const cats=state.config?.categories || ['심리학','건축학','상품광고','막장드라마','역사','과학','직접 입력'];
  if(brief){state.category=brief.category;state.format=brief.format;}
- $('#stage').innerHTML=`<section class="panel"><div class="panel-head"><div><h2>이야기의 출발점을 정하세요</h2><p>관심 있는 주제와 원하는 분위기를 알려주세요.</p></div><span class="badge">1 / 5 기획</span></div><div class="brief-grid"><div><div class="field"><span>카테고리</span><div class="chips">${cats.map(c=>`<button class="chip ${c===state.category?'selected':''}" data-category="${esc(c)}" aria-pressed="${c===state.category}" ${p?'disabled':''}>${esc(c)}</button>`).join('')}</div></div><label class="field"><span>어떤 이야기를 만들까요?</span><textarea id="topic" maxlength="1000" placeholder="예: 사람은 왜 미루는 걸까? 일상 속 심리학을 쉽게 설명하는 영상" ${p?'readonly':''}>${esc(brief?.topic || '')}</textarea></label><label class="field"><span>분위기와 요청사항 <small class="muted">선택</small></span><textarea id="direction" maxlength="2000" placeholder="예: 친근한 말투, 따뜻한 일러스트, 마지막에 실천 팁 한 가지" ${p?'readonly':''}>${esc(brief?.direction || '')}</textarea></label></div><div><span class="label">영상 형식</span><div class="formats"><button class="format ${state.format==='short'?'selected':''}" data-format="short" ${p?'disabled':''}><span class="ratio">9:16</span><strong>숏폼</strong><small>짧고 선명한 이야기</small></button><button class="format ${state.format==='long'?'selected':''}" data-format="long" ${p?'disabled':''}><span class="ratio landscape">16:9</span><strong>롱폼</strong><small>깊이 있게 풀어내는 이야기</small></button></div><label class="field" style="margin-top:24px"><span>목표 길이</span><select id="duration" ${p?'disabled':''}></select><small class="hint">숏폼은 최대 3분, 롱폼은 최대 10분까지 제작합니다.</small></label><p class="muted">${p?'프로젝트 기획은 저장되어 있습니다. 다른 기획은 새 프로젝트에서 시작하세요.':'광고는 사실에 근거해 작성하고, 생성한 대본을 직접 확인한 뒤 제작을 시작합니다.'}</p></div></div><div class="actions"><span class="save-state">${p?'저장된 기획':'기획 저장 후 다음 단계에서 시나리오를 생성합니다.'}</span><button class="primary" id="create">${p?'시나리오 보기':'기획 저장 · 다음 단계'}</button></div></section>`;
+ $('#stage').innerHTML=`<section class="panel"><div class="panel-head"><div><h2>이야기의 출발점을 정하세요</h2><p>관심 있는 주제와 원하는 분위기를 알려주세요.</p></div><span class="badge">1 / 5 기획</span></div><div class="brief-grid"><div><div class="field"><span>카테고리</span><div class="chips">${cats.map(c=>`<button class="chip ${c===state.category?'selected':''}" data-category="${esc(c)}" aria-pressed="${c===state.category}" ${p?'disabled':''}>${esc(c)}</button>`).join('')}</div></div><div class="field"><div class="field-title"><label for="topic">어떤 이야기를 만들까요?</label>${!p?'<button type="button" class="recommend-button" data-recommend="topic">✦ LLM 추천</button>':''}</div><textarea id="topic" maxlength="1000" placeholder="예: 사람은 왜 미루는 걸까? 일상 속 심리학을 쉽게 설명하는 영상" ${p?'readonly':''}>${esc(brief?.topic || '')}</textarea></div><div class="field"><div class="field-title"><label for="direction">분위기와 요청사항 <small class="muted">선택</small></label>${!p?'<button type="button" class="recommend-button" data-recommend="direction">✦ LLM 추천</button>':''}</div><textarea id="direction" maxlength="2000" placeholder="예: 친근한 말투, 따뜻한 일러스트, 마지막에 실천 팁 한 가지" ${p?'readonly':''}>${esc(brief?.direction || '')}</textarea></div>${!p?'<p class="hint">선택한 카테고리의 최근 검색 자료로 3가지 기획을 추천합니다. Gemini 검색·생성 사용료가 발생할 수 있습니다.</p><section id="recommendations" class="recommendations" aria-label="LLM 추천 결과" hidden></section>':''}</div><div><span class="label">영상 형식</span><div class="formats"><button class="format ${state.format==='short'?'selected':''}" data-format="short" ${p?'disabled':''}><span class="ratio">9:16</span><strong>숏폼</strong><small>짧고 선명한 이야기</small></button><button class="format ${state.format==='long'?'selected':''}" data-format="long" ${p?'disabled':''}><span class="ratio landscape">16:9</span><strong>롱폼</strong><small>깊이 있게 풀어내는 이야기</small></button></div><label class="field" style="margin-top:24px"><span>목표 길이</span><select id="duration" ${p?'disabled':''}></select><small class="hint">숏폼은 최대 3분, 롱폼은 최대 10분까지 제작합니다.</small></label><p class="muted">${p?'프로젝트 기획은 저장되어 있습니다. 다른 기획은 새 프로젝트에서 시작하세요.':'광고는 사실에 근거해 작성하고, 생성한 대본을 직접 확인한 뒤 제작을 시작합니다.'}</p></div></div><div class="actions"><span class="save-state">${p?'저장된 기획':'기획 저장 후 다음 단계에서 시나리오를 생성합니다.'}</span><button class="primary" id="create">${p?'시나리오 보기':'기획 저장 · 다음 단계'}</button></div></section>`;
  function durations(){const values=state.format==='short'?[24,32,48,60,90,120,180]:[120,180,300,600];$('#duration').innerHTML=values.map(v=>`<option value="${v}">${v<60?v+'초':v/60+'분'}</option>`).join('');if(brief)$('#duration').value=brief.duration;}
  durations();
- document.querySelectorAll('[data-category]').forEach(b=>b.onclick=()=>{state.category=b.dataset.category;document.querySelectorAll('[data-category]').forEach(x=>{x.classList.toggle('selected',x===b);x.setAttribute('aria-pressed',String(x===b));});});
- document.querySelectorAll('[data-format]').forEach(b=>b.onclick=()=>{state.format=b.dataset.format;document.querySelectorAll('[data-format]').forEach(x=>x.classList.toggle('selected',x===b));durations();});
+ const invalidateRecommendations=bindRecommendations(p);
+ document.querySelectorAll('[data-category]').forEach(b=>b.onclick=()=>{state.category=b.dataset.category;invalidateRecommendations();document.querySelectorAll('[data-category]').forEach(x=>{x.classList.toggle('selected',x===b);x.setAttribute('aria-pressed',String(x===b));});});
+ document.querySelectorAll('[data-format]').forEach(b=>b.onclick=()=>{state.format=b.dataset.format;invalidateRecommendations();document.querySelectorAll('[data-format]').forEach(x=>x.classList.toggle('selected',x===b));durations();});
  $('#create').onclick=()=>run(async()=>{if(!p){const r=await post('',{category:state.category,format:state.format,topic:$('#topic').value,direction:$('#direction').value,duration:Number($('#duration').value)});state.project=r.project;state.dirty=false;history.replaceState(null,'',`/studio?id=${r.project.id}`);}state.step=2;render();});
+}
+function bindRecommendations(project){
+ if(project)return()=>{};
+ const panel=$('#recommendations'),buttons=[...document.querySelectorAll('[data-recommend]')];let requestId=0;
+ const form=focus=>({category:state.category,format:state.format,duration:Number($('#duration').value),focus,topic:$('#topic').value,direction:$('#direction').value});
+ const busy=value=>{buttons.forEach(b=>{b.disabled=value;b.textContent=value?'검색·추천 중…':'✦ LLM 추천';});panel.setAttribute('aria-busy',String(value));};
+ const invalidate=()=>{requestId++;recommendationController?.abort();busy(false);panel.hidden=true;panel.replaceChildren();};
+ for(const id of ['topic','direction','duration'])$('#'+id).addEventListener('input',invalidate);
+ buttons.forEach(button=>button.onclick=async()=>{
+  const input=form(button.dataset.recommend);
+  if(input.focus==='direction'&&!input.topic.trim()){toast('분위기를 추천받을 주제를 먼저 입력하세요.');$('#topic').focus();return;}
+  if(input.category==='직접 입력'&&!input.topic.trim()){toast('관심 분야나 주제를 먼저 입력하세요.');$('#topic').focus();return;}
+  const current=++requestId;recommendationController=new AbortController();busy(true);panel.hidden=false;
+  panel.innerHTML='<p role="status">최근 자료를 검색하고 카테고리에 맞는 기획을 추천하고 있어요…</p>';
+  try{
+   const data=await api('/recommendations',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(input),signal:recommendationController.signal});
+   if(current!==requestId||!panel.isConnected||JSON.stringify(form(input.focus))!==JSON.stringify(input))return;
+   panel.innerHTML=`<div class="recommendation-heading"><h3>${esc(input.category)} · ${input.focus==='topic'?'이야기':'분위기'} 추천</h3><small>${new Date(data.checkedAt).toLocaleString('ko-KR')} 검색</small></div><p class="hint">최근 30일 검색 자료를 참고한 기획입니다. 검색량 순위를 뜻하지 않습니다.</p><div class="recommendation-list">${data.suggestions.map((item,i)=>`<article class="recommendation-card"><span class="badge">제안 ${i+1}</span><h4>${esc(item.topic)}</h4><p class="recommendation-direction">${esc(item.direction)}</p><p class="recommendation-reason">${esc(item.reason)}</p><div class="recommendation-actions">${input.focus==='topic'?`<button class="secondary" data-apply-recommendation="${i}" data-fields="both">주제·분위기 적용</button><button class="quiet" data-apply-recommendation="${i}" data-fields="topic">주제만 적용</button>`:`<button class="secondary" data-apply-recommendation="${i}" data-fields="direction">이 분위기 적용</button>`}</div></article>`).join('')}</div><div class="recommendation-sources"><strong>추천에 참고한 검색 출처</strong><ul>${data.sources.map(source=>`<li><a href="${esc(source.url)}" target="_blank" rel="noopener noreferrer">${esc(source.title)} ↗</a></li>`).join('')}</ul></div><div id="searchSuggestions"></div>`;
+   // Provider HTML is isolated from app CSS; scripts, handlers and unsafe URLs are never attached.
+   if(data.searchSuggestions){
+    const fragment=new DOMParser().parseFromString(data.searchSuggestions,'text/html');
+    const allowed=new Set(['style','div','span','a','svg','path','g','circle','rect','line','polyline','polygon','title']);
+    for(const el of [...fragment.head.querySelectorAll('*'),...fragment.body.querySelectorAll('*')])if(!allowed.has(el.localName))el.remove();
+    for(const el of fragment.querySelectorAll('*'))for(const attr of [...el.attributes]){
+     if(attr.name.startsWith('on')||['srcdoc','action','formaction'].includes(attr.name))el.removeAttribute(attr.name);
+     if(['href','src','xlink:href'].includes(attr.name)&&!/^https:\/\//i.test(attr.value))el.removeAttribute(attr.name);
+    }
+    fragment.querySelectorAll('a').forEach(a=>{a.target='_blank';a.rel='noopener noreferrer';});
+    const shadow=panel.querySelector('#searchSuggestions').attachShadow({mode:'closed'});
+    shadow.append(...fragment.head.childNodes,...fragment.body.childNodes);
+   }
+   panel.querySelectorAll('[data-apply-recommendation]').forEach(b=>b.onclick=()=>{
+    const item=data.suggestions[Number(b.dataset.applyRecommendation)];
+    if(b.dataset.fields!=='direction')$('#topic').value=item.topic;
+    if(b.dataset.fields!=='topic')$('#direction').value=item.direction;
+    state.dirty=true;invalidate();toast('추천을 적용했습니다. 내용을 확인하고 기획을 저장하세요.');
+   });
+  }catch(error){if(current===requestId&&panel.isConnected&&error.name!=='AbortError')panel.innerHTML=`<p class="recommendation-error" role="alert">${esc(error.message)}</p><p class="hint">입력한 내용은 유지됩니다. LLM 추천 버튼으로 다시 시도할 수 있습니다.</p>`;}
+  finally{if(current===requestId&&panel.isConnected)busy(false);}
+ });
+ return invalidate;
 }
 function render(){
  editor?.destroy();editor=null;heading();progress();note();
