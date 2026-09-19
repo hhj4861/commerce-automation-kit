@@ -29,9 +29,9 @@ export function openNotifications(dataDir, { now = Date.now, leaseMs = 30_000, m
       db.prepare('INSERT INTO notification_sources(key,fingerprint) VALUES (?,?) ON CONFLICT(key) DO UPDATE SET fingerprint=excluded.fingerprint').run(key, fingerprint);
     }
   });
-  const receive = db.transaction(() => {
+  const receive = db.transaction((includePublished = false) => {
     db.prepare("UPDATE notification_queue SET state='dead',last_error='처리 횟수 초과' WHERE state='inflight' AND available_at<=? AND attempts>=?").run(now(), maxAttempts);
-    const row = db.prepare("SELECT * FROM notification_queue WHERE state IN ('pending','inflight') AND available_at<=? ORDER BY available_at,rowid LIMIT 1").get(now());
+    const row = db.prepare("SELECT * FROM notification_queue WHERE (state IN ('pending','inflight') OR (?=1 AND state='published')) AND available_at<=? ORDER BY available_at,rowid LIMIT 1").get(includePublished ? 1 : 0, now());
     if (!row) return null;
     const receipt = randomUUID();
     db.prepare("UPDATE notification_queue SET state='inflight',attempts=attempts+1,receipt=?,available_at=? WHERE id=?").run(receipt, now() + leaseMs, row.id);
@@ -51,8 +51,18 @@ export function openNotifications(dataDir, { now = Date.now, leaseMs = 30_000, m
     db.prepare('INSERT OR IGNORE INTO notifications(id,payload) VALUES (?,?)').run(event.id, JSON.stringify({ ...event, href }));
   };
   const queue = {
-    enqueue, receive: () => receive.immediate(), ack, retry,
-    stats: () => Object.fromEntries(['pending', 'inflight', 'dead'].map(state => [state, db.prepare('SELECT count(*) AS n FROM notification_queue WHERE state=?').get(state).n])),
+    enqueue, receive: (includePublished = false) => receive.immediate(includePublished), ack, retry,
+    // Keep a recovery copy until the inbox commits. Replay before the free queue's 24h expiry.
+    published: (id, receipt) => db.prepare("UPDATE notification_queue SET state='published',attempts=0,receipt=NULL,available_at=? WHERE id=? AND receipt=? AND state='inflight' AND available_at>?").run(now() + 12 * 60 * 60 * 1000, id, receipt, now()).changes > 0,
+    complete: id => db.prepare('DELETE FROM notification_queue WHERE id=? AND EXISTS (SELECT 1 FROM notifications WHERE id=?)').run(id, id).changes > 0,
+    quarantine(event) {
+      if (db.prepare('SELECT 1 FROM notifications WHERE id=?').get(event.id)) return;
+      db.prepare("INSERT INTO notification_queue(id,payload,state,available_at,last_error) VALUES (?,?,'dead',?,'원격 전달 실패') ON CONFLICT(id) DO UPDATE SET state='dead',receipt=NULL,last_error='원격 전달 실패'").run(event.id, JSON.stringify(event), now());
+    },
+    stats: () => ({
+      pending: db.prepare("SELECT count(*) AS n FROM notification_queue WHERE state IN ('pending','published')").get().n,
+      ...Object.fromEntries(['inflight', 'dead'].map(state => [state, db.prepare('SELECT count(*) AS n FROM notification_queue WHERE state=?').get(state).n])),
+    }),
     retryDead: () => db.prepare("UPDATE notification_queue SET state='pending',attempts=0,available_at=?,receipt=NULL WHERE state='dead'").run(now()).changes,
   };
   const preference = user => db.prepare('SELECT enabled FROM notification_preferences WHERE user_id=?').get(user)?.enabled !== 0;

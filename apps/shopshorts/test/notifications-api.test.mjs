@@ -10,6 +10,7 @@ import { signSession } from '../lib/google-auth.js';
 test('real local HTTP flow: auth, queued job/studio events, read state, preference and restart', { timeout: 30000 }, async t => {
   const dir = await mkdtemp(join(tmpdir(), 'cak-inbox-http-'));
   const env = { ...process.env, SHOPSHORTS_PORT: '0', SHOPSHORTS_DATA_DIR: dir, SHOPSHORTS_STUDIO_RUNNER: 'off', SHOPSHORTS_TOKEN: 'notification-test-worker', SHOPSHORTS_SESSION_SECRET: 'test-only-secret-at-least-32-characters', SHOPSHORTS_GOOGLE_ALLOWED_EMAILS: 'one@example.test,two@example.test', SHOPSHORTS_GOOGLE_ALLOW_SIGNUPS: '0' };
+  env.SHOPSHORTS_NOTIFICATION_QUEUE = 'local';
   await writeFile(join(dir, 'jobs.json'), JSON.stringify([{ brief: { id: 'test', productName: '알림 테스트' }, script: {}, status: 'draft' }]));
   let child, base;
   const stop = async () => { if (child && child.exitCode === null) { const exited = once(child, 'exit'); child.kill(); await exited; } };

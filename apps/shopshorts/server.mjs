@@ -21,7 +21,8 @@ import { fileURLToPath } from 'node:url';
 import { tmpdir } from 'node:os';
 import { prepareShortsVideo, runVideoCli } from './video-generation.mjs';
 import { clearVideoGeneration, videoGenerationProblem } from './lib/video-generation.js';
-import { openNotifications, drainNotifications, notificationApi } from './lib/notifications-local.mjs';
+import { openNotifications, notificationApi } from './lib/notifications-local.mjs';
+import { notificationConfig, notificationTransport } from './lib/notification-transport.mjs';
 import { jobObservations, studioObservations } from './lib/notification-events.mjs';
 import { createHash } from 'node:crypto';
 
@@ -431,6 +432,7 @@ const REMOTE_TOKEN = kitEnv().SHOPSHORTS_TOKEN ?? null;
 
 const STUDIO_ENV = kitEnv();
 const notifications = openNotifications(DATA_DIR);
+const notificationDelivery = notificationTransport(notifications, notificationConfig(DATA_DIR, STUDIO_ENV));
 let notificationError = null;
 function observeNotifications(observations) {
   try { notifications.observe(observations); }
@@ -449,7 +451,7 @@ async function notificationTick() {
   try {
     notifications.observe(loadJobs().flatMap(jobObservations));
     notifications.observe((await studioStore.list()).flatMap(studioObservations));
-    await drainNotifications(notifications.queue, notifications.deliver);
+    await notificationDelivery.tick();
     notificationError = null;
   } catch (error) {
     notificationError = '알림 갱신이 지연되고 있어요. 잠시 후 다시 확인해 주세요.';
@@ -513,7 +515,7 @@ const server = createServer(async (req, res) => {
       const response = await notificationApi(request, notifications, user);
       if (req.method === 'GET' && response.ok) {
         const data = await response.json();
-        await sendResponse(res, Response.json({ ...data, warning: notificationError }, { headers: { 'cache-control': 'no-store' } }));
+        await sendResponse(res, Response.json({ ...data, transport: notificationDelivery.provider, warning: notificationError }, { headers: { 'cache-control': 'no-store' } }));
       } else await sendResponse(res, response);
       return;
     }
