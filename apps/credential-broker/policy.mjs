@@ -1,6 +1,8 @@
 export const ISSUER = 'https://token.actions.githubusercontent.com';
 export const AUDIENCE = 'cak-cloudflare-secrets';
 export const REPOSITORY = 'hhj4861/commerce-automation-kit';
+// Verified through GitHub's repository OIDC customization API (immutable subjects enabled).
+export const SUBJECT_PREFIX = 'repo:hhj4861@71001056/commerce-automation-kit@1310729493';
 export const KEYWORD_KEYS = [
   'NAVER_CLIENT_ID', 'NAVER_CLIENT_SECRET', 'NAVER_AD_CUSTOMER_ID',
   'NAVER_AD_API_KEY', 'NAVER_AD_SECRET_KEY', 'TELEGRAM_BOT_TOKEN',
@@ -27,7 +29,7 @@ export function authorizeGithub(claims, env) {
   if (claims.repository !== REPOSITORY || claims.repository_id !== '1310729493' ||
       claims.repository_owner_id !== '71001056' || !refs.includes(claims.ref) ||
       !['schedule', 'workflow_dispatch'].includes(claims.event_name) ||
-      claims.sub !== `repo:${REPOSITORY}:ref:${claims.ref}` ||
+      claims.sub !== `${SUBJECT_PREFIX}:ref:${claims.ref}` ||
       claims.runner_environment !== 'github-hosted') throw new Error('unauthorized');
   // Ref and path are signed by GitHub; no pull_request, fork, environment or tag subjects.
   const file = Object.keys(WORKFLOW_KEYS).find(name =>

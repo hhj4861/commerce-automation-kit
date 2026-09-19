@@ -2,14 +2,14 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { randomBytes, generateKeyPairSync, webcrypto } from 'node:crypto';
 import { handleRequest, readSecrets } from '../index.mjs';
-import { authorizeGithub, authorizeMigration, REPOSITORY, GITHUB_KEYS } from '../policy.mjs';
+import { authorizeGithub, authorizeMigration, REPOSITORY, SUBJECT_PREFIX, GITHUB_KEYS } from '../policy.mjs';
 import { readVault, writeVault } from '../vault.mjs';
 import { cloudSecrets } from '../../shopshorts/lib/cloud-secrets.js';
 globalThis.crypto ||= webcrypto;
 
 const claims = (file = 'keyword-intel-sync.yml') => ({
   repository: REPOSITORY, repository_id: '1310729493', repository_owner_id: '71001056',
-  ref: 'refs/heads/main', sub: `repo:${REPOSITORY}:ref:refs/heads/main`,
+  ref: 'refs/heads/main', sub: `${SUBJECT_PREFIX}:ref:refs/heads/main`,
   event_name: 'workflow_dispatch', runner_environment: 'github-hosted',
   workflow_ref: `${REPOSITORY}/.github/workflows/${file}@refs/heads/main`, sha: 'trusted-sha',
 });
@@ -37,6 +37,9 @@ const verify = file => ({ github: async () => claims(file), runner: async () => 
 test('workflow policy grants only needed keys', () => {
   assert.deepEqual(authorizeGithub(claims('tts-remote.yml'), {}).keys, ['ELEVENLABS_API_KEY']);
   assert.equal(authorizeGithub(claims(), {}).keys.length, 9);
+});
+test('old mutable subject does not satisfy immutable repository identity', () => {
+  assert.throws(() => authorizeGithub({ ...claims(), sub: `repo:${REPOSITORY}:ref:refs/heads/main` }, {}));
 });
 for (const [name, patch] of Object.entries({ fork: { repository_id: 'other' }, owner: { repository_owner_id: 'other' }, pr: { event_name: 'pull_request' }, tag: { ref: 'refs/tags/v1' }, subject: { sub: `repo:${REPOSITORY}:environment:prod` }, workflow: { workflow_ref: `${REPOSITORY}/.github/workflows/evil.yml@refs/heads/main` }, reusable: { job_workflow_ref: 'attacker/workflow@main' }, runner: { runner_environment: 'self-hosted' } })) {
   test(`rejects ${name} identity`, () => assert.throws(() => authorizeGithub({ ...claims(), ...patch }, {})));
