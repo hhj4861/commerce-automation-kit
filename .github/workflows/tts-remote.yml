@@ -5,6 +5,10 @@ name: tts-remote
 on:
   workflow_dispatch:
     inputs:
+      verify_secrets_only:
+        description: "Verify Cloudflare credentials without generating media"
+        type: boolean
+        default: false
       script_b64:
         description: "ShortsScript JSON (base64)"
         required: true
@@ -17,6 +21,7 @@ on:
 
 permissions:
   contents: read
+  id-token: write
 
 jobs:
   tts:
@@ -28,10 +33,16 @@ jobs:
         with:
           node-version: "20"
           cache: npm
-      - run: npm install --no-package-lock --no-audit --no-fund
-      - name: Generate narration
+      - name: Load credentials from Cloudflare
         env:
-          ELEVENLABS_API_KEY: ${{ secrets.ELEVENLABS_API_KEY }}
+          CAK_SECRETS_URL: ${{ vars.CAK_SECRETS_URL }}
+          CAK_SECRETS_ACTION: ${{ inputs.verify_secrets_only && 'verify' || 'load' }}
+        run: node apps/credential-broker/github-client.mjs
+      - run: npm install --no-package-lock --no-audit --no-fund
+        if: ${{ !inputs.verify_secrets_only }}
+      - name: Generate narration
+        if: ${{ !inputs.verify_secrets_only }}
+        env:
           ELEVENLABS_VOICE_ID: ${{ inputs.voice_id }}
           SCRIPT_B64: ${{ inputs.script_b64 }}
         run: |
@@ -39,6 +50,7 @@ jobs:
           npm run --silent cli -w @cak/tts-narration -- script --script /tmp/script.json --outdir "$RUNNER_TEMP/vo-out"
           ls -la "$RUNNER_TEMP/vo-out"
       - uses: actions/upload-artifact@v4
+        if: ${{ !inputs.verify_secrets_only }}
         with:
           name: narration
           path: ${{ runner.temp }}/vo-out

@@ -200,7 +200,8 @@ async function coupangDeeplink(env, productUrl) {
 }
 
 export async function onRequest(context) {
-  const { request, env } = context;
+  const { request } = context;
+  const env = context.data?.credentialEnv || context.env;
   const url = new URL(request.url);
   // 리뷰 확정 결함 수정: pathname 은 퍼센트 인코딩됨 — 한글 슬러그 라우팅을 위해 디코드
   const path = decodeURIComponent(url.pathname).replace(/^\/api\//, '');

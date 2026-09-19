@@ -36,7 +36,7 @@ function kitEnv() {
       if (m) extra[m[1]] = m[2];
     }
   }
-  return { ...process.env, ...extra };
+  return { ...extra, ...process.env };
 }
 
 const ENV = kitEnv();

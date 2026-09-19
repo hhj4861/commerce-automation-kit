@@ -3,6 +3,10 @@ name: music-remote
 on:
   workflow_dispatch:
     inputs:
+      verify_secrets_only:
+        description: "Verify Cloudflare credentials without generating media"
+        type: boolean
+        default: false
       brief_b64:
         description: "MusicBrief JSON (base64)"
         required: true
@@ -10,6 +14,7 @@ on:
 
 permissions:
   contents: read
+  id-token: write
 
 jobs:
   music:
@@ -21,16 +26,23 @@ jobs:
         with:
           node-version: "20"
           cache: npm
-      - run: npm install --no-package-lock --no-audit --no-fund
-      - name: Generate music
+      - name: Load credentials from Cloudflare
         env:
-          ELEVENLABS_API_KEY: ${{ secrets.ELEVENLABS_API_KEY }}
+          CAK_SECRETS_URL: ${{ vars.CAK_SECRETS_URL }}
+          CAK_SECRETS_ACTION: ${{ inputs.verify_secrets_only && 'verify' || 'load' }}
+        run: node apps/credential-broker/github-client.mjs
+      - run: npm install --no-package-lock --no-audit --no-fund
+        if: ${{ !inputs.verify_secrets_only }}
+      - name: Generate music
+        if: ${{ !inputs.verify_secrets_only }}
+        env:
           BRIEF_B64: ${{ inputs.brief_b64 }}
         run: |
           printf '%s' "$BRIEF_B64" | base64 -d > /tmp/brief.json
           npm run --silent cli -w @cak/ai-music -- generate --brief /tmp/brief.json --backend elevenlabs --out "$RUNNER_TEMP/bgm.mp3"
           ls -la "$RUNNER_TEMP/bgm.mp3"
       - uses: actions/upload-artifact@v4
+        if: ${{ !inputs.verify_secrets_only }}
         with:
           name: bgm
           path: ${{ runner.temp }}/bgm.mp3

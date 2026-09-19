@@ -1,0 +1,101 @@
+{
+  "name": "cak-credential-broker",
+  "main": "worker.mjs",
+  "compatibility_date": "2026-09-01",
+  "account_id": "8707f7095965c1c134cd93e0b68248ca",
+  "workers_dev": true,
+  "preview_urls": false,
+  "observability": {
+    "enabled": false
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "shopshorts",
+      "database_id": "19e3ee3c-87d5-483e-b420-50f2814c45b8"
+    }
+  ],
+  "vars": {
+    "STORE_ID": "de2c8d7c3e9c4067acc22212522c0fc4",
+    "BROKER_URL": "https://cak-credential-broker.guswhd1085.workers.dev",
+    "RUNNER_PUBLIC_JWK": "{\"crv\":\"Ed25519\",\"x\":\"Gdu3rj0RqgHpDNNPdXpPNE7PUxrEiz5YKSltS3tVKDE\",\"kty\":\"OKP\"}",
+    "GITHUB_ALLOWED_REFS": "refs/heads/main,refs/heads/feat/common-video-generator"
+  },
+  "secrets_store_secrets": [
+    {
+      "binding": "VAULT_KEY",
+      "store_id": "de2c8d7c3e9c4067acc22212522c0fc4",
+      "secret_name": "CAK_VAULT_KEY"
+    },
+    {
+      "binding": "SS_NAVER_CLIENT_ID",
+      "store_id": "de2c8d7c3e9c4067acc22212522c0fc4",
+      "secret_name": "CAK_NAVER_CLIENT_ID"
+    },
+    {
+      "binding": "SS_NAVER_CLIENT_SECRET",
+      "store_id": "de2c8d7c3e9c4067acc22212522c0fc4",
+      "secret_name": "CAK_NAVER_CLIENT_SECRET"
+    },
+    {
+      "binding": "SS_TELEGRAM_BOT_TOKEN",
+      "store_id": "de2c8d7c3e9c4067acc22212522c0fc4",
+      "secret_name": "CAK_TELEGRAM_BOT_TOKEN"
+    },
+    {
+      "binding": "SS_TELEGRAM_CHAT_ID",
+      "store_id": "de2c8d7c3e9c4067acc22212522c0fc4",
+      "secret_name": "CAK_TELEGRAM_CHAT_ID"
+    },
+    {
+      "binding": "SS_SHOPSHORTS_CLOUD_URL",
+      "store_id": "de2c8d7c3e9c4067acc22212522c0fc4",
+      "secret_name": "CAK_SHOPSHORTS_CLOUD_URL"
+    },
+    {
+      "binding": "SS_SHOPSHORTS_TOKEN",
+      "store_id": "de2c8d7c3e9c4067acc22212522c0fc4",
+      "secret_name": "CAK_SHOPSHORTS_TOKEN"
+    },
+    {
+      "binding": "SS_ELEVENLABS_API_KEY",
+      "store_id": "de2c8d7c3e9c4067acc22212522c0fc4",
+      "secret_name": "CAK_ELEVENLABS_API_KEY"
+    },
+    {
+      "binding": "SS_UPLOAD_POST_API_KEY",
+      "store_id": "de2c8d7c3e9c4067acc22212522c0fc4",
+      "secret_name": "CAK_UPLOAD_POST_API_KEY"
+    },
+    {
+      "binding": "SS_UPLOAD_POST_USER",
+      "store_id": "de2c8d7c3e9c4067acc22212522c0fc4",
+      "secret_name": "CAK_UPLOAD_POST_USER"
+    },
+    {
+      "binding": "SS_PEXELS_API_KEY",
+      "store_id": "de2c8d7c3e9c4067acc22212522c0fc4",
+      "secret_name": "CAK_PEXELS_API_KEY"
+    },
+    {
+      "binding": "SS_GEMINI_API_KEY",
+      "store_id": "de2c8d7c3e9c4067acc22212522c0fc4",
+      "secret_name": "CAK_GEMINI_API_KEY"
+    },
+    {
+      "binding": "SS_YOUTUBE_API_KEY",
+      "store_id": "de2c8d7c3e9c4067acc22212522c0fc4",
+      "secret_name": "CAK_YOUTUBE_API_KEY"
+    },
+    {
+      "binding": "SS_GOOGLE_CLIENT_ID",
+      "store_id": "de2c8d7c3e9c4067acc22212522c0fc4",
+      "secret_name": "CAK_GOOGLE_CLIENT_ID"
+    },
+    {
+      "binding": "SS_SHOPSHORTS_SESSION_SECRET",
+      "store_id": "de2c8d7c3e9c4067acc22212522c0fc4",
+      "secret_name": "CAK_SHOPSHORTS_SESSION_SECRET"
+    }
+  ]
+}

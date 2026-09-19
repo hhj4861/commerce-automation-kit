@@ -8,6 +8,12 @@ on:
     - cron: "0 0,6 * * *"
   workflow_dispatch:
     inputs:
+      secrets_mode:
+        description: "Cloudflare secrets: run, verify, or one-time import"
+        required: false
+        type: choice
+        options: [run, verify, import]
+        default: run
       send_telegram:
         description: "Send trend and blog Top 10 reports to Telegram"
         required: true
@@ -16,6 +22,7 @@ on:
 
 permissions:
   contents: read
+  id-token: write
 
 concurrency:
   group: keyword-intel-sync
@@ -23,6 +30,7 @@ concurrency:
 
 jobs:
   collect-and-report:
+    if: ${{ inputs.secrets_mode != 'import' && inputs.secrets_mode != 'verify' }}
     runs-on: ubuntu-latest
     timeout-minutes: 45
     defaults:
@@ -33,15 +41,7 @@ jobs:
       DB_PATH: ./data/poc-intel.db
       TREND_TIME_UNIT: date
       TREND_LOOKBACK_DAYS: "14"
-      NAVER_CLIENT_ID: ${{ secrets.NAVER_CLIENT_ID }}
-      NAVER_CLIENT_SECRET: ${{ secrets.NAVER_CLIENT_SECRET }}
-      NAVER_AD_CUSTOMER_ID: ${{ secrets.NAVER_AD_CUSTOMER_ID }}
-      NAVER_AD_API_KEY: ${{ secrets.NAVER_AD_API_KEY }}
-      NAVER_AD_SECRET_KEY: ${{ secrets.NAVER_AD_SECRET_KEY }}
-      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-      TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-      SHOPSHORTS_CLOUD_URL: ${{ secrets.SHOPSHORTS_CLOUD_URL }}
-      SHOPSHORTS_TOKEN: ${{ secrets.SHOPSHORTS_TOKEN }}
+
 
     steps:
       - name: Checkout
@@ -59,6 +59,12 @@ jobs:
         # Keep the POC isolated: resolve dependencies on the ephemeral runner without
         # rewriting or committing the repository lockfile.
         run: npm install --no-package-lock --no-audit --no-fund
+
+      - name: Load credentials from Cloudflare
+        working-directory: .
+        env:
+          CAK_SECRETS_URL: ${{ vars.CAK_SECRETS_URL }}
+        run: node apps/credential-broker/github-client.mjs
 
       - name: Validate required secrets
         shell: bash
@@ -79,7 +85,7 @@ jobs:
             done
           fi
           if (( ${#missing[@]} > 0 )); then
-            echo "::error::Missing GitHub Actions secrets: ${missing[*]}"
+            echo "::error::Missing Cloudflare credentials: ${missing[*]}"
             exit 1
           fi
 
@@ -177,3 +183,35 @@ jobs:
           path: packages/keyword-intel/data/poc-intel.db
           if-no-files-found: warn
           retention-days: 7
+
+  cloudflare-secrets:
+    if: ${{ github.event_name == 'workflow_dispatch' && (inputs.secrets_mode == 'import' || inputs.secrets_mode == 'verify') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Verify Cloudflare credentials
+        if: ${{ inputs.secrets_mode == 'verify' }}
+        env:
+          CAK_SECRETS_URL: ${{ vars.CAK_SECRETS_URL }}
+          CAK_SECRETS_ACTION: verify
+        run: node apps/credential-broker/github-client.mjs
+      - name: One-time sealed migration to Cloudflare
+        if: ${{ inputs.secrets_mode == 'import' }}
+        env:
+          CAK_SECRETS_URL: ${{ vars.CAK_SECRETS_URL }}
+          CAK_SECRETS_ACTION: import
+          NAVER_CLIENT_ID: ${{ secrets.NAVER_CLIENT_ID }}
+          NAVER_CLIENT_SECRET: ${{ secrets.NAVER_CLIENT_SECRET }}
+          NAVER_AD_CUSTOMER_ID: ${{ secrets.NAVER_AD_CUSTOMER_ID }}
+          NAVER_AD_API_KEY: ${{ secrets.NAVER_AD_API_KEY }}
+          NAVER_AD_SECRET_KEY: ${{ secrets.NAVER_AD_SECRET_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          SHOPSHORTS_CLOUD_URL: ${{ secrets.SHOPSHORTS_CLOUD_URL }}
+          SHOPSHORTS_TOKEN: ${{ secrets.SHOPSHORTS_TOKEN }}
+          ELEVENLABS_API_KEY: ${{ secrets.ELEVENLABS_API_KEY }}
+        run: node apps/credential-broker/github-client.mjs

@@ -52,14 +52,19 @@ npm run cloud:deploy -w @cak/app-shopshorts
 - Pages 시크릿: `SHOPSHORTS_TOKEN`
 - 딥링크 사용 시: `COUPANG_ACCESS_KEY`, `COUPANG_SECRET_KEY`
 
-로컬 워커 환경에는 `SHOPSHORTS_CLOUD_URL`과 동일한 `SHOPSHORTS_TOKEN`이 필요하다.
+중앙 비밀정보 관리는 [credential-broker](../credential-broker/README.md)를 사용한다.
+Pages는 `CREDENTIALS` 서비스 바인딩으로 Secrets Store 값을 받고, GitHub Actions는
+저장소 OIDC로 필요한 키만 받는다. OAuth 인증정보는 별도 암호화 D1 저장소에 보관한다.
+실행기도 중앙 저장소를 사용하려면 `npm run start:cloud-secrets -w @cak/app-shopshorts`
+또는 `npm run worker:cloud-secrets -w @cak/app-shopshorts`로 시작한다.
+기존 로컬 실행 명령은 `.env` 모드이며 자동으로 실행 중인 서버를 전환하지 않는다.
 
 ## 키워드 동기화
 
 `.github/workflows/keyword-intel-sync.yml`이 매시 7분·37분에 실행되어 트렌드·블로그
 키워드를 채널별로 D1에 전송한다. Mac 워커는 키워드를 전송하지 않고 영상 작업만 담당한다.
 
-GitHub Actions 시크릿:
+Cloudflare에서 GitHub Actions 실행 시 제공하는 값(기본 브랜치 이전 완료 전에는 기존 GitHub 시크릿 유지):
 
 - `NAVER_CLIENT_ID`, `NAVER_CLIENT_SECRET`
 - `NAVER_AD_CUSTOMER_ID`, `NAVER_AD_API_KEY`, `NAVER_AD_SECRET_KEY`

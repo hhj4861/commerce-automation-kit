@@ -1,5 +1,11 @@
 import { authRoute, googleUser, legacyAuthorized, sameOrigin } from '../lib/google-auth.js';
-export async function onRequest({ request, env, next }) {
+import { cloudSecrets } from '../lib/cloud-secrets.js';
+export async function onRequest(context) {
+  const { request, next } = context;
+  let env;
+  try { env = await cloudSecrets(context.env); }
+  catch { return Response.json({ error: '인증 설정을 불러올 수 없습니다.' }, { status: 503, headers: { 'cache-control': 'no-store' } }); }
+  context.data.credentialEnv = env;
   const url = new URL(request.url);
   const response = await authRoute(request, env);
   if (response) return response;
