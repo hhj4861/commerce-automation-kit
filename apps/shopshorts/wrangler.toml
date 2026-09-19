@@ -14,4 +14,11 @@ binding = "MEDIA"
 bucket_name = "shopshorts-media"
 
 [vars]
-# 원격 접속 토큰은 시크릿으로: npx wrangler pages secret put SHOPSHORTS_TOKEN
+GOOGLE_AUTH_MODE = "gis"
+SHOPSHORTS_ORIGIN = "https://shopshorts-dash.pages.dev"
+SHOPSHORTS_GOOGLE_ALLOW_SIGNUPS = "1"
+# Static credentials are resolved through the internal service binding.
+
+[[services]]
+binding = "CREDENTIALS"
+service = "cak-credential-broker"

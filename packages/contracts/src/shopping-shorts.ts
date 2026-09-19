@@ -1,3 +1,6 @@
+import type { AdVideoTier } from './ad-video-job.js';
+import type { PreparedShortsVideo, VideoCreativeDirection } from './video-generation.js';
+
 /**
  * shopping-shorts (원자 #12) ↔ 소비자 계약.
  *
@@ -155,6 +158,13 @@ export type ShoppingShortsStatus =
 export interface ShoppingShortsJob {
   brief: ShoppingShortsBrief;
   script: ShortsScript;
+  /** 공통 생성기에 전달할 근거·고유성·서사 검토. 승인 전 초안에 함께 등록한다. */
+  videoDirection?: VideoCreativeDirection;
+  /** 기본 standard — 광고와 같은 품질 설정. */
+  videoTier?: AdVideoTier;
+  /** 승인 후 공통 생성기가 발급한 클립별 계획. */
+  videoGeneration?: PreparedShortsVideo;
+  videoGenerationError?: string;
   status: ShoppingShortsStatus;
   /** 반려/검수 노트 */
   note?: string;

@@ -3,6 +3,13 @@
 공용 UI, 로컬 실행 서버·워커, Cloudflare Pages Functions·D1·R2 구성을 한 디렉터리에서 관리한다.
 UI·상태는 클라우드에서도 사용할 수 있고, ffmpeg·TTS·클립 생성 같은 무거운 실행은 로컬 Mac 워커가 담당한다.
 
+영상의 기획 검증·프롬프트·품질 설정은 **광고 기반 공통 생성기**를 사용한다.
+초안의 `videoDirection`(근거·고유성·서사)과 `videoTier`(기본 `standard`)를 받아,
+승인 후 `videoGeneration.plan`을 발급한다. 로컬 서버와 클라우드 워커가 같은 CLI를 호출한다.
+실제 힉스필드 호출은 이 계획을 읽는 제작 세션이 담당한다.
+계획 누락/입력 변경/클립 수 불일치는 `generated` 전이를 거부한다.
+[입력 예제·공통 실행 절차](../../docs/VIDEO-GENERATION.md)
+
 ```
 [Pages 공용 UI + Functions API + D1 큐 + R2 영상]
              ▲ 결과 업로드          │ 사람 승인·작업 요청
@@ -15,6 +22,8 @@ UI·상태는 클라우드에서도 사용할 수 있고, ffmpeg·TTS·클립 �
 - `functions/` — Cloudflare Pages API와 인증 미들웨어
 - `server.mjs` — 로컬 API와 정적 UI 서버
 - `worker.mjs` — 클라우드 큐의 lint·TTS·조립 실행자
+- `video-generation.mjs` — 공통 생성기 CLI 브릿지
+- `lib/video-generation.js` — 로컬/클라우드의 생성 입력 매핑·계획 신선도 검사
 - `schema.sql` — D1 스키마
 - `migrations/` — 기존 D1에 적용하는 증분 스키마
 - `wrangler.toml` — Pages·D1·R2 배포 설정
@@ -27,6 +36,7 @@ npm start -w @cak/app-shopshorts     # http://127.0.0.1:5178 (127.0.0.1 바인�
 ```
 
 데이터: `apps/shopshorts/data/jobs.json` (gitignore — 운영 데이터).
+검증용 데이터 경로는 `SHOPSHORTS_DATA_DIR`, 포트는 `SHOPSHORTS_PORT`로 격리할 수 있다.
 
 ## Cloudflare 실행·배포
 
@@ -42,14 +52,19 @@ npm run cloud:deploy -w @cak/app-shopshorts
 - Pages 시크릿: `SHOPSHORTS_TOKEN`
 - 딥링크 사용 시: `COUPANG_ACCESS_KEY`, `COUPANG_SECRET_KEY`
 
-로컬 워커 환경에는 `SHOPSHORTS_CLOUD_URL`과 동일한 `SHOPSHORTS_TOKEN`이 필요하다.
+중앙 비밀정보 관리는 [credential-broker](../credential-broker/README.md)를 사용한다.
+Pages는 `CREDENTIALS` 서비스 바인딩으로 Secrets Store 값을 받고, GitHub Actions는
+저장소 OIDC로 필요한 키만 받는다. OAuth 인증정보는 별도 암호화 D1 저장소에 보관한다.
+실행기도 중앙 저장소를 사용하려면 `npm run start:cloud-secrets -w @cak/app-shopshorts`
+또는 `npm run worker:cloud-secrets -w @cak/app-shopshorts`로 시작한다.
+기존 로컬 실행 명령은 `.env` 모드이며 자동으로 실행 중인 서버를 전환하지 않는다.
 
 ## 키워드 동기화
 
 `.github/workflows/keyword-intel-sync.yml`이 매시 7분·37분에 실행되어 트렌드·블로그
 키워드를 채널별로 D1에 전송한다. Mac 워커는 키워드를 전송하지 않고 영상 작업만 담당한다.
 
-GitHub Actions 시크릿:
+Cloudflare에서 GitHub Actions 실행 시 제공하는 값(기본 브랜치 이전 완료 전에는 기존 GitHub 시크릿 유지):
 
 - `NAVER_CLIENT_ID`, `NAVER_CLIENT_SECRET`
 - `NAVER_AD_CUSTOMER_ID`, `NAVER_AD_API_KEY`, `NAVER_AD_SECRET_KEY`
@@ -84,7 +99,8 @@ draft ──(게이트1: lint 재검증+사람 승인)──> script-approved �
 | POST | `/api/jobs` | 잡 등록(draft 고정, 등록 시 lint 자동 실행) — 스킬의 입구 |
 | POST | `/api/jobs/:id/transition` | `{to, note?, clipPaths?, previewVideo?, outputVideo?, publishRef?}` — 허용 전이만 |
 | POST | `/api/jobs/:id/lint` | 원자 lint 재실행 + 리포트 저장 |
-| POST | `/api/jobs/:id/estimate?model=` | 원자 견적 |
+| POST | `/api/jobs/:id/estimate` | 공통 생성기의 videoTier 기준 참고 견적(실제 비용은 MCP 프리플라이트) |
+| PUT | `/api/jobs/:id/video-direction` | `{videoDirection, videoTier?}` — 초안/반려 상태에서 공통 생성 기획 보완 |
 | GET | `/api/hot-keywords` | keyword-intel 상위 후보 3개(큐 중복 제외, 10분 캐시) + 초안 요청 목록 |
 | POST | `/api/draft-requests` | `{topic, contentType, opportunity?}` — 초안 요청 큐. **contentType: shorts 활성 / ad·blog·music 예약 슬롯**(콘텐츠 유형 확장 심). Claude 세션 모니터가 감지해 대본 작성→잡 등록 |
 | POST | `/api/draft-requests/:slug/done` | 초안 완료 처리(요청 제거) |
@@ -120,3 +136,91 @@ LLM 이 필요한 단계(대본·클립 생성)는 Claude 세션 모니터가, �
 - **변환 생성자는 Claude 세션 모니터**다: `/api/keyword-research/pending` 을 감지해 변환을 만들어
   PUT(`x-shopshorts-worker` 헤더)으로 채운다. 세션이 없으면 pending 이 유지되며 UI 는 3분 후 폴링을 멈추고
   재시도를 안내한다(무한 폴링 방지). 상위 트렌드 키워드는 미리 시드되어 즉시 뜬다.
+
+## 영상 제작실 (2026-09-18)
+
+대시보드의 **새 쇼츠 만들기**, 또는 `/studio`에서 시작한다.
+
+- **자동**: 기존 `/trends`의 네이버 소재 추천·초안·기존 제작 큐를 유지한다.
+- **수동**: 기획 → 시나리오 → 이미지·영상 → 편집 → 업로드. 프로젝트는 자동 큐와 별도 저장한다.
+- 카테고리: 심리학, 건축학, 상품광고, 막장드라마, 역사, 과학, 직접 입력. 숏폼은 9:16/최대 180초, 롱폼은 16:9/최대 600초.
+- 장면 단위 대본 편집, 이미지/영상 혼합, 직접 제작하거나 사용권이 있는 파일 등록(50MB), 드래그/키보드 버튼 순서 조절, 장면 길이, 배경음 파일·음량, Yooni/Claire/무음 선택을 지원한다.
+- 편집기는 30fps 비파괴 타임라인이다. 원본 장면을 여러 클립으로 나누고 프레임 단위로 시작/끝을 자르거나, 복사·잘라내기·붙여넣기·삭제·순서 변경·실행 취소/다시 실행할 수 있다. 원본 파일은 변경하지 않는다. 최대 300클립이며 원본 범위는 클립마다 0~900프레임이다. 원본 영상보다 긴 구간은 반복한다.
+- 자막은 클립별로 삽입하거나 대본에서 가져온다. 글꼴(나눔고딕/나눔명조/나눔손글씨), 크기, 색상, 위치, 반투명 배경, 시작/끝 프레임을 편집한다. 분할·복사·트리밍 시 연결 자막도 함께 조정된다. 같은 OFL 폰트를 브라우저와 ffmpeg에서 사용하고 최종 영상에 번인한다. 긴 자막은 직접 줄바꿈해 화면 안에 맞춘다.
+- 목소리를 클릭하면 ElevenLabs의 공식 공개 샘플을, 등록한 배경음을 클릭하면 실제 파일을 재생한다. 오디오 컨트롤로 정지할 수 있다. 타임라인 재생은 영상·자막·BGM을 함께 보여주며, **내 대본의 음성 생성은 최종 영상 만들기에서만 실행**된다. 샘플 청취는 음성 생성 호출을 하지 않는다.
+- 단축키: B 분할, ⌘/Ctrl+C/X/V 복사/잘라내기/붙여넣기, Delete 삭제, ⌘/Ctrl+Z 실행 취소, ⌘/Ctrl+Shift+Z 다시 실행, ⌘/Ctrl+S 저장, Space 재생, ←/→ 1프레임 이동. 숫자 입력 또는 타임라인 가장자리 드래그로 프레임을 자르고, 클립 드래그 또는 앞/뒤 버튼으로 순서를 바꾼다.
+- 기존 편집 데이터는 열 때 새 타임라인으로 변환하고 저장할 때 version 2로 영속화한다. **편집 저장** 후 재접속해 이어서 편집한다. CapCut의 [분할·재배치](https://www.capcut.com/tools/split-scene)와 [텍스트 도구](https://www.capcut.com/tools/text)를 참고한 기본 편집 구성이다. 다중 영상 레이어·전환 효과·키프레임·자동 받아쓰기·효과 라이브러리는 아직 제공하지 않는다.
+- 대본 검수 후 생성, 최종 영상 검수 후 업로드하는 두 사람 게이트를 유지한다. 편집이 바뀌면 최종 영상을 무효화한다. 영상 원본 오디오는 제거한다. 새 타임라인에서는 내레이션도 원본 시작/끝에 맞춰 자른다. 긴 음성을 모두 담으려면 클립 끝을 늘려야 한다. 기존 편집 형식은 목소리가 장면보다 길 때 편집을 요청하는 동작을 유지한다.
+- 광고 카테고리는 기존 shopping-shorts CLI의 표현 lint를 생성·조립·발행 전에 다시 호출하며 `(광고)`를 영상과 설명에 추가한다. 긴 시나리오는 기존 계약의 12비트 단위로 lint한다. 설명과 API에 AI 생성 표시를 전달한다.
+
+### Google 로그인 / 계정 등록
+
+`/login`이 로그인 전 홈이며 로고도 `/login`으로 연결된다. Google 로그인 성공 후 홈은 `/`이다. 로그인된 사용자가 `/login`에 접근하면 `/`로 이동하며, 데스크톱·모바일 홈 상단의 로그아웃 버튼은 세션 쿠키를 삭제하고 `/login`으로 돌아간다. `/login`에서 가입·로그인 및 OAuth 등록 상태를 확인한다. 첫 로그인도 동일한 Google 인증으로 처리하며, 별도 비밀번호를 받지 않는다. **현재 하나의 공유 운영 워크스페이스**로, 로그인한 계정끼리 프로젝트를 공유한다. 전체 계정 가입은 아래 설정으로 허용하며 사용자별 테넌트 격리는 제공하지 않는다.
+
+로컬은 kit `.env` 또는 프로세스 환경(프로세스 설정 우선), Pages는 배포 환경의 secret/변수에 다음을 설정한다. 실제 비밀값은 저장소에 넣지 않는다.
+
+```text
+GOOGLE_AUTH_MODE=gis
+GOOGLE_CLIENT_ID=<웹 애플리케이션 OAuth 클라이언트 ID>
+SHOPSHORTS_ORIGIN=http://127.0.0.1:5198
+SHOPSHORTS_SESSION_SECRET=<무작위 32자 이상 문자열>
+SHOPSHORTS_GOOGLE_ALLOW_SIGNUPS=1
+```
+
+`replay-live-poc`과 같은 Google Identity Services 버튼/팝업 방식이다. Client Secret은 필요 없다. Google Cloud의 해당 웹 클라이언트 **승인된 JavaScript 원본**에 `http://127.0.0.1:5198`을 등록한다. `localhost`로도 사용할 경우 `http://localhost`와 `http://localhost:5198`도 등록한다. 기존 다른 앱의 원본은 유지한다. 클라이언트 ID를 연결한 것과 Google 콘솔의 출처 등록·실제 사용자 로그인 성공은 별개다.
+
+`SHOPSHORTS_GOOGLE_ALLOW_SIGNUPS=1`이면 이메일 허용 목록 없이 검증된 모든 Google 계정이 로그인한다. 기본값은 `0`이며 그 경우 `SHOPSHORTS_GOOGLE_ALLOWED_EMAILS`를 설정한다. 현재 앱은 **공유 워크스페이스**이므로 모든 로그인 사용자가 같은 콘텐츠에 접근한다. 사용자별 테넌트·데이터 격리는 제공하지 않는다. 공개 가입 설정은 운영 배포에 자동 적용되지 않는다.
+
+서버가 발급한 5분 nonce를 HttpOnly 서명 쿠키에 연결하고, ID 토큰은 `jose`와 Google 공식 JWKS로 RS256 서명·issuer·audience·만료·nonce·검증된 이메일을 검사한다. 성공하면 24시간 HttpOnly/SameSite 앱 세션 쿠키를 발급한다. HTTPS에서는 Secure를 적용한다. Google 토큰은 보관하지 않는다. 세션 서명키는 앱별로 따로 발급하며, 로그아웃은 앱 쿠키를 제거한다.
+
+로컬에서도 로그인 없이 내부 페이지에 접근하면 `/login`으로 이동하며 API는 401을 반환한다. 기존 `SHOPSHORTS_TOKEN` 워커 Bearer 인증과 관리자 링크는 유지한다. Google 로그인은 운영 앱 인증이며 YouTube 업로드 권한을 주지 않는다.
+
+기존 authorization-code 방식을 유지하려면 `GOOGLE_AUTH_MODE=code`와 `GOOGLE_CLIENT_SECRET`을 설정하고 `${SHOPSHORTS_ORIGIN}/auth/google/callback`을 승인된 리디렉션 URI에 등록한다. 이 경로의 state·PKCE·userinfo 검증과 로그인 후 `/` 이동도 유지된다.
+
+근거: [Google GIS 설정](https://developers.google.com/identity/gsi/web/guides/get-google-api-clientid), [서버 ID 토큰 검증](https://developers.google.com/identity/gsi/web/guides/verify-google-id-token).
+
+### 생성/편집 워커 설정
+
+기존 자동 모드의 Seedance/힉스필드 흐름은 변경하지 않는다. 수동 모드는 서버에서 호출할 수 있는 공식 Gemini REST API를 사용한다. 모델별 계정 권한·지원 여부·과금은 공급자에서 확인해야 하며 미실측 단가를 UI에 추정 표시하지 않는다.
+
+| 기능 | 제작 서버/워커 환경 |
+|---|---|
+| 대본 | `GEMINI_API_KEY`, `SHOPSHORTS_TEXT_MODEL` (기본 `gemini-2.5-flash`) |
+| 이미지 | 같은 키, `SHOPSHORTS_IMAGE_MODEL` (기본 `gemini-2.5-flash-image`) |
+| 영상 | 같은 키, `SHOPSHORTS_VIDEO_MODEL` (기본 `veo-3.1-generate-preview`) |
+| 음성 | `ELEVENLABS_API_KEY`; 선택 보이스가 해당 계정에서 사용 가능해야 함 |
+| 숏폼 업로드 | `UPLOAD_POST_API_KEY`, `UPLOAD_POST_USER`; 플랫폼 연결 완료 필요 |
+| 롱폼 업로드 | `YOUTUBE_CLIENT_SECRET`, 기존 youtube-upload OAuth 인증 토큰 |
+
+영상은 1080p/8초 클립을 생성하고 편집 시 지정 길이에 맞춰 반복/자른다. 영상 생성 요청 ID와 음성 결과를 로컬에 저장해 재시도 시 재사용한다. 실패는 프로젝트에 기록한다. 업로드는 실제 전송 직전에 `submitting` 기록을 남기고 중복 실행을 차단한다. 플랫폼 응답이 불명확하면 재전송하지 말고 플랫폼과 요청 ID를 먼저 확인한다. 접수된 Upload-Post 작업은 최대 10분까지 폴링하며, 이후 계속 처리 중이면 접수 상태와 요청 ID를 표시한다.
+
+- 로컬 서버: 자체 제작 루프, `data/studio-projects.json`, `data/studio-media`, `data/studio-work`. 로컬 데이터 디렉터리당 서버 하나를 실행한다. 재시작 시 중단된 작업을 실패로 표시하고 자동 재과금하지 않는다.
+- Pages: `migrations/0005_studio.sql`을 D1에 적용 후 UI/Functions를 배포한다. `worker.mjs`를 같은 소스로 갱신·재시작해야 수동 큐를 처리한다. D1의 `studio_projects`, R2의 `studio/` prefix를 사용한다. 기존 워커 토큰으로만 작업 claim/결과 저장/미디어 전송을 허용하고 revision CAS로 중복 처리를 막는다.
+- 클라우드 워커가 강제 종료되면 실행 중 작업은 운영자가 실제 프로세스 종료와 외부 API 접수 여부를 확인한 후 복구해야 한다. 임의의 시간 초과로 유료 작업/업로드를 재실행하지 않는다.
+- 검증 서버: `SHOPSHORTS_STUDIO_RUNNER=off`로 유료 작업 실행을 끌 수 있다. 운영 데이터와 분리하려면 `SHOPSHORTS_DATA_DIR`와 `SHOPSHORTS_PORT`도 지정한다.
+
+### 검증 범위
+
+`npm test -w @cak/app-shopshorts`는 인증 state/PKCE/허용 목록/쿠키 변조, 사람 게이트, 작업 CAS, 편집 무효화, 로컬 영속화·복구, Range 전송, **실제 ffmpeg 이미지+영상+BGM 조립, 1프레임 클립 연결·소스 구간/순서·정확한 자막 프레임 및 한글 폰트 3종**, 기존 자동 제작 회귀를 검증한다. 외부 OAuth·유료 Gemini/ElevenLabs 실호출·실계정 게시와 운영 배포는 이 테스트에 포함하지 않는다.
+
+공식 참고: [Google 서버 OAuth](https://developers.google.com/identity/protocols/oauth2/web-server), [Google userinfo](https://developers.google.com/identity/openid-connect/openid-connect), [Gemini generateContent](https://ai.google.dev/api/generate-content), [이미지 생성](https://ai.google.dev/gemini-api/docs/image-generation), [Veo 영상 생성](https://ai.google.dev/gemini-api/docs/veo), [YouTube 합성 미디어 표시](https://developers.google.com/youtube/v3/docs/videos#status.containsSyntheticMedia).
+
+### 완료 훅의 잘못된 폴더 등록 복구
+
+`tools/task-finish-directory-recovery.py`는 설치된 전역 훅의 폴더 추적 오류 복구 패치다. `--apply`는 백업 후 적용하며, `cancel-empty-track --path <경로> --reason <근거>` 명령은 최초 등록부터 변경이 없고 현재도 존재하지 않는 경로만 감사 기록을 남겨 취소한다. 폴더에 파일이 생겼다면 본인 파일만 보존·이동한 후 비어 있는 폴더를 제거하고 취소한다. 완료 검증·도구 실행 기록·다른 경로 추적은 유지한다. 훅을 끄거나 상태 DB를 직접 수정하지 않는다. 검증: `python3 tools/test-task-finish-directory-recovery.py`.
+
+### 기획 LLM 추천 (2026-09-19)
+
+새 프로젝트 1단계의 **어떤 이야기를 만들까요?** / **분위기와 요청사항** 옆 `LLM 추천`을 누르면 선택한 카테고리·형식·길이·입력 내용을 바탕으로 후보 3개를 만든다. 주제 추천은 주제만 또는 주제+분위기를, 분위기 추천은 현재 주제를 유지하고 분위기만 적용할 수 있다. 적용 전에는 입력 내용을 변경하지 않으며, 저장된 프로젝트 기획은 기존처럼 읽기 전용이다.
+
+- 로컬 서버가 공식 `codex exec`를 실행해 이 Mac의 **기존 ChatGPT/Codex 구독 로그인**을 재사용한다. `codex login status`가 `Logged in using ChatGPT`여야 하며 미로그인 상태에서는 터미널에서 `codex login`한다. 인증 파일을 직접 읽거나 토큰을 복사하지 않고 CLI가 갱신을 관리한다. Gemini 키나 별도 OpenAI API 키는 추천 기능에 필요하지 않다.
+- 모델은 Codex의 현재 설정을 따른다. 추천 전용 모델을 지정하려면 `SHOPSHORTS_CODEX_MODEL`을 설정한다. API 키 환경변수는 자식 프로세스에 전달하지 않고 `forced_login_method="chatgpt"`로 구독 로그인을 사용한다.
+- `POST /api/studio/recommendations` → 로컬 Codex → 내장 실시간 웹 검색 → JSON 추천 3개 순서다. 최근 30일 자료를 우선 검색하도록 요청하며, 기간 강제 필터나 검색량 순위를 보장하지 않는다. 실제 검색 완료 이벤트·출처·완성된 응답이 없으면 실패로 표시한다. 링크는 모델이 검색 후 반환한 참고 자료이며, 별도 진위 검증기는 아니다. 기존 자동 모드의 네이버 트렌드 경로는 유지한다.
+- 빈 임시 디렉터리에서 읽기 전용으로 실행한다. 셸·브라우저 조작·앱·하위 에이전트·이미지 생성 기능을 제한하고, CLI의 MCP 목록을 조회해 각 도구를 해당 실행에서 비활성화한 뒤 다시 확인한다. 기존 훅·신뢰·인증 설정은 유지한다. 완료 후 임시 디렉터리는 삭제한다.
+- 한 번에 추천 1개 요청만 실행한다. 중복 요청은 429, 생성 3분 초과는 504, 취소/페이지 이탈은 프로세스 종료로 처리한다. 실패 시 자동 재시도하거나 다른 유료 API로 전환하지 않는다. `SHOPSHORTS_STUDIO_RUNNER=off`에서도 추천 버튼의 명시적 요청은 실행되며 Codex 구독 사용 한도를 소비한다.
+- 적용 전에는 입력을 보존한다. 카테고리·형식·입력이 바뀌면 이전 추천을 취소하고 늦게 도착한 응답을 무시한다. 앱은 추천 검색 결과를 저장하지 않고, 사용자가 선택한 주제/연출만 기획에 저장한다. Codex는 `--ephemeral`로 실행한다.
+- Cloudflare Pages Functions에서는 로컬 CLI를 실행할 수 없으므로 503과 로컬 제작 서버 안내를 반환한다. 개인 구독 인증을 클라우드에 복사하지 않는다. 이번 연결 범위는 **1단계 기획 추천**이며, 시나리오·이미지·영상 생성의 기존 공급자 설정과는 별개다.
+
+검증(2026-09-19): 앱 테스트 73개 및 Pages Functions 빌드 통과. 로컬 5198 브라우저에서 실제 Codex 주제/분위기 추천, 출처 표시, 적용 전 입력 보존, 분위기 적용 시 주제 유지, 모바일 레이아웃 및 기획 저장을 확인했다. 테스트 프로젝트는 `/private/tmp/shopshorts-studio-ui`의 격리 데이터에만 저장했다.
+
+공식 참고: [Codex 비대화형 실행 및 저장된 로그인 재사용](https://developers.openai.com/codex/noninteractive), [인증](https://developers.openai.com/codex/auth), [웹 검색·로그인 방식 설정](https://developers.openai.com/codex/config-reference).

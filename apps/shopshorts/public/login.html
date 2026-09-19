@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#f7f7f4">
+<title>로그인 · Shopshorts</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@500;600;700&family=Noto+Sans+KR:wght@400;500;600;700&display=swap');
+
+  /* Match app-shell.css. Keep login styles inline: shell assets require authentication. */
+  :root {
+    --canvas: #f7f7f4; --surface: #fff; --surface-soft: #f1f2ed;
+    --ink: #242622; --muted: #73776f; --line: #e5e6df;
+    --brand: #ff6b4a; --brand-soft: #fff0eb;
+    --mint: #277e64; --mint-soft: #e7f4ee;
+    --red: #b54b42; --red-soft: #fbeae7;
+  }
+  * { box-sizing: border-box; }
+  html { color-scheme: light; }
+  body { margin: 0; background: var(--canvas); color: var(--ink); font: 14px "DM Sans", "Noto Sans KR", -apple-system, BlinkMacSystemFont, sans-serif; }
+  a { color: inherit; text-decoration: none; }
+  button { font: inherit; color: inherit; cursor: pointer; }
+  svg { display: block; flex-shrink: 0; }
+  [hidden] { display: none !important; }
+  a:focus-visible, button:focus-visible, summary:focus-visible { outline: 3px solid var(--mint); outline-offset: 4px; }
+  .page { max-width: 1160px; margin: auto; padding: 0 32px; }
+  .page-header { min-height: 88px; display: flex; align-items: center; justify-content: space-between; gap: 20px; border-bottom: 1px solid var(--line); }
+  .brand { display: inline-flex; align-items: center; gap: 11px; }
+  .brand-mark { width: 34px; height: 34px; border-radius: 11px; display: grid; place-items: center; background: var(--brand); color: #fff; box-shadow: inset 0 -2px 0 rgba(0,0,0,.08); }
+  .brand-name { font-size: 16px; font-weight: 700; letter-spacing: -.03em; }
+  .brand-name span { display: block; color: var(--muted); font-size: 10px; font-weight: 500; letter-spacing: .07em; margin-top: 1px; }
+  main { display: flex; align-items: center; min-height: calc(100svh - 150px); padding: 48px 0; }
+  .login-layout { width: 100%; display: grid; grid-template-columns: 1fr 1.08fr; border: 1px solid var(--line); border-radius: 24px; background: var(--surface); overflow: hidden; box-shadow: 0 12px 32px rgba(35,42,32,.05); }
+  .intro { display: flex; flex-direction: column; background: #20231f; color: #fff; padding: 48px 40px; }
+  .studio-label { display: flex; align-items: center; gap: 9px; color: #bcc5b8; font-size: 12px; margin: 0 0 44px; }
+  .studio-label svg { color: var(--brand); }
+  h1 { margin: 0; font-size: clamp(30px, 3.2vw, 40px); line-height: 1.4; font-weight: 700; letter-spacing: -.055em; word-break: keep-all; }
+  .intro-copy { margin: 20px 0 44px; max-width: 32ch; color: #bbc1b7; font-size: 13px; line-height: 1.9; word-break: keep-all; }
+  .flow { list-style: none; padding: 24px 0 0; margin: auto 0 0; border-top: 1px solid #3b4138; display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .flow li { display: flex; flex-direction: column; gap: 12px; font-size: 12px; color: #d2d7cd; }
+  .step-icon { width: 38px; height: 38px; display: grid; place-items: center; background: #30392f; color: #a8c8b5; border-radius: 11px; }
+  .flow li:first-child .step-icon { background: var(--brand-soft); color: #b34b33; }
+  .auth-panel { padding: 48px; align-self: center; min-width: 0; }
+  h2 { font-size: 25px; line-height: 1.4; letter-spacing: -.04em; margin: 0 0 12px; }
+  .description { color: var(--muted); line-height: 1.8; margin: 0 0 28px; font-size: 13px; word-break: keep-all; }
+  .google { display: flex; align-items: center; justify-content: center; gap: 12px; min-height: 52px; width: 100%; border: 1px solid #c5c9bf; border-radius: 12px; background: var(--surface); font-size: 14px; font-weight: 600; padding: 12px 16px; }
+  .google:not([aria-disabled=true]):hover { background: var(--surface-soft); border-color: #92998a; }
+  .google[aria-disabled=true] { color: var(--muted); background: var(--surface-soft); cursor: not-allowed; }
+  .google[aria-disabled=true] svg { opacity: .5; }
+  #google-identity { min-height: 44px; display: flex; justify-content: center; }
+  .account-note { color: var(--muted); font-size: 12px; line-height: 1.8; text-align: center; margin: 12px 0 26px; }
+  .privacy-note { display: flex; align-items: flex-start; gap: 10px; padding: 16px; border-radius: 12px; background: var(--surface-soft); color: #60665a; }
+  .privacy-note svg { margin-top: 3px; color: var(--mint); }
+  .privacy-note p { margin: 0; font-size: 12px; line-height: 1.8; word-break: keep-all; }
+  .privacy-note strong { display: block; color: var(--ink); font-weight: 500; margin-bottom: 4px; }
+  .status { margin: 0 0 18px; padding: 12px 14px; background: var(--mint-soft); color: #22624f; border-radius: 10px; font-size: 12px; line-height: 1.8; overflow-wrap: anywhere; }
+  .status[data-kind=error] { background: var(--red-soft); color: var(--red); }
+  .status[data-kind=warning] { background: #fff3d7; color: #805300; }
+  .retry { margin: 0 0 18px; }
+  .secondary { border: 1px solid var(--line); border-radius: 10px; background: #fff; min-height: 44px; padding: 10px 14px; font-size: 12px; }
+  .secondary:hover { background: var(--surface-soft); }
+  .secondary:disabled { color: var(--muted); cursor: wait; }
+  details { margin-top: 26px; border-top: 1px solid var(--line); padding-top: 10px; }
+  summary { cursor: pointer; color: var(--muted); font-size: 12px; padding: 12px 0; }
+  summary:hover { color: var(--ink); }
+  details ol { padding-left: 20px; margin: 10px 0; }
+  details li { font-size: 12px; line-height: 1.8; margin-bottom: 18px; color: #60665a; }
+  details a { color: var(--mint); text-decoration: underline; text-underline-offset: 3px; }
+  code { display: block; font-size: 11px; background: var(--surface-soft); padding: 12px; line-height: 1.9; overflow-wrap: anywhere; margin: 10px 0; border-radius: 8px; }
+  .hint { font-size: 11px; color: var(--muted); line-height: 1.8; overflow-wrap: anywhere; }
+  footer { padding-bottom: 24px; color: var(--muted); font-size: 11px; text-align: center; }
+  @media (max-width: 820px) {
+    .page { padding: 0 20px; }
+    .intro { padding: 36px 28px; }
+    .auth-panel { padding: 36px 28px; }
+    h1 { font-size: 30px; }
+  }
+  @media (max-width: 640px) {
+    .page { padding: 0 16px; }
+    .page-header { min-height: 74px; }
+    .brand-name span { display: none; }
+    main { min-height: auto; padding: 24px 0; }
+    .login-layout { grid-template-columns: 1fr; border-radius: 18px; }
+    .intro { padding: 28px 24px; }
+    .studio-label { margin-bottom: 18px; }
+    h1 { font-size: 29px; line-height: 1.35; }
+    .intro-copy { margin: 14px 0 0; max-width: 38ch; font-size: 12px; }
+    .flow { display: none; }
+    .auth-panel { padding: 30px 24px; }
+    h2 { font-size: 23px; }
+    .description { margin-bottom: 24px; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <header class="page-header">
+    <a class="brand" href="/login" aria-label="Shopshorts 로그인 홈">
+      <span class="brand-mark"><svg width="23" height="23" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.7c.5 4.7 2.7 7 7.3 7.5-4.6.5-6.8 2.8-7.3 7.5-.5-4.7-2.7-7-7.3-7.5 4.6-.5 6.8-2.8 7.3-7.5ZM19 15.5c.2 2 1.2 3 3 3.2-1.8.2-2.8 1.2-3 3.1-.2-1.9-1.2-2.9-3-3.1 1.8-.2 2.8-1.2 3-3.2Z" fill="currentColor"/></svg></span>
+      <span class="brand-name">Shopshorts<span>CONTENT STUDIO</span></span>
+    </a>
+  </header>
+  <main>
+    <div class="login-layout">
+      <section class="intro" aria-labelledby="intro-title">
+        <p class="studio-label"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="4"/><path d="m10 8 6 4-6 4Z"/></svg>나만의 콘텐츠 제작실</p>
+        <h1 id="intro-title">하나의 아이디어가<br>한 편의 영상으로.</h1>
+        <p class="intro-copy">트렌드에서 소재를 찾거나, 나만의 이야기로 시작하세요. 기획부터 편집과 업로드까지 한곳에서 이어집니다.</p>
+        <ol class="flow" aria-label="영상 제작 순서">
+          <li><span class="step-icon"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="m15 4 5 5M4 20l5-1L20 8a3.5 3.5 0 0 0-5-5L4 14Z"/></svg></span>기획</li>
+          <li><span class="step-icon"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="m12 3 2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5Z"/></svg></span>생성</li>
+          <li><span class="step-icon"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M4 7h16M4 17h16M8 4v6M16 14v6"/></svg></span>편집</li>
+          <li><span class="step-icon"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M12 16V3m-5 5 5-5 5 5M4 15v5h16v-5"/></svg></span>업로드</li>
+        </ol>
+      </section>
+      <section class="auth-panel" aria-labelledby="login-title">
+        <h2 id="login-title">제작을 이어가세요</h2>
+        <p class="description" id="login-description">Google 계정으로 로그인하고<br>나의 콘텐츠 작업을 한곳에서 관리하세요.</p>
+        <div id="status" class="status" role="status" aria-live="polite" aria-atomic="true">로그인 설정을 확인하고 있어요.</div>
+        <button id="retry" class="secondary retry" type="button" hidden>다시 확인하기</button>
+        <div id="signin">
+          <a class="google" id="google" role="link" aria-disabled="true" tabindex="-1" aria-describedby="account-note">
+            <svg width="20" height="20" viewBox="0 0 48 48" aria-hidden="true"><path fill="#4285f4" d="M43.61 24.46c0-1.36-.12-2.66-.35-3.92H24v7.43h11a9.42 9.42 0 0 1-4.08 6.18v5.14h6.61c3.87-3.56 6.08-8.81 6.08-14.83Z"/><path fill="#34a853" d="M24 44c5.51 0 10.13-1.83 13.51-4.96l-6.61-5.14c-1.83 1.23-4.17 1.98-6.9 1.98-5.32 0-9.84-3.59-11.45-8.43H5.72v5.3A20 20 0 0 0 24 44Z"/><path fill="#fbbc05" d="M12.55 27.45A12 12 0 0 1 11.91 24c0-1.2.22-2.36.62-3.45v-5.3H5.72A20 20 0 0 0 4 24c0 3.23.78 6.29 2.17 9l6.38-5.55Z"/><path fill="#ea4335" d="M24 12.12c3 0 5.68 1.03 7.8 3.05l5.85-5.85A19.64 19.64 0 0 0 24 4 20 20 0 0 0 5.72 15.25l6.83 5.3C14.16 15.71 18.68 12.12 24 12.12Z"/></svg>
+            Google로 계속하기
+          </a>
+          <div id="google-identity" hidden></div>
+          <p class="account-note" id="account-note">처음 이용하나요? 같은 버튼으로 가입할 수 있어요.</p>
+        </div>
+        <div class="privacy-note">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><rect x="5" y="10" width="14" height="11" rx="3"/><path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v3"/></svg>
+          <p><strong>Google 계정으로 시작하는 워크스페이스</strong>이름과 이메일을 로그인 확인에 사용합니다.<br>YouTube 업로드 채널은 로그인 후 별도로 연결해요.</p>
+        </div>
+        <details id="setup">
+          <summary>관리자용 로그인 설정 안내</summary>
+          <ol>
+            <li><a href="https://console.cloud.google.com/auth/clients" target="_blank" rel="noopener noreferrer">Google Cloud에서 웹 애플리케이션 OAuth 클라이언트 만들기</a><br>동의 화면과 테스트 사용자를 등록하세요.</li>
+            <li>Google Identity Services 모드에서는 승인된 JavaScript 원본에 현재 사이트 주소를 등록하세요. 코드 방식의 OAuth를 사용하는 경우에는 아래 콜백 주소를 리디렉션 URI로 등록하세요.<code id="redirect"></code><button class="secondary" id="copy" type="button">주소 복사</button></li>
+            <li>서버의 비밀 설정에 아래 값을 등록하고 다시 시작하세요. GIS 모드는 Client Secret이 필요 없습니다. 세션 서명 비밀은 Git에 저장하지 않습니다.<code>GOOGLE_AUTH_MODE=gis<br>GOOGLE_CLIENT_ID<br>SHOPSHORTS_ORIGIN<br>SHOPSHORTS_SESSION_SECRET (임의 문자열 32자 이상)<br>SHOPSHORTS_GOOGLE_ALLOW_SIGNUPS=1 (전체 Google 계정)</code></li>
+          </ol>
+          <p class="hint" id="missing"></p>
+        </details>
+        <noscript><p class="status" data-kind="warning">로그인하려면 브라우저에서 JavaScript를 켜고 새로고침하세요.</p></noscript>
+      </section>
+    </div>
+  </main>
+  <footer>Shopshorts Content Studio</footer>
+</div>
+<script>
+(() => {
+  const status = document.getElementById('status');
+  const google = document.getElementById('google');
+  const retry = document.getElementById('retry');
+  const redirect = document.getElementById('redirect');
+  const error = new URLSearchParams(location.search).get('error');
+  redirect.textContent = location.origin + '/auth/google/callback';
+  const showStatus = (message, kind = 'info') => {
+    status.textContent = message;
+    status.dataset.kind = kind;
+    status.hidden = false;
+  };
+  const setReady = ready => {
+    google.setAttribute('aria-disabled', String(!ready));
+    google.tabIndex = ready ? 0 : -1;
+    if (ready) google.setAttribute('href', '/auth/google/start');
+    else google.removeAttribute('href');
+  };
+  google.addEventListener('click', event => {
+    if (google.getAttribute('aria-disabled') === 'true') event.preventDefault();
+  });
+  const identityContainer = document.getElementById('google-identity');
+  let attempt = 0;
+  let expiryTimer;
+  function loadGoogleSdk() {
+    if (window.google?.accounts?.id) return Promise.resolve(window.google.accounts.id);
+    return new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      script.src = 'https://accounts.google.com/gsi/client';
+      script.async = true;
+      const timer = setTimeout(() => { script.remove(); reject(new Error('sdk')); }, 15000);
+      script.onload = () => {
+        clearTimeout(timer);
+        if (window.google?.accounts?.id) resolve(window.google.accounts.id);
+        else { script.remove(); reject(new Error('sdk')); }
+      };
+      script.onerror = () => { clearTimeout(timer); script.remove(); reject(new Error('sdk')); };
+      document.head.appendChild(script);
+    });
+  }
+  async function mountGoogle(data, currentAttempt) {
+    const [identity, response] = await Promise.all([
+      loadGoogleSdk(), fetch('/auth/google/challenge', { cache: 'no-store', signal: AbortSignal.timeout(10000) })
+    ]);
+    if (!response.ok) throw new Error('challenge');
+    const challenge = await response.json();
+    if (attempt !== currentAttempt) return;
+    let submitting = false;
+    const fail = message => {
+      if (attempt !== currentAttempt) return;
+      clearTimeout(expiryTimer);
+      identityContainer.hidden = true;
+      showStatus(message, 'error');
+      retry.hidden = false;
+    };
+    identity.initialize({
+      client_id: data.clientId, nonce: challenge.nonce, auto_select: false,
+      ux_mode: 'popup', use_fedcm_for_button: true,
+      callback: async result => {
+        if (submitting || attempt !== currentAttempt || Date.now() >= challenge.expiresAt) return;
+        submitting = true;
+        clearTimeout(expiryTimer);
+        identityContainer.hidden = true;
+        showStatus('Google 계정을 확인하고 있어요.');
+        try {
+          const response = await fetch('/auth/google/credential', {
+            method: 'POST', headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ credential: result.credential }), signal: AbortSignal.timeout(15000)
+          });
+          const body = await response.json();
+          if (!response.ok) throw new Error(body.error || 'Google 로그인을 완료하지 못했어요. 다시 시도해 주세요.');
+          if (attempt === currentAttempt) location.replace('/');
+        } catch (error) { fail(error.name === 'AbortError' ? '로그인 요청 시간이 지났어요. 다시 시도해 주세요.' : error.message); }
+      }
+    });
+    google.hidden = true;
+    identityContainer.hidden = false;
+    identityContainer.replaceChildren();
+    identity.renderButton(identityContainer, {
+      type: 'standard', theme: 'outline', size: 'large', text: 'continue_with',
+      shape: 'rectangular', locale: 'ko', width: Math.min(400, identityContainer.clientWidth || 300)
+    });
+    expiryTimer = setTimeout(() => fail('로그인 요청 시간이 지났어요. 다시 확인하기를 눌러 주세요.'), Math.max(0, challenge.expiresAt - Date.now()));
+  }
+  async function loadStatus() {
+    const currentAttempt = ++attempt;
+    clearTimeout(expiryTimer);
+    identityContainer.hidden = true;
+    google.hidden = false;
+    setReady(false);
+    retry.hidden = true;
+    showStatus('로그인 설정을 확인하고 있어요.');
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000);
+    try {
+      const response = await fetch('/auth/status', { signal: controller.signal, cache: 'no-store' });
+      if (!response.ok) throw new Error('status');
+      const data = await response.json();
+      redirect.textContent = data.redirectUri || location.origin + '/auth/google/callback';
+      document.getElementById('missing').textContent = data.ready ? '' : '설정 필요: ' + (data.missing || []).join(', ');
+      if (data.authenticated || data.user) { location.replace('/'); return; }
+      if (data.ready && data.mode === 'gis') await mountGoogle(data, currentAttempt);
+      else setReady(data.ready === true);
+      status.hidden = true;
+      if (!data.ready) showStatus('Google 로그인을 준비하고 있어요. 관리자에게 설정 확인을 요청해 주세요.', 'warning');
+      if (error) {
+        showStatus(({
+          cancelled: 'Google 로그인이 취소되었거나 만료됐어요. 아래 버튼으로 다시 시작해 주세요.',
+          access: '이 계정은 워크스페이스 사용 권한이 없어요. 허용된 Google 계정을 선택하거나 관리자에게 등록을 요청해 주세요.',
+          provider: 'Google 로그인을 완료하지 못했어요. 다시 시도하고, 계속 실패하면 관리자에게 문의해 주세요.'
+        })[error] || '로그인을 완료하지 못했어요. 아래 버튼으로 다시 시도해 주세요.', 'error');
+      }
+      if (error) history.replaceState(null, '', location.pathname);
+    } catch {
+      showStatus('로그인 설정을 불러오지 못했어요. 연결 상태를 확인하고 다시 시도해 주세요.', 'error');
+      identityContainer.hidden = true;
+      retry.hidden = false;
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+  retry.addEventListener('click', loadStatus);
+  document.getElementById('copy').addEventListener('click', async event => {
+    const button = event.currentTarget;
+    try {
+      await navigator.clipboard.writeText(redirect.textContent);
+      button.textContent = '주소 복사됨';
+    } catch {
+      showStatus('자동 복사가 안 됐어요. 위 주소를 선택해 직접 복사해 주세요.', 'warning');
+    }
+  });
+  loadStatus();
+})();
+</script>
+</body>
+</html>

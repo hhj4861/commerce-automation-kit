@@ -6,7 +6,7 @@
  * 계약 타입(`field?: T`)으로 그대로 대입할 수 없어, parse 후 정규화 함수로 변환한다.
  */
 import { z } from 'zod';
-import type { AdBeat, AdConcept, AdVideoModel, AdVideoResolution, AdVideoTier } from '@cak/contracts';
+import type { AdBeat, AdConcept, AdVideoModel, AdVideoResolution, AdVideoTier, VideoGenerationRequest } from '@cak/contracts';
 
 export const adVideoModelSchema: z.ZodType<AdVideoModel> = z.enum([
   'seedance_2_0',
@@ -63,4 +63,22 @@ export function parseAdConcept(input: unknown): AdConcept {
   if (r.category !== undefined) concept.category = r.category;
   if (r.aspectRatio !== undefined) concept.aspectRatio = r.aspectRatio;
   return concept;
+}
+
+const videoGenerationRequestSchema = z.object({
+  concept: adConceptSchema,
+  target: z.enum(['ad', 'shorts']),
+  tier: adVideoTierSchema.optional(),
+  splitByBeat: z.boolean().optional(),
+  extraStyle: z.string().optional(),
+}).strict();
+
+export function parseVideoGenerationRequest(input: unknown): VideoGenerationRequest {
+  const r = videoGenerationRequestSchema.parse(input);
+  return {
+    concept: parseAdConcept(r.concept), target: r.target,
+    ...(r.tier !== undefined ? { tier: r.tier } : {}),
+    ...(r.splitByBeat !== undefined ? { splitByBeat: r.splitByBeat } : {}),
+    ...(r.extraStyle !== undefined ? { extraStyle: r.extraStyle } : {}),
+  };
 }

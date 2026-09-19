@@ -2,6 +2,12 @@
 
 **쇼핑쇼츠**(상품 소개 세로영상 + 제휴 링크) 파이프라인의 **결정적 구간**을 담당하는 원자.
 
+클립 생성은 광고 기반 [공통 영상 생성기](../../docs/VIDEO-GENERATION.md)를 사용한다.
+광고와 동일한 `standard` 품질을 기본으로 하며, 이 원자는 대본 lint·고지·조립을 계속 담당한다.
+`visualPrompt`는 장면 입력이고 실제 생성에는 공통 생성기가 확장한 `plan.clips[].prompt`를 쓴다.
+공통 생성 품질 견적은 루트 `npm run --silent video:estimate -- --durations 3,5,4`로 확인한다.
+아래 원자 `estimate --model` 명령은 기존 호출 호환용이며 공통 생성 품질의 기준 견적은 아니다.
+
 | 구간 | 담당 |
 |---|---|
 | 소재(상품) 신호 | keyword-intel(#1) |

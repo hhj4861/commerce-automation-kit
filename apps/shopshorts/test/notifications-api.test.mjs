@@ -1,0 +1,67 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { spawn } from 'node:child_process';
+import { mkdtemp, writeFile, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { once } from 'node:events';
+import { signSession } from '../lib/google-auth.js';
+
+test('real local HTTP flow: auth, queued job/studio events, read state, preference and restart', { timeout: 30000 }, async t => {
+  const dir = await mkdtemp(join(tmpdir(), 'cak-inbox-http-'));
+  const env = { ...process.env, SHOPSHORTS_PORT: '0', SHOPSHORTS_DATA_DIR: dir, SHOPSHORTS_STUDIO_RUNNER: 'off', SHOPSHORTS_TOKEN: 'notification-test-worker', SHOPSHORTS_SESSION_SECRET: 'test-only-secret-at-least-32-characters', SHOPSHORTS_GOOGLE_ALLOWED_EMAILS: 'one@example.test,two@example.test', SHOPSHORTS_GOOGLE_ALLOW_SIGNUPS: '0' };
+  env.SHOPSHORTS_NOTIFICATION_QUEUE = 'local';
+  await writeFile(join(dir, 'jobs.json'), JSON.stringify([{ brief: { id: 'test', productName: '알림 테스트' }, script: {}, status: 'draft' }]));
+  let child, base;
+  const stop = async () => { if (child && child.exitCode === null) { const exited = once(child, 'exit'); child.kill(); await exited; } };
+  t.after(async () => { await stop(); await rm(dir, { recursive: true, force: true }); });
+  const start = async () => {
+    child = spawn(process.execPath, ['server.mjs'], { cwd: new URL('..', import.meta.url), env, stdio: ['ignore', 'pipe', 'pipe'] });
+    let output = '', errors = '';
+    child.stderr.on('data', data => { errors += data; });
+    base = await new Promise((resolve, reject) => {
+      const timer = setTimeout(() => reject(new Error(errors || '서버 시작 실패')), 10000);
+      child.once('error', e => { clearTimeout(timer); reject(e); });
+      child.once('exit', code => { clearTimeout(timer); reject(new Error(`서버 종료 ${code}: ${errors}`)); });
+      child.stdout.on('data', data => { output += data; const match = output.match(/http:\/\/127\.0\.0\.1:\d+/); if (match) { clearTimeout(timer); resolve(match[0]); } });
+    });
+  };
+  await start();
+  const cookie = async sub => `ss_google=${await signSession({ type: 'user', sub, email: `${sub === 'one' ? 'one' : 'two'}@example.test`, exp: Date.now() + 60000 }, env)}`;
+  const one = await cookie('one'), two = await cookie('two');
+  const call = (path, body, identity = one) => fetch(base + path, { headers: { cookie: identity, ...(identity === 'ss=notification-test-worker' ? { authorization: 'Bearer notification-test-worker' } : {}), 'content-type': 'application/json' }, ...(body === undefined ? {} : { method: 'POST', body: JSON.stringify(body) }) });
+  assert.equal((await fetch(base + '/api/notifications')).status, 401);
+  const redirect = await fetch(base + '/notifications', { redirect: 'manual' });
+  assert.equal(redirect.status, 302);
+  for (const file of ['/notifications', '/notifications.js', '/notifications.css']) assert.equal((await call(file)).status, 200);
+  let result = await (await call('/api/notifications')).json();
+  assert.equal(result.unreadCount, 1); const initialId = result.items[0].id;
+  assert.equal((await fetch(base + '/api/notifications/read-all', { method: 'POST', headers: { cookie: one, origin: 'https://evil.test' }, body: '{}' })).status, 403);
+  assert.equal((await call(`/api/notifications/${initialId}/read`, { read: true })).status, 200);
+  assert.equal((await call('/api/notifications/preferences', { enabled: false })).status, 200);
+  assert.equal((await (await call('/api/notifications', undefined, two)).json()).unreadCount, 1);
+  assert.equal((await call('/api/jobs/test/transition', { to: 'rejected' })).status, 200);
+  const worker = 'ss=notification-test-worker';
+  let project = (await (await call('/api/studio', { category: '과학', topic: '알림 테스트', format: 'short', duration: 30 }, worker)).json()).project;
+  project = (await (await call(`/api/studio/${project.id}/scenario`, { revision: project.revision, confirm: true }, worker)).json()).project;
+  project = (await (await call(`/api/studio/${project.id}/claim`, { revision: project.revision }, worker)).json()).project;
+  const failed = await call(`/api/studio/${project.id}/failure`, { revision: project.revision, taskId: project.task.id, error: 'test-only failure' }, worker);
+  assert.equal(failed.status, 200);
+  const deadline = Date.now() + 8000;
+  do {
+    result = await (await call('/api/notifications')).json();
+    if (result.items.length === 3) break;
+    await new Promise(resolve => setTimeout(resolve, 100));
+  } while (Date.now() < deadline);
+  assert.equal(result.items.length, 3);
+  assert.equal(result.items[0].source, 'studio');
+  assert.equal(result.unreadCount, 2);
+  assert.equal(result.enabled, false);
+  assert.equal((await call(`/api/studio/${project.id}`)).status, 200);
+  await stop(); await start();
+  result = await (await call('/api/notifications')).json();
+  assert.equal(result.items.length, 3); assert.equal(result.unreadCount, 2); assert.equal(result.enabled, false);
+  await call('/api/notifications/read-all', { throughSeq: result.throughSeq });
+  assert.equal((await (await call('/api/notifications?filter=unread')).json()).items.length, 0);
+  assert.equal((await (await call('/api/notifications', undefined, two)).json()).unreadCount, 3);
+});

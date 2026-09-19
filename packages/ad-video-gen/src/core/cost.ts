@@ -6,6 +6,7 @@
  * 검증점: seedance_2_0 1080p 5s=45cr·15s=135cr / marketing_studio_video 1080p 12s=120cr·15s=150cr / 720p 15s=75cr.
  */
 import type { AdVideoModel, AdVideoResolution, AdVideoTier } from '@cak/contracts';
+import { VIDEO_QUALITY_PROFILES } from './video-policy.js';
 
 /** 4000 크레딧 팩 기준 1크레딧당 USD */
 export const USD_PER_CREDIT = 0.0475;
@@ -62,27 +63,5 @@ export interface TierDefaults {
 
 /** 티어별 기본 조합 — 비용 정책의 축(시안은 싸게, 송출급은 최종 1컷만) */
 export function pickTierDefaults(tier: AdVideoTier): TierDefaults {
-  switch (tier) {
-    case 'draft':
-      return {
-        model: 'seedance_2_0_fast',
-        resolution: '480p',
-        durationSec: 5,
-        rationale: '시안은 싸게 — 컨셉 확인용 저가 조합(단가 미실측이라 생성 전 get_cost 필수)',
-      };
-    case 'standard':
-      return {
-        model: 'seedance_2_0',
-        resolution: '1080p',
-        durationSec: 15,
-        rationale: '확정본 표준 — 실측 단가 검증 조합(9cr/초, 15s=135cr), 오디오 포함',
-      };
-    case 'broadcast':
-      return {
-        model: 'veo3_1',
-        resolution: '4k',
-        durationSec: 15,
-        rationale: 'TV 송출급 최종 1컷만 — 최고가 모델이라 확정 컨셉에만 사용(단가는 get_cost 프리플라이트)',
-      };
-  }
+  return { ...VIDEO_QUALITY_PROFILES[tier] };
 }

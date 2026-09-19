@@ -1,0 +1,37 @@
+/* Reuse the studio's existing palette and type. Unread state carries the emphasis. */
+[data-notification-count][hidden] { display:none; }
+[data-top-action="notifications"] { position:relative; }
+.notification-badge { min-width:18px; padding:2px 5px; border-radius:12px; background:var(--brand); color:#242622; font-size:10px; font-weight:700; }
+.top-actions .notification-badge { position:absolute; top:-6px; right:-8px; border:2px solid var(--canvas); }
+.inbox-toolbar { display:flex; align-items:center; justify-content:space-between; gap:16px; padding-bottom:18px; border-bottom:1px solid var(--line); }
+.inbox-filters { display:flex; gap:6px; }
+.inbox-filters button { border:0; border-radius:8px; background:transparent; padding:10px 14px; cursor:pointer; }
+.inbox-filters button[aria-pressed="true"] { background:var(--ink); color:white; }
+.inbox-filters span { margin-left:6px; }
+.inbox-row { display:flex; align-items:flex-start; gap:14px; padding:22px 16px; border-bottom:1px solid var(--line); background:var(--surface); }
+.inbox-row.is-read { background:transparent; }
+.inbox-dot { flex:none; width:8px; height:8px; margin-top:7px; border-radius:50%; background:var(--brand); }
+.inbox-dot.is-error { background:var(--red); }
+.is-read .inbox-dot { background:transparent; border:1px solid var(--faint); }
+.inbox-copy { flex:1; min-width:0; overflow-wrap:anywhere; }
+.inbox-copy strong { font-size:14px; line-height:1.6; }
+.is-read .inbox-copy strong { font-weight:500; }
+.inbox-copy p { margin:4px 0 8px; color:var(--muted); line-height:1.6; }
+.inbox-copy time { font-size:11px; color:var(--muted); }
+.inbox-actions { display:flex; align-items:center; gap:8px; }
+.inbox-read { background:transparent; border:0; color:var(--muted); padding:10px; cursor:pointer; font-size:12px; }
+.inbox-empty { padding:64px 20px; text-align:center; color:var(--muted); }
+.inbox-empty h2 { font-size:18px; color:var(--ink); }
+.inbox-empty p { line-height:1.7; }
+.inbox-note { color:var(--muted); font-size:12px; line-height:1.7; }
+.inbox-error { padding:14px; margin:14px 0; border-radius:8px; background:var(--red-soft); color:var(--red); }
+.inbox-error button { border:0; background:transparent; color:inherit; text-decoration:underline; cursor:pointer; }
+.inbox-more { margin:24px auto; display:block; }
+.inbox-toolbar button:disabled,.inbox-actions button:disabled { opacity:.5; cursor:wait; }
+@media(max-width:650px) {
+  .inbox-row { flex-wrap:wrap; padding:18px 8px; }
+  .inbox-copy { flex-basis:calc(100% - 24px); }
+  .inbox-actions { margin-left:22px; }
+  .inbox-toolbar { gap:8px; }
+  .inbox-filters button { padding:10px; }
+}

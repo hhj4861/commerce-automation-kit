@@ -5,6 +5,9 @@ description: 쇼핑쇼츠(상품 소개 세로영상+쿠팡 파트너스 링크)
 
 # shopping-shorts — 쇼핑쇼츠 배치 제작 & 운영 큐
 
+영상 생성은 [광고 기반 공통 생성 절차](../../../docs/VIDEO-GENERATION.md)를 먼저 읽고 따른다.
+광고와 같은 `video:plan` 엔진을 사용한다. `visualPrompt`는 장면 입력이며 직접 생성 호출에 사용하지 않는다.
+
 상품 하나(또는 keyword-intel 후보)를 받아 **기획 배치 → 사람 승인 → 힉스필드 생성 → 원자 조립 →
 발행 검수** 파이프라인을 오케스트레이션한다. 강의 3편 실측 분석(2026-07-27) 기반 공정이되,
 금지선 충돌 3개(타인 영상 재가공·상세페이지 캡처·가짜 경험담)는 **합법 대체**로 설계돼 있다.
@@ -19,7 +22,7 @@ description: 쇼핑쇼츠(상품 소개 세로영상+쿠팡 파트너스 링크)
 
 - 힉스필드 MCP 연결(`ToolSearch "select:mcp__claude_ai__balance"`) + 크레딧 확인. 끊겨 있으면 `/mcp` 재연결 안내.
 - 대시보드 서버: `curl -s http://127.0.0.1:5178/api/jobs` 실패 시 `npm start -w @cak/app-shopshorts` 백그라운드 기동.
-- **비용 최적화는 ad-video 스킬 §0.5와 동일 원칙**: 컨셉 확정 전 고해상 금지, 시안은 싸게(kling std/fast), 확정만 고품질, 배치 전 `get_cost` 프리플라이트. 쇼츠 클립 기본 모델: **kling3_0 pro 9:16**(실측 1.75cr/s), 시안: kling3_0 std(1.5cr/s).
+- **광고와 같은 품질 정책**: 기본 `videoTier:"standard"`(Seedance 2.0/1080p). 사용자가 시안을 선택한 경우만 `draft`로 낮춘다. 지원 사양·실제 비용은 생성 전 MCP 프리플라이트로 확인한다.
 
 ## 1. 상품 선정 (사람 확정)
 
@@ -46,10 +49,15 @@ WebSearch 2~4회로 **근거 있는 소구점**을 도출한다(리뷰에서 반
 `visualPrompt` 는 **자체 생성 전용** — URL·"캡처"·타 플랫폼 영상 참조를 넣으면 `external-source` block (금지선 #1).
 파트너스 링크는 **사용자가 발급해 `brief.affiliateUrl` 에 수동 입력**(API 어댑터는 D1 실측 후 예약 슬롯).
 
-잡 JSON(`{brief, script}`) 생성 → 검증·등록:
+잡 JSON(`{brief, script, videoDirection, videoTier?}`) 생성 → 검증·등록.
+`videoDirection`에는 실제 근거 `evidence`, 고유성 검토 `uniqueness`, 서사 확인 `narrativeComplete`를 넣는다.
+기존 잡에 이 필드가 없으면 `draft`/`rejected`에서 `PUT /api/jobs/:id/video-direction`으로
+`{videoDirection, videoTier:"standard"}`를 보완한 후 사람 승인을 받는다. 기획 근거를 임의로 채우지 않는다.
+`visualPrompt`에는 장면만 작성한다. 자막·caption·subtitle 삽입 지시는 후반 작업 입력으로 분리한다.
+필요한 비트의 연출 강조는 `emphasis: {"2":"hero"}`처럼 지정한다(공통 문서의 입력 예제 참조).
 ```bash
 npm run --silent cli -w @cak/shopping-shorts -- lint --job job.json          # block 0 확인
-npm run --silent cli -w @cak/shopping-shorts -- estimate --job job.json --model kling3_0-pro
+npm run --silent video:estimate -- --tier standard --durations 3,5,4       # 실제 비트 길이로 교체
 npm run --silent cli -w @cak/shopping-shorts -- score --jobs a.json,b.json,c.json   # 생성 전 효율 참고 점수(총점순)
 curl -s -X POST http://127.0.0.1:5178/api/jobs -H 'content-type: application/json' -d @job.json
 ```
@@ -61,7 +69,7 @@ curl -s -X POST http://127.0.0.1:5178/api/jobs -H 'content-type: application/jso
 1. **대본 스코어러(0cr)** — `score --jobs …`. Google ABCD(주목·브랜딩·공감·행동유도)+Shorts 권장(첫 3초 움직임·
    10초 페이오프·자막 한 줄·CTA 한 문장·10초 이상)을 규칙 점수로. 훅 후보 5~6개를 쓰고 상위만 시안으로 보낸다.
    **참고용**(자동 선정 금지) — 감점 사유를 대본에 반영하는 용도가 본질.
-2. **시안 예측기(std 시안 4.5cr/훅 + 힉스필드 Virality Predictor, 2026-09-06 실측 0cr)** — 생성 완료 job_id로
+2. **시안 예측기(공통 draft 계획의 실제 견적 + 힉스필드 Virality Predictor)** — 생성 완료 job_id로
    `virality_predictor(action:create)` → `job_status` 폴링 → `analysis.scores`(hook_score·overall·viral_potential·sustain).
    3초 훅 클립 단위로 비교 가능. 예측 프록시이며 성과 보장 아님(도구 disclaimer).
 3. **광고 실측** — 광고그룹 1개에 훅별 광고 여러 개, 조회율·CPV로 판정. 이 실측표가 1·2층의 가중치를 고치는 유일한 데이터.
@@ -73,35 +81,12 @@ curl -s -X POST http://127.0.0.1:5178/api/jobs -H 'content-type: application/jso
 
 ## 5. 클립 생성 (승인된 잡만)
 
-### 5.1 프롬프트는 손으로 쓰지 않는다 — 광고와 같은 공통 엔진을 쓴다 (필수)
-
-쇼츠 품질이 광고보다 떨어졌던 원인은 비율이 아니라 **프롬프트 밀도**였다(실측 2026-08).
-광고는 `buildSpotPrompt` 가 시네마틱 스타일·조명·렌즈·연출 극대화를 항상 주입하는데,
-쇼츠는 세션이 매번 손으로 써서 잡마다 문구가 제각각이었다.
-→ **쇼츠도 같은 조립기를 쓰되 `--aspect 9:16` 만 다르게 준다.**
-
-컨셉 JSON(`AdConcept` 형태 — 소구점·근거·고유성·비트·사람승인)을 만들고:
-
-```bash
-npm run --silent cli -w @cak/ad-video-gen -- check-concept --concept concept.json      # 3중 게이트
-npm run --silent cli -w @cak/ad-video-gen -- build-prompt --concept concept.json --aspect 9:16
-```
-
-- 게이트 미통과(`humanApproved=false`·고유성 실패 등)면 프롬프트를 **발급하지 않는다**(exit 1).
-- 출력 `prompt` 를 비트별 `visualPrompt` 로 쓴다. 컨셉·연출 강도는 광고와 완전히 동일하고
-  마지막 줄의 프레이밍 지시만 세로 구도·세이프존으로 갈린다.
-- 비트에 `emphasis`(`problem`|`resolution`|`hero`)를 달면 연출 극대화가 자동 주입된다.
-  **과장은 연출(비주얼)에만** — 문구·수치·효능의 사실 주장 과장은 금지(표시광고법·금지선 #3).
-- 9:16 프레이밍은 상/하단을 비워두게 지시한다 — 그 자리에 자막·**대가성 고지**가 번인되기 때문.
-
-### 5.2 생성 호출
-
-- `generate_video` **aspect_ratio "9:16"**, duration=비트 길이.
-- 첫 배치는 **시안 1편**(kling std)을 먼저 보여주고 톤 확정 후 나머지 배치.
-- 사람 신체 클로즈업 NSFW 오탐·tv_spot 아바타 자동삽입 등 연출 규칙은 ad-video 스킬 §2 실측 표를 따른다.
-- **해상도 실측**: kling3_0 는 16:9 가 720p 고정인 반면 **9:16 은 1080x1920 네이티브**다.
-  쇼츠는 업스케일 없이 그대로 쓴다(광고 16:9 만 후반 lanczos 1.5x 필요).
-- 다운로드 후 대시보드 전이: `{to:"generated", clipPaths:[...]}`.
+- 승인 후 로컬 서버/클라우드 워커가 광고 기반 공통 CLI를 호출한다.
+- 최신 잡의 `videoGeneration.plan.clips`가 준비될 때까지 생성하지 않는다. 오류는 `videoGenerationError`에서 확인한다.
+- 공통 문서의 **생성 실행 절차**로 각 클립의 프롬프트·모델·해상도·화면비·길이를 그대로 실행한다.
+  수기 프롬프트나 쇼츠 전용 저가 모델로 우회하지 않는다.
+- 사용자가 시안을 선택했으면 초안에서 `videoTier:"draft"`를 지정해 승인받는다.
+- 다운로드·영상 검증 후 `{to:"generated", clipPaths:[...]}`로 기록한다. 계획과 대본·클립 수가 다르면 서버가 거부한다.
 
 ## 6. TTS 내레이션 (기본 포함)
 

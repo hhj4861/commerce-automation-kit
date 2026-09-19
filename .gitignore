@@ -10,6 +10,7 @@ data/
 .DS_Store
 coverage/
 .vitest/
+.wrangler/
 
 # IDE (개인 설정 — 커밋 제외)
 .idea/

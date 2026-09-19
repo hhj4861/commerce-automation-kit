@@ -12,15 +12,24 @@
  * 대시보드는 그 결과(requestId)를 기록할 뿐이다. (완전 무인화 금지 — 저관여+사람 감시)
  */
 import { createServer } from 'node:http';
+import { mergeRuntimeEnv } from '../credential-broker/runtime-env.mjs';
+import { authRoute, googleUser, legacyAuthorized, sameOrigin } from './lib/google-auth.js';
+import { localStudioStore, startLocalStudio, handleLocalStudio, sendResponse } from './studio-local.mjs';
 import { spawn } from 'node:child_process';
 import { mkdirSync, readFileSync, writeFileSync, existsSync, statSync, createReadStream } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { tmpdir } from 'node:os';
+import { prepareShortsVideo, runVideoCli } from './video-generation.mjs';
+import { clearVideoGeneration, videoGenerationProblem } from './lib/video-generation.js';
+import { openNotifications, notificationApi } from './lib/notifications-local.mjs';
+import { notificationConfig, notificationTransport } from './lib/notification-transport.mjs';
+import { jobObservations, studioObservations } from './lib/notification-events.mjs';
+import { createHash } from 'node:crypto';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const KIT_ROOT = resolve(__dirname, '..', '..');
-const DATA_DIR = join(__dirname, 'data');
+const DATA_DIR = process.env.SHOPSHORTS_DATA_DIR ? resolve(process.env.SHOPSHORTS_DATA_DIR) : join(__dirname, 'data');
 const JOBS_PATH = join(DATA_DIR, 'jobs.json');
 const DRAFT_REQ_PATH = join(DATA_DIR, 'draft-requests.json');
 const PORT = Number(process.env.SHOPSHORTS_PORT ?? 5178);
@@ -41,7 +50,7 @@ function kitEnv() {
       if (m) extra[m[1]] = m[2];
     }
   }
-  return { ...process.env, ...extra };
+  return mergeRuntimeEnv(extra, process.env);
 }
 
 const STATUSES = [
@@ -82,6 +91,7 @@ function loadJobs() {
 function saveJobs(jobs) {
   mkdirSync(DATA_DIR, { recursive: true });
   writeFileSync(JOBS_PATH, JSON.stringify(jobs, null, 1), 'utf8');
+  observeNotifications(jobs.flatMap(jobObservations));
 }
 
 // ---------- 원자 CLI 브릿지 ----------
@@ -418,36 +428,109 @@ function serveJobVideo(req, res, job, which) {
 }
 
 // 원격 접속 토큰(Cloudflare Tunnel 경유용) — .env SHOPSHORTS_TOKEN.
-// 로컬(127.0.0.1/localhost Host)은 무인증 유지, 터널 호스트로 들어온 요청만 토큰 요구.
+// 로컬과 원격 모두 로그인 필요. 워커의 Bearer 토큰 인증은 유지한다.
 const REMOTE_TOKEN = kitEnv().SHOPSHORTS_TOKEN ?? null;
+
+const STUDIO_ENV = kitEnv();
+const notifications = openNotifications(DATA_DIR);
+const notificationDelivery = notificationTransport(notifications, notificationConfig(DATA_DIR, STUDIO_ENV));
+let notificationError = null;
+function observeNotifications(observations) {
+  try { notifications.observe(observations); }
+  catch (error) { notificationError = '알림을 저장하지 못했어요. 잠시 후 다시 확인해 주세요.'; console.error('[notifications] observe failed:', error.message); }
+}
+const studioStore = localStudioStore(DATA_DIR, STUDIO_ENV, projects => observeNotifications(projects.flatMap(studioObservations)));
+if (process.env.SHOPSHORTS_STUDIO_RUNNER !== 'off') {
+  const runner = startLocalStudio(studioStore, STUDIO_ENV);
+  await runner.recover();
+}
+
+let notificationRunning = false;
+async function notificationTick() {
+  if (notificationRunning) return;
+  notificationRunning = true;
+  try {
+    notifications.observe(loadJobs().flatMap(jobObservations));
+    notifications.observe((await studioStore.list()).flatMap(studioObservations));
+    await notificationDelivery.tick();
+    notificationError = null;
+  } catch (error) {
+    notificationError = '알림 갱신이 지연되고 있어요. 잠시 후 다시 확인해 주세요.';
+    console.error('[notifications] tick failed:', error.message);
+  } finally { notificationRunning = false; }
+}
+await notificationTick();
+const notificationTimer = setInterval(notificationTick, 3000);
+notificationTimer.unref();
 
 const server = createServer(async (req, res) => {
   const url = new URL(req.url ?? '/', `http://localhost:${PORT}`);
   try {
     const host = req.headers.host ?? '';
-    const isLocal = host.startsWith('127.0.0.1') || host.startsWith('localhost');
-    if (!isLocal) {
-      if (!REMOTE_TOKEN) { res.writeHead(403, { 'content-type': 'text/plain; charset=utf-8' }); res.end('원격 접속 비활성(SHOPSHORTS_TOKEN 미설정)'); return; }
-      const q = url.searchParams.get('token');
-      if (q === REMOTE_TOKEN) {
-        res.writeHead(302, {
-          'set-cookie': `ss=${REMOTE_TOKEN}; Path=/; HttpOnly; SameSite=Lax; Max-Age=2592000`,
-          location: url.pathname,
-        });
-        res.end();
-        return;
+    const actualPort = server.address()?.port ?? PORT;
+    const localHosts = [`127.0.0.1:${actualPort}`, `localhost:${actualPort}`];
+    const isLocal = localHosts.includes(host);
+    const origin = isLocal ? `http://${host}` : (STUDIO_ENV.SHOPSHORTS_ORIGIN || `https://${host}`);
+    let authBody;
+    if (url.pathname === '/auth/google/credential' && req.method === 'POST') {
+      const chunks = []; let size = 0;
+      for await (const chunk of req) {
+        size += chunk.length;
+        if (size > 16000) { json(res, 413, { error: '로그인 요청이 너무 큽니다.' }); return; }
+        chunks.push(chunk);
       }
-      const cookie = /(?:^|;\s*)ss=([^;]+)/.exec(req.headers.cookie ?? '')?.[1];
-      if (cookie !== REMOTE_TOKEN) {
-        res.writeHead(401, { 'content-type': 'text/plain; charset=utf-8' });
-        res.end('인증 필요 — 발급받은 ?token= 링크로 접속하세요');
-        return;
+      authBody = Buffer.concat(chunks);
+    }
+    const authRequest = new Request(new URL(req.url, origin), { method: req.method, headers: req.headers, ...(authBody ? { body: authBody } : {}) });
+    const authResponse = await authRoute(authRequest, STUDIO_ENV);
+    if (authResponse) { await sendResponse(res, authResponse); return; }
+    if (req.method === 'GET' && ['/login', '/login.html'].includes(url.pathname)) {
+      res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' });
+      res.end(readFileSync(join(__dirname, 'public/login.html'))); return;
+    }
+    if (!['GET', 'HEAD'].includes(req.method) && !sameOrigin(authRequest)) {
+      json(res, 403, { error: '다른 사이트에서 요청할 수 없습니다.' }); return;
+    }
+    const signedInUser = await googleUser(authRequest, STUDIO_ENV);
+    if (!legacyAuthorized(authRequest, STUDIO_ENV) && !signedInUser) {
+      if (REMOTE_TOKEN && url.searchParams.get('token') === REMOTE_TOKEN) {
+        res.writeHead(302, { 'set-cookie': `ss=${REMOTE_TOKEN}; Path=/; HttpOnly; SameSite=Lax; Max-Age=2592000${isLocal ? '' : '; Secure'}`, location: url.pathname }); res.end(); return;
       }
+      if (url.pathname.startsWith('/api/')) json(res, 401, { error: '로그인이 필요합니다.' });
+      else { res.writeHead(302, { location: '/login' }); res.end(); }
+      return;
+    }
+    if (url.pathname === '/api/notifications' || url.pathname.startsWith('/api/notifications/')) {
+      const user = signedInUser ? `google:${createHash('sha256').update(signedInUser.sub || signedInUser.email).digest('hex')}` : 'legacy-operator';
+      let body;
+      if (req.method === 'POST') {
+        const chunks = []; let size = 0;
+        for await (const chunk of req) {
+          size += chunk.length;
+          if (size > 4096) { json(res, 413, { error: '알림 요청이 너무 큽니다.' }); return; }
+          chunks.push(chunk);
+        }
+        body = Buffer.concat(chunks);
+      }
+      const request = new Request(new URL(req.url, origin), { method: req.method, headers: req.headers, ...(body ? { body } : {}) });
+      const response = await notificationApi(request, notifications, user);
+      if (req.method === 'GET' && response.ok) {
+        const data = await response.json();
+        await sendResponse(res, Response.json({ ...data, transport: notificationDelivery.provider, warning: notificationError }, { headers: { 'cache-control': 'no-store' } }));
+      } else await sendResponse(res, response);
+      return;
+    }
+    if (url.pathname.startsWith('/api/studio')) { await handleLocalStudio(req, res, origin, STUDIO_ENV, studioStore); return; }
+    const studioFiles = { '/notifications.js': ['notifications.js','text/javascript'], '/notifications.css': ['notifications.css','text/css'], '/editor.js': ['editor.js','text/javascript'], '/editor-model.js': ['editor-model.js','text/javascript'], '/NanumGothic-Regular.ttf': ['NanumGothic-Regular.ttf','font/ttf'], '/NanumMyeongjo-Regular.ttf': ['NanumMyeongjo-Regular.ttf','font/ttf'], '/NanumPenScript-Regular.ttf': ['NanumPenScript-Regular.ttf','font/ttf'], '/app-shell.css': ['app-shell.css','text/css'], '/studio': ['studio.html','text/html'], '/studio.html': ['studio.html','text/html'], '/studio.js': ['studio.js','text/javascript'], '/studio.css': ['studio.css','text/css'] };
+    if (req.method === 'GET' && studioFiles[url.pathname]) {
+      const [file, type] = studioFiles[url.pathname];
+      res.writeHead(200, { 'content-type': type + '; charset=utf-8', 'cache-control': 'no-store' });
+      res.end(readFileSync(join(__dirname, 'public', file))); return;
     }
     // 정적 UI
-    const appPages = ['/', '/index.html', '/contents', '/trends', '/blog', '/performance', '/affiliate-links', '/settings'];
+    const appPages = ['/', '/index.html', '/contents', '/trends', '/blog', '/performance', '/affiliate-links', '/settings', '/notifications'];
     if (req.method === 'GET' && appPages.includes(url.pathname)) {
-      res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
+      res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' });
       res.end(readFileSync(join(__dirname, 'public', 'index.html')));
       return;
     }
@@ -573,6 +656,8 @@ const server = createServer(async (req, res) => {
       const job = {
         brief: body.brief,
         script: body.script,
+        ...(body.videoDirection !== undefined ? { videoDirection: body.videoDirection } : {}),
+        ...(body.videoTier !== undefined ? { videoTier: body.videoTier } : {}),
         status: 'draft',
         updatedAt: new Date().toISOString(),
       };
@@ -585,6 +670,23 @@ const server = createServer(async (req, res) => {
       jobs.push(job);
       saveJobs(jobs);
       json(res, 201, { ok: true, job });
+      return;
+    }
+
+    const directionRoute = url.pathname.match(/^\/api\/jobs\/([a-z0-9-]+)\/video-direction$/);
+    if (directionRoute && req.method === 'PUT') {
+      const body = await readBody(req);
+      if (!body?.videoDirection) { json(res, 400, { error: 'videoDirection 필수' }); return; }
+      const jobs = loadJobs();
+      const job = findJob(jobs, directionRoute[1]);
+      if (!job) { json(res, 404, { error: '잡 없음' }); return; }
+      if (!['draft', 'rejected'].includes(job.status)) { json(res, 409, { error: '기획을 수정하려면 초안으로 되돌려 주세요.' }); return; }
+      job.videoDirection = body.videoDirection;
+      job.videoTier = body.videoTier ?? 'standard';
+      clearVideoGeneration(job);
+      job.updatedAt = new Date().toISOString();
+      saveJobs(jobs);
+      json(res, 200, { ok: true, job });
       return;
     }
 
@@ -748,18 +850,37 @@ const server = createServer(async (req, res) => {
         return;
       }
 
+      // CLI 실행 중 다른 요청이 저장한 잡을 오래된 jobs 배열로 덮어쓰지 않는다.
+      const original = JSON.stringify(job);
+      const saveCurrentJob = () => {
+        const latest = loadJobs();
+        const index = latest.findIndex((j) => j.brief.id === id);
+        if (index < 0 || JSON.stringify(latest[index]) !== original) {
+          json(res, 409, { error: '처리 중 기획이 변경됐습니다. 다시 확인해 주세요.' });
+          return false;
+        }
+        latest[index] = job;
+        saveJobs(latest);
+        return true;
+      };
+
       if (action === 'lint') {
         const r = await withJobFile(job, (p) => runAtomCli(['lint', '--job', p]));
         job.lintReport = r.data;
         job.updatedAt = new Date().toISOString();
-        saveJobs(jobs);
+        if (!saveCurrentJob()) return;
         json(res, 200, r.data);
         return;
       }
 
       if (action === 'estimate') {
-        const model = url.searchParams.get('model') ?? 'kling3_0-pro';
-        const r = await withJobFile(job, (p) => runAtomCli(['estimate', '--job', p, '--model', model]));
+        if (!Array.isArray(job.script?.beats) || !job.script.beats.length
+          || job.script.beats.some((b) => !Number.isFinite(b?.durationSec) || b.durationSec <= 0)) {
+          json(res, 422, { error: '유효한 길이를 가진 대본 장면이 필요합니다.' });
+          return;
+        }
+        const r = await runVideoCli(['video-estimate', '--tier', job.videoTier ?? 'standard',
+          '--durations', job.script.beats.map((b) => b.durationSec).join(',')]);
         json(res, 200, r.data);
         return;
       }
@@ -778,11 +899,21 @@ const server = createServer(async (req, res) => {
         const r = await withJobFile(job, (p) => runAtomCli(['lint', '--job', p]));
         job.lintReport = r.data;
         if (r.data.ok !== true) {
-          saveJobs(jobs);
+          if (!saveCurrentJob()) return;
           json(res, 422, { error: 'lint block — 전이 거부', report: r.data });
           return;
         }
       }
+      if (to === 'script-approved') {
+        try { job.videoGeneration = await prepareShortsVideo({ ...job, status: to }); }
+        catch (e) { json(res, 422, { error: String(e?.message ?? e) }); return; }
+        delete job.videoGenerationError;
+      }
+      if (to === 'generated' && job.status === 'script-approved') {
+        const problem = await videoGenerationProblem(job, body.clipPaths ?? job.clipPaths ?? []);
+        if (problem) { json(res, 422, { error: problem }); return; }
+      }
+      if (to === 'draft' || to === 'rejected') clearVideoGeneration(job);
       // 발행 검수 진입 시 조립 산출물이 있어야 한다.
       if (to === 'review' && !body.outputVideo && !job.outputVideo) {
         json(res, 422, { error: 'outputVideo 없이 review 로 갈 수 없음(조립 먼저)' });
@@ -796,7 +927,7 @@ const server = createServer(async (req, res) => {
       if (typeof body.outputVideo === 'string') job.outputVideo = body.outputVideo;
       if (typeof body.publishRef === 'string') job.publishRef = body.publishRef;
       job.updatedAt = new Date().toISOString();
-      saveJobs(jobs);
+      if (!saveCurrentJob()) return;
       json(res, 200, { ok: true, job });
       return;
     }
@@ -810,5 +941,5 @@ const server = createServer(async (req, res) => {
 });
 
 server.listen(PORT, '127.0.0.1', () => {
-  console.log(`[shopshorts] http://127.0.0.1:${PORT} (로컬 전용, jobs=${JOBS_PATH})`);
+  console.log(`[shopshorts] http://127.0.0.1:${server.address().port} (로컬 전용, jobs=${JOBS_PATH})`);
 });

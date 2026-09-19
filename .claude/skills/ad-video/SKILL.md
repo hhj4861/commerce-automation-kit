@@ -5,6 +5,10 @@ description: 힉스필드(Higgsfield MCP)로 제품/브랜드 광고 영상을 �
 
 # ad-video — AI 광고 영상 제작 & 쇼케이스 자동 반영
 
+영상 생성은 [광고 기반 공통 생성 절차](../../../docs/VIDEO-GENERATION.md)를 먼저 읽고 따른다.
+광고·쇼츠 모두 `video:plan`의 프롬프트·모델·해상도·티어를 그대로 사용한다.
+아래 제작별 지침 중 과거 모델 예시와 충돌하면 공통 생성 절차가 우선한다.
+
 제품/브랜드 하나를 받아 광고 영상을 생성하고, FIRSTFRAME 쇼케이스에 자동 반영한 뒤 재배포한다. OLIPOP·Allbirds·진돗개 데모를 만든 방법과 동일하다.
 
 **재사용 로직은 kit 모듈에 있다 (2026-07-24 분리 완료)** — `~/workSpace/commerce-automation-kit`:
@@ -37,14 +41,10 @@ description: 힉스필드(Higgsfield MCP)로 제품/브랜드 광고 영상을 �
 **절대 원칙: 컨셉·서사가 확정되기 전에 1080p 15초 풀길이를 생성하지 마라.** (실패: 진돗개에서 미확정 상태로 135cr 풀생성을 5번 리젝 = ~$32 낭비.)
 
 1. **컨셉을 먼저 텍스트로 확정** — 리서치 → 소구점 → 고유성 테스트 → 서사 완결성(1.5절)까지 **생성 없이** 통과시키고 사용자 승인을 받는다. 리젝의 대부분은 여기서 걸러야 할 것이 생성으로 넘어가서 생긴다.
-2. **시안은 싸게** — 구도·톤이 불확실하면 `seedance_2_0` **`mode:"fast"`** 또는 **480p** 또는 **5초(45cr)** 로 먼저 확인. 5초 시안 3개(135cr) = 1080p 15초 1편 값.
+2. **시안 품질은 명시적으로 선택** — 사용자가 저렴한 시안을 선택한 경우 공통 생성 요청에 `tier:"draft"`를 지정한다. 최종본 기본값은 `standard`다.
 3. **최종만 고품질** — 확정된 컨셉만 1080p 최종 생성.
 4. **구간 단위 재생성** — 긴 광고는 5초 클립 여러 개로 만들어 trim+concat. 마음에 안 드는 **그 구간만** 45cr로 다시 뽑는다(전체 재생성 금지). 30초는 15s×2 또는 5s×6.
-5. **모델을 용도로 나눠라** (힉스필드 안에 다 입점):
-   - **시안·양산**: `kling3_0`(저렴) 또는 seedance fast
-   - **범용**: `seedance_2_0`(중간)
-   - **진짜 TV 송출급 최종**: `veo3_1`(4K+네이티브 오디오, 최고 품질·최고가) — "TV급이어야 한다"는 요청이 있을 때만 최종 히어로컷에 사용
-   - `models_explore`로 각 모델 duration/해상도/get_cost를 먼저 확인한다.
+5. **품질 설정은 공통 생성기가 결정한다.** `standard`는 광고 엔진의 Seedance 2.0/1080p, 시안은 `draft`, 방송용은 `broadcast`다. 쇼츠·광고 여부로 모델을 낮추지 않는다. 현재 모델 지원 사양은 MCP로 확인한다.
 6. **생성 전 `get_cost:true`로 프리플라이트** 하고, 잔액이 빠듯하면 사용자에게 알린다.
 
 ## 1. 제품/소재 준비
@@ -110,19 +110,13 @@ description: 힉스필드(Higgsfield MCP)로 제품/브랜드 광고 영상을 �
 3. **`tv_spot` 모드는 아바타(사람)를 자동 삽입**한다(warning에 표시됨). 제품만 나오는 광고를 원하면 `product_showcase` 사용하거나, 사람 없는 순수 제품 회전은 `seedance_2_0` + `start_image` 로.
 4. **사람 신체(발/다리 등)가 크게 나오는 프롬프트는 NSFW 필터에 오탐**될 수 있음(Allbirds "신발 신는 사람" 차단됨). 차단 시 크레딧은 환불됨 → 사람 없는 제품 중심으로 재시도.
 
-호출 예 (제품 회전, 라벨 안전):
+공통 생성 요청 `{target:"ad", tier:"standard", concept:<승인한 AdConcept>}`를 파일로 저장한다.
+```bash
+npm run --silent video:plan -- --request request.json --out video-plan.json
 ```
-mcp__claude_ai__generate_video {model:"seedance_2_0", resolution:"1080p", mode:"std", duration:5,
-  generate_audio:false, aspect_ratio:"16:9",
-  medias:[{value:"<media_id>", role:"start_image"}],
-  prompt:"The <제품> rotates very slowly on a turntable, front facing camera, sharp and undistorted. Soft studio light, shallow depth of field, no camera shake."}
-```
-호출 예 (제품 TV 스팟):
-```
-mcp__claude_ai__generate_video {model:"marketing_studio_video", mode:"tv_spot",
-  product_ids:["<product_id>"], resolution:"1080p", duration:15, aspect_ratio:"16:9",
-  prompt:"Cinematic TV commercial for <제품>. Hero shot held long, product centered, label crisp. Warm light, slow push-in, no shake."}
-```
+성공한 `plan.clips[]`를 공통 문서의 **생성 실행 절차**에 따라 힉스필드에 전달한다.
+수기 프롬프트로 직접 호출하거나 모델·해상도를 따로 선택하지 않는다.
+참조 미디어는 사용권 있는 입력만 연결하고 실제 요청 옵션으로 비용을 재확인한다.
 
 ## 3. (선택) 멘트/VO 추가
 
@@ -209,9 +203,8 @@ Cloudflare 인증 우선순위: ① 환경변수 `CLOUDFLARE_API_TOKEN` → ② 
 
 1. **사용자 지정 소구점은 절대 기준**이다. 지정되면 컨셉·컷 구성·프롬프트가 전부 그 소구점을 시각화해야 하며, 리서치는 보강용으로만 쓴다.
 2. **생성 전 `check-concept` CLI 통과 의무** — 컨셉을 concept.json 으로 만들어 `npm run cli -w @cak/ad-video-gen -- check-concept --concept c.json` 을 실제로 실행한다(재량 생략 금지). 실패하면 컨셉을 고치고 재실행.
-3. **프롬프트는 `build-prompt` 로 조립** — 소구점이 `Key selling points:` 로 구조 주입되게 한다. 수기 프롬프트를 쓰면 소구점 누락 위험.
-   - 화면비는 `--aspect` 로 준다(광고 기본 `16:9`, 쇼핑쇼츠/릴스 `9:16`). **이 조립기는 쇼핑쇼츠와 공유한다** —
-     컨셉·소구점·연출 극대화는 두 경로가 완전히 동일하고, 마지막 프레이밍 지시만 비율에 따라 갈린다(2026-08 공통화).
+3. **공통 `video:plan`으로 프롬프트·품질을 함께 결정한다.** 내부에서 `buildSpotPrompt`와 컨셉 검증을 사용한다.
+   화면비는 요청 컨셉의 `aspectRatio`로 지정하고, 생성은 [공통 절차](../../../docs/VIDEO-GENERATION.md)를 따른다.
 4. **컷별 소구점 매핑 스토리보드(시안) 승인 의무** — 생성 전 각 컷이 어느 소구점을 어떻게 보여주는지 표로 사용자에게 승인받는다(알파기어 확립 절차). 오버레이 문구·리뷰 인용 위치까지 시안에 포함.
 
 ## 시안 = 산출 계약 (2026-08-10 — 사용자 확정 규칙)
@@ -223,7 +216,7 @@ Cloudflare 인증 우선순위: ① 환경변수 `CLOUDFLARE_API_TOKEN` → ② 
 ## 실측 노트 (2026-08-10, 알파기어 광고)
 
 - **kling3_0 은 16:9 에서 720p 고정** — width/height 1920x1080 을 넘겨도 무시된다(9:16 은 1080x1920 가능). 1080p 16:9 가 필요하면 seedance(45cr) 또는 후반 란초스 1.5× 업스케일(웹 재생 기준 양호). kling3_0 t2v 는 10cr/5s 로 seedance 의 1/4.5.
-- **seedance 큐 정체 시 kling3_0 우회** — 30분+ in_progress 면 갈아타라. 같은 프롬프트로 kling 이 1~2분에 나온다. 정체된 잡은 완료돼도 미사용 보관(실패 시 환불).
+- **큐 정체 시 품질을 임의로 낮추지 않는다.** 재시도·대체 모델은 현재 공통 계획과 사용자 승인 범위를 확인한 뒤 결정한다.
 - **i2v(start_image)는 t2v 보다 단가가 높고, 소스 이미지의 글씨가 영상에 새겨진다** — 상세페이지 크롭을 입력으로 쓰지 말 것. 실사진은 **스타일 참고(프롬프트 서술)로만** 쓰고, 프롬프트에 `no text, no letters anywhere` 명시.
 - **회사망 ElevenLabs 차단 우회**: `.github/workflows/tts-remote.yml`(내레이션) / `music-remote.yml`(BGM, ai-music elevenlabs 백엔드) — base64 브리프 디스패치 → 아티팩트 회수. 로컬 mix 는 ffmpeg 라 차단 무관.
 - **실구매 리뷰 인용** 은 원문 그대로 + "실구매 리뷰 · 쿠팡 구매평" 출처 표기(각색 금지 — 가짜 경험담 금지선과 구분). 효능 수치가 없을 때 리뷰 증언이 합법적 대체재.

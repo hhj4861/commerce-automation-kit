@@ -5,6 +5,12 @@
 이 원자는 (1) 생성 전 게이트·프롬프트·비용 (2) 생성 후 ffmpeg 후반작업을 제공한다.
 계약은 `@cak/contracts` 의 `AdConcept` / `AdBeat` / `AdVideoJob` / `AdVideoModel` / `AdVideoTier` / `AdVideoResolution`.
 
+**2026-09-14: 광고 품질을 기준으로 광고·쇼츠 공통 영상 생성기로 사용한다.**
+공통 진입점은 저장소 루트의 `npm run --silent video:plan -- --request request.json --out video-plan.json`이다.
+`core/generation.ts`가 컨셉 검증·광고 프롬프트·품질 선택·클립 분할·참고 견적을 한 경로로 처리한다.
+광고·쇼츠 모두 기본 `standard`(광고용 Seedance 2.0 / 1080p)를 사용하고 시안 티어만 명시적으로 낮춘다.
+실제 MCP 생성은 계획을 소비하는 세션이 수행한다. [공통 실행 절차](../../docs/VIDEO-GENERATION.md)를 따른다.
+
 ## 역할
 
 | 단계 | 기능 | 모듈 |
@@ -19,6 +25,8 @@
 
 ```sh
 # 생성 전
+npm run cli -- video-plan --request request.json [--out video-plan.json]
+npm run cli -- video-estimate --tier standard --durations 3,5,4
 npm run cli -- check-concept --concept concept.json          # 3중 게이트 → {ok,problems,warnings}
 npm run cli -- build-prompt --concept concept.json [--extra-style "Teal and amber palette."]
 npm run cli -- lint-prompt --text "..."                      # 또는 --file prompt.txt

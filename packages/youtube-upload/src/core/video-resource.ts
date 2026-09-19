@@ -12,6 +12,7 @@ export interface VideoSnippet {
 export interface VideoStatus {
   privacyStatus: string;
   selfDeclaredMadeForKids: boolean;
+  containsSyntheticMedia?: boolean;
 }
 export interface VideoRequestBody {
   snippet: VideoSnippet;
@@ -28,6 +29,7 @@ export function buildVideoRequestBody(job: YoutubeUploadJob, description: string
     status: {
       privacyStatus: job.privacyStatus,
       selfDeclaredMadeForKids: job.madeForKids ?? false,
+      ...(job.containsSyntheticMedia !== undefined ? { containsSyntheticMedia: job.containsSyntheticMedia } : {}),
     },
   };
 }
