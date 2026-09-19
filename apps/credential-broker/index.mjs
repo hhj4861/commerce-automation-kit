@@ -58,7 +58,10 @@ export async function handleRequest(request, env, verify = { github: verifyGithu
       return response({ values: await readSecrets(env, access.keys) });
     }
     if (path === '/github/import') {
-      try { authorizeMigration(await verify.github(token), env); } catch { return response({ error: 'unauthorized' }, 403); }
+      let claims;
+      try { claims = await verify.github(token); } catch { return response({ error: 'unauthorized', stage: 'github-signature' }, 403); }
+      try { authorizeGithub(claims, env); } catch { return response({ error: 'unauthorized', stage: 'github-policy' }, 403); }
+      try { authorizeMigration(claims, env); } catch { return response({ error: 'unauthorized', stage: 'migration-policy' }, 403); }
       if (!input.values || Object.keys(input.values).length !== GITHUB_KEYS.length || GITHUB_KEYS.some(k => typeof input.values[k] !== 'string' || !input.values[k] || new TextEncoder().encode(input.values[k]).length > 1024)) return response({ error: 'invalid migration values' }, 400);
       // First import only. A subsequent run cannot silently replace the sealed migration.
       await writeVault(env, 'migration/github', input.values, 0);

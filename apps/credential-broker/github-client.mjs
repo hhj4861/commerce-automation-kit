@@ -27,7 +27,11 @@ export async function run(env = process.env, fetcher = fetch) {
     method: 'POST', headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
     body: JSON.stringify({ values }), redirect: 'error', signal: AbortSignal.timeout(20000),
   });
-  if (!result.ok) throw new Error(`Cloudflare credential request failed (${result.status})`);
+  if (!result.ok) {
+    const error = await result.json().catch(() => ({}));
+    if (['github-signature', 'github-policy', 'migration-policy'].includes(error.stage)) console.error(`Credential rejection stage: ${error.stage}`);
+    throw new Error(`Cloudflare credential request failed (${result.status})`);
+  }
   const body = await result.json();
   if (action === 'import') { console.log(`Cloudflare sealed migration stored (${body.count} keys)`); return; }
   if (!body.values || !Object.keys(body.values).length) throw new Error('Empty credentials');
