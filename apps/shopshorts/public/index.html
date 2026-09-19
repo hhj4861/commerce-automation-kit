@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Shopshorts — Content Studio</title>
 <link rel="stylesheet" href="/app-shell.css">
+<link rel="stylesheet" href="/notifications.css">
 <style>
   .view[hidden], .account-actions[hidden], [data-signin][hidden] { display: none; }
   .account-actions { display: flex; align-items: center; gap: 10px; }
@@ -479,6 +480,7 @@
   <button class="nav-item" data-nav="trends">트렌드</button>
   <button class="nav-item" data-nav="blog">블로그 POC</button>
   <button class="nav-item" data-nav="links">제휴 링크</button>
+  <button class="nav-item" data-nav="notifications">알림함 <span class="notification-badge" data-notification-count hidden></span></button>
 </nav>
 
 <div class="app">
@@ -499,6 +501,7 @@
     <div class="nav-label" style="margin-top:28px">MANAGE</div>
     <nav>
       <button class="nav-item" data-icon-before="link" data-nav="links">제휴 링크</button>
+      <button class="nav-item" data-icon-before="bell" data-nav="notifications">알림함 <span class="notification-badge" data-notification-count hidden></span></button>
       <button class="nav-item" data-icon-before="settings" data-nav="settings">설정</button>
     </nav>
     <div class="sidebar-foot">
@@ -514,7 +517,7 @@
       <div class="breadcrumb">워크스페이스&nbsp; / &nbsp;<strong>쇼핑쇼츠 운영</strong></div>
       <div class="top-actions">
         <button class="icon-btn" aria-label="검색" data-icon="search" data-top-action="search"></button>
-        <button class="icon-btn" aria-label="알림" data-icon="bell" data-top-action="notifications"></button>
+        <button class="icon-btn" aria-label="알림함" data-icon-before="bell" data-top-action="notifications"><span class="notification-badge" data-notification-count hidden></span></button>
         <a class="account" href="/login" data-signin hidden>로그인</a><div class="account-actions" data-account hidden><span class="account-name" data-account-name></span><button class="account account-logout" type="button" data-logout>로그아웃</button></div>
       </div>
     </div>
@@ -1195,7 +1198,7 @@ async function load(keepSelection=false) {
     state.selected = state.jobs.find(j => j.status === 'review')?.brief.id || state.jobs[0]?.brief.id || null;
   }
   renderSummary(); renderTopics(); renderPipeline(); renderJobs(); renderDetail();
-  if (typeof currentRoute === 'function' && currentRoute() !== 'dashboard') renderPage(currentRoute());
+  if (typeof currentRoute === 'function' && !['dashboard', 'notifications'].includes(currentRoute())) renderPage(currentRoute());
 }
 async function loadHot() {
   try {
@@ -1245,13 +1248,14 @@ function activateNav(name) {
 }
 const ROUTES = {
   dashboard:'/', content:'/contents', trends:'/trends', performance:'/performance',
-  blog:'/blog', links:'/affiliate-links', settings:'/settings'
+  blog:'/blog', links:'/affiliate-links', settings:'/settings', notifications:'/notifications'
 };
 const ROUTE_NAMES = Object.fromEntries(Object.entries(ROUTES).map(([key,value]) => [value,key]));
 function currentRoute() {
   return ROUTE_NAMES[location.pathname.replace(/\/+$/, '') || '/'] || 'dashboard';
 }
 function navigate(name, push=true) {
+  window.notificationInbox?.unmount();
   activateNav(name);
   if (name === 'dashboard') {
     document.getElementById('dashboardView').hidden = false;
@@ -1268,6 +1272,11 @@ function navigate(name, push=true) {
 }
 function renderPage(name) {
   const view = document.getElementById('pageView');
+  if (name === 'notifications') {
+    view.innerHTML = '<div class="inbox-empty" role="status">알림을 불러오는 중이에요.</div>';
+    window.notificationInbox?.mount(view);
+    return;
+  }
   const title = {content:'콘텐츠',trends:'트렌드 탐색',blog:'블로그 POC',performance:'성과',links:'제휴 링크',settings:'설정'}[name];
   const copy = {
     content:'제작 중인 쇼츠와 완료된 콘텐츠를 한곳에서 관리하세요.',
@@ -1442,16 +1451,16 @@ function renderPage(name) {
   }
   if (name === 'settings') {
     const autoRefresh = localStorage.getItem('shopshorts:autoRefresh') !== 'off';
-    const notifications = localStorage.getItem('shopshorts:notifications') !== 'off';
     body = `<article class="page-card">
       <div class="setting-row"><div><strong>Google 로그인</strong><small>계정 등록과 OAuth 설정 상태를 확인합니다.</small></div><a class="tool-btn" href="/login">계정 관리</a></div>
       <div class="setting-row"><div><strong>자동 새로고침</strong><small>12초마다 작업 상태를 확인합니다.</small></div><button class="toggle ${autoRefresh ? 'on' : ''}" data-setting="autoRefresh" aria-label="자동 새로고침"></button></div>
-      <div class="setting-row"><div><strong>작업 알림</strong><small>확인이 필요한 작업을 대시보드에 표시합니다.</small></div><button class="toggle ${notifications ? 'on' : ''}" data-setting="notifications" aria-label="작업 알림"></button></div>
+      <div class="setting-row"><div><strong>새 알림 숫자 표시</strong><small>메뉴와 종 버튼에 안 읽은 알림 수를 표시합니다. 꺼도 알림함에 기록은 남습니다.</small></div><button class="toggle" data-notification-preference role="switch" aria-checked="false" aria-label="새 알림 숫자 표시" disabled></button></div>
       <div class="setting-row"><div><strong>운영 서버</strong><small>${state.isCloud ? 'Cloudflare Pages · D1 · R2' : '로컬 전용 · 127.0.0.1:5178'}</small></div><span class="status-pill">정상</span></div>
     </article>`;
   }
   view.innerHTML = `<div class="page-head"><div><div class="eyebrow">SHOPSHORTS</div><h1>${title}</h1><p>${copy}</p></div></div>${body}`;
   bindPageActions(name);
+  window.notificationInbox?.bindPreference();
 }
 // ---------- 소재 리서치 (트렌드 탐색 통합 — 검색어 변환·관찰 창·메모) ----------
 const RESEARCH_URLS = {
@@ -1878,9 +1887,7 @@ document.querySelector('[data-top-action="search"]')?.addEventListener('click', 
   if (state.search) showToast(`“${state.search}” 검색 결과를 표시합니다.`);
 });
 document.querySelector('[data-top-action="notifications"]')?.addEventListener('click', () => {
-  activateNav('content');
-  setQueueFilter('needs');
-  showToast('지금 확인이 필요한 작업만 모았습니다.');
+  navigate('notifications');
 });
 load().then(() => navigate(currentRoute(), false)); loadHot().then(() => {
   if (currentRoute() === 'trends') renderPage('trends');
@@ -1894,6 +1901,33 @@ setInterval(() => {
     if (currentRoute() === 'blog') loadBlogPoc();
   }
 }, 12000);
+</script>
+<script type="module">
+import { createNotificationInbox } from '/notifications.js';
+async function openNotificationJob(id) {
+  // Load the current job rather than act on an old notification snapshot.
+  const result = await api('/api/jobs');
+  state.jobs = result.jobs || [];
+  if (!state.jobs.some(job => job.brief.id === id)) throw new Error('이 작업은 삭제됐거나 더 이상 볼 수 없어요.');
+  state.selected = id;
+  navigate('dashboard');
+  renderDetail(true);
+  document.querySelector('[data-section="content"]')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+window.notificationInbox = createNotificationInbox({
+  document, openJob: openNotificationJob,
+  openStudio: async id => {
+    const response = await fetch(`/api/studio/${encodeURIComponent(id)}`, { cache: 'no-store' });
+    if (!response.ok) throw new Error('이 제작 작업은 삭제됐거나 더 이상 볼 수 없어요.');
+    location.assign(`/studio?id=${encodeURIComponent(id)}`);
+  },
+});
+if (currentRoute() === 'notifications') window.notificationInbox.mount(document.getElementById('pageView'));
+else window.notificationInbox.refresh();
+const notificationJob = new URLSearchParams(location.search).get('job');
+if (notificationJob && currentRoute() === 'dashboard') openNotificationJob(notificationJob).catch(e => showToast(e.message));
+setInterval(() => { if (!document.hidden) window.notificationInbox.poll(); }, 5000);
+window.addEventListener('pageshow', () => window.notificationInbox.refresh());
 </script>
 </body>
 </html>

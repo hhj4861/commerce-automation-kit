@@ -21,6 +21,9 @@ import { fileURLToPath } from 'node:url';
 import { tmpdir } from 'node:os';
 import { prepareShortsVideo, runVideoCli } from './video-generation.mjs';
 import { clearVideoGeneration, videoGenerationProblem } from './lib/video-generation.js';
+import { openNotifications, drainNotifications, notificationApi } from './lib/notifications-local.mjs';
+import { jobObservations, studioObservations } from './lib/notification-events.mjs';
+import { createHash } from 'node:crypto';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const KIT_ROOT = resolve(__dirname, '..', '..');
@@ -86,6 +89,7 @@ function loadJobs() {
 function saveJobs(jobs) {
   mkdirSync(DATA_DIR, { recursive: true });
   writeFileSync(JOBS_PATH, JSON.stringify(jobs, null, 1), 'utf8');
+  observeNotifications(jobs.flatMap(jobObservations));
 }
 
 // ---------- 원자 CLI 브릿지 ----------
@@ -426,11 +430,35 @@ function serveJobVideo(req, res, job, which) {
 const REMOTE_TOKEN = kitEnv().SHOPSHORTS_TOKEN ?? null;
 
 const STUDIO_ENV = kitEnv();
-const studioStore = localStudioStore(DATA_DIR, STUDIO_ENV);
+const notifications = openNotifications(DATA_DIR);
+let notificationError = null;
+function observeNotifications(observations) {
+  try { notifications.observe(observations); }
+  catch (error) { notificationError = '알림을 저장하지 못했어요. 잠시 후 다시 확인해 주세요.'; console.error('[notifications] observe failed:', error.message); }
+}
+const studioStore = localStudioStore(DATA_DIR, STUDIO_ENV, projects => observeNotifications(projects.flatMap(studioObservations)));
 if (process.env.SHOPSHORTS_STUDIO_RUNNER !== 'off') {
   const runner = startLocalStudio(studioStore, STUDIO_ENV);
   await runner.recover();
 }
+
+let notificationRunning = false;
+async function notificationTick() {
+  if (notificationRunning) return;
+  notificationRunning = true;
+  try {
+    notifications.observe(loadJobs().flatMap(jobObservations));
+    notifications.observe((await studioStore.list()).flatMap(studioObservations));
+    await drainNotifications(notifications.queue, notifications.deliver);
+    notificationError = null;
+  } catch (error) {
+    notificationError = '알림 갱신이 지연되고 있어요. 잠시 후 다시 확인해 주세요.';
+    console.error('[notifications] tick failed:', error.message);
+  } finally { notificationRunning = false; }
+}
+await notificationTick();
+const notificationTimer = setInterval(notificationTick, 3000);
+notificationTimer.unref();
 
 const server = createServer(async (req, res) => {
   const url = new URL(req.url ?? '/', `http://localhost:${PORT}`);
@@ -460,7 +488,8 @@ const server = createServer(async (req, res) => {
     if (!['GET', 'HEAD'].includes(req.method) && !sameOrigin(authRequest)) {
       json(res, 403, { error: '다른 사이트에서 요청할 수 없습니다.' }); return;
     }
-    if (!legacyAuthorized(authRequest, STUDIO_ENV) && !await googleUser(authRequest, STUDIO_ENV)) {
+    const signedInUser = await googleUser(authRequest, STUDIO_ENV);
+    if (!legacyAuthorized(authRequest, STUDIO_ENV) && !signedInUser) {
       if (REMOTE_TOKEN && url.searchParams.get('token') === REMOTE_TOKEN) {
         res.writeHead(302, { 'set-cookie': `ss=${REMOTE_TOKEN}; Path=/; HttpOnly; SameSite=Lax; Max-Age=2592000${isLocal ? '' : '; Secure'}`, location: url.pathname }); res.end(); return;
       }
@@ -468,15 +497,35 @@ const server = createServer(async (req, res) => {
       else { res.writeHead(302, { location: '/login' }); res.end(); }
       return;
     }
+    if (url.pathname === '/api/notifications' || url.pathname.startsWith('/api/notifications/')) {
+      const user = signedInUser ? `google:${createHash('sha256').update(signedInUser.sub || signedInUser.email).digest('hex')}` : 'legacy-operator';
+      let body;
+      if (req.method === 'POST') {
+        const chunks = []; let size = 0;
+        for await (const chunk of req) {
+          size += chunk.length;
+          if (size > 4096) { json(res, 413, { error: '알림 요청이 너무 큽니다.' }); return; }
+          chunks.push(chunk);
+        }
+        body = Buffer.concat(chunks);
+      }
+      const request = new Request(new URL(req.url, origin), { method: req.method, headers: req.headers, ...(body ? { body } : {}) });
+      const response = await notificationApi(request, notifications, user);
+      if (req.method === 'GET' && response.ok) {
+        const data = await response.json();
+        await sendResponse(res, Response.json({ ...data, warning: notificationError }, { headers: { 'cache-control': 'no-store' } }));
+      } else await sendResponse(res, response);
+      return;
+    }
     if (url.pathname.startsWith('/api/studio')) { await handleLocalStudio(req, res, origin, STUDIO_ENV, studioStore); return; }
-    const studioFiles = { '/editor.js': ['editor.js','text/javascript'], '/editor-model.js': ['editor-model.js','text/javascript'], '/NanumGothic-Regular.ttf': ['NanumGothic-Regular.ttf','font/ttf'], '/NanumMyeongjo-Regular.ttf': ['NanumMyeongjo-Regular.ttf','font/ttf'], '/NanumPenScript-Regular.ttf': ['NanumPenScript-Regular.ttf','font/ttf'], '/app-shell.css': ['app-shell.css','text/css'], '/studio': ['studio.html','text/html'], '/studio.html': ['studio.html','text/html'], '/studio.js': ['studio.js','text/javascript'], '/studio.css': ['studio.css','text/css'] };
+    const studioFiles = { '/notifications.js': ['notifications.js','text/javascript'], '/notifications.css': ['notifications.css','text/css'], '/editor.js': ['editor.js','text/javascript'], '/editor-model.js': ['editor-model.js','text/javascript'], '/NanumGothic-Regular.ttf': ['NanumGothic-Regular.ttf','font/ttf'], '/NanumMyeongjo-Regular.ttf': ['NanumMyeongjo-Regular.ttf','font/ttf'], '/NanumPenScript-Regular.ttf': ['NanumPenScript-Regular.ttf','font/ttf'], '/app-shell.css': ['app-shell.css','text/css'], '/studio': ['studio.html','text/html'], '/studio.html': ['studio.html','text/html'], '/studio.js': ['studio.js','text/javascript'], '/studio.css': ['studio.css','text/css'] };
     if (req.method === 'GET' && studioFiles[url.pathname]) {
       const [file, type] = studioFiles[url.pathname];
       res.writeHead(200, { 'content-type': type + '; charset=utf-8', 'cache-control': 'no-store' });
       res.end(readFileSync(join(__dirname, 'public', file))); return;
     }
     // 정적 UI
-    const appPages = ['/', '/index.html', '/contents', '/trends', '/blog', '/performance', '/affiliate-links', '/settings'];
+    const appPages = ['/', '/index.html', '/contents', '/trends', '/blog', '/performance', '/affiliate-links', '/settings', '/notifications'];
     if (req.method === 'GET' && appPages.includes(url.pathname)) {
       res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' });
       res.end(readFileSync(join(__dirname, 'public', 'index.html')));

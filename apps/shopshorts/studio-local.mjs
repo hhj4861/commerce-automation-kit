@@ -4,11 +4,11 @@ import { generateCodexRecommendation } from './studio-codex.mjs';
 import { studioApi } from './lib/studio-api.js';
 import { executeStudioTask, capabilities } from './studio-runner.mjs';
 
-export function localStudioStore(dataDir, env) {
+export function localStudioStore(dataDir, env, onPersist = () => {}) {
   const file = join(dataDir, 'studio-projects.json');
   const mediaRoot = resolve(dataDir, 'studio-media');
   const load = () => existsSync(file) ? JSON.parse(readFileSync(file, 'utf8')) : [];
-  const persist = items => { mkdirSync(dataDir, { recursive: true }); writeFileSync(`${file}.tmp`, JSON.stringify(items)); renameSync(`${file}.tmp`, file); };
+  const persist = items => { mkdirSync(dataDir, { recursive: true }); writeFileSync(`${file}.tmp`, JSON.stringify(items)); renameSync(`${file}.tmp`, file); onPersist(items); };
   const assetPath = key => {
     const path = resolve(mediaRoot, key);
     if (!path.startsWith(mediaRoot + sep)) throw new Error('미디어 경로 오류');
