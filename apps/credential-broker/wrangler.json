@@ -96,6 +96,21 @@
       "binding": "SS_SHOPSHORTS_SESSION_SECRET",
       "store_id": "de2c8d7c3e9c4067acc22212522c0fc4",
       "secret_name": "CAK_SHOPSHORTS_SESSION_SECRET"
+    },
+    {
+      "binding": "SS_NAVER_AD_CUSTOMER_ID",
+      "store_id": "de2c8d7c3e9c4067acc22212522c0fc4",
+      "secret_name": "CAK_NAVER_AD_CUSTOMER_ID"
+    },
+    {
+      "binding": "SS_NAVER_AD_API_KEY",
+      "store_id": "de2c8d7c3e9c4067acc22212522c0fc4",
+      "secret_name": "CAK_NAVER_AD_API_KEY"
+    },
+    {
+      "binding": "SS_NAVER_AD_SECRET_KEY",
+      "store_id": "de2c8d7c3e9c4067acc22212522c0fc4",
+      "secret_name": "CAK_NAVER_AD_SECRET_KEY"
     }
   ]
 }

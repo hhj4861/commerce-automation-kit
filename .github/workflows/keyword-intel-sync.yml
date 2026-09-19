@@ -9,10 +9,10 @@ on:
   workflow_dispatch:
     inputs:
       secrets_mode:
-        description: "Cloudflare secrets: run, verify, or one-time import"
+        description: "Cloudflare secrets: run or verify"
         required: false
         type: choice
-        options: [run, verify, import]
+        options: [run, verify]
         default: run
       send_telegram:
         description: "Send trend and blog Top 10 reports to Telegram"
@@ -30,7 +30,7 @@ concurrency:
 
 jobs:
   collect-and-report:
-    if: ${{ inputs.secrets_mode != 'import' && inputs.secrets_mode != 'verify' }}
+    if: ${{ inputs.secrets_mode != 'verify' }}
     runs-on: ubuntu-latest
     timeout-minutes: 45
     defaults:
@@ -185,7 +185,7 @@ jobs:
           retention-days: 7
 
   cloudflare-secrets:
-    if: ${{ github.event_name == 'workflow_dispatch' && (inputs.secrets_mode == 'import' || inputs.secrets_mode == 'verify') }}
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.secrets_mode == 'verify' }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -198,20 +198,4 @@ jobs:
         env:
           CAK_SECRETS_URL: ${{ vars.CAK_SECRETS_URL }}
           CAK_SECRETS_ACTION: verify
-        run: node apps/credential-broker/github-client.mjs
-      - name: One-time sealed migration to Cloudflare
-        if: ${{ inputs.secrets_mode == 'import' }}
-        env:
-          CAK_SECRETS_URL: ${{ vars.CAK_SECRETS_URL }}
-          CAK_SECRETS_ACTION: import
-          NAVER_CLIENT_ID: ${{ secrets.NAVER_CLIENT_ID }}
-          NAVER_CLIENT_SECRET: ${{ secrets.NAVER_CLIENT_SECRET }}
-          NAVER_AD_CUSTOMER_ID: ${{ secrets.NAVER_AD_CUSTOMER_ID }}
-          NAVER_AD_API_KEY: ${{ secrets.NAVER_AD_API_KEY }}
-          NAVER_AD_SECRET_KEY: ${{ secrets.NAVER_AD_SECRET_KEY }}
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          SHOPSHORTS_CLOUD_URL: ${{ secrets.SHOPSHORTS_CLOUD_URL }}
-          SHOPSHORTS_TOKEN: ${{ secrets.SHOPSHORTS_TOKEN }}
-          ELEVENLABS_API_KEY: ${{ secrets.ELEVENLABS_API_KEY }}
         run: node apps/credential-broker/github-client.mjs

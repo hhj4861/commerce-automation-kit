@@ -12,6 +12,7 @@
  * 대시보드는 그 결과(requestId)를 기록할 뿐이다. (완전 무인화 금지 — 저관여+사람 감시)
  */
 import { createServer } from 'node:http';
+import { mergeRuntimeEnv } from '../credential-broker/runtime-env.mjs';
 import { authRoute, googleUser, legacyAuthorized, sameOrigin } from './lib/google-auth.js';
 import { localStudioStore, startLocalStudio, handleLocalStudio, sendResponse } from './studio-local.mjs';
 import { spawn } from 'node:child_process';
@@ -49,7 +50,7 @@ function kitEnv() {
       if (m) extra[m[1]] = m[2];
     }
   }
-  return { ...extra, ...process.env };
+  return mergeRuntimeEnv(extra, process.env);
 }
 
 const STATUSES = [

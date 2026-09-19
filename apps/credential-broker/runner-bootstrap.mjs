@@ -6,6 +6,7 @@ import { randomUUID } from 'node:crypto';
 import { spawn } from 'node:child_process';
 import { once } from 'node:events';
 import { runnerRequest } from './runner-client.mjs';
+import { withoutCredentials } from './runtime-env.mjs';
 
 export async function prepareRuntime(call, baseEnv = process.env) {
   const owner = randomUUID();
@@ -43,7 +44,7 @@ export async function prepareRuntime(call, baseEnv = process.env) {
       });
       return serial;
     };
-    const env = { ...baseEnv, ...values, CODEX_HOME: codexHome };
+    const env = { ...withoutCredentials(baseEnv), ...values, CODEX_HOME: codexHome, CAK_CLOUD_SECRETS_ACTIVE: '1' };
     if (records.youtube) env.YOUTUBE_TOKEN_PATH = mapping.youtube;
     if (records['youtube-client']) env.YOUTUBE_CLIENT_SECRET = mapping['youtube-client'];
     return { env, dir, flush, async close() {

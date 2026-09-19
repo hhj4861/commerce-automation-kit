@@ -14,6 +14,7 @@
  * 실행: node apps/shopshorts/worker.mjs   (환경: kit .env 의 SHOPSHORTS_TOKEN, SHOPSHORTS_CLOUD_URL)
  */
 import { spawn } from 'node:child_process';
+import { mergeRuntimeEnv } from '../credential-broker/runtime-env.mjs';
 import { startStudioWorker } from './studio-worker.mjs';
 import { existsSync, readFileSync } from 'node:fs';
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
@@ -36,7 +37,7 @@ function kitEnv() {
       if (m) extra[m[1]] = m[2];
     }
   }
-  return { ...extra, ...process.env };
+  return mergeRuntimeEnv(extra, process.env);
 }
 
 const ENV = kitEnv();

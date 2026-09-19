@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile, writeFile, stat, access, rm } from 'node:fs/promises';
 import { prepareRuntime } from '../runner-bootstrap.mjs';
+import { mergeRuntimeEnv } from '../runtime-env.mjs';
 function fake() {
   const records = { codex: { revision: 1, value: { tokens: { refresh_token: 'test-old' } } }, youtube: { revision: 4, value: { refresh_token: 'test-yt' } } };
   const calls = [];
@@ -44,4 +45,15 @@ test('failed refresh persistence preserves restricted cache and reports failure'
     await access(runtime.dir);
     assert.equal(remote.calls.some(c => c.body.operation === 'release'), false);
   } finally { await rm(runtime.dir, { recursive: true, force: true }); }
+});
+test('central mode never falls back to removed local keys; non-secret settings remain', async () => {
+  const remote = fake();
+  const runtime = await prepareRuntime(remote.call, { COUPANG_SECRET_KEY: 'stale', HOME: '/home/test' });
+  try {
+    const env = mergeRuntimeEnv({ COUPANG_SECRET_KEY: 'also-stale', GOOGLE_AUTH_MODE: 'gis', ELEVENLABS_API_KEY: 'old' }, runtime.env);
+    assert.equal(env.COUPANG_SECRET_KEY, undefined);
+    assert.equal(env.ELEVENLABS_API_KEY, 'cloud-key');
+    assert.equal(env.GOOGLE_AUTH_MODE, 'gis');
+    assert.equal(mergeRuntimeEnv({ ELEVENLABS_API_KEY: 'local' }, {}).ELEVENLABS_API_KEY, 'local');
+  } finally { await runtime.close(); }
 });
