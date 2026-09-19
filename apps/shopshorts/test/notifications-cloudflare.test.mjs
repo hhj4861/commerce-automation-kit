@@ -108,6 +108,14 @@ test('configuration defaults local, supports saved settings and fails closed on 
   assert.throws(() => notificationConfig(f.dir, {}), /설정 파일 오류/);
 });
 
+test('central queue credentials never fall back to local tokens or token files', t => {
+  const f = fixture(t);
+  writeFileSync(join(f.dir, 'notification-queue.json'), JSON.stringify({ ...config, token: undefined, tokenFile: '/missing/token' }));
+  const env = { CAK_CLOUD_SECRETS_ACTIVE: '1', CLOUDFLARE_API_TOKEN: 'stale-local-token' };
+  assert.throws(() => notificationConfig(f.dir, env), /중앙 알림 큐 토큰/);
+  assert.equal(notificationConfig(f.dir, { ...env, SHOPSHORTS_CF_QUEUE_TOKEN: 'central-token' }).token, 'central-token');
+});
+
 test('provision creates dedicated DLQ first and refuses incompatible existing consumers', async () => {
   const calls = [];
   const api = async (path, body) => {

@@ -11,8 +11,10 @@ export function notificationConfig(dataDir, env) {
   if (provider === 'local') return { provider };
   if (provider !== 'cloudflare') throw new Error('지원하지 않는 알림 큐');
   const tokenFile = env.SHOPSHORTS_CF_TOKEN_FILE || saved.tokenFile;
-  let token = env.CLOUDFLARE_API_TOKEN;
-  if (!token && tokenFile) {
+  const central = env.CAK_CLOUD_SECRETS_ACTIVE === '1';
+  let token = env.SHOPSHORTS_CF_QUEUE_TOKEN || (central ? undefined : env.CLOUDFLARE_API_TOKEN);
+  if (central && !token) throw new Error('Cloudflare 중앙 알림 큐 토큰이 없습니다');
+  if (!central && !token && tokenFile) {
     try { token = readFileSync(tokenFile, 'utf8').trim(); }
     catch { throw new Error('Cloudflare Queues 토큰 파일을 읽지 못했습니다'); }
   }
