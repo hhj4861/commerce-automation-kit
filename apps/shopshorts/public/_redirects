@@ -5,5 +5,5 @@
 /settings       /index.html 200
 /blog           /index.html 200
 
-/studio         /studio.html 200
-/login          /login.html 200
+# Pages serves matching HTML at extensionless paths automatically.
+# Rewriting /login or /studio to its .html file creates a canonicalization loop.
