@@ -30,6 +30,12 @@ export async function run(env = process.env, fetcher = fetch) {
   if (!result.ok) {
     const error = await result.json().catch(() => ({}));
     if (['github-signature', 'github-policy', 'migration-policy'].includes(error.stage)) console.error(`Credential rejection stage: ${error.stage}`);
+    if (error.stage === 'github-policy') {
+      // Public repository/workflow identifiers only; never print the JWT or arbitrary claims.
+      const claims = JSON.parse(Buffer.from(token.split('.')[1], 'base64url').toString());
+      const fields = ['repository', 'repository_id', 'repository_owner_id', 'ref', 'sub', 'event_name', 'runner_environment', 'workflow_ref', 'job_workflow_ref'];
+      console.error(JSON.stringify(Object.fromEntries(fields.map(k => [k, claims[k]]))));
+    }
     throw new Error(`Cloudflare credential request failed (${result.status})`);
   }
   const body = await result.json();
