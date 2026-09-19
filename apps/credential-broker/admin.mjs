@@ -87,6 +87,11 @@ async function main() {
     const env = { ...parseEnv(await readFile(resolve(ROOT, 'packages/keyword-intel/.env'), 'utf8')), ...parseEnv(await readFile(resolve(ROOT, '.env'), 'utf8')) };
     await upsert(config, Object.fromEntries(STATIC_KEYS.filter(k => env[k]).map(k => [k, env[k]])));
     console.log(`Unavailable locally: ${STATIC_KEYS.filter(k => !env[k]).join(', ')}`);
+  } else if (action === 'register-queue') {
+    if (!process.argv[3]) throw new Error('Queue configuration path required');
+    const queue = JSON.parse(await readFile(resolve(process.argv[3]), 'utf8'));
+    if (queue.provider !== 'cloudflare' || !queue.tokenFile) throw new Error('Cloudflare queue token file required');
+    await upsert(await getConfig(), { SHOPSHORTS_CF_QUEUE_TOKEN: (await readFile(queue.tokenFile, 'utf8')).trim() });
   } else if (action === 'import-oauth') {
     const env = parseEnv(await readFile(resolve(ROOT, '.env'), 'utf8'));
     for (const [name, file] of [['codex', resolve(homedir(), '.codex/auth.json')], ['youtube', env.YOUTUBE_TOKEN_PATH || resolve(homedir(), '.cak-youtube-tokens.json')], ['youtube-client', env.YOUTUBE_CLIENT_SECRET]]) {
