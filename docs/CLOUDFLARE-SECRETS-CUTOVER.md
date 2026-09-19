@@ -49,9 +49,12 @@
 2. 사용자가 **모든 Google 계정 허용**을 명시적으로 요청해
    `SHOPSHORTS_GOOGLE_ALLOW_SIGNUPS=1`을 운영 배포했다. `/auth/status`는
    `ready=true`, `allowSignups=true`, 누락 설정 없음으로 응답한다.
-   실제 Google GIS는 `The given origin is not allowed for the given client ID` 오류를 반환한다.
-   Google Cloud Console의 웹 OAuth 클라이언트에서 승인된 JavaScript 원본에
-   `https://shopshorts-dash.pages.dev`를 추가해야 한다. 실제 계정 로그인은 아직 미검증이다.
+   **2026-09-20 사용자 원본 등록 후 재검증:** 기존 `origin is not allowed` 오류 해소.
+   Google GIS client·style·button 모두 HTTP 200이며 ‘Google 계정으로 계속하기’ 버튼이 표시된다.
+   클릭하면 `https://accounts.google.com/v3/signin/identifier`의 공식 Google 로그인 화면이 열린다.
+   `/auth/google/challenge`는 HTTP 200, nonce, HttpOnly 인증 흐름 쿠키, `no-store`를 반환한다.
+   격리 브라우저에는 로그인된 Google 계정이 없어 초기 계정 목록은 비어 있었다.
+   실제 사용자 계정 인증을 완료한 뒤 대시보드에 복귀하는 단계는 사용자 브라우저 확인이 필요하다.
 3. Pages의 LLM 추천은 아직 원격 Codex 실행기에 연결되지 않았다. 로컬 5198에서는 Codex를 사용한다.
    시나리오·이미지·영상의 기존 Gemini 키는 등록 사실과 공급자 인증 성공을 구분한다.
 4. Claude 구독 인증은 통합하지 않았다. 지원되는 인증 방식이 필요한 별도 연동이다.

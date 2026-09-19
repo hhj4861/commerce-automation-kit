@@ -17,9 +17,11 @@
   with the source, and verified with a read-only GitHub request. Both duplicate
   Pages secrets and the sealed migration copy were removed; import mode is closed.
 - Google GIS mode, the production origin and all-account admission are configured
-  per explicit operator approval. Google still rejects the production origin:
-  add `https://shopshorts-dash.pages.dev` to the OAuth client's authorized JavaScript
-  origins in Google Cloud Console. Existing administrator-token access works.
+  per explicit operator approval. After the operator registered the production
+  origin, verification on 2026-09-20 confirmed the GIS button loads with HTTP 200
+  and opens Google's official sign-in page. The server challenge also returns 200
+  with a nonce and an HttpOnly flow cookie. Completing a real account sign-in and
+  returning to the dashboard still needs a user-browser check.
 - PR #10 was merged into `main` on explicit operator approval (merge `8fffe46`).
   Main's keyword, TTS and music OIDC reads all passed. The 10 duplicate GitHub
   secrets were deleted; the repository secret inventory is empty. See the cutover
