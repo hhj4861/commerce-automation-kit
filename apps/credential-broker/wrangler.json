@@ -111,6 +111,16 @@
       "binding": "SS_NAVER_AD_SECRET_KEY",
       "store_id": "de2c8d7c3e9c4067acc22212522c0fc4",
       "secret_name": "CAK_NAVER_AD_SECRET_KEY"
+    },
+    {
+      "binding": "SS_WP_AUTO_BLOG_GITHUB_TOKEN",
+      "store_id": "de2c8d7c3e9c4067acc22212522c0fc4",
+      "secret_name": "CAK_WP_AUTO_BLOG_GITHUB_TOKEN"
+    },
+    {
+      "binding": "SS_SHOPSHORTS_CF_QUEUE_TOKEN",
+      "store_id": "de2c8d7c3e9c4067acc22212522c0fc4",
+      "secret_name": "CAK_SHOPSHORTS_CF_QUEUE_TOKEN"
     }
   ]
 }

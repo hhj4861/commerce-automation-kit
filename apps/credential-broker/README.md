@@ -3,7 +3,7 @@
 ## Applied state — 2026-09-19
 
 - Cloudflare account `8707f7095965c1c134cd93e0b68248ca`, store `cak-secrets`
-  (`de2c8d7c3e9c4067acc22212522c0fc4`): 17 application values plus the vault key.
+  (`de2c8d7c3e9c4067acc22212522c0fc4`): 19 application values plus the vault key.
 - Worker: `https://cak-credential-broker.guswhd1085.workers.dev` deployed; API-key
   reads, anonymous denial and concurrent OAuth-runtime rejection verified remotely.
 - D1: Codex auth, YouTube tokens and YouTube client JSON encrypted and read-back verified.
@@ -12,13 +12,26 @@
   [TTS](https://github.com/hhj4861/commerce-automation-kit/actions/runs/35429163973) and
   [music](https://github.com/hhj4861/commerce-automation-kit/actions/runs/35429165212).
   No media generation or Telegram delivery was requested by these verification jobs.
-- Production Pages has **not** been switched. Automatic approval review rejected
-  deploying the current studio branch to production without explicit approval.
-  Its existing `WP_AUTO_BLOG_GITHUB_TOKEN` remains there, not yet in Secrets Store.
+- Production Pages switched after explicit user approval. Its private service
+  binding resolves central credentials. The blog token was migrated, compared
+  with the source, and verified with a read-only GitHub request. Both duplicate
+  Pages secrets and the sealed migration copy were removed; import mode is closed.
+- Google GIS mode and the production origin are configured. Google admission
+  remains closed until the operator supplies allowed account emails. Existing
+  administrator-token access remains available.
 - Existing GitHub secrets remain for default-branch scheduled jobs. Removing them
   requires the workflow changes to reach `main`; PR merge needs explicit approval.
-- The current shared local server was not restarted. The Cloudflare runtime wrapper
-  was verified separately; use the commands below to switch an execution process.
+- Local port 5198 and the production queue worker now run together under one
+  central-credential wrapper/lease. Existing local projects and notification data
+  remain in `/private/tmp/shopshorts-studio-ui`. Cloud worker heartbeat was verified.
+- The notification queue token is also central (`SHOPSHORTS_CF_QUEUE_TOKEN`).
+  Central mode rejects missing credentials instead of using an old local token file.
+- Production Pages does not yet have a Codex recommendation bridge; recommendations
+  work only on the local server. Presence-based generation capabilities do not
+  prove that the previously invalid Gemini credential is accepted by the provider.
+
+Deployment evidence, remaining gates and restart command:
+[`docs/CLOUDFLARE-SECRETS-CUTOVER.md`](../../docs/CLOUDFLARE-SECRETS-CUTOVER.md).
 
 The account Secrets Store `cak-secrets` owns static keys (`CAK_*`). The
 `cak-credential-broker` Worker resolves bindings; Pages uses its private RPC service

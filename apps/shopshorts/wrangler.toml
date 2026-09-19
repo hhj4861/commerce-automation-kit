@@ -14,6 +14,8 @@ binding = "MEDIA"
 bucket_name = "shopshorts-media"
 
 [vars]
+GOOGLE_AUTH_MODE = "gis"
+SHOPSHORTS_ORIGIN = "https://shopshorts-dash.pages.dev"
 # Static credentials are resolved through the internal service binding.
 
 [[services]]
