@@ -10,6 +10,7 @@
   "scripts": {
     "start": "node server.mjs",
     "worker": "node worker.mjs",
+    "llm:worker": "node studio-account-worker.mjs",
     "start:cloud-secrets": "node ../credential-broker/runner-bootstrap.mjs server.mjs",
     "worker:cloud-secrets": "node ../credential-broker/runner-bootstrap.mjs worker.mjs",
     "test": "node --test test/*.test.mjs",

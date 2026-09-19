@@ -32,9 +32,9 @@ export function disabledMcpArgs(servers) {
   });
 }
 
-async function restrictMcp({cwd,signal}) {
+async function restrictMcp({cwd,signal,env}) {
   const list=async overrides=>{
-    const {stdout}=await execFileAsync('codex',['mcp','list','--json',...overrides],{cwd,env:codexEnvironment(),signal,timeout:15000,maxBuffer:1024*1024});
+    const {stdout}=await execFileAsync('codex',['mcp','list','--json',...overrides],{cwd,env:codexEnvironment(env),signal,timeout:15000,maxBuffer:1024*1024});
     return JSON.parse(stdout);
   };
   try {
@@ -63,7 +63,7 @@ export function parseCodexEvents(output) {
   return {value,searched};
 }
 
-export function createCodexGenerator({spawnProcess=spawn, prepare=restrictMcp, timeoutMs=180000}={}) {
+export function createCodexGenerator({spawnProcess=spawn, prepare=restrictMcp, timeoutMs=180000, env=process.env}={}) {
   let running=false;
   return async (prompt,{signal,model}={}) => {
     if (running) fail('다른 Codex 추천을 생성 중입니다. 잠시 후 다시 시도하세요.',429);
@@ -73,11 +73,11 @@ export function createCodexGenerator({spawnProcess=spawn, prepare=restrictMcp, t
     let cwd;
     try {
       cwd=await mkdtemp(join(tmpdir(),'shopshorts-codex-'));
-      const restrictions=await prepare({cwd,signal});
+      const restrictions=await prepare({cwd,signal,env});
       args.splice(args.length-1,0,...restrictions);
       if(signal?.aborted) fail('추천 요청이 취소되었습니다.',499);
       return await new Promise((resolve,reject) => {
-        const child=spawnProcess('codex',args,{cwd,env:codexEnvironment(),stdio:['pipe','pipe','pipe'],shell:false});
+        const child=spawnProcess('codex',args,{cwd,env:codexEnvironment(env),stdio:['pipe','pipe','pipe'],shell:false});
         child.stdout.setEncoding('utf8');
         let output='', size=0, failure, killTimer;
         const stop=(message,status) => {

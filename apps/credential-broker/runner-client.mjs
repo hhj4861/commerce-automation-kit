@@ -6,7 +6,7 @@ import { AUDIENCE } from './policy.mjs';
 export async function runnerRequest(base, keyPath, path, body, fetcher = fetch) {
   const url = new URL(base);
   if (url.protocol !== 'https:' || url.username || url.password || url.pathname !== '/' || url.search || url.hash) throw new Error('Invalid broker URL');
-  if (!['/runner/secrets', '/runner/vault', '/runner/lease'].includes(path)) throw new Error('Invalid broker operation');
+  if (!['/runner/secrets', '/runner/vault', '/runner/lease', '/runner/accounts', '/runner/account-action'].includes(path)) throw new Error('Invalid broker operation');
   const jwk = JSON.parse(await readFile(keyPath, 'utf8'));
   const key = await importJWK(jwk, 'EdDSA');
   const token = await new SignJWT({}).setProtectedHeader({ alg: 'EdDSA' }).setIssuer('cak-runner').setSubject('shopshorts-runner').setAudience(AUDIENCE).setIssuedAt().setExpirationTime('60s').setJti(randomUUID()).sign(key);

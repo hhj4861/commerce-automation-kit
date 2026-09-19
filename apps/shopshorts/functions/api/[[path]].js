@@ -1,5 +1,6 @@
 import { studioApi, cloudStudioStore } from '../../lib/studio-api.js';
 import { workerAuthorized } from '../../lib/google-auth.js';
+import { llmAccountApi } from '../../lib/llm-account-api.js';
 /**
  * shopshorts Cloudflare API — Pages Functions 라우터.
  *
@@ -208,6 +209,8 @@ export async function onRequest(context) {
   const method = request.method;
 
   try {
+    const accountResponse = await llmAccountApi(request, env, (owner, operation, input) => env.CREDENTIALS.llmAccount(owner, operation, input));
+    if (accountResponse) return accountResponse;
     if (path === 'studio/worker' && method === 'PUT') {
       if (!workerAuthorized(request, env)) return json({ error: '워커 인증 필요' }, 403);
       const input = await request.json();
@@ -216,7 +219,7 @@ export async function onRequest(context) {
       await env.DB.prepare("INSERT INTO meta (key,value) VALUES ('studio_worker',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value").bind(JSON.stringify(caps)).run();
       return json({ ok: true });
     }
-    if (path === 'studio' || path.startsWith('studio/')) return studioApi(request, env, cloudStudioStore(env));
+    if (path === 'studio' || path.startsWith('studio/')) return studioApi(request, env, cloudStudioStore(env), { recommendationAccounts: true });
     // ---------- 잡 목록/등록 ----------
     if (path === 'jobs' && method === 'GET') {
       const { results } = await env.DB.prepare('SELECT data FROM jobs').all();
