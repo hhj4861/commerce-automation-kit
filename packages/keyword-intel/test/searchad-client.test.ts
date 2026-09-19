@@ -70,6 +70,27 @@ describe('keywordTool — 파싱', () => {
     expect(rows[0]!.compIdx).toBeNull();
   });
 
+  it('기기별 실측 0, 마스킹, 결측, 잘못된 값을 구분해 보존한다', async () => {
+    reply({ keywordList: [
+      { relKeyword: '실측', monthlyPcQcCnt: '0', monthlyMobileQcCnt: '1,200' },
+      { relKeyword: '마스킹', monthlyPcQcCnt: '< 10' },
+      { relKeyword: '오류', monthlyPcQcCnt: '20x', monthlyMobileQcCnt: { count: 30 } },
+    ] });
+    const rows = await keywordTool(cred, '실측');
+    expect(rows.find((row) => row.relKeyword === '실측')).toMatchObject({
+      monthlyPc: 0, monthlyPcStatus: 'measured', monthlyMobile: 1200,
+      monthlyMobileStatus: 'measured', masked: false,
+    });
+    expect(rows.find((row) => row.relKeyword === '마스킹')).toMatchObject({
+      monthlyPc: null, monthlyPcStatus: 'masked', monthlyMobile: null,
+      monthlyMobileStatus: 'missing', masked: true,
+    });
+    expect(rows.find((row) => row.relKeyword === '오류')).toMatchObject({
+      monthlyPc: null, monthlyPcStatus: 'invalid', monthlyMobile: null,
+      monthlyMobileStatus: 'invalid', masked: false,
+    });
+  });
+
   it('빈 keywordList 도 안전', async () => {
     reply({ keywordList: [] });
     expect(await keywordTool(cred, 'x')).toEqual([]);

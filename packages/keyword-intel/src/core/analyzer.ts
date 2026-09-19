@@ -45,9 +45,12 @@ export function summarizeCompetition(shop: ShopSearchResult): KeywordSignal['com
 
 /** 데이터랩 응답(단일 그룹) → trend 블록 */
 export function summarizeTrend(datalab: DatalabResult | null): KeywordSignal['trend'] {
+  const metadata = datalab ? {
+    timeUnit: datalab.timeUnit, startDate: datalab.startDate, endDate: datalab.endDate,
+  } : {};
   const series =
     datalab?.results[0]?.data.map((d) => ({ period: d.period, ratio: asRel(d.ratio) })) ?? [];
-  if (series.length === 0) return { latest: null, momentumPct: null, series: [] };
+  if (series.length === 0) return { ...metadata, latest: null, momentumPct: null, series: [] };
   const latest = series.at(-1)!.ratio;
   // 최근 절반 평균 vs 직전 절반 평균으로 모멘텀 근사 (정의는 ARCHITECTURE §4)
   const half = Math.floor(series.length / 2);
@@ -55,7 +58,7 @@ export function summarizeTrend(datalab: DatalabResult | null): KeywordSignal['tr
     half > 0
       ? pctChange(avg(series.slice(0, half).map((s) => s.ratio)), avg(series.slice(half).map((s) => s.ratio)))
       : null;
-  return { latest, momentumPct, series };
+  return { ...metadata, latest, momentumPct, series };
 }
 
 /**
