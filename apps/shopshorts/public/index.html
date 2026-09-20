@@ -1915,7 +1915,8 @@ async function openNotificationJob(id) {
   document.querySelector('[data-section="content"]')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 window.notificationInbox = createNotificationInbox({
-  document, openJob: openNotificationJob,
+  document, recommendations: true, openJob: openNotificationJob,
+  openRecommendation: id => location.assign(`/studio?new=1&recommendation=${encodeURIComponent(id)}`),
   openStudio: async id => {
     const response = await fetch(`/api/studio/${encodeURIComponent(id)}`, { cache: 'no-store' });
     if (!response.ok) throw new Error('이 제작 작업은 삭제됐거나 더 이상 볼 수 없어요.');

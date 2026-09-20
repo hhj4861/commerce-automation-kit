@@ -8,6 +8,7 @@ export function renderInbox(data, { filter = 'all', error = '', busy = false } =
       <button data-inbox-filter="all" aria-pressed="${filter === 'all'}" ${disabled}>전체</button>
       <button data-inbox-filter="unread" aria-pressed="${filter === 'unread'}" ${disabled}>안 읽음 <span>${data?.unreadCount ?? '—'}</span></button></div>
       <button class="mini-btn" data-inbox-action="read-all" ${busy || !data?.unreadCount ? 'disabled' : ''}>모두 읽음</button></div>
+    ${data?.recommendationRetention ? '<p class="inbox-note">AI 추천 결과는 계정별 최근 최대 10개까지 보관합니다.</p>' : ''}
     ${data?.enabled === false ? '<p class="inbox-note">새 알림 숫자 표시를 껐어요. 알림은 계속 이곳에 보관됩니다.</p>' : ''}
     ${problems ? `<div class="inbox-error" role="alert">${escape(problems)} <button data-inbox-action="${data?.queue?.dead ? 'retry' : 'refresh'}" ${disabled}>다시 시도</button></div>` : ''}
     ${data?.queue?.pending || data?.queue?.inflight ? '<p class="inbox-note" role="status">새 알림을 정리하고 있어요.</p>' : ''}
@@ -19,11 +20,16 @@ export function renderInbox(data, { filter = 'all', error = '', busy = false } =
     ${data?.nextCursor ? `<button class="inbox-more mini-btn" data-inbox-action="more" ${disabled}>이전 알림 더 보기</button>` : ''}`;
 }
 
-export function createNotificationInbox({ document, fetcher = fetch, openJob, openStudio }) {
+export function createNotificationInbox({ document, fetcher = fetch, openJob, openStudio, openRecommendation, recommendations = false }) {
   let data = null, filter = 'all', error = '', busy = false, host = null, serial = 0, restoreFocus = null;
   const api = async (path = '', body) => {
     const response = await fetcher(`/api/notifications${path}`, { cache: 'no-store', signal: AbortSignal.timeout(10000), ...(body === undefined ? {} : { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }) });
     if (!response.ok) throw new Error(response.status === 401 ? '로그인이 만료됐어요. 다시 로그인해 주세요.' : '알림을 불러오지 못했어요. 다시 시도해 주세요.');
+    return response.json();
+  };
+  const recommendationApi = async (path, body) => {
+    const response = await fetcher(`/api/studio/llm/${path}`, { cache: 'no-store', signal: AbortSignal.timeout(10000), ...(body === undefined ? {} : { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }) });
+    if (!response.ok) throw Error('AI 추천 알림을 불러오지 못했어요. 다시 시도해 주세요.');
     return response.json();
   };
   const paint = () => {
@@ -59,9 +65,16 @@ export function createNotificationInbox({ document, fetcher = fetch, openJob, op
     if (!quiet) { busy = true; paint(); }
     try {
       const result = await api(`?filter=${filter}${more && data?.nextCursor ? `&before=${data.nextCursor}` : ''}`);
+      if (recommendations) {
+        const privateData = await recommendationApi('notifications');
+        result.recommendationIds = privateData.items.map(item => item.sourceId);
+        result.unreadCount += privateData.unreadCount;
+        result.items = [...privateData.items.filter(item => filter !== 'unread' || !item.read), ...result.items].sort((a,b)=>Date.parse(b.occurredAt)-Date.parse(a.occurredAt));
+        result.recommendationRetention = true;
+      }
       if (requestId !== serial) return;
       data = summaryOnly && data ? { ...data, enabled: result.enabled, unreadCount: result.unreadCount, queue: result.queue, warning: result.warning }
-        : more ? { ...result, items: [...data.items, ...result.items] } : result;
+        : more ? { ...result, items: [...result.items.filter(item=>item.source==='recommendation'), ...data.items.filter(item=>item.source!=='recommendation'), ...result.items.filter(item=>item.source!=='recommendation')].sort((a,b)=>Date.parse(b.occurredAt)-Date.parse(a.occurredAt)) } : result;
       error = '';
     } catch (e) { if (requestId === serial) error = e.message; }
     finally { if (requestId === serial) { busy = false; paint(); } }
@@ -70,7 +83,11 @@ export function createNotificationInbox({ document, fetcher = fetch, openJob, op
     if (busy) return;
     ++serial; busy = true; error = ''; paint();
     try {
-      await api(path, body);
+      if (path === '/recommendation-read') await recommendationApi('notification-read', body);
+      else {
+        await api(path, body);
+        if (path === '/read-all' && data?.recommendationIds?.length) await recommendationApi('notification-read', { ids: data.recommendationIds, read: true });
+      }
       busy = false;
       await refresh();
       if (after) await after();
@@ -88,9 +105,9 @@ export function createNotificationInbox({ document, fetcher = fetch, openJob, op
     if (inboxAction === 'retry') return mutate('/retry', {});
     const item = data?.items.find(x => x.id === (inboxRead || inboxOpen));
     if (!item) return;
-    const go = () => item.source === 'job' ? openJob(item.sourceId) : openStudio(item.sourceId);
+    const go = () => item.source === 'recommendation' ? openRecommendation(item.sourceId) : item.source === 'job' ? openJob(item.sourceId) : openStudio(item.sourceId);
     if (inboxOpen && item.read) { try { await go(); } catch (e) { error = e.message; paint(); } return; }
-    return mutate(`/${encodeURIComponent(item.id)}/read`, { read: inboxOpen ? true : !item.read }, inboxOpen ? go : undefined);
+    return mutate(item.source === 'recommendation' ? '/recommendation-read' : `/${encodeURIComponent(item.id)}/read`, { ...(item.source === 'recommendation' ? { ids: [item.sourceId] } : {}), read: inboxOpen ? true : !item.read }, inboxOpen ? go : undefined);
   }
   return {
     mount(element) { host = element; host.onclick = click; paint(); return refresh(); },
