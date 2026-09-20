@@ -5,9 +5,9 @@ import { mkdtemp, mkdir, readFile, writeFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { recommendBrief } from './lib/studio-recommendations.js';
+import { claudeFailure as failure, classifyClaudeFailure } from './lib/llm-account-errors.js';
 
 const exec = promisify(execFile);
-const failure = () => new Error('Claude 연결 또는 추천에 실패했습니다. 인증 상태와 구독 사용 한도를 확인하세요.');
 export const claudeEnvironment = env => Object.fromEntries(['HOME', 'PATH', 'TMPDIR', 'LANG', 'LC_ALL', 'SSL_CERT_FILE', 'NODE_EXTRA_CA_CERTS', 'CLAUDE_CONFIG_DIR'].filter(k => env[k]).map(k => [k, env[k]]));
 export function safeClaudeLogin(value) {
   const url = new URL(value);
@@ -20,13 +20,15 @@ export function safeClaudeLogin(value) {
 
 function childRun(args, { env, signal, input, onOutput, spawnProcess = spawn, timeoutMs = 180000 }) {
   const child = spawnProcess('claude', args, { cwd: env.HOME, env: { ...claudeEnvironment(env), BROWSER: '/usr/bin/true' }, stdio: ['pipe', 'pipe', 'pipe'], shell: false });
-  let output = '', size = 0, failed = false, killTimer;
+  let output = '', diagnostic = '', size = 0, failed = false, killTimer, failureCode;
   const stop = () => { child.kill('SIGTERM'); killTimer ||= setTimeout(() => child.kill('SIGKILL'), 1500); killTimer.unref(); };
-  const timer = setTimeout(() => { failed = true; stop(); }, timeoutMs);
+  const timer = setTimeout(() => { failed = true; failureCode = 'CLAUDE_TIMEOUT'; stop(); }, timeoutMs);
   signal?.addEventListener('abort', stop, { once: true });
-  child.stdout.setEncoding('utf8'); child.stderr.resume(); child.stdin.on('error', () => { failed = true; stop(); });
+  child.stdout.setEncoding('utf8'); child.stderr.setEncoding('utf8');
+  child.stderr.on('data', chunk => { diagnostic = (diagnostic + chunk).slice(-16384); });
+  child.stdin.on('error', () => { failed = true; stop(); });
   const done = new Promise((resolve, reject) => {
-    child.on('error', () => { failed = true; });
+    child.on('error', error => { failed = true; if (error.code === 'ENOENT') failureCode = 'CLAUDE_NOT_INSTALLED'; });
     child.stdout.on('data', chunk => {
       size += Buffer.byteLength(chunk);
       if (size > 2 * 1024 * 1024) { failed = true; stop(); return; }
@@ -35,7 +37,8 @@ function childRun(args, { env, signal, input, onOutput, spawnProcess = spawn, ti
     });
     child.once('close', code => {
       clearTimeout(timer); clearTimeout(killTimer); signal?.removeEventListener('abort', stop);
-      if (failed || signal?.aborted || code !== 0) reject(failure()); else resolve(output);
+      if (failed || signal?.aborted || code !== 0) reject(failure(failureCode || classifyClaudeFailure(diagnostic + '\n' + output))); else resolve(output);
+      diagnostic = ''; output = '';
     });
   });
   if (signal?.aborted) stop();
@@ -69,7 +72,8 @@ export async function loginClaude(env, { signal, update, read, spawnProcess, pol
     finally { polling = false; }
   };
   const timer = setInterval(() => { if (!polling) pollTask = poll(); }, pollMs);
-  try { await run.done; await publishing; if (inputFailure || !manual) throw inputFailure || failure(); }
+  try { await run.done; await publishing; if (inputFailure || !manual) throw inputFailure || failure('CLAUDE_LOGIN_FAILED'); }
+  catch (error) { if (error.code === 'CLAUDE_REQUEST_FAILED') throw failure('CLAUDE_LOGIN_FAILED'); throw error; }
   finally { clearInterval(timer); await pollTask; }
 }
 
@@ -84,7 +88,7 @@ export function claudeArgs(model) {
 export function parseClaudeEvents(output) {
   const searches = new Set(); let searched = false, result, answer = '';
   for (const line of output.split('\n').filter(Boolean)) {
-    let event; try { event = JSON.parse(line); } catch { throw failure(); }
+    let event; try { event = JSON.parse(line); } catch { throw failure('CLAUDE_OUTPUT_INVALID'); }
     if (event.type === 'assistant') for (const block of event.message?.content || []) {
       if (block.type === 'tool_use' && block.name === 'WebSearch') searches.add(block.id);
       if (block.type === 'text') answer = block.text;
@@ -94,9 +98,10 @@ export function parseClaudeEvents(output) {
     }
     if (event.type === 'result') result = event;
   }
-  if (!result || result.is_error || result.subtype !== 'success') throw failure();
+  if (!result) throw failure('CLAUDE_OUTPUT_INVALID');
+  if (result.is_error || result.subtype !== 'success') throw failure(classifyClaudeFailure(JSON.stringify(result)));
   try { return { searched, value: JSON.parse(String(result.result || answer).replace(/^\s*```(?:json)?\s*/, '').replace(/\s*```\s*$/, '')) }; }
-  catch { throw failure(); }
+  catch { throw failure('CLAUDE_OUTPUT_INVALID'); }
 }
 export const generateClaude = (env, { spawnProcess } = {}) => async (prompt, { signal, model } = {}) =>
   parseClaudeEvents(await childRun(claudeArgs(model), { env, signal, input: prompt, spawnProcess }).done);
@@ -108,23 +113,33 @@ export async function readClaudeCredential(env, { platform = process.platform, e
   let saved;
   if (platform === 'darwin') {
     try { saved = JSON.parse((await execute('/usr/bin/security', ['find-generic-password', '-s', service(env.CLAUDE_CONFIG_DIR), '-w'], { timeout: 5000, maxBuffer: 262144 })).stdout); }
-    catch (e) { if (e.code !== 44) throw failure(); }
+    catch (e) { if (e.code !== 44) throw failure('CLAUDE_KEYCHAIN_FAILED'); }
   }
-  if (!saved) saved = JSON.parse(await readFile(join(env.CLAUDE_CONFIG_DIR, '.credentials.json'), 'utf8'));
+  if (!saved) {
+    try { saved = JSON.parse(await readFile(join(env.CLAUDE_CONFIG_DIR, '.credentials.json'), 'utf8')); }
+    catch { throw failure('CLAUDE_CREDENTIAL_FAILED'); }
+  }
   const oauth = saved?.claudeAiOauth;
-  if (typeof oauth?.accessToken !== 'string' || !oauth.accessToken || typeof oauth.refreshToken !== 'string' || !oauth.refreshToken || !Number.isFinite(oauth.expiresAt) || !Array.isArray(oauth.scopes) || !oauth.scopes.includes('user:inference')) throw failure();
+  if (typeof oauth?.accessToken !== 'string' || !oauth.accessToken || typeof oauth.refreshToken !== 'string' || !oauth.refreshToken || !Number.isFinite(oauth.expiresAt) || !Array.isArray(oauth.scopes) || !oauth.scopes.includes('user:inference')) throw failure('CLAUDE_CREDENTIAL_FAILED');
   return { claudeAiOauth: oauth };
 }
 async function clearKeychain(env) {
   if (process.platform !== 'darwin') return;
   try { await exec('/usr/bin/security', ['delete-generic-password', '-s', service(env.CLAUDE_CONFIG_DIR)], { timeout: 5000 }); }
-  catch (e) { if (e.code !== 44) throw failure(); } // 44: this isolated item does not exist.
+  catch (e) { if (e.code !== 44) throw failure('CLAUDE_KEYCHAIN_FAILED'); } // 44: this isolated item does not exist.
 }
 async function accountStatus(env, signal) {
-  const result = await exec('claude', ['auth', 'status'], { cwd: env.HOME, env: claudeEnvironment(env), signal, timeout: 15000, maxBuffer: 32768 });
-  const status = JSON.parse(result.stdout);
-  if (!status.loggedIn || status.authMethod !== 'claude.ai') throw failure();
-  return status;
+  try {
+    const result = await exec('claude', ['auth', 'status'], { cwd: env.HOME, env: claudeEnvironment(env), signal, timeout: 15000, maxBuffer: 32768 });
+    const status = JSON.parse(result.stdout);
+    if (!status.loggedIn || status.authMethod !== 'claude.ai') throw failure('CLAUDE_AUTH_FAILED');
+    return status;
+  } catch (error) {
+    if (error.code === 'CLAUDE_AUTH_FAILED') throw error;
+    if (error.code === 'ENOENT') throw failure('CLAUDE_NOT_INSTALLED');
+    const code = classifyClaudeFailure(String(error.stderr || ''));
+    throw failure(error.killed ? 'CLAUDE_TIMEOUT' : code === 'CLAUDE_REQUEST_FAILED' ? 'CLAUDE_AUTH_FAILED' : code);
+  }
 }
 
 export async function executeClaudeAccountJob(value, { signal, update, read, env = process.env,

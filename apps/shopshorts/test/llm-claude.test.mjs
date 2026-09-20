@@ -6,6 +6,7 @@ import { mkdtemp, readFile, writeFile, rm, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { safeClaudeLogin, loginClaude, claudeArgs, claudeEnvironment, parseClaudeEvents, readClaudeCredential, executeClaudeAccountJob, generateClaude } from '../studio-account-claude.mjs';
+import { accountFailureMessage, classifyClaudeFailure } from '../lib/llm-account-errors.js';
 
 const url = 'https://claude.com/cai/oauth/authorize?state=state-bound-123&code_challenge=fixture-challenge&code_challenge_method=S256&redirect_uri=https%3A%2F%2Fplatform.claude.com%2Foauth%2Fcode%2Fcallback';
 const oauth = token => ({ claudeAiOauth: { accessToken: 'fixture-access', refreshToken: token, expiresAt: Date.now() + 60000, scopes: ['user:inference', 'user:profile'] } });
@@ -113,4 +114,41 @@ test('Claude refresh persistence failure retains private cache without returning
     assert.equal((await stat(runtime.HOME)).mode & 0o777, 0o700);
     assert.equal((await stat(join(runtime.CLAUDE_CONFIG_DIR, '.credentials.json'))).mode & 0o777, 0o600);
   } finally { if (runtime) await rm(runtime.HOME, { recursive: true, force: true }); }
+});
+
+test('CLI failures expose a fixed actionable reason, never raw output or credentials', async () => {
+  for (const [diagnostic, code] of [
+    ['authentication_error: token expired', 'CLAUDE_AUTH_FAILED'],
+    ['rate_limit_error: usage limit reached', 'CLAUDE_RATE_LIMITED'],
+    ['keychain: user interaction is not allowed', 'CLAUDE_KEYCHAIN_FAILED'],
+    ['fetch failed ECONNRESET', 'CLAUDE_NETWORK_FAILED'],
+    ['unrecognized private diagnostic', 'CLAUDE_REQUEST_FAILED'],
+  ]) {
+    const c = child();
+    await assert.rejects(generateClaude({ HOME: '/isolated' }, { spawnProcess() {
+      setTimeout(() => { c.stderr.write(diagnostic + ' fixture-secret-token'); c.stdout.write('private-auth-url'); c.emit('close', 1); }, 0);
+      return c;
+    } })('fixture prompt'), error => {
+      assert.equal(error.code, code);
+      assert.doesNotMatch(error.message, /fixture-secret-token|private-auth-url|private diagnostic/);
+      assert.equal(accountFailureMessage('claude', error), error.message);
+      return true;
+    });
+  }
+  assert.equal(classifyClaudeFailure('No diagnostic'), 'CLAUDE_REQUEST_FAILED');
+  assert.doesNotMatch(accountFailureMessage('claude', Error('private-secret')), /private-secret/);
+});
+
+test('official login failures are distinguished from recommendation failures', async () => {
+  const c = child();
+  await assert.rejects(loginClaude({ HOME: '/isolated' }, { update: async () => {}, read: async () => ({}), spawnProcess() {
+    setTimeout(() => c.emit('close', 1), 0); return c;
+  } }), { code: 'CLAUDE_LOGIN_FAILED' });
+});
+
+test('stream result error is classified without exposing the provider response', () => {
+  assert.throws(() => parseClaudeEvents(JSON.stringify({ type: 'result', is_error: true, subtype: 'error', result: 'rate_limit_error private-account-data' })), error => {
+    assert.equal(error.code, 'CLAUDE_RATE_LIMITED'); assert.doesNotMatch(error.message, /private-account-data/); return true;
+  });
+  assert.throws(() => parseClaudeEvents('invalid private output'), { code: 'CLAUDE_OUTPUT_INVALID' });
 });

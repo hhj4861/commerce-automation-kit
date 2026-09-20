@@ -59,22 +59,29 @@ export async function connectLlm({ signal, manage = false } = {}) {
       const focusedCode = dialog.querySelector('#llm-authorization-code');
       const codeFocus = document.activeElement === focusedCode;
       const selection = focusedCode?.selectionStart;
+      const selectionEnd = focusedCode?.selectionEnd;
+      const focusedAction = document.activeElement?.closest('[data-focus]')?.dataset.focus;
       const providers = [{ id: 'codex', name: 'Codex', plan: 'ChatGPT 구독' }, { id: 'claude', name: 'Claude', plan: 'Claude 구독' }];
-      dialog.innerHTML = `<div class="llm-dialog-head"><div><span class="badge">AI 계정</span><h2 id="llm-dialog-title">추천에 사용할 계정을 연결하세요</h2></div><button class="quiet" data-close aria-label="계정 연결 닫기">✕</button></div>
-        <p class="muted">현재 로그인한 사용자에게만 연결됩니다. 인증은 제공사의 공식 화면에서 진행합니다.</p>
-        <div class="llm-providers">${providers.map(provider => {
-          const connected = current.connected && current.provider === provider.id;
-          const connecting = pending && current.job.provider === provider.id;
-          return `<section class="llm-provider ${connected ? 'connected' : ''}"><h3>${provider.name}<span>${provider.plan}</span></h3><p>${connected ? escape(current.account) + ' · 연결됨' : `${provider.plan} 계정으로 로그인하고 구독 사용량으로 추천받습니다.`}</p>${connected ? '<button class="secondary" data-disconnect>연결 해제</button>' : `<button class="primary" data-connect="${provider.id}" ${busy || pending || current.connected || !current.available ? 'disabled' : ''}>${connecting ? '인증 대기 중…' : `${provider.name} 연결`}</button>`}</section>`;
-        }).join('')}</div>
-        ${current.connected ? '<p class="hint">다른 제공사를 사용하려면 현재 연결을 해제한 뒤 새 계정을 연결하세요.</p>' : ''}
-        ${!current.available ? '<p role="status" class="llm-error">LLM 실행기가 오프라인입니다. 실행기가 연결되면 인증과 추천을 진행할 수 있습니다.</p>' : ''}
-        ${pending ? `<section class="llm-device" aria-label="${current.job.provider === 'claude' ? 'Claude' : 'Codex'} 인증"><h3>${device ? '공식 인증 화면에 코드를 입력하세요' : manual ? 'Claude 인증 후 받은 코드를 입력하세요' : '인증 요청을 준비하고 있습니다…'}</h3>${device ? `<p class="llm-code">${escape(device.code)}</p><a class="primary" href="${escape(device.url)}" target="_blank" rel="noopener noreferrer">ChatGPT 인증 화면 열기 ↗</a><p class="hint">이 창은 그대로 두세요. 인증이 끝나면 추천을 이어서 진행합니다. 토큰을 복사하거나 붙여넣을 필요가 없습니다.</p>` : ''}${manual ? `<a class="primary" href="${escape(manual.url)}" target="_blank" rel="noopener noreferrer">Claude 인증 화면 열기 ↗</a><p class="hint">공식 화면에서 로그인한 뒤 표시되는 일회용 인증 코드를 복사하세요. API 키나 access/refresh 토큰을 입력하지 마세요.</p><form id="llm-code-form"><label for="llm-authorization-code">일회용 인증 코드</label><input id="llm-authorization-code" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="2600" ${current.job.codeSubmitted || busy ? 'disabled' : ''}><button class="primary" type="submit" ${current.job.codeSubmitted || busy ? 'disabled' : ''}>${current.job.codeSubmitted ? '인증 확인 중…' : '코드 확인 · 연결'}</button></form>` : ''}<button class="quiet" data-cancel>연결 취소</button></section>` : ''}
-        <p class="llm-error" role="alert">${escape(message || (current.job?.state === 'failed' ? current.job.error : ''))}</p>
-        <div class="actions"><button class="secondary" data-refresh ${busy ? 'disabled' : ''}>연결 상태 다시 확인</button><button class="primary" data-continue ${!current.connected || busy ? 'disabled' : ''}>${manage ? '확인' : '연결된 계정으로 추천받기'}</button></div>`;
+      const selected = providers.find(provider => provider.id === (pending ? current.job.provider : current.provider));
+      const mark = provider => `<span class="llm-mark llm-mark-${provider.id}" aria-hidden="true">${provider.id === 'codex' ? 'C<span>↗</span>' : '✳'}</span>`;
+      const error = message || (current.job?.state === 'failed' ? current.job.error : '');
+      dialog.innerHTML = `<div class="llm-dialog-head"><h2 id="llm-dialog-title">${pending ? `${selected.name} 연결` : current.connected ? '연결된 AI 계정' : '어떤 AI와 함께할까요?'}</h2><button class="llm-close" data-close data-focus="close" aria-label="계정 연결 닫기">✕</button></div>
+        <p class="llm-intro">${pending ? '로그인을 마치면 추천을 이어갈게요.' : current.connected ? '이 계정으로 영상 아이디어를 추천받아요.' : '사용 중인 구독 계정으로 아이디어를 추천받으세요.'}</p>
+        ${!pending && !current.connected ? `<div class="llm-providers">${providers.map(provider => `<button class="llm-provider" data-connect="${provider.id}" data-focus="${provider.id}" aria-label="${provider.name} 연결" ${busy || !current.available ? 'disabled' : ''}>${mark(provider)}<span class="llm-provider-label"><strong>${provider.name}</strong><span>${provider.plan}</span></span><span class="llm-provider-action" aria-hidden="true">연결 <span>↗</span></span></button>`).join('')}</div>` : ''}
+        ${current.connected && !pending ? `<section class="llm-connected">${mark(selected)}<div class="llm-provider-label"><strong>${selected.name} <span class="llm-connected-badge">연결됨</span></strong><span class="llm-account">${escape(current.account)}</span></div></section><div class="llm-manage"><button class="llm-text-button" data-disconnect data-focus="disconnect" ${busy ? 'disabled' : ''}>연결 해제</button><button class="llm-cta" data-continue data-focus="continue" ${busy ? 'disabled' : ''}>${manage ? '완료' : '추천받기'}</button></div>` : ''}
+        ${!current.available ? '<p role="status" class="llm-error">LLM 실행기가 오프라인입니다. 잠시 후 다시 확인해 주세요.</p>' : ''}
+        ${pending ? `<section class="llm-device" aria-label="${selected.name} 인증">
+          ${device ? `<div class="llm-auth-step"><span class="llm-step-number">1</span><div><h3>인증 코드를 확인하세요</h3><p class="llm-code" aria-label="인증 코드">${escape(device.code)}</p></div></div><div class="llm-auth-step"><span class="llm-step-number">2</span><div><h3>ChatGPT에서 코드를 입력하세요</h3><a class="llm-cta" data-focus="authorize" href="${escape(device.url)}" target="_blank" rel="noopener noreferrer" aria-label="ChatGPT 인증 화면 열기 (새 창)">ChatGPT에서 계속 <span aria-hidden="true">↗</span></a></div></div><p class="llm-waiting" role="status"><span class="llm-status-dot"></span>인증을 기다리고 있어요</p>` : ''}
+          ${manual ? `<div class="llm-auth-step"><span class="llm-step-number">1</span><div><h3>Claude에서 로그인하세요</h3><a class="llm-cta llm-cta-outline" data-focus="authorize" href="${escape(manual.url)}" target="_blank" rel="noopener noreferrer" aria-label="Claude 인증 화면 열기 (새 창)">Claude에서 계속 <span aria-hidden="true">↗</span></a></div></div><form id="llm-code-form" class="llm-auth-step"><span class="llm-step-number">2</span><div><label for="llm-authorization-code">받은 인증 코드를 붙여넣으세요</label><input id="llm-authorization-code" aria-label="일회용 인증 코드" aria-describedby="llm-code-hint" type="password" placeholder="인증 코드 붙여넣기" autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="2600" ${current.job.codeSubmitted || busy ? 'disabled' : ''}><p id="llm-code-hint" class="llm-help">API 키가 아닌 일회용 코드예요.</p><button class="llm-cta" data-focus="submit" type="submit" ${current.job.codeSubmitted || busy ? 'disabled' : ''}>${current.job.codeSubmitted ? '연결 확인 중…' : '연결 완료'}</button></div></form>` : ''}
+          ${!device && !manual ? '<p class="llm-waiting" role="status"><span class="llm-status-dot"></span>로그인 화면을 준비하고 있어요</p>' : ''}
+          <button class="llm-text-button" data-cancel data-focus="cancel" ${busy ? 'disabled' : ''}>연결 취소</button></section>` : ''}
+        ${error ? `<p class="llm-error" role="alert">${escape(error)}</p>` : ''}
+        <footer class="llm-footer"><span>내 계정에만 안전하게 연결돼요</span>${!current.available || error ? `<button class="llm-text-button" data-refresh data-focus="refresh" ${busy ? 'disabled' : ''}>다시 확인</button>` : ''}</footer>`;
       dialog.querySelector('[data-close]').onclick = () => close(false);
-      dialog.querySelector('[data-continue]').onclick = () => close(true);
-      dialog.querySelector('[data-refresh]').onclick = () => run(async () => { current = await request('llm/status', undefined, lifetime.signal); if (current.job?.kind === 'connect' && ['queued', 'running'].includes(current.job.state)) { attempt = current.job.id; poll(); } });
+      const continueButton = dialog.querySelector('[data-continue]');
+      if (continueButton) continueButton.onclick = () => close(true);
+      const refresh = dialog.querySelector('[data-refresh]');
+      if (refresh) refresh.onclick = () => run(async () => { current = await request('llm/status', undefined, lifetime.signal); if (current.job?.kind === 'connect' && ['queued', 'running'].includes(current.job.state)) { attempt = current.job.id; poll(); } });
       for (const connect of dialog.querySelectorAll('[data-connect]')) connect.onclick = () => run(async () => { authorizationCode = ''; const next = await request('llm/connect', { provider: connect.dataset.connect }); current = { ...current, ...next }; attempt = next.job?.kind === 'connect' ? next.job.id : null; if (finished && attempt) await request('llm/cancel', { id: attempt }); else poll(); });
       const disconnect = dialog.querySelector('[data-disconnect]');
       if (disconnect) disconnect.onclick = () => run(async () => { current = { ...current, ...await request('llm/disconnect', {}, lifetime.signal) }; });
@@ -84,7 +91,7 @@ export async function connectLlm({ signal, manage = false } = {}) {
       if (codeInput) {
         codeInput.value = authorizationCode;
         codeInput.oninput = () => { authorizationCode = codeInput.value; };
-        if (codeFocus) { codeInput.focus(); codeInput.setSelectionRange(selection, selection); }
+        if (codeFocus) { codeInput.focus(); codeInput.setSelectionRange(selection, selectionEnd); }
         dialog.querySelector('#llm-code-form').onsubmit = event => {
           event.preventDefault(); const code = authorizationCode.trim();
           if (!code) { message = '일회용 인증 코드를 입력하세요.'; render(); return; }
@@ -92,6 +99,7 @@ export async function connectLlm({ signal, manage = false } = {}) {
           run(async () => { current = { ...current, ...await request('llm/code', { id: current.job.id, code }, lifetime.signal) }; });
         };
       }
+      if (!codeFocus && focusedAction) dialog.querySelector(`[data-focus="${focusedAction}"]`)?.focus({ preventScroll: true });
     }
     dialog.addEventListener('cancel', event => { event.preventDefault(); close(false); });
     render(); dialog.showModal();

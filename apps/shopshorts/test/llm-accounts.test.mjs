@@ -149,6 +149,23 @@ test('two runners claim a job only once; disconnect invalidates an in-flight cre
   assert.equal(executions, 1); assert.equal((await accountAction(env, a, 'status')).connected, false);
 });
 
+test('runner preserves classified failure in public status and logs only safe identifiers', async t => {
+  const { env, db } = fixture(); t.after(() => db.close());
+  await accountRunner(env, { operation: 'poll' });
+  await accountAction(env, a, 'connect', { provider: 'claude' });
+  const logs = [];
+  const worker = startAccountWorker({ intervalMs: 100000, call: (_path, input) => accountRunner(env, input), log: line => logs.push(line),
+    execute: async () => { throw Object.assign(Error('private-token and authorization-url'), { code: 'CLAUDE_KEYCHAIN_FAILED' }); },
+  });
+  try {
+    await waitFor(async () => (await accountAction(env, a, 'status')).job?.state === 'failed');
+    const view = await accountAction(env, a, 'status');
+    assert.match(view.job.error, /키체인/); assert.equal(view.connected, false);
+    assert.doesNotMatch(JSON.stringify(view) + logs.join(''), /private-token|authorization-url/);
+    assert.deepEqual(logs, ['[llm-accounts] claude connect CLAUDE_KEYCHAIN_FAILED']);
+  } finally { await worker.stop(); }
+});
+
 test('Codex device login uses isolated official auth, validates completion and cleans runtime', async () => {
   let runtime, closeCount = 0; const patches = [];
   await executeAccountJob({ job: { kind: 'connect' } }, {
