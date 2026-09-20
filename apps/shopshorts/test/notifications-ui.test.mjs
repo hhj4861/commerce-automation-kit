@@ -63,3 +63,23 @@ test('stale poll cannot undo a completed read and later pages stay available', a
   assert.equal(ui.badge.hidden, true);
   await ui.click({ inboxAction: 'more' }); assert.match(ui.host.innerHTML, /data-inbox-read="b"/);
 });
+
+
+test('recommendation inbox combines counts and opens only the saved owner result after read persistence', async () => {
+ const calls=[],opened=[];let read=false;
+ const privateItem={...item,id:'recommendation:one',source:'recommendation',sourceId:'one'};
+ const host={innerHTML:'',isConnected:true},badge={};
+ const document={querySelectorAll:selector=>selector==='[data-notification-count]'?[badge]:[]};
+ const controller=createNotificationInbox({document,recommendations:true,openRecommendation:id=>opened.push(id),fetcher:async(url,options)=>{
+  calls.push({url,body:options.body&&JSON.parse(options.body)});
+  if(url.endsWith('notification-read')){read=JSON.parse(options.body).read;return response({ok:true});}
+  if(url.includes('/api/studio/'))return response({items:[{...privateItem,read}],unreadCount:read?0:1});
+  return response({items:[item],unreadCount:1,throughSeq:3,enabled:true});
+ }});
+ await controller.mount(host);assert.equal(badge.textContent,'2');
+ await host.onclick({target:{closest:()=>({dataset:{inboxOpen:'recommendation:one'}})}});
+ assert.deepEqual(opened,['one']);assert.equal(badge.textContent,'1');
+ assert.deepEqual(calls.find(call=>call.url.endsWith('notification-read')).body,{ids:['one'],read:true});
+ await host.onclick({target:{closest:()=>({dataset:{inboxAction:'read-all'}})}});
+ assert.deepEqual(calls.filter(call=>call.url.endsWith('notification-read')).at(-1).body,{ids:['one'],read:true});
+});

@@ -17,9 +17,9 @@ export async function llmAccountApi(request, env, call) {
     if (!owner) return json({ error: '로그인이 필요합니다.' }, 401);
     if (!sameOrigin(request)) return json({ error: '다른 사이트에서 요청할 수 없습니다.' }, 403);
     const operation = path === '/api/studio/recommendations' ? 'recommend' : path.slice('/api/studio/llm/'.length);
-    if (!['status', 'connect', 'code', 'disconnect', 'cancel', 'recommend'].includes(operation)) return json({ error: '잘못된 요청입니다.' }, 404);
-    if (request.method !== (operation === 'status' ? 'GET' : 'POST')) return json({ error: '지원하지 않는 요청입니다.' }, 405);
-    let input = {};
+    if (!['status', 'connect', 'code', 'disconnect', 'cancel', 'recommend', 'notifications', 'notification-read', 'recommendation'].includes(operation)) return json({ error: '잘못된 요청입니다.' }, 404);
+    if (request.method !== (['status','notifications','recommendation'].includes(operation) ? 'GET' : 'POST')) return json({ error: '지원하지 않는 요청입니다.' }, 405);
+    let input = operation === 'recommendation' ? { id: new URL(request.url).searchParams.get('id') } : {};
     if (request.method === 'POST') {
       if (!request.headers.get('content-type')?.startsWith('application/json')) return json({ error: 'JSON 요청이 필요합니다.' }, 415);
       const reader = request.body?.getReader(); let text = '', size = 0;
