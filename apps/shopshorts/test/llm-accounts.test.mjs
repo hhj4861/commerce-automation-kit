@@ -64,6 +64,61 @@ test('cancelling an unfinished login removes credentials saved immediately befor
   assert.equal((await readVault(env, `llm/account/${a}`)).value.credential, undefined);
 });
 
+test('Claude one-time code is owner/attempt/state-bound, encrypted and never returned', async t => {
+  const { env, db } = fixture(); t.after(() => db.close());
+  await accountRunner(env, { operation: 'poll' });
+  const pending = await accountAction(env, a, 'connect', { provider: 'claude' });
+  assert.equal(pending.job.provider, 'claude');
+  const record = await readVault(env, `llm/account/${a}`);
+  await writeVault(env, `llm/account/${a}`, { ...record.value, job: { ...record.value.job, state: 'running', leaseUntil: Date.now() + 60000, manual: { url: 'https://claude.com/cai/oauth/authorize', state: 'state-bound-123' } } }, record.revision);
+  for (const [owner, code, status] of [[b, 'authcode123#state-bound-123', 409], [a, 'authcode123#wrong-state', 400], [a, 'sk-ant-secret-token', 400], [a, 'authcode123\ncommand', 400]]) {
+    assert.equal((await accountAction(env, owner, 'code', { id: pending.job.id, code })).status, status);
+  }
+  const result = await accountAction(env, a, 'code', { id: pending.job.id, code: 'authcode123#state-bound-123' });
+  assert.equal(result.job.codeSubmitted, true); assert.doesNotMatch(JSON.stringify(result), /authcode123/);
+  assert.doesNotMatch(db.prepare('SELECT payload FROM credential_vault WHERE name = ?').get(`llm/account/${a}`).payload, /authcode123/);
+  assert.equal((await readVault(env, `llm/account/${a}`)).value.job.code, 'authcode123#state-bound-123');
+  assert.equal((await accountAction(env, a, 'code', { id: pending.job.id, code: 'authcode123' })).status, 409);
+  await accountAction(env, a, 'cancel', { id: pending.job.id });
+  assert.equal((await readVault(env, `llm/account/${a}`)).value.job, undefined);
+});
+
+test('Claude recommendation remains bound to selected provider and refuses silent account switches', async t => {
+  const { env, db } = fixture(); t.after(() => db.close());
+  await accountRunner(env, { operation: 'poll' });
+  await writeVault(env, `llm/account/${a}`, { provider: 'claude', credential: { fixture: true }, account: 'Claude fixture' }, 0);
+  assert.equal((await accountAction(env, a, 'connect', { provider: 'codex' })).status, 409);
+  const request = await accountAction(env, a, 'recommend', { brief, provider: 'codex' });
+  assert.equal(request.provider, 'claude'); assert.equal(request.job.provider, 'claude');
+});
+
+test('cancel then choose another provider is allowed immediately; same-provider retry is limited', async t => {
+  const { env, db } = fixture(); t.after(() => db.close());
+  await accountRunner(env, { operation: 'poll' });
+  const pending = await accountAction(env, a, 'connect', { provider: 'codex' });
+  await accountAction(env, a, 'cancel', { id: pending.job.id });
+  assert.equal((await accountAction(env, a, 'connect', { provider: 'codex' })).status, 429);
+  assert.equal((await accountAction(env, a, 'connect', { provider: 'claude' })).job.provider, 'claude');
+});
+
+test('a concurrent code submission is preserved when the runner renews its lease', async t => {
+  const { env, db } = fixture(); t.after(() => db.close());
+  await accountRunner(env, { operation: 'poll' });
+  const pending = await accountAction(env, a, 'connect', { provider: 'claude' });
+  let compete = false, renewed = false;
+  const call = async (_path, input) => {
+    if (compete && input.operation === 'write') { compete = false; const submitted = await accountAction(env, a, 'code', { id: pending.job.id, code: 'authorization-fixture#state-bound-123' }); assert.equal(submitted.job.codeSubmitted, true); }
+    return accountRunner(env, input);
+  };
+  const worker = startAccountWorker({ call, intervalMs: 100000, log() {}, execute: async (_value, { update, read }) => {
+    await update({ job: { manual: { url: 'https://claude.com/cai/oauth/authorize', state: 'state-bound-123' } } });
+    compete = true; await update({});
+    assert.equal((await read()).job.code, 'authorization-fixture#state-bound-123');
+    await update({ job: { state: 'done', code: null } }); renewed = true;
+  } });
+  await waitFor(() => renewed); await worker.stop();
+});
+
 test('HTTP account routes bind Google subject, reject CSRF/oversize and work through Pages dispatch', async () => {
   const env = { SHOPSHORTS_SESSION_SECRET: 'x'.repeat(40), SHOPSHORTS_GOOGLE_ALLOW_SIGNUPS: '1' };
   const cookies = await Promise.all(['a', 'b'].map(sub => signSession({ type: 'user', sub, email: `${sub}@example.test`, exp: Date.now() + 10000 }, env)));
