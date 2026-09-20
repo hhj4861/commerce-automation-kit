@@ -145,7 +145,8 @@ class ParserAndInstall(unittest.TestCase):
         for name,end in [('check','stop_event'),('stop_event','handle')]:
             extract=lambda s:s[s.index('def '+name+'('):s.index('def '+end+'(')]
             self.assertEqual(extract(original),extract(updated))
-        with self.assertRaises(ValueError):repair.patch(original.replace('def settled_syntax(source):','def renamed(source):'))
+        anchor = 'def mixed_literal_batch(source):' if repair.MARKER in original else 'def settled_syntax(source):'
+        with self.assertRaises(ValueError):repair.patch(original.replace(anchor,'def renamed(source):'))
         with self.assertRaises(ValueError):repair.patch(updated.replace("prepared['mixed_literal_dispatch'] = mixed_literal_dispatch",'pass'))
 
 
