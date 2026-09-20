@@ -1,6 +1,10 @@
 // Credential ciphertext stays in D1; encryption key is a separate Secrets Store binding.
 const encoder = new TextEncoder();
-const encode = bytes => btoa(String.fromCharCode(...new Uint8Array(bytes)));
+const encode = bytes => {
+  const data = new Uint8Array(bytes); let text = '';
+  for (let offset = 0; offset < data.length; offset += 8192) text += String.fromCharCode(...data.subarray(offset, offset + 8192));
+  return btoa(text);
+};
 const decode = value => Uint8Array.from(atob(value), c => c.charCodeAt(0));
 async function key(env) {
   const raw = decode(await env.VAULT_KEY.get());

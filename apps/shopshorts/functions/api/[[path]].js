@@ -219,7 +219,7 @@ export async function onRequest(context) {
       await env.DB.prepare("INSERT INTO meta (key,value) VALUES ('studio_worker',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value").bind(JSON.stringify(caps)).run();
       return json({ ok: true });
     }
-    if (path === 'studio' || path.startsWith('studio/')) return studioApi(request, env, cloudStudioStore(env), { recommendationAccounts: true });
+    if (path === 'studio' || path.startsWith('studio/')) return studioApi(request, env, cloudStudioStore(env), { recommendationAccounts: true, scenarioAccounts: (owner, operation, input) => env.CREDENTIALS.llmAccount(owner, operation, input) });
     // ---------- 잡 목록/등록 ----------
     if (path === 'jobs' && method === 'GET') {
       const { results } = await env.DB.prepare('SELECT data FROM jobs').all();

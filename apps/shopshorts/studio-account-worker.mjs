@@ -52,7 +52,7 @@ export function startAccountWorker({ env = process.env, call = accountBroker(env
       try { await execute(initial, { signal: controller.signal, update, read: async () => (await read()).value, env }); }
       catch (error) {
         if (!controller.signal.aborted) {
-          log(`[llm-accounts] ${initial.job.provider === 'claude' ? 'claude' : 'codex'} ${initial.job.kind === 'connect' ? 'connect' : 'recommend'} ${accountFailureCode(error)}`);
+          log(`[llm-accounts] ${initial.job.provider === 'claude' ? 'claude' : 'codex'} ${['connect', 'recommend', 'scenario'].includes(initial.job.kind) ? initial.job.kind : 'unknown'} ${accountFailureCode(error)}`);
           await update({ job: { state: 'failed', device: null, manual: null, code: null, error: accountFailureMessage(initial.job.provider, error) } }).catch(() => {});
         }
       } finally { clearTimeout(deadline); clearInterval(renew); await serial; tasks.delete(owner); }
@@ -62,7 +62,7 @@ export function startAccountWorker({ env = process.env, call = accountBroker(env
     if (polling || stopped) return;
     polling = true;
     try {
-      const batch = await accountCall({ operation: 'poll', cursor }); cursor = batch.cursor;
+      const batch = await accountCall({ operation: 'poll', cursor, scenario: true }); cursor = batch.cursor;
       if (stopped) return;
       for (const record of batch.records) {
         if (record.value.job.state !== 'queued' || tasks.has(record.owner) || tasks.size >= 4) continue;

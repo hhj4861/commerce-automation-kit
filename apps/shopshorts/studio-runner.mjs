@@ -4,11 +4,10 @@ import { existsSync } from 'node:fs';
 import { join, resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { FPS, FONTS, normalizeEdit, frameCount } from './public/editor-model.js';
-import { validateScenes } from './lib/studio.js';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const GOOGLE = 'https://generativelanguage.googleapis.com/v1beta';
-export const capabilities = env => ({ workerAt: new Date().toISOString(), scenario: !!env.GEMINI_API_KEY, image: !!env.GEMINI_API_KEY, video: !!env.GEMINI_API_KEY, voice: !!env.ELEVENLABS_API_KEY, shortsUpload: !!(env.UPLOAD_POST_API_KEY && env.UPLOAD_POST_USER), longUpload: !!env.YOUTUBE_CLIENT_SECRET });
+export const capabilities = env => ({ workerAt: new Date().toISOString(), scenario: false, image: !!env.GEMINI_API_KEY, video: !!env.GEMINI_API_KEY, voice: !!env.ELEVENLABS_API_KEY, shortsUpload: !!(env.UPLOAD_POST_API_KEY && env.UPLOAD_POST_USER), longUpload: !!env.YOUTUBE_CLIENT_SECRET });
 export function command(bin, args, env, timeout = 600000) {
   return new Promise((resolveP, reject) => {
     const child = spawn(bin, args, { cwd: ROOT, env: { ...process.env, ...env }, stdio: ['ignore', 'pipe', 'pipe'] });
@@ -29,15 +28,6 @@ async function google(path, body, env, fetcher) {
   const response = await fetcher(`${GOOGLE}/${path}`, { method: body ? 'POST' : 'GET', headers: { 'x-goog-api-key': env.GEMINI_API_KEY, 'content-type': 'application/json' }, ...(body ? { body: JSON.stringify(body) } : {}), signal: AbortSignal.timeout(180000) });
   if (!response.ok) throw new Error(`Google 생성 API 실패(${response.status}). 키·모델 사용 권한·잔액을 확인하세요.`);
   return response.json();
-}
-export async function generateScenario(brief, env, fetcher = fetch) {
-  const prompt = `한국어 영상 시나리오를 JSON으로 작성하세요. 요청 데이터: ${JSON.stringify(brief)}\n기승전결과 구체적인 장면 묘사, 자연스러운 내레이션. 타인 콘텐츠 복제·가짜 사용후기·의학적 효능 단정 금지. 막장드라마는 가상의 성인 인물. 지식 콘텐츠는 검증 가능한 설명. 상품광고는 제공된 사실만 사용. 요청 길이에 맞게 각 장면은 4~8초, narration은 초당 한글 약 4글자. title과 scenes 배열만 반환. 각 scene: id(scene-1 형식), narration, prompt(독창적인 장면의 영문 시각 설명), duration(초), kind(image 기본). 총 길이 ${brief.duration}초. 최대 100장면.`;
-  const result = await google(`models/${env.SHOPSHORTS_TEXT_MODEL || 'gemini-2.5-flash'}:generateContent`, { contents: [{ parts: [{ text: prompt }] }], generationConfig: { responseMimeType: 'application/json' } }, env, fetcher);
-  const value = JSON.parse((result.candidates?.[0]?.content?.parts || []).filter(p => p.text).map(p => p.text).join(''));
-  const scenes = validateScenes(value.scenes);
-  const total = scenes.reduce((n, s) => n + s.duration, 0);
-  if (total > (brief.format === 'short' ? 180 : 600) || Math.abs(total - brief.duration) > Math.max(8, brief.duration * .2)) throw new Error('생성된 시나리오 길이가 요청과 맞지 않습니다. 다시 생성하세요.');
-  return { title: String(value.title || brief.topic).slice(0, 100), scenes };
 }
 async function lintProject(job, work, env, publication = false) {
   // Reuse the atom via its public CLI; chunking preserves the 12-beat contract for longform.
@@ -118,10 +108,10 @@ async function renderProject(job, work, env, io) {
   return { render: { key, type: 'video/mp4', createdAt: new Date().toISOString(), duration: frameCount(timeline)/FPS } };
 }
 export async function executeStudioTask(job, env, io, checkpoint, { fetcher = fetch, runCli = cli } = {}) {
+  const action = job.task.action;
+  if (action === 'scenario') throw new Error('시나리오는 연결한 Codex·Claude 계정으로 다시 요청하세요.');
   const work = join(io.workDir, job.id);
   await mkdir(work, { recursive: true });
-  const action = job.task.action;
-  if (action === 'scenario') return generateScenario(job.brief, env, fetcher);
   await lintProject(job, work, env, action === 'publish');
   if (action === 'media') {
     const assets = { ...job.assets };

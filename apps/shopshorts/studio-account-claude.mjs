@@ -5,6 +5,7 @@ import { mkdtemp, mkdir, readFile, writeFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { recommendBrief } from './lib/studio-recommendations.js';
+import { scenarioBrief } from './lib/studio-scenario.js';
 import { claudeFailure as failure, classifyClaudeFailure } from './lib/llm-account-errors.js';
 
 const exec = promisify(execFile);
@@ -196,13 +197,13 @@ export async function executeClaudeAccountJob(value, { signal, update, read, env
       return;
     }
     if (setupCredential(value.credential)) {
-      const result = await recommendBrief(value.job.input, env, { generate: generator(runtime, { oauthToken: value.credential.accessToken }), signal, provider: 'claude' });
+      const result = await (value.job.kind === 'scenario' ? scenarioBrief : recommendBrief)(value.job.input, env, { generate: generator(runtime, { oauthToken: value.credential.accessToken }), signal, provider: 'claude' });
       await update({ job: { state: 'done', result } });
       return;
     }
     await identify(runtime, signal);
     try {
-      const result = await recommendBrief(value.job.input, env, { generate: generator(runtime), signal, provider: 'claude' });
+      const result = await (value.job.kind === 'scenario' ? scenarioBrief : recommendBrief)(value.job.input, env, { generate: generator(runtime), signal, provider: 'claude' });
       await persist({ credential: await capture(), job: { state: 'done', result } });
     } catch (e) { await persist({ credential: await capture() }); throw e; }
   } finally {
