@@ -1,8 +1,9 @@
 import {createEditor} from './editor.js';
-import {connectLlm,recommendWithAccount} from './llm-connection.js';
+import {connectLlm,recommendWithAccount,waitForRecommendation} from './llm-connection.js';
+import {createNotificationInbox} from './notifications.js';
 import {createRecommendationFocus} from './recommendation-focus.js';
 import {frameCount,FPS} from './editor-model.js';
-let editor=null, recommendationController=null, recommendationCleanup=null;
+let editor=null, recommendationController=null, recommendationCleanup=null, restoreRecommendation=null;
 'use strict';
 const $ = s => document.querySelector(s);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -14,6 +15,7 @@ const taskBusy = () => ['queued','running'].includes(state.project?.task?.state)
 const total = p => p.edit?.version===2 ? Math.round(frameCount(p.edit)/FPS*100)/100 : p.edit ? p.edit.order.reduce((sum,id) => sum + p.edit.durations[id],0) : p.scenes.reduce((sum,s) => sum+s.duration,0);
 const assetUrl = (id, asset) => `/api/studio/${id}/assets/${encodeURIComponent(asset)}?v=${state.project?.revision || 0}`;
 function toast(text){ $('#toast').textContent=text;$('#toast').hidden=false;clearTimeout(toast.timer);toast.timer=setTimeout(()=>$('#toast').hidden=true,5000); }
+const recommendationInbox=createNotificationInbox({document,recommendations:true,openJob:id=>location.assign('/?job='+encodeURIComponent(id)),openStudio:id=>location.assign('/studio?id='+encodeURIComponent(id)),openRecommendation:id=>location.assign('/studio?new=1&recommendation='+encodeURIComponent(id))});
 async function api(path='', options={}) {
   const response=await fetch('/api/studio'+path,options);
   if(response.status===401){location.href='/login';throw Error('로그인이 필요합니다.');}
@@ -47,7 +49,7 @@ function heading(){
  $('#intro').textContent=p?`${p.brief.category} · ${p.brief.format==='short'?'숏폼 9:16':'롱폼 16:9'} · ${p.scenes.length?p.scenes.length+'장면 / '+total(p)+'초':p.brief.duration+'초 목표'}`:'주제와 영상 형식을 정하면 AI가 시나리오를 작성합니다.';
  $('#newProject').hidden=false;
 }
-function start(){recommendationController?.abort();editor?.destroy();editor=null;state.project=null;state.step=1;state.dirty=false;$('#modes').hidden=true;$('#workspace').hidden=false;$('#projects').hidden=true;history.replaceState(null,'','/studio?new=1');heading();progress();renderBrief();}
+function start(){recommendationController?.abort('detached');editor?.destroy();editor=null;state.project=null;state.step=1;state.dirty=false;$('#modes').hidden=true;$('#workspace').hidden=false;$('#projects').hidden=true;history.replaceState(null,'','/studio?new=1');heading();progress();renderBrief();}
 function renderBrief(){
  recommendationCleanup?.(); recommendationCleanup=null;
  const p=state.project, brief=p?.brief;
@@ -73,29 +75,34 @@ function bindRecommendations(project){
   area.setAttribute('role','status');button.closest('.field').append(area);return[button.dataset.recommend,area];
  }));
  const busy=value=>{buttons.forEach(b=>{b.disabled=value;b.textContent=value&&b.dataset.recommend===activeFocus?'추천 중…':'✦ LLM 추천';});manage.disabled=value;};
- const invalidate=()=>{requestId++;recommendationController?.abort();busy(false);activeFocus=null;views.forEach(view=>view.destroy());views.clear();Object.values(areas).forEach(area=>{area.hidden=true;area.replaceChildren();});};
+ const invalidate=()=>{requestId++;recommendationController?.abort('detached');busy(false);activeFocus=null;views.forEach(view=>view.destroy());views.clear();Object.values(areas).forEach(area=>{area.hidden=true;area.replaceChildren();});};
  recommendationCleanup=invalidate;
  for(const id of ['topic','direction','duration'])$('#'+id).addEventListener('input',invalidate);
- buttons.forEach(button=>button.onclick=async()=>{
-  const input=form(button.dataset.recommend);
+ const execute=async(button,saved)=>{
+  const input=saved?.input || form(button.dataset.recommend);
   if(input.focus==='direction'&&!input.topic.trim()){toast('분위기를 추천받을 주제를 먼저 입력하세요.');$('#topic').focus();return;}
   if(input.category==='직접 입력'&&!input.topic.trim()){toast('관심 분야나 주제를 먼저 입력하세요.');$('#topic').focus();return;}
   const current=++requestId;recommendationController=new AbortController();activeFocus=input.focus;busy(true);
   const controller=recommendationController;
   views.get(input.focus)?.destroy();
-  const view=createRecommendationFocus({input,anchor:button,summary:areas[input.focus],onCancel:()=>controller.abort(),onRetry:()=>button.click(),onApply:(item,fields)=>{
+  const view=createRecommendationFocus({input,anchor:button,summary:areas[input.focus],onCancel:()=>controller.abort('cancelled'),onBackground:()=>toast('추천은 계속 진행됩니다. 완료되면 알림함에서 확인하세요.'),onRetry:()=>button.click(),onApply:(item,fields)=>{
    if(fields!=='direction')$('#topic').value=item.topic;
    if(fields!=='topic')$('#direction').value=item.direction;
    state.dirty=true;invalidate();const target=$(fields==='direction'?'#direction':'#topic');target.focus();target.scrollIntoView({block:'center',behavior:'instant'});toast('추천을 적용했습니다. 내용을 확인하고 기획을 저장하세요.');
   }});
   views.set(input.focus,view);
   try{
-   const data=await recommendWithAccount(input,controller.signal,value=>{if(current===requestId)view.update(value);});
+   if(saved?.state==='failed')throw Error(saved.error || '추천을 완료하지 못했어요. 다시 시도해 주세요.');
+   const onProgress=value=>{if(current===requestId)view.update(value);};
+   const data=saved?.state==='done'?saved.result:saved?await waitForRecommendation(saved.id,controller.signal,onProgress):await recommendWithAccount(input,controller.signal,onProgress);
    if(current!==requestId||!panel.isConnected||JSON.stringify(form(input.focus))!==JSON.stringify(input))return;
-   view.complete(data);
-  }catch(error){if(current===requestId&&panel.isConnected)view.fail(error);}
+   view.complete(data,{saved:!!saved,elapsedMs:saved?.elapsedMs});recommendationInbox.refresh();
+   if(!document.querySelector('.recommend-dialog[open]'))toast('AI 추천이 완료됐어요. 알림함에서 결과를 확인하세요.');
+  }catch(error){if(current===requestId&&panel.isConnected){view.fail(error);recommendationInbox.refresh();}}
   finally{if(current===requestId&&panel.isConnected){busy(false);if(controller.signal.aborted&&!document.querySelector('dialog[open]'))button.focus({preventScroll:true});}}
- });
+ };
+ buttons.forEach(button=>button.onclick=()=>execute(button));
+ restoreRecommendation=saved=>execute(buttons.find(button=>button.dataset.recommend===saved.input.focus),saved);
  return invalidate;
 }
 function render(){
@@ -162,5 +169,7 @@ async function loadList(){const {projects}=await api();$('#projectList').innerHT
 $('#manual').onclick=()=>{if(!state.config){toast('서버 연결 상태를 먼저 확인하세요.');return;}start();};$('#newProject').onclick=()=>{if(state.pending)return;if(state.dirty&&!confirm('저장하지 않은 변경이 있습니다. 새 프로젝트를 시작할까요?'))return;start();};
 $('#stage').addEventListener('input',()=>{if(state.step!==4)state.dirty=true;});
 window.addEventListener('beforeunload',e=>{if(state.dirty){e.preventDefault();e.returnValue='';}});
-(async()=>{try{state.config=await api('/config');const auth=await(await fetch('/auth/status')).json();if(auth.user)$('#account').textContent=auth.user.name||auth.user.email;const id=new URLSearchParams(location.search).get('id');if(id)await openProject(id);else if(new URLSearchParams(location.search).has('new'))start();else await loadList();}catch(e){$('#notice').innerHTML=`<div class="status-note error">${esc(e.message)}</div>`;}})();
+(async()=>{try{state.config=await api('/config');const auth=await(await fetch('/auth/status')).json();if(auth.user)$('#account').textContent=auth.user.name||auth.user.email;const params=new URLSearchParams(location.search),id=params.get('id'),recommendationId=params.get('recommendation');if(recommendationId){const saved=(await api('/llm/recommendation?id='+encodeURIComponent(recommendationId))).recommendation;start();state.category=saved.input.category;state.format=saved.input.format;renderBrief();$('#topic').value=saved.input.topic;$('#direction').value=saved.input.direction;$('#duration').value=saved.input.duration;history.replaceState(null,'','/studio?new=1&recommendation='+encodeURIComponent(recommendationId));restoreRecommendation(saved);}else if(id)await openProject(id);else if(params.has('new'))start();else await loadList();recommendationInbox.refresh();}catch(e){$('#notice').innerHTML=`<div class="status-note error">${esc(e.message)}</div>`;}})();
 setInterval(async()=>{if(state.pending||state.dirty)return;try{if(state.project&&taskBusy()){const p=(await api('/'+state.project.id)).project;if(p.revision!==state.project.revision){const previous=state.project.task;state.project=p;if(p.task?.state==='done'&&previous?.state!=='done'){if(p.task.action==='scenario')state.step=2;if(p.task.action==='render'||p.task.action==='publish')state.step=5;}render();}}}catch(e){toast(e.message);}},4000);
+
+setInterval(()=>{if(!document.hidden)recommendationInbox.poll();},5000);

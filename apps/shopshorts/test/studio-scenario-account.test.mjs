@@ -100,6 +100,18 @@ test('closed-window result survives a later recommendation and disconnect, then 
   assert.equal((await f.call(f.owner, 'scenario-status', { id: project.task.id, projectId: project.id })).job, null);
 });
 
+test('scenario completion preserves recommendation results and unread inbox entries', async t => {
+  const f = await fixture(t);
+  const recommendation = await f.call(f.owner, 'recommend', { brief: { ...brief, focus: 'topic' } });
+  const record = await readVault(f.env, f.name);
+  await accountRunner(f.env, { operation: 'write', owner: f.owner, revision: record.revision,
+    value: { ...record.value, job: { ...record.value.job, state: 'done', result: { suggestions: ['saved recommendation'] } } } });
+  assert.equal((await f.start()).status, 202); await f.complete(); await f.request();
+  const inbox = await f.call(f.owner, 'notifications', {});
+  assert.equal(inbox.unreadCount, 1); assert.equal(inbox.items[0].sourceId, recommendation.job.id);
+  assert.deepEqual((await f.call(f.owner, 'recommendation', { id: recommendation.job.id })).recommendation.result.suggestions, ['saved recommendation']);
+});
+
 test('disconnect cancels generation and fences a late worker write', async t => {
   const f = await fixture(t); await f.start();
   const stale = await readVault(f.env, f.name);

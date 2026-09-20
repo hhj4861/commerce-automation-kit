@@ -54,7 +54,9 @@ const server = createServer(async (req, res) => {
     let response = await llmAccountApi(request, env, (owner, operation, input) => accountAction(env, owner, operation, input));
     if (!response) {
       const path = new URL(request.url).pathname;
-      if (path === '/api/studio/config') response = Response.json({ categories: ['심리학', '건축학'], execution: 'local', capabilities: {} });
+      if (path === '/api/notifications') response = Response.json({items:[],unreadCount:0,throughSeq:0,enabled:true,queue:{}});
+      else if (path === '/notifications') response = new Response(`<html lang="ko"><head><link rel="stylesheet" href="/notifications.css"></head><body><main id="inbox"></main><script type="module">import {createNotificationInbox} from '/notifications.js'; const inbox=createNotificationInbox({document,recommendations:true,openRecommendation:id=>location.assign('/studio?new=1&recommendation='+encodeURIComponent(id))});inbox.mount(document.querySelector('#inbox'));setInterval(()=>inbox.poll(),1000);</script></body></html>`,{headers:{'content-type':'text/html'}});
+      else if (path === '/api/studio/config') response = Response.json({ categories: ['심리학', '건축학'], execution: 'local', capabilities: {} });
       else if (path === '/api/studio') response = Response.json({ projects: [] });
       else if (path === '/auth/status') response = Response.json({ authenticated: true, user: { name: '테스트' } });
       else {
@@ -167,7 +169,7 @@ try {
   assert.equal(await page.locator('.recommend-dialog[open] .recommend-flow [aria-current=step]').innerText(), '3\n검색 · 생성');
   assert.equal(await page.locator('.recommend-dialog[open]').evaluate(n=>n.scrollWidth<=n.clientWidth),true);
   await page.screenshot({path:'/private/tmp/cak-recommendation-focus-progress-mobile.png',fullPage:true});
-  await page.locator('.recommend-dialog[open] .recommend-cancel').click();
+  await page.locator('.recommend-dialog[open] .recommend-stop').click();
   await page.waitForFunction(()=>document.querySelector('[data-recommend-progress=direction]').dataset.state==='cancelled');
   assert.equal(await page.locator('#direction').inputValue(), directionBeforeCancel);
   assert.equal(await page.locator('[data-recommend=direction]').evaluate(n=>document.activeElement===n),true);
@@ -191,6 +193,47 @@ try {
   assert.equal(await page.locator('#direction').inputValue(),suggestions[0].direction);
   assert.equal(await page.locator('#topic').inputValue(),'내가 쓴 주제');
   assert.equal(await page.locator('#direction').evaluate(n=>document.activeElement===n),true);
+  await page.waitForTimeout(5100);
+  generationDelay=5000;
+  const generatedBeforeBackground=generated;
+  await page.locator('[data-recommend=topic]').click();
+  await page.waitForFunction(()=>document.querySelector('.recommend-dialog[open]')?.dataset.state==='running');
+  await page.getByRole('button',{name:'추천 창 닫기',exact:true}).click();
+  assert.equal(await page.locator('.recommend-dialog[open]').count(),0);
+  await page.waitForFunction(()=>document.querySelector('[data-recommend-progress=topic]').dataset.state==='done',{},{timeout:15000});
+  assert.equal(generated,generatedBeforeBackground+1);
+  assert.equal(await page.locator('.recommend-dialog[open]').count(),0);
+  await page.waitForFunction(()=>[...document.querySelectorAll('[data-notification-count]')].some(n=>!n.hidden));
+  const backgroundJob=(await(await page.request.get(origin+'/api/studio/llm/status')).json()).job;
+  const notices=await(await page.request.get(origin+'/api/studio/llm/notifications')).json();
+  assert.equal(notices.items.filter(n=>n.sourceId===backgroundJob.id).length,1);
+  page.on('dialog',dialog=>dialog.accept());
+  await page.locator('.studio-inbox:visible').first().click();
+  await page.locator(`[data-inbox-open="recommendation:${backgroundJob.id}"]`).click();
+  await page.waitForFunction(()=>document.querySelector('.recommend-dialog[open]')?.dataset.state==='done');
+  assert.equal(await page.locator('#topic').inputValue(),'내가 쓴 주제');
+  assert.equal(await page.locator('.recommend-dialog[open] .recommendation-card').count(),3);
+  const readNotices=await(await page.request.get(origin+'/api/studio/llm/notifications')).json();
+  assert.equal(readNotices.items.find(n=>n.sourceId===backgroundJob.id).read,true);
+  await page.reload();
+  await page.waitForFunction(()=>document.querySelector('.recommend-dialog[open]')?.dataset.state==='done');
+  assert.equal(generated,generatedBeforeBackground+1);
+  await page.keyboard.press('Escape');
+  await page.waitForTimeout(5100);
+  await page.locator('[data-recommend=topic]').click();
+  await page.waitForFunction(()=>document.querySelector('.recommend-dialog[open]')?.dataset.state==='running');
+  const detachedJob=(await(await page.request.get(origin+'/api/studio/llm/status')).json()).job;
+  await page.keyboard.press('Escape');
+  await page.locator('#direction').fill('생성 중 다른 방향을 메모해도 기존 요청은 계속됩니다.');
+  assert.equal((await(await page.request.get(origin+'/api/studio/llm/status')).json()).job.id,detachedJob.id);
+  await page.locator('.studio-inbox:visible').first().click();
+  await page.locator(`[data-inbox-open="recommendation:${detachedJob.id}"]`).waitFor({timeout:15000});
+  await page.screenshot({path:'/private/tmp/cak-recommendation-background-inbox.png',fullPage:true});
+  await page.locator(`[data-inbox-open="recommendation:${detachedJob.id}"]`).click();
+  await page.waitForFunction(()=>document.querySelector('.recommend-dialog[open]')?.dataset.state==='done');
+  assert.equal(generated,generatedBeforeBackground+2);
+  await page.keyboard.press('Escape');
+  generationDelay=0;
   await page.getByRole('button', { name: 'AI 계정 연결 관리', exact: true }).click();
   await page.getByText('claude@example.test', { exact: true }).waitFor();
   await page.getByRole('button', { name: '연결 해제', exact: true }).click();
@@ -201,7 +244,7 @@ try {
   assert.equal(await page.getByRole('button', { name: 'Codex 연결', exact: true }).isDisabled(), true);
   await page.keyboard.press('Escape');
   assert.deepEqual(errors, []);
-  console.log(JSON.stringify({ browser: 'Chrome', checks: ['provider selection', 'Codex device code', 'automatic continuation', 'three recommendations', 'apply suggestion', 'disconnect', 'cancel pending login', 'mobile layout', 'escape preserves input', 'Claude authorization code', 'wrong-state rejection', 'polling preserves code', 'Claude recommendation', 'offline runtime', 'copy code', 'clipboard failure', 'per-field progress', 'cancel recommendation', 'per-field failure', 'focused result dialog', 'result reopen without regeneration', 'visible apply action', 'result keyboard focus', 'progress deliverables', 'collapsed details', 'dialog cancellation', 'retry failed recommendation', 'direction-only result and apply', 'long content mobile action', 'expanded full result'], provider: 'fixture', passed: true }));
+  console.log(JSON.stringify({ browser: 'Chrome', checks: ['provider selection', 'Codex device code', 'automatic continuation', 'three recommendations', 'apply suggestion', 'disconnect', 'cancel pending login', 'mobile layout', 'escape preserves input', 'Claude authorization code', 'wrong-state rejection', 'polling preserves code', 'Claude recommendation', 'offline runtime', 'copy code', 'clipboard failure', 'per-field progress', 'cancel recommendation', 'per-field failure', 'focused result dialog', 'result reopen without regeneration', 'visible apply action', 'result keyboard focus', 'progress deliverables', 'collapsed details', 'dialog cancellation', 'retry failed recommendation', 'direction-only result and apply', 'long content mobile action', 'expanded full result', 'close continues generation', 'no completion focus steal', 'completion inbox badge', 'one persisted notification', 'inbox opens saved result', 'read state persists', 'reload restores without generation', 'navigation preserves generation', 'editing does not cancel accepted job'], provider: 'fixture', passed: true }));
 } finally {
   if (browser) await browser.close(); await worker.stop();
   await new Promise(resolve => server.close(resolve)); db.close();

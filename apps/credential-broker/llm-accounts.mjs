@@ -9,6 +9,14 @@ const nameFor = owner => {
 };
 const problem = (error, status = 409) => ({ error, status });
 const active = (job, now) => job && ['queued', 'running'].includes(job.state) && job.deadline > now;
+const savedRecommendations = value => value.recommendations || [];
+const recommendation = (job, now) => ({ id: job.id, input: job.input, state: job.state, result: job.result,
+  error: job.error, elapsedMs: Math.max(0, now - (job.createdAt || job.deadline - 240000)), occurredAt: new Date(now).toISOString(), read: false });
+const notification = item => ({ id: `recommendation:${item.id}`, source: 'recommendation', sourceId: item.id,
+  title: item.state === 'done' ? `${item.input?.focus === 'direction' ? '분위기' : '이야기'} 추천이 준비됐어요` : 'AI 추천을 완료하지 못했어요',
+  name: `${item.input?.category || '영상 기획'} · ${item.state === 'done' ? '제안을 확인하고 적용하세요' : '결과를 열어 다시 시도하세요'}`,
+  kind: item.state === 'done' ? 'success' : 'error', occurredAt: item.occurredAt, read: item.read,
+  href: `/studio?new=1&recommendation=${encodeURIComponent(item.id)}` });
 export function publicAccount(value = {}, now = Date.now()) {
   const job = value.job;
   const expired = job && ['queued', 'running'].includes(job.state) && (job.deadline <= now || (job.state === 'running' && job.leaseUntil <= now));
@@ -70,6 +78,24 @@ export async function accountAction(env, owner, operation, input = {}, now = Dat
     else await writeVault(env, scenarioName(owner, input.id), { sourceRevision: archived.value.sourceRevision, job: null }, archived.revision);
     return { ok: true };
   }
+  if (operation === 'notifications') {
+    const items = savedRecommendations(value).map(notification);
+    return { items, unreadCount: items.filter(item => !item.read).length };
+  }
+  if (operation === 'recommendation') {
+    const saved = savedRecommendations(value).find(item => item.id === input.id);
+    const current = value.job?.kind === 'recommend' && value.job.id === input.id ? value.job : null;
+    if (saved) return { recommendation: saved };
+    if (current) return { recommendation: { ...recommendation(current, now), state: publicAccount(value, now).job.state, error: publicAccount(value, now).job.error } };
+    return problem('보관된 추천을 찾지 못했어요. 최근 추천은 최대 10개까지 보관됩니다.', 404);
+  }
+  if (operation === 'notification-read') {
+    if (typeof input.read !== 'boolean' || !Array.isArray(input.ids) || input.ids.length > 10 || input.ids.some(id => typeof id !== 'string')) return problem('읽음 처리할 알림을 확인하세요.', 400);
+    const recommendations = savedRecommendations(value).map(item => input.ids.includes(item.id) ? { ...item, read: input.read } : item);
+    if (input.ids.some(id => !recommendations.some(item => item.id === id))) return problem('알림을 찾지 못했어요.', 404);
+    await writeVault(env, name, { ...value, recommendations }, record?.revision || 0);
+    return { ok: true };
+  }
   if (operation === 'status') {
     const heartbeat = await readVault(env, 'llm/runtime');
     return { ...publicAccount(value, now), available: heartbeat?.value.at > now - 30000,
@@ -88,7 +114,7 @@ export async function accountAction(env, owner, operation, input = {}, now = Dat
   if (operation === 'disconnect' || operation === 'cancel') {
     if (operation === 'cancel' && input.id !== value.job?.id) return problem('이미 변경된 연결 요청입니다.');
     await retainScenario(env, owner, record, now);
-    const next = { lastRequest: value.lastRequest, lastKind: value.lastKind, lastProvider: value.lastProvider,
+    const next = { recommendations: savedRecommendations(value), lastRequest: value.lastRequest, lastKind: value.lastKind, lastProvider: value.lastProvider,
       ...(operation === 'disconnect' || value.job?.kind === 'connect' ? {} : { credential: value.credential, account: value.account, provider: value.provider }) };
     await writeVault(env, name, next, record?.revision || 0);
     return publicAccount(next, now);
@@ -107,11 +133,11 @@ export async function accountAction(env, owner, operation, input = {}, now = Dat
   if (operation === 'scenario' && heartbeat.value.scenario !== true) return problem('시나리오를 지원하는 LLM 실행기를 연결하세요.', 503);
   const provider = operation === 'connect' ? input.provider : value.provider || 'codex';
   if (value.lastKind === operation && value.lastProvider === provider && value.lastRequest > now - 5000) return problem('잠시 후 다시 시도하세요.', 429);
-  const job = { id: operation === 'scenario' ? input.id : crypto.randomUUID(), kind: operation, provider, state: 'queued', deadline: now + (operation === 'connect' ? 600000 : 240000),
+  const job = { id: operation === 'scenario' ? input.id : crypto.randomUUID(), kind: operation, provider, state: 'queued', createdAt: now, deadline: now + (operation === 'connect' ? 600000 : 240000),
     ...(['recommend', 'scenario'].includes(operation) ? { input: input.brief } : {}),
     ...(operation === 'scenario' ? { projectId: input.projectId } : {}) };
   await retainScenario(env, owner, record, now);
-  const next = { credential: value.credential, account: value.account, provider, lastRequest: now, lastKind: operation, lastProvider: provider, job };
+  const next = { recommendations: savedRecommendations(value), credential: value.credential, account: value.account, provider, lastRequest: now, lastKind: operation, lastProvider: provider, job };
   await writeVault(env, name, next, record?.revision || 0);
   return publicAccount(next, now);
 }
@@ -136,7 +162,16 @@ export async function accountRunner(env, input) {
   const name = nameFor(input.owner);
   if (input.operation === 'read') return { record: await readVault(env, name) };
   if (input.operation === 'write' && Number.isSafeInteger(input.revision) && input.revision > 0 && input.value && typeof input.value === 'object') {
-    return { revision: await writeVault(env, name, input.value, input.revision) };
+    const current = await readVault(env, name);
+    let recommendations = savedRecommendations(current?.value || {});
+    const job = input.value.job;
+    if (job?.kind === 'recommend' && ['done', 'failed'].includes(job.state) && !recommendations.some(item => item.id === job.id)) {
+      recommendations = [recommendation(job, Date.now()), ...recommendations].slice(0, 10);
+      // Bound the encrypted account payload below the runner's request limit.
+      while (recommendations.length > 1 && new TextEncoder().encode(JSON.stringify(recommendations)).length > 120000) recommendations.pop();
+    }
+    // Completion, result and unread notification commit together under the same CAS.
+    return { revision: await writeVault(env, name, { ...input.value, recommendations }, input.revision) };
   }
   throw new Error('invalid operation');
 }

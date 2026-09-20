@@ -122,6 +122,10 @@ export async function recommendWithAccount(input, signal, onProgress = () => {})
   onProgress({ stage: 'queued' });
   const initial = await request('recommendations', input), id = initial.job?.id;
   if (!id) throw Error('추천 요청을 시작하지 못했습니다. 다시 시도하세요.');
+  return waitForRecommendation(id, signal, onProgress);
+}
+
+export async function waitForRecommendation(id, signal, onProgress = () => {}) {
   let done = false;
   try {
     while (!signal?.aborted) {
@@ -134,5 +138,5 @@ export async function recommendWithAccount(input, signal, onProgress = () => {})
       if (!current.available) throw Error('LLM 실행기 연결이 끊겼습니다. 연결 상태를 확인하고 다시 시도하세요.');
     }
     throw new DOMException('취소됨', 'AbortError');
-  } finally { if (!done) request('llm/cancel', { id }).catch(() => {}); }
+  } finally { if (!done && signal?.aborted && signal.reason === 'cancelled') await request('llm/cancel', { id }); }
 }

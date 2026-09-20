@@ -212,3 +212,41 @@ test('persistence failure preserves private recovery cache rather than losing ro
     assert.equal((await stat(join(runtime.CODEX_HOME, 'auth.json'))).mode & 0o777, 0o600);
   } finally { if (runtime) await rm(dirname(runtime.CODEX_HOME), { recursive: true, force: true }); }
 });
+
+
+test('recommendation results and unread notifications commit atomically, remain private and survive later jobs', async t => {
+ const {env,db}=fixture();t.after(()=>db.close());
+ const name=`llm/account/${a}`;
+ await writeVault(env,name,{credential:auth,job:{id:'saved-job',kind:'recommend',state:'running',input:brief,deadline:Date.now()+240000}},0);
+ let record=await readVault(env,name);
+ const done={...record.value,job:{...record.value.job,state:'done',result:{suggestions:[{topic:'private-result'}]}}};
+ await accountRunner(env,{operation:'write',owner:a,revision:record.revision,value:done});
+ let inbox=await accountAction(env,a,'notifications');assert.equal(inbox.unreadCount,1);assert.equal(inbox.items.length,1);
+ assert.equal((await accountAction(env,b,'notifications')).items.length,0);
+ assert.equal((await accountAction(env,b,'recommendation',{id:'saved-job'})).status,404);
+ assert.doesNotMatch(JSON.stringify(inbox),/private-result|fixture-access|fixture-refresh/);
+ assert.doesNotMatch(db.prepare('SELECT payload FROM credential_vault WHERE name=?').get(name).payload,/private-result/);
+ assert.equal((await accountAction(env,a,'recommendation',{id:'saved-job'})).recommendation.result.suggestions[0].topic,'private-result');
+ record=await readVault(env,name);
+ await accountAction(env,a,'notification-read',{ids:['saved-job'],read:true});
+ await assert.rejects(accountRunner(env,{operation:'write',owner:a,revision:record.revision,value:done}),{status:409});
+ record=await readVault(env,name);
+ await accountRunner(env,{operation:'write',owner:a,revision:record.revision,value:done});
+ inbox=await accountAction(env,a,'notifications');assert.equal(inbox.items.length,1);assert.equal(inbox.unreadCount,0);
+ await accountAction(env,a,'disconnect');
+ assert.equal((await accountAction(env,a,'recommendation',{id:'saved-job'})).recommendation.state,'done');
+ assert.equal((await accountAction(env,a,'notification-read',{ids:['not-owned'],read:true})).status,404);
+});
+
+test('recommendation history keeps at most ten outcomes and no browser observation is required', async t => {
+ const {env,db}=fixture();t.after(()=>db.close());
+ const name=`llm/account/${a}`;await writeVault(env,name,{credential:auth},0);
+ for(let i=0;i<12;i++){
+  const record=await readVault(env,name);
+  await accountRunner(env,{operation:'write',owner:a,revision:record.revision,value:{...record.value,job:{id:`outcome-${i}`,kind:'recommend',state:i%2?'failed':'done',input:brief,result:i%2?undefined:{suggestions:[]},error:i%2?'생성 실패':undefined,createdAt:Date.now()-1000}}});
+ }
+ const inbox=await accountAction(env,a,'notifications');assert.equal(inbox.items.length,10);assert.equal(inbox.unreadCount,10);
+ assert.equal(inbox.items[0].sourceId,'outcome-11');
+ assert.equal((await accountAction(env,a,'recommendation',{id:'outcome-0'})).status,404);
+ assert.equal((await accountAction(env,a,'recommendation',{id:'outcome-10'})).recommendation.elapsedMs>=1000,true);
+});
