@@ -1,9 +1,9 @@
 import { spawn, execFile } from 'node:child_process';
-import { promisify, stripVTControlCharacters } from 'node:util';
+import { promisify } from 'node:util';
 import { createHash } from 'node:crypto';
 import { mkdtemp, mkdir, readFile, writeFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { recommendBrief } from './lib/studio-recommendations.js';
 import { claudeFailure as failure, classifyClaudeFailure } from './lib/llm-account-errors.js';
 
@@ -18,8 +18,8 @@ export function safeClaudeLogin(value) {
   return { url: url.href, state: url.searchParams.get('state') };
 }
 
-function childRun(args, { env, signal, input, onOutput, spawnProcess = spawn, timeoutMs = 180000 }) {
-  const child = spawnProcess('claude', args, { cwd: env.HOME, env: { ...claudeEnvironment(env), BROWSER: '/usr/bin/true' }, stdio: ['pipe', 'pipe', 'pipe'], shell: false });
+function childRun(args, { env, signal, input, onOutput, spawnProcess = spawn, timeoutMs = 180000, command = 'claude', oauthToken }) {
+  const child = spawnProcess(command, args, { cwd: env.HOME, env: { ...claudeEnvironment(env), BROWSER: '/usr/bin/true', ...(oauthToken ? { CLAUDE_CODE_OAUTH_TOKEN: oauthToken } : {}) }, stdio: ['pipe', 'pipe', 'pipe'], shell: false });
   let output = '', diagnostic = '', size = 0, failed = false, killTimer, failureCode;
   const stop = () => { child.kill('SIGTERM'); killTimer ||= setTimeout(() => child.kill('SIGKILL'), 1500); killTimer.unref(); };
   const timer = setTimeout(() => { failed = true; failureCode = 'CLAUDE_TIMEOUT'; stop(); }, timeoutMs);
@@ -28,12 +28,15 @@ function childRun(args, { env, signal, input, onOutput, spawnProcess = spawn, ti
   child.stderr.on('data', chunk => { diagnostic = (diagnostic + chunk).slice(-16384); });
   child.stdin.on('error', () => { failed = true; stop(); });
   const done = new Promise((resolve, reject) => {
-    child.on('error', error => { failed = true; if (error.code === 'ENOENT') failureCode = 'CLAUDE_NOT_INSTALLED'; });
+    child.on('error', error => { failed = true; if (error.code === 'ENOENT') failureCode = command === 'claude' ? 'CLAUDE_NOT_INSTALLED' : 'CLAUDE_LOGIN_RUNTIME_MISSING'; });
     child.stdout.on('data', chunk => {
       size += Buffer.byteLength(chunk);
       if (size > 2 * 1024 * 1024) { failed = true; stop(); return; }
       output += chunk;
-      if (onOutput) Promise.resolve(onOutput(output)).catch(() => { failed = true; stop(); });
+      if (onOutput) {
+        try { Promise.resolve(onOutput(output)).catch(() => { failed = true; stop(); }); }
+        catch { failed = true; stop(); }
+      }
     });
     child.once('close', code => {
       clearTimeout(timer); clearTimeout(killTimer); signal?.removeEventListener('abort', stop);
@@ -46,15 +49,25 @@ function childRun(args, { env, signal, input, onOutput, spawnProcess = spawn, ti
   return { done, stop, write: text => child.stdin.write(text) };
 }
 
-export async function loginClaude(env, { signal, update, read, spawnProcess, pollMs = 1500 }) {
-  let manual, publishing = Promise.resolve(), polling = false, sent = false, inputFailure, pollTask = Promise.resolve();
-  const run = childRun(['auth', 'login', '--claudeai'], { env, signal, spawnProcess, timeoutMs: 600000, onOutput(output) {
-    if (manual) return publishing;
-    for (const match of stripVTControlCharacters(output).matchAll(/https:\/\/[^\s]+(?=\s)/g)) {
-      try { manual = safeClaudeLogin(match[0]); } catch { continue; }
-      publishing = update({ job: { manual } });
-      return publishing;
+export const setupCredential = value => value?.kind === 'claude-setup-token-v1' && typeof value.accessToken === 'string' && /^sk-ant-oat01-[A-Za-z0-9._~+/-]{64,4096}={0,2}$/.test(value.accessToken);
+export const claudeLoginPython = resolve(import.meta.dirname, '../../node_modules/.claude-auth-venv/bin/python');
+
+export async function loginClaude(env, { signal, update, read, spawnProcess, pollMs = 1500, python = claudeLoginPython }) {
+  let manual, publishing = Promise.resolve(), polling = false, sent = false, inputFailure, pollTask = Promise.resolve(), consumed = 0, credential;
+  const run = childRun([resolve(import.meta.dirname, 'studio-claude-login.py')], { env, signal, spawnProcess, command: python, timeoutMs: 600000, onOutput(output) {
+    const lines = output.split('\n');
+    for (; consumed < lines.length - 1; consumed++) {
+      const event = JSON.parse(lines[consumed]);
+      if (event.type === 'authorization' && !manual) {
+        manual = safeClaudeLogin(event.url);
+        publishing = update({ job: { manual } });
+      } else if (event.type === 'credential') {
+        const candidate = { kind: 'claude-setup-token-v1', accessToken: event.accessToken, createdAt: new Date().toISOString() };
+        if (!sent || !setupCredential(candidate)) throw failure('CLAUDE_AUTH_FAILED');
+        credential = candidate;
+      } else if (event.type === 'error') inputFailure = failure(event.code);
     }
+    return publishing;
   } });
   const poll = async () => {
     if (!manual || sent || polling) return;
@@ -63,18 +76,23 @@ export async function loginClaude(env, { signal, update, read, spawnProcess, pol
       const fresh = await read();
       if (fresh.job.code) {
         const [code, state] = fresh.job.code.split('#');
-        if (state !== manual.state || !/^[A-Za-z0-9._~+=/-]{8,2048}$/.test(code) || code.startsWith('sk-')) throw failure();
-        // Remove the one-time code from durable storage before feeding the official CLI.
+        if (state !== manual.state || !/^[A-Za-z0-9._~+=/-]{8,2048}$/.test(code) || code.startsWith('sk-')) throw failure('CLAUDE_AUTH_FAILED');
         await update({ job: { code: null } });
-        sent = true; run.write(`${code}#${state}\n`);
+        sent = true; run.write(JSON.stringify({ code: `${code}#${state}` }) + '\n');
       }
     } catch (e) { inputFailure = e; run.stop(); }
     finally { polling = false; }
   };
   const timer = setInterval(() => { if (!polling) pollTask = poll(); }, pollMs);
-  try { await run.done; await publishing; if (inputFailure || !manual) throw inputFailure || failure('CLAUDE_LOGIN_FAILED'); }
-  catch (error) { if (error.code === 'CLAUDE_REQUEST_FAILED') throw failure('CLAUDE_LOGIN_FAILED'); throw error; }
-  finally { clearInterval(timer); await pollTask; }
+  try {
+    await run.done; await publishing;
+    if (inputFailure || !manual || !credential) throw inputFailure || failure('CLAUDE_LOGIN_FAILED');
+    return credential;
+  } catch (error) {
+    if (inputFailure) throw inputFailure;
+    if (error.code === 'CLAUDE_REQUEST_FAILED') throw failure('CLAUDE_LOGIN_FAILED');
+    throw error;
+  } finally { clearInterval(timer); await pollTask; }
 }
 
 export function claudeArgs(model) {
@@ -103,8 +121,8 @@ export function parseClaudeEvents(output) {
   try { return { searched, value: JSON.parse(String(result.result || answer).replace(/^\s*```(?:json)?\s*/, '').replace(/\s*```\s*$/, '')) }; }
   catch { throw failure('CLAUDE_OUTPUT_INVALID'); }
 }
-export const generateClaude = (env, { spawnProcess } = {}) => async (prompt, { signal, model } = {}) =>
-  parseClaudeEvents(await childRun(claudeArgs(model), { env, signal, input: prompt, spawnProcess }).done);
+export const generateClaude = (env, { spawnProcess, oauthToken } = {}) => async (prompt, { signal, model } = {}) =>
+  parseClaudeEvents(await childRun(claudeArgs(model), { env, signal, input: prompt, spawnProcess, oauthToken }).done);
 
 // Claude Code scopes its macOS Keychain item to CLAUDE_CONFIG_DIR. This adapter
 // touches only the fresh private runtime namespace, never the operator's entry.
@@ -148,8 +166,9 @@ export async function executeClaudeAccountJob(value, { signal, update, read, env
   const home = await mkdtemp(join(tmpdir(), 'shopshorts-claude-'));
   const runtime = { ...claudeEnvironment(env), HOME: home, CLAUDE_CONFIG_DIR: join(home, '.claude') };
   let retainCache = false;
+  const keychainRuntime = value.job.kind !== 'connect' && !setupCredential(value.credential);
   const persist = async patch => {
-    if (patch.credential) await writeFile(join(runtime.CLAUDE_CONFIG_DIR, '.credentials.json'), JSON.stringify(patch.credential.credentials), { mode: 0o600 });
+    if (patch.credential) await writeFile(join(runtime.CLAUDE_CONFIG_DIR, setupCredential(patch.credential) ? 'setup-token.json' : '.credentials.json'), JSON.stringify(setupCredential(patch.credential) ? patch.credential : patch.credential.credentials), { mode: 0o600 });
     try { await update(patch); }
     catch (e) { if (patch.credential && e.code !== 'STALE_ACCOUNT' && signal?.reason?.code !== 'STALE_ACCOUNT') retainCache = true; throw e; }
   };
@@ -166,14 +185,19 @@ export async function executeClaudeAccountJob(value, { signal, update, read, env
   };
   try {
     await mkdir(runtime.CLAUDE_CONFIG_DIR, { mode: 0o700 });
-    if (value.credential) {
+    if (value.credential && !setupCredential(value.credential)) {
       await writeFile(join(runtime.CLAUDE_CONFIG_DIR, '.credentials.json'), JSON.stringify(value.credential.credentials), { mode: 0o600 });
       for (const path of ['.claude.json', '.claude/.claude.json']) if (value.credential.profiles?.[path]) await writeFile(join(home, path), JSON.stringify(value.credential.profiles[path]), { mode: 0o600 });
     }
     if (value.job.kind === 'connect') {
-      await login(runtime, { signal, update, read });
-      const status = await identify(runtime, signal);
-      await persist({ credential: await capture(), account: status.email || 'Claude 구독 계정', provider: 'claude', job: { state: 'done', manual: null, code: null } });
+      const credential = await login(runtime, { signal, update, read, python: env.SHOPSHORTS_CLAUDE_PYTHON || claudeLoginPython });
+      if (!setupCredential(credential)) throw failure('CLAUDE_AUTH_FAILED');
+      await persist({ credential, account: 'Claude 구독 계정', provider: 'claude', job: { state: 'done', manual: null, code: null } });
+      return;
+    }
+    if (setupCredential(value.credential)) {
+      const result = await recommendBrief(value.job.input, env, { generate: generator(runtime, { oauthToken: value.credential.accessToken }), signal, provider: 'claude' });
+      await update({ job: { state: 'done', result } });
       return;
     }
     await identify(runtime, signal);
@@ -183,6 +207,6 @@ export async function executeClaudeAccountJob(value, { signal, update, read, env
     } catch (e) { await persist({ credential: await capture() }); throw e; }
   } finally {
     if (retainCache) console.error('[llm-accounts] Claude 인증 갱신 저장 실패. 복구용 비공개 캐시 보존:', home);
-    else { await cleanup(runtime); await rm(home, { recursive: true, force: true }); }
+    else { if (keychainRuntime) await cleanup(runtime); await rm(home, { recursive: true, force: true }); }
   }
 }

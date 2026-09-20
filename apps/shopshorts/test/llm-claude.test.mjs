@@ -5,10 +5,12 @@ import { PassThrough, Writable } from 'node:stream';
 import { mkdtemp, readFile, writeFile, rm, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
-import { safeClaudeLogin, loginClaude, claudeArgs, claudeEnvironment, parseClaudeEvents, readClaudeCredential, executeClaudeAccountJob, generateClaude } from '../studio-account-claude.mjs';
+import { safeClaudeLogin, loginClaude, claudeArgs, claudeEnvironment, parseClaudeEvents, readClaudeCredential, executeClaudeAccountJob, generateClaude, setupCredential } from '../studio-account-claude.mjs';
 import { accountFailureMessage, classifyClaudeFailure } from '../lib/llm-account-errors.js';
 
 const url = 'https://claude.com/cai/oauth/authorize?state=state-bound-123&code_challenge=fixture-challenge&code_challenge_method=S256&redirect_uri=https%3A%2F%2Fplatform.claude.com%2Foauth%2Fcode%2Fcallback';
+const setup = { kind: 'claude-setup-token-v1', accessToken: 'sk-ant-oat01-' + 'x'.repeat(96) };
+const wire = value => JSON.stringify(value) + '\n';
 const oauth = token => ({ claudeAiOauth: { accessToken: 'fixture-access', refreshToken: token, expiresAt: Date.now() + 60000, scopes: ['user:inference', 'user:profile'] } });
 const brief = { category: '심리학', format: 'short', duration: 32, focus: 'topic', topic: '집중력', direction: '' };
 const suggestions = { suggestions: Array.from({ length: 3 }, (_, i) => ({ topic: `주제 ${i}`, direction: '차분한 설명', reason: '검색 근거' })), sources: [{ title: '자료', url: 'https://example.org/source' }] };
@@ -27,13 +29,13 @@ test('Claude URL only accepts official PKCE authorization and registered callbac
 
 test('official login receives only state-matched one-time code, erased before stdin write', async () => {
   let saved, consumed = false, input;
-  const c = child(text => { assert.equal(consumed, true); input = text; queueMicrotask(() => c.emit('close', 0)); });
+  const c = child(text => { assert.equal(consumed, true); input = JSON.parse(text).code; queueMicrotask(() => { c.stdout.write(wire({ type: 'credential', accessToken: setup.accessToken })); c.emit('close', 0); }); });
   await loginClaude({ HOME: '/private/fixture', PATH: '/bin', CLAUDE_CONFIG_DIR: '/private/fixture/.claude' }, {
     update: async patch => { if (patch.job.manual) saved = patch.job.manual; if (patch.job.code === null) consumed = true; },
     read: async () => ({ job: { code: 'authcode123#state-bound-123' } }), pollMs: 1,
-    spawnProcess: (bin, args, options) => { assert.equal(bin, 'claude'); assert.deepEqual(args, ['auth', 'login', '--claudeai']); assert.equal(options.env.BROWSER, '/usr/bin/true'); setTimeout(() => c.stdout.write(`Visit: ${url}\nPaste code here > `), 0); return c; },
+    spawnProcess: (bin, args, options) => { assert.match(bin, /claude-auth-venv\/bin\/python$/); assert.match(args[0], /studio-claude-login\.py$/); assert.equal(options.env.BROWSER, '/usr/bin/true'); setTimeout(() => c.stdout.write(wire({ type: 'authorization', url })), 0); return c; },
   });
-  assert.equal(saved.url, url); assert.equal(input, 'authcode123#state-bound-123\n');
+  assert.equal(saved.url, url); assert.equal(input, 'authcode123#state-bound-123');
 });
 
 test('cancel terminates official login and wrong-state code is never fed to CLI', async () => {
@@ -42,7 +44,7 @@ test('cancel terminates official login and wrong-state code is never fed to CLI'
     const controller = new AbortController(); const c = child(() => writes++);
     await assert.rejects(loginClaude({ HOME: '/fixture' }, { signal: controller.signal, pollMs: 1,
       update: async () => { if (cancelled) controller.abort(); }, read: async () => ({ job: { code: 'authcode123#wrong-state' } }),
-      spawnProcess: () => { setTimeout(() => c.stdout.write(url + '\n'), 0); return c; },
+      spawnProcess: () => { setTimeout(() => c.stdout.write(wire({ type: 'authorization', url })), 0); return c; },
     }));
   }
   assert.equal(writes, 0);
@@ -95,12 +97,12 @@ test('connected Claude credential powers recommendation, rotation is persisted o
 test('Claude login stores official credential and account label, cleans temporary runtime', async () => {
   let runtime, saved;
   await executeClaudeAccountJob({ job: { kind: 'connect' } }, {
-    login: async env => { runtime = env; await writeFile(join(env.CLAUDE_CONFIG_DIR, '.credentials.json'), JSON.stringify(oauth('new')), { mode: 0o600 }); },
+    login: async env => { runtime = env; return setup; },
     credential: env => readClaudeCredential(env, { platform: 'linux' }), cleanup: async () => {},
-    identify: async () => ({ email: 'account@example.test' }), update: async patch => { saved = patch; },
+    identify: async () => { throw Error('setup-token must not read Keychain auth status'); }, update: async patch => { saved = patch; },
   });
-  assert.equal(saved.provider, 'claude'); assert.equal(saved.account, 'account@example.test'); assert.equal(saved.job.state, 'done'); assert.equal(saved.job.code, null);
-  assert.equal(saved.credential.credentials.claudeAiOauth.refreshToken, 'new');
+  assert.equal(saved.provider, 'claude'); assert.equal(saved.account, 'Claude 구독 계정'); assert.equal(saved.job.state, 'done'); assert.equal(saved.job.code, null);
+  assert.equal(saved.credential.accessToken, setup.accessToken);
   await assert.rejects(stat(runtime.HOME), { code: 'ENOENT' });
 });
 
@@ -151,4 +153,43 @@ test('stream result error is classified without exposing the provider response',
     assert.equal(error.code, 'CLAUDE_RATE_LIMITED'); assert.doesNotMatch(error.message, /private-account-data/); return true;
   });
   assert.throws(() => parseClaudeEvents('invalid private output'), { code: 'CLAUDE_OUTPUT_INVALID' });
+});
+
+
+test('setup-token recommendation passes only that owner token and never touches Keychain', async () => {
+  let runtime, result;
+  const forbidden = async () => { throw Error('Keychain path must not be called'); };
+  await executeClaudeAccountJob({ credential: setup, job: { kind: 'recommend', input: brief } }, {
+    env: { HOME: '/operator', PATH: '/bin', CLAUDE_CODE_OAUTH_TOKEN: 'operator-secret' },
+    identify: forbidden, credential: forbidden, cleanup: forbidden,
+    generator: (env, options) => { runtime = env; assert.equal(env.CLAUDE_CODE_OAUTH_TOKEN, undefined); assert.equal(options.oauthToken, setup.accessToken); return async () => ({ searched: true, value: suggestions }); },
+    update: async patch => { result = patch; },
+  });
+  assert.equal(result.job.state, 'done'); assert.equal(result.job.result.provider, 'claude');
+  await assert.rejects(stat(runtime.HOME), { code: 'ENOENT' });
+});
+
+test('explicit owner OAuth token reaches the CLI without importing operator credentials', async () => {
+  const c = child();
+  const result = await generateClaude({ HOME: '/isolated', CLAUDE_CODE_OAUTH_TOKEN: 'operator-secret' }, { oauthToken: setup.accessToken, spawnProcess(_bin, _args, options) {
+    assert.equal(options.env.CLAUDE_CODE_OAUTH_TOKEN, setup.accessToken);
+    queueMicrotask(() => { c.stdout.write(wire({ type: 'result', subtype: 'success', result: JSON.stringify(suggestions) })); c.emit('close', 0); }); return c;
+  } })('prompt');
+  assert.equal(result.value.suggestions.length, 3);
+  assert.equal(setupCredential({ ...setup, accessToken: 'sk-ant-api03-' + 'x'.repeat(96) }), false);
+});
+
+test('new login never calls Keychain and retains restricted recovery file if vault write fails', async () => {
+  let runtime;
+  try {
+    await assert.rejects(executeClaudeAccountJob({ job: { kind: 'connect' } }, {
+      login: async env => { runtime = env; return setup; },
+      identify: async () => { throw Error('must not identify through Keychain'); },
+      cleanup: async () => { throw Error('must not clear Keychain'); },
+      update: async () => { throw Error('vault unavailable'); },
+    }), /vault unavailable/);
+    const file = join(runtime.CLAUDE_CONFIG_DIR, 'setup-token.json');
+    assert.equal((await stat(file)).mode & 0o777, 0o600);
+    assert.equal(JSON.parse(await readFile(file, 'utf8')).accessToken, setup.accessToken);
+  } finally { if(runtime) await rm(runtime.HOME, { recursive: true, force: true }); }
 });

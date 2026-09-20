@@ -1,6 +1,7 @@
 // Only these fixed diagnostics may cross the runner boundary. Never return CLI
 // stdout/stderr: login output can contain authorization URLs and credentials.
 const messages = Object.freeze({
+  CLAUDE_LOGIN_RUNTIME_MISSING: 'Claude 연결 실행 환경이 준비되지 않았습니다. 운영자에게 확인을 요청해 주세요.',
   CLAUDE_LOGIN_FAILED: 'Claude 로그인을 완료하지 못했습니다. 다시 연결하고 새 인증 코드를 입력해 주세요.',
   CLAUDE_AUTH_FAILED: 'Claude 인증을 확인하지 못했습니다. 계정을 다시 연결해 주세요.',
   CLAUDE_KEYCHAIN_FAILED: '실행기에서 Claude 인증 정보에 접근하지 못했습니다. 운영자가 Mac 키체인 접근 상태를 확인해야 합니다.',

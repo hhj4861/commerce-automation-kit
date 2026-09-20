@@ -11,6 +11,7 @@
     "start": "node server.mjs",
     "worker": "node worker.mjs",
     "llm:worker": "node studio-account-worker.mjs",
+    "llm:setup": "python3 -m venv ../../node_modules/.claude-auth-venv && ../../node_modules/.claude-auth-venv/bin/python -m pip install -r requirements-claude.txt",
     "start:cloud-secrets": "node ../credential-broker/runner-bootstrap.mjs server.mjs",
     "worker:cloud-secrets": "node ../credential-broker/runner-bootstrap.mjs worker.mjs",
     "test": "node --test test/*.test.mjs",
