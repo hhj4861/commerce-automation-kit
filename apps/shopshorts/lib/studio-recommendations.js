@@ -31,7 +31,7 @@ export function parseRecommendations(value, searched) {
   return {suggestions,sources:[...new Map(sources.map(s=>[s.url,s])).values()]};
 }
 
-export async function recommendBrief(input,env,{generate,now=new Date(),signal}={}) {
+export async function recommendBrief(input,env,{generate,now=new Date(),signal,provider='codex'}={}) {
   const brief=recommendationInput(input);
   if (!generate) fail('Codex 구독 추천은 Codex에 로그인된 로컬 제작 서버에서 사용할 수 있습니다.',503);
   const end=now.toISOString(),start=new Date(now.getTime()-30*86400000).toISOString();
@@ -42,6 +42,6 @@ export async function recommendBrief(input,env,{generate,now=new Date(),signal}=
 검색량·인기 순위·상승률을 지어내지 마세요. 최근 이슈와 상시 관심사를 구분하고 reason에 검색 근거의 날짜와 관련성을 설명하세요. 최근 자료가 부족하면 부족함을 명시하세요. 기사·기존 영상·유명 창작물의 내용을 복제하지 말고 독창적인 기획을 제안하세요. 상품광고는 실제 제품 정보 없이 효능·경험·보장을 만들지 마세요. 막장드라마는 가상의 성인 인물 이야기로 만드세요.
 다음 JSON만 반환하세요. 필드는 마크다운 없이 일반 문장으로 쓰고 링크는 sources에만 넣으세요. 각 topic은 1~1000자, direction은 1~2000자, reason은 1~800자. sources는 실제 검색으로 확인한 자료의 HTTPS 원문 링크와 제목입니다. sources와 suggestions의 모든 값은 한국어로 작성하되 URL은 원문 그대로 쓰세요.
 {"suggestions":[{"topic":"영상 주제와 핵심 이야기","direction":"분위기·요청사항","reason":"이 기획을 추천하는 검색 근거 날짜와 이유"}, ...총 3개],"sources":[{"title":"자료 제목","url":"https://..."}]}`;
-  const result=await generate(prompt,{signal,model:env.SHOPSHORTS_CODEX_MODEL});
-  return {...parseRecommendations(result.value,result.searched),provider:'codex',category:brief.category,focus:brief.focus,checkedAt:end,period:{start,end}};
+  const result=await generate(prompt,{signal,model:provider==='claude'?env.SHOPSHORTS_CLAUDE_MODEL:env.SHOPSHORTS_CODEX_MODEL});
+  return {...parseRecommendations(result.value,result.searched),provider,category:brief.category,focus:brief.focus,checkedAt:end,period:{start,end}};
 }

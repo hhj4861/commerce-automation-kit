@@ -13,6 +13,6 @@ export async function runnerRequest(base, keyPath, path, body, fetcher = fetch) 
   const result = await fetcher(`${url.origin}${path}`, { method: 'POST', redirect: 'error',
     headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
     body: JSON.stringify(body), signal: AbortSignal.timeout(20000) });
-  if (!result.ok) throw new Error(`Credential service failed (${result.status})`);
+  if (!result.ok) throw Object.assign(new Error(`Credential service failed (${result.status})`), { status: result.status });
   return result.json();
 }

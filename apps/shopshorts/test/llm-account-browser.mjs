@@ -19,17 +19,26 @@ const env = { SHOPSHORTS_SESSION_SECRET: 'fixture-session-secret'.repeat(3), SHO
     first: async () => db.prepare(sql).get(...args), all: async () => ({ results: db.prepare(sql).all(...args) }), run: async () => ({ meta: { changes: db.prepare(sql).run(...args).changes } }),
   }; } }; } } };
 const suggestions = Array.from({ length: 3 }, (_, i) => ({ topic: `집중력 추천 ${i + 1}`, direction: '차분한 설명', reason: '테스트 검색 근거' }));
-let finishLogin, generated = 0;
-const worker = startAccountWorker({ intervalMs: 20, call: (_, input) => accountRunner(env, input), execute: async (value, { signal, update }) => {
+let finishLogin, generated = 0, generatedProvider;
+const worker = startAccountWorker({ intervalMs: 20, call: (_, input) => accountRunner(env, input), execute: async (value, { signal, update, read }) => {
   if (value.job.kind === 'connect') {
+    if (value.job.provider === 'claude') {
+      await update({ job: { manual: { url: 'https://claude.com/cai/oauth/authorize?state=fixture-state', state: 'fixture-state' } } });
+      while (!signal.aborted) {
+        const fresh = await read();
+        if (fresh.job.code) { assert.equal(fresh.job.code, 'authorization-fixture#fixture-state'); await update({ credential: { fixture: true }, provider: 'claude', account: 'claude@example.test', job: { state: 'done', manual: null, code: null } }); return; }
+        await new Promise(resolve => setTimeout(resolve, 20));
+      }
+      return;
+    }
     await update({ job: { device: { url: 'https://auth.openai.com/codex/device', code: 'TEST-CODE' } } });
     await new Promise(resolve => { finishLogin = resolve; signal.addEventListener('abort', resolve, { once: true }); });
     if (signal.aborted) return;
     await update({ credential: { fixture: true }, account: 'browser@example.test', job: { state: 'done', device: null } });
   } else {
     assert.equal(value.job.input.category, '심리학'); assert.equal(value.job.input.topic, '내가 쓴 주제');
-    const result = await recommendBrief(value.job.input, {}, { generate: async () => ({ searched: true, value: { suggestions, sources: [{ title: '검색 출처 테스트', url: 'https://example.org/source' }] } }) });
-    generated++; await update({ job: { state: 'done', result } });
+    const result = await recommendBrief(value.job.input, {}, { provider: value.job.provider, generate: async () => ({ searched: true, value: { suggestions, sources: [{ title: '검색 출처 테스트', url: 'https://example.org/source' }] } }) });
+    generated++; generatedProvider = result.provider; await update({ job: { state: 'done', result } });
   }
 } });
 const server = createServer(async (req, res) => {
@@ -98,13 +107,32 @@ try {
   await page.keyboard.press('Escape');
   assert.equal(await page.locator('[data-recommend="topic"]').isEnabled(), true);
   assert.equal(await page.locator('#topic').inputValue(), '집중력 추천 1');
+  await page.locator('#topic').fill('내가 쓴 주제');
+  await page.locator('[data-recommend="topic"]').click();
+  await page.getByRole('button', { name: 'Claude 연결', exact: true }).click();
+  await page.getByRole('link', { name: /Claude 인증 화면 열기/ }).waitFor();
+  await page.getByLabel('일회용 인증 코드', { exact: true }).fill('authorization-fixture#wrong-state');
+  await page.getByRole('button', { name: '코드 확인 · 연결', exact: true }).click();
+  await page.getByText('다른 연결 요청의 인증 코드입니다.', { exact: false }).waitFor();
+  await page.getByLabel('일회용 인증 코드', { exact: true }).fill('authorization-fixture#fixture-state');
+  await page.waitForTimeout(1800); // Verify polling does not erase the code or focus.
+  assert.equal(await page.getByLabel('일회용 인증 코드', { exact: true }).inputValue(), 'authorization-fixture#fixture-state');
+  await page.screenshot({ path: '/private/tmp/cak-llm-claude-mobile.png', fullPage: true });
+  await page.getByRole('button', { name: '코드 확인 · 연결', exact: true }).click();
+  await page.locator('.recommendation-card').first().waitFor({ timeout: 15000 });
+  assert.equal(generatedProvider, 'claude'); assert.equal(generated, 2);
+  assert.equal(await page.locator('#topic').inputValue(), '내가 쓴 주제');
+  await page.getByRole('button', { name: 'AI 계정 연결 관리', exact: true }).click();
+  await page.getByText('claude@example.test · 연결됨', { exact: true }).waitFor();
+  await page.getByRole('button', { name: '연결 해제', exact: true }).click();
+  await page.keyboard.press('Escape');
   await worker.stop(); db.prepare('DELETE FROM credential_vault WHERE name = ?').run('llm/runtime');
   await page.locator('[data-recommend="topic"]').click();
   await page.getByText('LLM 실행기가 오프라인입니다.', { exact: false }).waitFor();
   assert.equal(await page.getByRole('button', { name: 'Codex 연결', exact: true }).isDisabled(), true);
   await page.keyboard.press('Escape');
   assert.deepEqual(errors, []);
-  console.log(JSON.stringify({ browser: 'Chrome', checks: ['connect dialog', 'device code', 'automatic continuation', 'three recommendations', 'apply suggestion', 'disconnect', 'cancel pending login', 'mobile layout', 'escape preserves input', 'offline runtime'], provider: 'fixture', passed: true }));
+  console.log(JSON.stringify({ browser: 'Chrome', checks: ['provider selection', 'Codex device code', 'automatic continuation', 'three recommendations', 'apply suggestion', 'disconnect', 'cancel pending login', 'mobile layout', 'escape preserves input', 'Claude authorization code', 'wrong-state rejection', 'polling preserves code', 'Claude recommendation', 'offline runtime'], provider: 'fixture', passed: true }));
 } finally {
   if (browser) await browser.close(); await worker.stop();
   await new Promise(resolve => server.close(resolve)); db.close();
