@@ -4,6 +4,7 @@ import { pathToFileURL } from 'node:url';
 import { runnerRequest } from '../credential-broker/runner-client.mjs';
 import { executeAccountJob } from './studio-account-codex.mjs';
 import { executeClaudeAccountJob } from './studio-account-claude.mjs';
+import { accountFailureCode, accountFailureMessage } from './lib/llm-account-errors.js';
 
 export const executeProviderJob = (value, context) => (value.job.provider === 'claude' ? executeClaudeAccountJob : executeAccountJob)(value, context);
 
@@ -49,8 +50,11 @@ export function startAccountWorker({ env = process.env, call = accountBroker(env
     tasks.set(owner, task);
     task.done = (async () => {
       try { await execute(initial, { signal: controller.signal, update, read: async () => (await read()).value, env }); }
-      catch {
-        if (!controller.signal.aborted) await update({ job: { state: 'failed', device: null, manual: null, code: null, error: `${initial.job.provider === 'claude' ? 'Claude' : 'Codex'} 요청에 실패했습니다. 계정을 다시 연결하거나 구독 사용 한도와 실행기 상태를 확인하세요.` } }).catch(() => {});
+      catch (error) {
+        if (!controller.signal.aborted) {
+          log(`[llm-accounts] ${initial.job.provider === 'claude' ? 'claude' : 'codex'} ${initial.job.kind === 'connect' ? 'connect' : 'recommend'} ${accountFailureCode(error)}`);
+          await update({ job: { state: 'failed', device: null, manual: null, code: null, error: accountFailureMessage(initial.job.provider, error) } }).catch(() => {});
+        }
       } finally { clearTimeout(deadline); clearInterval(renew); await serial; tasks.delete(owner); }
     })();
   }

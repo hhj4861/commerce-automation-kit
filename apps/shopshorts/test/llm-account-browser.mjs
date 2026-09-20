@@ -74,6 +74,7 @@ try {
   await page.locator('[data-recommend="topic"]').click();
   await page.getByRole('dialog').waitFor();
   assert.match(await page.getByRole('dialog').innerText(), /Claude/);
+  await page.screenshot({ path: '/private/tmp/cak-connection-chooser-desktop.png', fullPage: true });
   await page.getByRole('button', { name: 'Codex 연결', exact: true }).click();
   await page.getByText('TEST-CODE', { exact: true }).waitFor();
   assert.equal(await page.getByRole('link', { name: /ChatGPT 인증 화면 열기/ }).getAttribute('href'), 'https://auth.openai.com/codex/device');
@@ -112,18 +113,20 @@ try {
   await page.getByRole('button', { name: 'Claude 연결', exact: true }).click();
   await page.getByRole('link', { name: /Claude 인증 화면 열기/ }).waitFor();
   await page.getByLabel('일회용 인증 코드', { exact: true }).fill('authorization-fixture#wrong-state');
-  await page.getByRole('button', { name: '코드 확인 · 연결', exact: true }).click();
+  await page.getByRole('button', { name: '연결 완료', exact: true }).click();
   await page.getByText('다른 연결 요청의 인증 코드입니다.', { exact: false }).waitFor();
   await page.getByLabel('일회용 인증 코드', { exact: true }).fill('authorization-fixture#fixture-state');
   await page.waitForTimeout(1800); // Verify polling does not erase the code or focus.
   assert.equal(await page.getByLabel('일회용 인증 코드', { exact: true }).inputValue(), 'authorization-fixture#fixture-state');
+  assert.equal(await page.getByLabel('일회용 인증 코드', { exact: true }).evaluate(node => node === document.activeElement), true);
+  assert.equal(await page.getByRole('dialog').evaluate(node => node.scrollWidth <= node.clientWidth && node.scrollHeight <= node.clientHeight), true);
   await page.screenshot({ path: '/private/tmp/cak-llm-claude-mobile.png', fullPage: true });
-  await page.getByRole('button', { name: '코드 확인 · 연결', exact: true }).click();
+  await page.getByRole('button', { name: '연결 완료', exact: true }).click();
   await page.locator('.recommendation-card').first().waitFor({ timeout: 15000 });
   assert.equal(generatedProvider, 'claude'); assert.equal(generated, 2);
   assert.equal(await page.locator('#topic').inputValue(), '내가 쓴 주제');
   await page.getByRole('button', { name: 'AI 계정 연결 관리', exact: true }).click();
-  await page.getByText('claude@example.test · 연결됨', { exact: true }).waitFor();
+  await page.getByText('claude@example.test', { exact: true }).waitFor();
   await page.getByRole('button', { name: '연결 해제', exact: true }).click();
   await page.keyboard.press('Escape');
   await worker.stop(); db.prepare('DELETE FROM credential_vault WHERE name = ?').run('llm/runtime');
