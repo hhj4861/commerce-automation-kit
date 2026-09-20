@@ -18,7 +18,9 @@ const env = { SHOPSHORTS_SESSION_SECRET: 'fixture-session-secret'.repeat(3), SHO
   VAULT_KEY: { get: async () => Buffer.alloc(32, 6).toString('base64') }, DB: { prepare(sql) { return { bind(...args) { return {
     first: async () => db.prepare(sql).get(...args), all: async () => ({ results: db.prepare(sql).all(...args) }), run: async () => ({ meta: { changes: db.prepare(sql).run(...args).changes } }),
   }; } }; } } };
-const suggestions = Array.from({ length: 3 }, (_, i) => ({ topic: `집중력 추천 ${i + 1}`, direction: '차분한 설명', reason: '테스트 검색 근거' }));
+const topics=['똑같이 10분 봤는데 기분이 다른 이유. 친구와 대화한 뒤와 남의 일상을 비교한 뒤, 무엇이 달랐을까요?', '할 일을 앞두고 책상부터 정리하는 마음. 미루는 순간의 평가 걱정과 불확실함을 돌아봐요.', '같이 있는데 혼자인 느낌. 대화 중 휴대전화만 보는 상대에게 원하는 관심을 말로 요청하는 이야기.'];
+const directions=['차분한 내레이션으로 시작해 두 가지 일상을 나란히 보여주세요. 친구와 취미 이야기를 나누는 장면과 다른 사람의 성취를 보며 한숨 쉬는 장면을 대비합니다. 마지막에는 스스로 돌아볼 질문을 남겨요.', '책상 정리부터 하는 주인공의 가벼운 상황극. 속마음은 짧은 자막으로 표현하고, 마지막에 작은 실천을 제안해요.', '조용한 카페에서 눈높이 화면으로 대화를 보여주세요. 부드러운 말투와 따뜻한 색감으로 마무리해요.'];
+const suggestions = topics.map((topic,i)=>({topic,direction:directions[i],reason:'브라우저 검증용 검색 근거입니다. 실제 제공사 호출은 사용하지 않습니다.'}));
 let finishLogin, generated = 0, generatedProvider;
 let generationDelay = 0, generationFailure = false;
 const worker = startAccountWorker({ intervalMs: 20, call: (_, input) => accountRunner(env, input), execute: async (value, { signal, update, read }) => {
@@ -76,8 +78,8 @@ try {
   await page.goto(origin + '/studio?new=1');
   await page.locator('#topic').fill('내가 쓴 주제'); await page.locator('#direction').fill('내가 쓴 요청사항');
   await page.locator('[data-recommend="topic"]').click();
-  await page.getByRole('dialog').waitFor();
-  assert.match(await page.getByRole('dialog').innerText(), /Claude/);
+  await page.locator('.llm-dialog[open]').waitFor();
+  assert.match(await page.locator('.llm-dialog[open]').innerText(), /Claude/);
   assert.equal(await page.locator('[data-recommend=direction]').innerText(), '✦ LLM 추천');
   assert.equal(await page.locator('[data-recommend-progress=topic]').getAttribute('data-state'), 'authorization');
   assert.equal(await page.locator('[data-recommend-progress=direction]').isVisible(), false);
@@ -96,14 +98,24 @@ try {
   finishLogin();
   await page.locator('.recommendation-card').first().waitFor({ timeout: 15000 });
   assert.equal(await page.locator('.recommendation-card').count(), 3); assert.equal(generated, 1);
+  const focusDialog=page.locator('.recommend-dialog[open]');
+  assert.equal(await focusDialog.locator('h2').evaluate(n=>document.activeElement===n),true);
+  assert.equal(await focusDialog.locator('.recommendation-card details[open]').count(),0);
+  const firstAction=await focusDialog.locator('[data-apply-recommendation]').first().boundingBox();
+  assert.ok(firstAction.y>=0&&firstAction.y+firstAction.height<=900);
+  await page.screenshot({path:'/private/tmp/cak-recommendation-focus-results-desktop.png',fullPage:true});
+  await page.getByRole('button',{name:'추천 창 닫기',exact:true}).click();
+  assert.equal(await page.locator('[data-recommend=topic]').evaluate(n=>document.activeElement===n),true);
+  await page.getByRole('button',{name:'이야기 추천 3개 다시 보기',exact:true}).click();
+  assert.equal(generated,1);
   assert.equal(await page.locator('#topic').inputValue(), '내가 쓴 주제');
   await page.getByRole('button', { name: '주제·분위기 적용', exact: true }).first().click();
-  assert.equal(await page.locator('#topic').inputValue(), '집중력 추천 1');
+  assert.equal(await page.locator('#topic').inputValue(), suggestions[0].topic);
   await page.getByRole('button', { name: 'AI 계정 연결 관리', exact: true }).click();
   await page.getByRole('button', { name: '연결 해제', exact: true }).click();
   await page.getByRole('button', { name: 'Codex 연결', exact: true }).waitFor();
   await page.keyboard.press('Escape');
-  assert.equal(await page.locator('#topic').inputValue(), '집중력 추천 1');
+  assert.equal(await page.locator('#topic').inputValue(), suggestions[0].topic);
   await page.locator('[data-recommend="topic"]').click();
   await page.getByRole('button', { name: 'Codex 연결', exact: true }).click();
   await page.getByText('TEST-CODE', { exact: true }).waitFor();
@@ -116,12 +128,12 @@ try {
   }
   await page.setViewportSize({ width: 390, height: 844 });
   await page.locator('[data-recommend="topic"]').click();
-  await page.getByRole('dialog').waitFor();
-  assert.equal(await page.getByRole('dialog').evaluate(node => node.scrollWidth <= node.clientWidth), true);
+  await page.locator('.llm-dialog[open]').waitFor();
+  assert.equal(await page.locator('.llm-dialog[open]').evaluate(node => node.scrollWidth <= node.clientWidth), true);
   await page.screenshot({ path: '/private/tmp/cak-llm-account-mobile.png', fullPage: true });
   await page.keyboard.press('Escape');
   assert.equal(await page.locator('[data-recommend="topic"]').isEnabled(), true);
-  assert.equal(await page.locator('#topic').inputValue(), '집중력 추천 1');
+  assert.equal(await page.locator('#topic').inputValue(), suggestions[0].topic);
   await page.locator('#topic').fill('내가 쓴 주제');
   await page.locator('[data-recommend="topic"]').click();
   await page.getByRole('button', { name: 'Claude 연결', exact: true }).click();
@@ -133,13 +145,16 @@ try {
   await page.waitForTimeout(1800); // Verify polling does not erase the code or focus.
   assert.equal(await page.getByLabel('일회용 인증 코드', { exact: true }).inputValue(), 'authorization-fixture#fixture-state');
   assert.equal(await page.getByLabel('일회용 인증 코드', { exact: true }).evaluate(node => node === document.activeElement), true);
-  assert.equal(await page.getByRole('dialog').evaluate(node => node.scrollWidth <= node.clientWidth && node.scrollHeight <= node.clientHeight), true);
+  assert.equal(await page.locator('.llm-dialog[open]').evaluate(node => node.scrollWidth <= node.clientWidth && node.scrollHeight <= node.clientHeight), true);
   await page.screenshot({ path: '/private/tmp/cak-llm-claude-mobile.png', fullPage: true });
   await page.getByRole('button', { name: '연결 완료', exact: true }).click();
   await page.locator('.recommendation-card').first().waitFor({ timeout: 15000 });
   assert.equal(generatedProvider, 'claude'); assert.equal(generated, 2);
   assert.equal(await page.locator('#topic').inputValue(), '내가 쓴 주제');
   assert.equal(await page.locator('[data-recommend-progress=topic]').getAttribute('data-state'), 'done');
+  assert.equal(await page.locator('.recommend-dialog[open]').evaluate(n=>n.scrollWidth<=n.clientWidth),true);
+  await page.screenshot({path:'/private/tmp/cak-recommendation-focus-results-mobile.png',fullPage:true});
+  await page.keyboard.press('Escape');
   await page.waitForTimeout(5100); // Respect the production same-provider request cooldown.
   const directionBeforeCancel=await page.locator('#direction').inputValue();
   generationDelay=5000;
@@ -147,16 +162,35 @@ try {
   await page.waitForFunction(()=>document.querySelector('[data-recommend-progress=direction]').dataset.state==='running');
   assert.equal(await page.locator('[data-recommend=topic]').innerText(), '✦ LLM 추천');
   assert.equal(await page.locator('[data-recommend-progress=topic]').getAttribute('data-state'), 'done');
-  await page.screenshot({path:'/private/tmp/cak-recommendation-progress-mobile.png',fullPage:true});
-  await page.locator('[data-recommend-progress=direction] .recommend-cancel').click();
+  assert.equal(await page.locator('.recommend-dialog[open]').isVisible(),true);
+  assert.match(await page.locator('.recommend-dialog[open] .recommend-deliverable').innerText(),/분위기 3가지/);
+  assert.equal(await page.locator('.recommend-dialog[open] .recommend-flow [aria-current=step]').innerText(), '3\n검색 · 생성');
+  assert.equal(await page.locator('.recommend-dialog[open]').evaluate(n=>n.scrollWidth<=n.clientWidth),true);
+  await page.screenshot({path:'/private/tmp/cak-recommendation-focus-progress-mobile.png',fullPage:true});
+  await page.locator('.recommend-dialog[open] .recommend-cancel').click();
   await page.waitForFunction(()=>document.querySelector('[data-recommend-progress=direction]').dataset.state==='cancelled');
   assert.equal(await page.locator('#direction').inputValue(), directionBeforeCancel);
+  assert.equal(await page.locator('[data-recommend=direction]').evaluate(n=>document.activeElement===n),true);
   await page.waitForTimeout(5100);
   generationDelay=0;generationFailure=true;
   await page.locator('[data-recommend=direction]').click();
   await page.waitForFunction(()=>document.querySelector('[data-recommend-progress=direction]').dataset.state==='failed');
   assert.equal(await page.locator('[data-recommend-progress=topic]').getAttribute('data-state'), 'done');
   generationFailure=false;
+  assert.equal(await page.getByRole('button',{name:'다시 추천받기',exact:true}).isVisible(),true);
+  await page.waitForTimeout(5100);
+  await page.getByRole('button',{name:'다시 추천받기',exact:true}).click();
+  await page.waitForFunction(()=>document.querySelector('.recommend-dialog[open]')?.dataset.state==='done');
+  assert.equal(await page.locator('.recommend-dialog[open] .recommendation-card h3').first().innerText(),suggestions[0].direction);
+  const mobileAction=await page.locator('.recommend-dialog[open] [data-apply-recommendation]').first().boundingBox();
+  assert.ok(mobileAction.y>=0&&mobileAction.y+mobileAction.height<=844);
+  await page.locator('.recommend-dialog[open] details').first().locator('summary').click();
+  assert.match(await page.locator('.recommend-dialog[open] details[open]').first().innerText(),/브라우저 검증용/);
+  await page.screenshot({path:'/private/tmp/cak-recommendation-focus-direction-mobile.png',fullPage:true});
+  await page.getByRole('button',{name:'이 분위기 적용',exact:true}).first().click();
+  assert.equal(await page.locator('#direction').inputValue(),suggestions[0].direction);
+  assert.equal(await page.locator('#topic').inputValue(),'내가 쓴 주제');
+  assert.equal(await page.locator('#direction').evaluate(n=>document.activeElement===n),true);
   await page.getByRole('button', { name: 'AI 계정 연결 관리', exact: true }).click();
   await page.getByText('claude@example.test', { exact: true }).waitFor();
   await page.getByRole('button', { name: '연결 해제', exact: true }).click();
@@ -167,7 +201,7 @@ try {
   assert.equal(await page.getByRole('button', { name: 'Codex 연결', exact: true }).isDisabled(), true);
   await page.keyboard.press('Escape');
   assert.deepEqual(errors, []);
-  console.log(JSON.stringify({ browser: 'Chrome', checks: ['provider selection', 'Codex device code', 'automatic continuation', 'three recommendations', 'apply suggestion', 'disconnect', 'cancel pending login', 'mobile layout', 'escape preserves input', 'Claude authorization code', 'wrong-state rejection', 'polling preserves code', 'Claude recommendation', 'offline runtime', 'copy code', 'clipboard failure', 'per-field progress', 'cancel recommendation', 'per-field failure'], provider: 'fixture', passed: true }));
+  console.log(JSON.stringify({ browser: 'Chrome', checks: ['provider selection', 'Codex device code', 'automatic continuation', 'three recommendations', 'apply suggestion', 'disconnect', 'cancel pending login', 'mobile layout', 'escape preserves input', 'Claude authorization code', 'wrong-state rejection', 'polling preserves code', 'Claude recommendation', 'offline runtime', 'copy code', 'clipboard failure', 'per-field progress', 'cancel recommendation', 'per-field failure', 'focused result dialog', 'result reopen without regeneration', 'visible apply action', 'result keyboard focus', 'progress deliverables', 'collapsed details', 'dialog cancellation', 'retry failed recommendation', 'direction-only result and apply', 'long content mobile action', 'expanded full result'], provider: 'fixture', passed: true }));
 } finally {
   if (browser) await browser.close(); await worker.stop();
   await new Promise(resolve => server.close(resolve)); db.close();
