@@ -20,6 +20,7 @@ const env = { SHOPSHORTS_SESSION_SECRET: 'fixture-session-secret'.repeat(3), SHO
   }; } }; } } };
 const suggestions = Array.from({ length: 3 }, (_, i) => ({ topic: `집중력 추천 ${i + 1}`, direction: '차분한 설명', reason: '테스트 검색 근거' }));
 let finishLogin, generated = 0, generatedProvider;
+let generationDelay = 0, generationFailure = false;
 const worker = startAccountWorker({ intervalMs: 20, call: (_, input) => accountRunner(env, input), execute: async (value, { signal, update, read }) => {
   if (value.job.kind === 'connect') {
     if (value.job.provider === 'claude') {
@@ -36,6 +37,8 @@ const worker = startAccountWorker({ intervalMs: 20, call: (_, input) => accountR
     if (signal.aborted) return;
     await update({ credential: { fixture: true }, account: 'browser@example.test', job: { state: 'done', device: null } });
   } else {
+    if(generationDelay)await new Promise(resolve=>setTimeout(resolve,generationDelay));
+    if(generationFailure)throw Error('fixture-only generation failure');
     assert.equal(value.job.input.category, '심리학'); assert.equal(value.job.input.topic, '내가 쓴 주제');
     const result = await recommendBrief(value.job.input, {}, { provider: value.job.provider, generate: async () => ({ searched: true, value: { suggestions, sources: [{ title: '검색 출처 테스트', url: 'https://example.org/source' }] } }) });
     generated++; generatedProvider = result.provider; await update({ job: { state: 'done', result } });
@@ -67,6 +70,7 @@ try {
   browser = await chromium.launch({ channel: 'chrome', headless: true });
   const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
   const origin = `http://127.0.0.1:${server.address().port}`;
+  await context.grantPermissions(['clipboard-read','clipboard-write'], { origin });
   await context.addCookies([{ name: 'ss_google', value: await signSession({ type: 'user', sub: 'browser-user', email: 'browser@example.test', exp: Date.now() + 600000 }, env), url: origin }]);
   const page = await context.newPage(); const errors = []; page.on('pageerror', e => errors.push(e.message));
   await page.goto(origin + '/studio?new=1');
@@ -74,9 +78,19 @@ try {
   await page.locator('[data-recommend="topic"]').click();
   await page.getByRole('dialog').waitFor();
   assert.match(await page.getByRole('dialog').innerText(), /Claude/);
+  assert.equal(await page.locator('[data-recommend=direction]').innerText(), '✦ LLM 추천');
+  assert.equal(await page.locator('[data-recommend-progress=topic]').getAttribute('data-state'), 'authorization');
+  assert.equal(await page.locator('[data-recommend-progress=direction]').isVisible(), false);
   await page.screenshot({ path: '/private/tmp/cak-connection-chooser-desktop.png', fullPage: true });
   await page.getByRole('button', { name: 'Codex 연결', exact: true }).click();
   await page.getByText('TEST-CODE', { exact: true }).waitFor();
+  await page.getByRole('button', { name: '인증 코드 복사', exact: true }).click();
+  await page.getByText('인증 코드를 복사했어요.', { exact: true }).waitFor();
+  assert.equal(await page.evaluate(()=>navigator.clipboard.readText()), 'TEST-CODE');
+  await page.evaluate(()=>{window.originalClipboardWrite=navigator.clipboard.writeText.bind(navigator.clipboard);navigator.clipboard.writeText=async()=>{throw new DOMException('denied','NotAllowedError');};});
+  await page.getByRole('button', { name: '인증 코드 복사', exact: true }).click();
+  await page.getByText('복사할 수 없습니다.', { exact: false }).waitFor();
+  await page.evaluate(()=>{navigator.clipboard.writeText=window.originalClipboardWrite;});
   assert.equal(await page.getByRole('link', { name: /ChatGPT 인증 화면 열기/ }).getAttribute('href'), 'https://auth.openai.com/codex/device');
   await page.screenshot({ path: '/private/tmp/cak-llm-account-desktop.png', fullPage: true });
   finishLogin();
@@ -125,6 +139,24 @@ try {
   await page.locator('.recommendation-card').first().waitFor({ timeout: 15000 });
   assert.equal(generatedProvider, 'claude'); assert.equal(generated, 2);
   assert.equal(await page.locator('#topic').inputValue(), '내가 쓴 주제');
+  assert.equal(await page.locator('[data-recommend-progress=topic]').getAttribute('data-state'), 'done');
+  await page.waitForTimeout(5100); // Respect the production same-provider request cooldown.
+  const directionBeforeCancel=await page.locator('#direction').inputValue();
+  generationDelay=5000;
+  await page.locator('[data-recommend=direction]').click();
+  await page.waitForFunction(()=>document.querySelector('[data-recommend-progress=direction]').dataset.state==='running');
+  assert.equal(await page.locator('[data-recommend=topic]').innerText(), '✦ LLM 추천');
+  assert.equal(await page.locator('[data-recommend-progress=topic]').getAttribute('data-state'), 'done');
+  await page.screenshot({path:'/private/tmp/cak-recommendation-progress-mobile.png',fullPage:true});
+  await page.locator('[data-recommend-progress=direction] .recommend-cancel').click();
+  await page.waitForFunction(()=>document.querySelector('[data-recommend-progress=direction]').dataset.state==='cancelled');
+  assert.equal(await page.locator('#direction').inputValue(), directionBeforeCancel);
+  await page.waitForTimeout(5100);
+  generationDelay=0;generationFailure=true;
+  await page.locator('[data-recommend=direction]').click();
+  await page.waitForFunction(()=>document.querySelector('[data-recommend-progress=direction]').dataset.state==='failed');
+  assert.equal(await page.locator('[data-recommend-progress=topic]').getAttribute('data-state'), 'done');
+  generationFailure=false;
   await page.getByRole('button', { name: 'AI 계정 연결 관리', exact: true }).click();
   await page.getByText('claude@example.test', { exact: true }).waitFor();
   await page.getByRole('button', { name: '연결 해제', exact: true }).click();
@@ -135,7 +167,7 @@ try {
   assert.equal(await page.getByRole('button', { name: 'Codex 연결', exact: true }).isDisabled(), true);
   await page.keyboard.press('Escape');
   assert.deepEqual(errors, []);
-  console.log(JSON.stringify({ browser: 'Chrome', checks: ['provider selection', 'Codex device code', 'automatic continuation', 'three recommendations', 'apply suggestion', 'disconnect', 'cancel pending login', 'mobile layout', 'escape preserves input', 'Claude authorization code', 'wrong-state rejection', 'polling preserves code', 'Claude recommendation', 'offline runtime'], provider: 'fixture', passed: true }));
+  console.log(JSON.stringify({ browser: 'Chrome', checks: ['provider selection', 'Codex device code', 'automatic continuation', 'three recommendations', 'apply suggestion', 'disconnect', 'cancel pending login', 'mobile layout', 'escape preserves input', 'Claude authorization code', 'wrong-state rejection', 'polling preserves code', 'Claude recommendation', 'offline runtime', 'copy code', 'clipboard failure', 'per-field progress', 'cancel recommendation', 'per-field failure'], provider: 'fixture', passed: true }));
 } finally {
   if (browser) await browser.close(); await worker.stop();
   await new Promise(resolve => server.close(resolve)); db.close();

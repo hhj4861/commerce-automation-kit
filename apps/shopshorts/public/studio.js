@@ -66,18 +66,41 @@ function bindRecommendations(project){
  const manage=document.createElement('button');manage.type='button';manage.className='quiet';manage.textContent='AI 계정 연결 관리';panel.before(manage);
  manage.onclick=()=>connectLlm({manage:true}).catch(e=>toast(e.message));
  const form=focus=>({category:state.category,format:state.format,duration:Number($('#duration').value),focus,topic:$('#topic').value,direction:$('#direction').value});
- const busy=value=>{buttons.forEach(b=>{b.disabled=value;b.textContent=value?'검색·추천 중…':'✦ LLM 추천';});panel.setAttribute('aria-busy',String(value));};
- const invalidate=()=>{requestId++;recommendationController?.abort();busy(false);panel.hidden=true;panel.replaceChildren();};
+ const stages = { account: ['계정 확인 중', '연결된 AI 계정을 확인하고 있어요.', 0], authorization: ['계정 연결 대기', '계정 연결 창에서 인증을 마쳐 주세요.', 0], queued: ['요청 대기 중', '실행기가 요청을 받기를 기다리고 있어요.', 1], running: ['추천 생성 중', 'AI가 최근 자료와 입력 내용을 바탕으로 기획을 준비하고 있어요.', 2], done: ['추천 완료', '아래에서 마음에 드는 추천을 선택하세요.', 3], cancelled: ['추천 취소됨', '입력한 내용은 그대로 유지됩니다.', -1], failed: ['추천을 완료하지 못했어요', '입력한 내용은 그대로 유지됩니다.', -1] };
+ const areas=Object.fromEntries(buttons.map(button=>{
+  const area=document.createElement('div');area.className='recommend-progress';area.hidden=true;area.dataset.recommendProgress=button.dataset.recommend;
+  button.closest('.field').append(area);return[button.dataset.recommend,area];
+ }));
+ let activeFocus=null, ticker=null, startedAt=0, lastStage=null;
+ const stopTicker=()=>{clearInterval(ticker);ticker=null;};
+ const showProgress=(focus,{stage,provider},detail)=>{
+  const area=areas[focus];if(!area?.isConnected)return;
+  const [title,hint,step]=stages[stage]||stages.running;
+  const elapsed=Math.max(0,Math.floor((Date.now()-startedAt)/1000));
+  area.hidden=false;area.dataset.state=stage;
+  area.setAttribute('aria-busy',String(['account','authorization','queued','running'].includes(stage)));
+  area.innerHTML=`<div class="recommend-progress-head"><strong role="status">${esc(title)}${provider?' · '+(provider==='claude'?'Claude':'Codex'):''}</strong><span data-elapsed aria-label="경과 시간">${elapsed}초</span></div><p>${esc(detail||hint)}</p>${step>=0?`<ol class="recommend-progress-steps" aria-label="추천 진행 단계">${['계정 확인','요청 대기','추천 생성','완료'].map((label,i)=>`<li class="${i<step?'done':i===step?'active':''}" ${i===step?'aria-current="step"':''}><span aria-hidden="true">${i<step?'✓':i+1}</span>${label}</li>`).join('')}</ol>`:''}${step>=0&&step<3?'<button type="button" class="recommend-cancel">취소</button>':''}`;
+  const cancel=area.querySelector('.recommend-cancel');if(cancel)cancel.onclick=()=>recommendationController?.abort();
+  lastStage={stage,provider};
+ };
+ const busy=value=>{buttons.forEach(b=>{b.disabled=value;b.textContent=value&&b.dataset.recommend===activeFocus?'추천 중…':'✦ LLM 추천';});panel.setAttribute('aria-busy',String(value));manage.disabled=value;};
+ const invalidate=()=>{requestId++;recommendationController?.abort();stopTicker();busy(false);activeFocus=null;panel.hidden=true;panel.replaceChildren();Object.values(areas).forEach(area=>{area.hidden=true;area.replaceChildren();});};
  for(const id of ['topic','direction','duration'])$('#'+id).addEventListener('input',invalidate);
  buttons.forEach(button=>button.onclick=async()=>{
   const input=form(button.dataset.recommend);
   if(input.focus==='direction'&&!input.topic.trim()){toast('분위기를 추천받을 주제를 먼저 입력하세요.');$('#topic').focus();return;}
   if(input.category==='직접 입력'&&!input.topic.trim()){toast('관심 분야나 주제를 먼저 입력하세요.');$('#topic').focus();return;}
-  const current=++requestId;recommendationController=new AbortController();busy(true);panel.hidden=false;
-  panel.innerHTML='<p role="status">최근 자료를 검색하고 카테고리에 맞는 기획을 추천하고 있어요…</p>';
+  const current=++requestId;recommendationController=new AbortController();activeFocus=input.focus;startedAt=Date.now();lastStage=null;busy(true);panel.hidden=true;panel.replaceChildren();
+  const signal=recommendationController.signal;
+  stopTicker();ticker=setInterval(()=>{
+   if(!areas[input.focus].isConnected){stopTicker();return;}
+   const clock=areas[input.focus].querySelector('[data-elapsed]');if(clock)clock.textContent=Math.floor((Date.now()-startedAt)/1000)+'초';
+  },1000);
+  signal.addEventListener('abort',stopTicker,{once:true});
   try{
-   const data=await recommendWithAccount(input,recommendationController.signal);
+   const data=await recommendWithAccount(input,signal,value=>{if(current===requestId&&JSON.stringify(value)!==JSON.stringify(lastStage))showProgress(input.focus,value);});
    if(current!==requestId||!panel.isConnected||JSON.stringify(form(input.focus))!==JSON.stringify(input))return;
+   panel.hidden=false;
    panel.innerHTML=`<div class="recommendation-heading"><h3>${esc(input.category)} · ${input.focus==='topic'?'이야기':'분위기'} 추천</h3><small>${new Date(data.checkedAt).toLocaleString('ko-KR')} 검색</small></div><p class="hint">최근 30일 자료를 우선 검색한 기획입니다. 검색량 순위를 뜻하지 않습니다.</p><div class="recommendation-list">${data.suggestions.map((item,i)=>`<article class="recommendation-card"><span class="badge">제안 ${i+1}</span><h4>${esc(item.topic)}</h4><p class="recommendation-direction">${esc(item.direction)}</p><p class="recommendation-reason">${esc(item.reason)}</p><div class="recommendation-actions">${input.focus==='topic'?`<button class="secondary" data-apply-recommendation="${i}" data-fields="both">주제·분위기 적용</button><button class="quiet" data-apply-recommendation="${i}" data-fields="topic">주제만 적용</button>`:`<button class="secondary" data-apply-recommendation="${i}" data-fields="direction">이 분위기 적용</button>`}</div></article>`).join('')}</div><div class="recommendation-sources"><strong>추천에 참고한 검색 출처</strong><ul>${data.sources.map(source=>`<li><a href="${esc(source.url)}" target="_blank" rel="noopener noreferrer">${esc(source.title)} ↗</a></li>`).join('')}</ul></div>`;
    panel.querySelectorAll('[data-apply-recommendation]').forEach(b=>b.onclick=()=>{
     const item=data.suggestions[Number(b.dataset.applyRecommendation)];
@@ -85,8 +108,12 @@ function bindRecommendations(project){
     if(b.dataset.fields!=='topic')$('#direction').value=item.direction;
     state.dirty=true;invalidate();toast('추천을 적용했습니다. 내용을 확인하고 기획을 저장하세요.');
    });
-  }catch(error){if(current===requestId&&panel.isConnected){if(error.name==='AbortError')panel.hidden=true;else panel.innerHTML=`<p class="recommendation-error" role="alert">${esc(error.message)}</p><p class="hint">입력한 내용은 유지됩니다. AI 계정 연결 관리에서 연결을 확인하고 다시 시도하세요.</p>`;}}
-  finally{if(current===requestId&&panel.isConnected)busy(false);}
+  }catch(error){if(current===requestId&&panel.isConnected){
+   panel.hidden=true;
+   showProgress(input.focus,{stage:error.name==='AbortError'?'cancelled':'failed'},error.name==='AbortError'?undefined:error.message);
+  }}
+  finally{if(current===requestId){stopTicker();if(panel.isConnected)busy(false);}}
+
  });
  return invalidate;
 }

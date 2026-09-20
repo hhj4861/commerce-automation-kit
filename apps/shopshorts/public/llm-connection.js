@@ -14,14 +14,16 @@ function pause(signal) {
   });
 }
 
-export async function connectLlm({ signal, manage = false } = {}) {
+export async function connectLlm({ signal, manage = false, onProgress = () => {} } = {}) {
+  onProgress({ stage: 'account' });
   const status = await request('llm/status', undefined, signal);
   if (status.connected && !manage) return true;
   if (signal?.aborted) return false;
+  onProgress({ stage: 'authorization' });
   const dialog = document.createElement('dialog'); dialog.className = 'llm-dialog';
   dialog.setAttribute('aria-labelledby', 'llm-dialog-title');
   document.body.append(dialog);
-  let current = status, busy = false, finished = false, attempt = null, message = '', polling = false, authorizationCode = '';
+  let current = status, busy = false, finished = false, attempt = null, message = '', polling = false, authorizationCode = '', copyState = '';
   const lifetime = new AbortController();
   return new Promise(resolve => {
     async function close(connected = false) {
@@ -71,7 +73,7 @@ export async function connectLlm({ signal, manage = false } = {}) {
         ${current.connected && !pending ? `<section class="llm-connected">${mark(selected)}<div class="llm-provider-label"><strong>${selected.name} <span class="llm-connected-badge">연결됨</span></strong><span class="llm-account">${escape(current.account)}</span></div></section><div class="llm-manage"><button class="llm-text-button" data-disconnect data-focus="disconnect" ${busy ? 'disabled' : ''}>연결 해제</button><button class="llm-cta" data-continue data-focus="continue" ${busy ? 'disabled' : ''}>${manage ? '완료' : '추천받기'}</button></div>` : ''}
         ${!current.available ? '<p role="status" class="llm-error">LLM 실행기가 오프라인입니다. 잠시 후 다시 확인해 주세요.</p>' : ''}
         ${pending ? `<section class="llm-device" aria-label="${selected.name} 인증">
-          ${device ? `<div class="llm-auth-step"><span class="llm-step-number">1</span><div><h3>인증 코드를 확인하세요</h3><p class="llm-code" aria-label="인증 코드">${escape(device.code)}</p></div></div><div class="llm-auth-step"><span class="llm-step-number">2</span><div><h3>ChatGPT에서 코드를 입력하세요</h3><a class="llm-cta" data-focus="authorize" href="${escape(device.url)}" target="_blank" rel="noopener noreferrer" aria-label="ChatGPT 인증 화면 열기 (새 창)">ChatGPT에서 계속 <span aria-hidden="true">↗</span></a></div></div><p class="llm-waiting" role="status"><span class="llm-status-dot"></span>인증을 기다리고 있어요</p>` : ''}
+          ${device ? `<div class="llm-auth-step"><span class="llm-step-number">1</span><div><h3>인증 코드를 확인하세요</h3><div class="llm-code-row"><p class="llm-code" aria-label="인증 코드">${escape(device.code)}</p><button class="llm-copy" data-copy-code data-focus="copy" aria-label="인증 코드 복사" aria-busy="${copyState==='copying'}">${copyState==='copied'?'✓ 복사됨':'복사'}</button></div><span class="llm-copy-status" role="status">${copyState==='copied'?'인증 코드를 복사했어요.':''}</span></div></div><div class="llm-auth-step"><span class="llm-step-number">2</span><div><h3>ChatGPT에서 코드를 입력하세요</h3><a class="llm-cta" data-focus="authorize" href="${escape(device.url)}" target="_blank" rel="noopener noreferrer" aria-label="ChatGPT 인증 화면 열기 (새 창)">ChatGPT에서 계속 <span aria-hidden="true">↗</span></a></div></div><p class="llm-waiting" role="status"><span class="llm-status-dot"></span>인증을 기다리고 있어요</p>` : ''}
           ${manual ? `<div class="llm-auth-step"><span class="llm-step-number">1</span><div><h3>Claude에서 로그인하세요</h3><a class="llm-cta llm-cta-outline" data-focus="authorize" href="${escape(manual.url)}" target="_blank" rel="noopener noreferrer" aria-label="Claude 인증 화면 열기 (새 창)">Claude에서 계속 <span aria-hidden="true">↗</span></a></div></div><form id="llm-code-form" class="llm-auth-step"><span class="llm-step-number">2</span><div><label for="llm-authorization-code">받은 인증 코드를 붙여넣으세요</label><input id="llm-authorization-code" aria-label="일회용 인증 코드" aria-describedby="llm-code-hint" type="password" placeholder="인증 코드 붙여넣기" autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="2600" ${current.job.codeSubmitted || busy ? 'disabled' : ''}><p id="llm-code-hint" class="llm-help">API 키가 아닌 일회용 코드예요.</p><button class="llm-cta" data-focus="submit" type="submit" ${current.job.codeSubmitted || busy ? 'disabled' : ''}>${current.job.codeSubmitted ? '연결 확인 중…' : '연결 완료'}</button></div></form>` : ''}
           ${!device && !manual ? '<p class="llm-waiting" role="status"><span class="llm-status-dot"></span>로그인 화면을 준비하고 있어요</p>' : ''}
           <button class="llm-text-button" data-cancel data-focus="cancel" ${busy ? 'disabled' : ''}>연결 취소</button></section>` : ''}
@@ -82,7 +84,15 @@ export async function connectLlm({ signal, manage = false } = {}) {
       if (continueButton) continueButton.onclick = () => close(true);
       const refresh = dialog.querySelector('[data-refresh]');
       if (refresh) refresh.onclick = () => run(async () => { current = await request('llm/status', undefined, lifetime.signal); if (current.job?.kind === 'connect' && ['queued', 'running'].includes(current.job.state)) { attempt = current.job.id; poll(); } });
-      for (const connect of dialog.querySelectorAll('[data-connect]')) connect.onclick = () => run(async () => { authorizationCode = ''; const next = await request('llm/connect', { provider: connect.dataset.connect }); current = { ...current, ...next }; attempt = next.job?.kind === 'connect' ? next.job.id : null; if (finished && attempt) await request('llm/cancel', { id: attempt }); else poll(); });
+      for (const connect of dialog.querySelectorAll('[data-connect]')) connect.onclick = () => run(async () => { authorizationCode = ''; copyState = ''; const next = await request('llm/connect', { provider: connect.dataset.connect }); current = { ...current, ...next }; attempt = next.job?.kind === 'connect' ? next.job.id : null; if (finished && attempt) await request('llm/cancel', { id: attempt }); else poll(); });
+      const copy = dialog.querySelector('[data-copy-code]');
+      if (copy) copy.onclick = async () => {
+        if (copyState === 'copying') return;
+        const code = device.code; copyState = 'copying'; message = ''; render();
+        try { await navigator.clipboard.writeText(code); copyState = 'copied'; }
+        catch { copyState = ''; message = '복사할 수 없습니다. 코드를 직접 선택해 복사해 주세요.'; }
+        if (!finished) render();
+      };
       const disconnect = dialog.querySelector('[data-disconnect]');
       if (disconnect) disconnect.onclick = () => run(async () => { current = { ...current, ...await request('llm/disconnect', {}, lifetime.signal) }; });
       const cancel = dialog.querySelector('[data-cancel]');
@@ -107,8 +117,9 @@ export async function connectLlm({ signal, manage = false } = {}) {
   });
 }
 
-export async function recommendWithAccount(input, signal) {
-  if (!await connectLlm({ signal })) throw new DOMException('취소됨', 'AbortError');
+export async function recommendWithAccount(input, signal, onProgress = () => {}) {
+  if (!await connectLlm({ signal, onProgress })) throw new DOMException('취소됨', 'AbortError');
+  onProgress({ stage: 'queued' });
   const initial = await request('recommendations', input), id = initial.job?.id;
   if (!id) throw Error('추천 요청을 시작하지 못했습니다. 다시 시도하세요.');
   let done = false;
@@ -117,8 +128,9 @@ export async function recommendWithAccount(input, signal) {
       await pause(signal);
       const current = await request('llm/status', undefined, signal);
       if (current.job?.id !== id) throw Error('추천 요청이 다른 창에서 변경됐습니다. 다시 시도하세요.');
-      if (current.job.state === 'done') { done = true; return current.job.result; }
+      if (current.job.state === 'done') { done = true; onProgress({ stage: 'done', provider: current.provider }); return current.job.result; }
       if (current.job.state === 'failed') { done = true; throw Error(current.job.error); }
+      onProgress({ stage: current.job.state === 'queued' ? 'queued' : 'running', provider: current.provider });
       if (!current.available) throw Error('LLM 실행기 연결이 끊겼습니다. 연결 상태를 확인하고 다시 시도하세요.');
     }
     throw new DOMException('취소됨', 'AbortError');
