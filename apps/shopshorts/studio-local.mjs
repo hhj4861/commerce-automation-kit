@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync, renameSync } from 'node:fs';
 import { resolve, join, dirname, extname, sep } from 'node:path';
-import { generateCodexRecommendation } from './studio-codex.mjs';
+import { accountBroker } from './studio-account-worker.mjs';
+import { llmAccountApi } from './lib/llm-account-api.js';
 import { studioApi } from './lib/studio-api.js';
 import { executeStudioTask, capabilities } from './studio-runner.mjs';
 
@@ -83,7 +84,7 @@ export async function handleLocalStudio(req, res, origin, env, store) {
   res.once('close', abort);
   const request = new Request(new URL(req.url, origin), { method: req.method, headers: req.headers, signal: controller.signal, ...(['GET', 'HEAD'].includes(req.method) ? {} : { body: Buffer.concat(chunks) }) });
   try {
-    const result = await studioApi(request, env, store, {recommendationGenerate:generateCodexRecommendation});
+    const result = await llmAccountApi(request, env, (owner, operation, input) => accountBroker(env)('/runner/account-action', { owner, operation, input })) || await studioApi(request, env, store, { recommendationAccounts: true });
     if (!res.destroyed) await sendResponse(res, result);
   } finally { res.off('close', abort); }
 }

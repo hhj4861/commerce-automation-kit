@@ -16,6 +16,7 @@
 import { spawn } from 'node:child_process';
 import { mergeRuntimeEnv } from '../credential-broker/runtime-env.mjs';
 import { startStudioWorker } from './studio-worker.mjs';
+import { startAccountWorker } from './studio-account-worker.mjs';
 import { existsSync, readFileSync } from 'node:fs';
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
@@ -445,6 +446,8 @@ async function recoverStuck() {
 }
 
 log('worker.start', { cloud: CLOUD });
+const accountWorker = startAccountWorker({ env: ENV });
+for (const signal of ['SIGINT', 'SIGTERM']) process.once(signal, async () => { await accountWorker.stop(); process.exit(0); });
 startStudioWorker({ env: ENV, cloud: CLOUD, token: TOKEN, workDir: join(WORK_DIR, 'studio') });
 await recoverStuck();
 setInterval(tick, 5000);

@@ -2,10 +2,12 @@ import { WorkerEntrypoint } from 'cloudflare:workers';
 import { handleRequest, readSecrets } from './index.mjs';
 import { PAGE_KEYS } from './policy.mjs';
 import { writeVault } from './vault.mjs';
+import { accountAction } from './llm-accounts.mjs';
 export default class CredentialBroker extends WorkerEntrypoint {
   fetch(request) { return handleRequest(request, this.env); }
   // Only Pages holding this service binding can call these RPC methods.
   getPagesSecrets() { return readSecrets(this.env, PAGE_KEYS, false); }
+  llmAccount(owner, operation, input) { return accountAction(this.env, owner, operation, input); }
   async importPagesSecrets(values) {
     if (Date.now() >= Number(this.env.MIGRATION_EXPIRES_AT || 0)) throw new Error('migration closed');
     const selected = Object.fromEntries(PAGE_KEYS.filter(k => typeof values[k] === 'string' && values[k]).map(k => [k, values[k]]));

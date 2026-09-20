@@ -2,6 +2,7 @@ import { createRemoteJWKSet, importJWK, jwtVerify } from 'jose';
 import { AUDIENCE, ISSUER, STATIC_KEYS, PAGE_KEYS, GITHUB_KEYS, authorizeGithub, authorizeMigration } from './policy.mjs';
 import { readVault, writeVault } from './vault.mjs';
 import { lease } from './leases.mjs';
+import { accountAction, accountRunner } from './llm-accounts.mjs';
 
 const githubKeys = createRemoteJWKSet(new URL(`${ISSUER}/.well-known/jwks`));
 const response = (value, status = 200) => Response.json(value, { status, headers: { 'cache-control': 'no-store', 'x-content-type-options': 'nosniff' } });
@@ -46,7 +47,7 @@ export async function handleRequest(request, env, verify = { github: verifyGithu
       const { value, done } = await reader.read();
       if (done) break;
       size += value.length;
-      if (size > 65536) { await reader.cancel(); return response({ error: 'too large' }, 413); }
+      if (size > (path === '/runner/accounts' ? 262144 : 65536)) { await reader.cancel(); return response({ error: 'too large' }, 413); }
       chunks.push(value);
     }
     const bytes = new Uint8Array(size); let offset = 0;
@@ -67,8 +68,10 @@ export async function handleRequest(request, env, verify = { github: verifyGithu
       await writeVault(env, 'migration/github', input.values, 0);
       return response({ ok: true, count: GITHUB_KEYS.length });
     }
-    if (!['/runner/secrets', '/runner/vault', '/runner/lease'].includes(path)) return response({ error: 'not found' }, 404);
+    if (!['/runner/secrets', '/runner/vault', '/runner/lease', '/runner/accounts', '/runner/account-action'].includes(path)) return response({ error: 'not found' }, 404);
     try { await verify.runner(token, env); } catch { return response({ error: 'unauthorized' }, 403); }
+    if (path === '/runner/accounts') return response(await accountRunner(env, input));
+    if (path === '/runner/account-action') return response(await accountAction(env, input.owner, input.operation, input.input));
     if (path === '/runner/lease') return response(await lease(env, input.operation, input.owner));
     if (path === '/runner/secrets') return response({ values: await readSecrets(env, STATIC_KEYS, false) });
     if (!['codex', 'youtube', 'youtube-client', 'migration/github', 'migration/pages'].includes(input.name)) return response({ error: 'unknown credential' }, 400);
