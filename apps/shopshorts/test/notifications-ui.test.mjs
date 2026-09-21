@@ -83,3 +83,35 @@ test('recommendation inbox combines counts and opens only the saved owner result
  await host.onclick({target:{closest:()=>({dataset:{inboxAction:'read-all'}})}});
  assert.deepEqual(calls.filter(call=>call.url.endsWith('notification-read')).at(-1).body,{ids:['one'],read:true});
 });
+
+
+test('Pages without a general inbox still shows private results and supports read-all', async () => {
+ const calls=[],opened=[];let read=false;
+ const privateItem={...item,id:'recommendation:one',source:'recommendation',sourceId:'one'};
+ const host={innerHTML:'',isConnected:true},badge={},preference={classList:{toggle(){}},setAttribute(){}};
+ const document={querySelectorAll:selector=>selector==='[data-notification-count]'?[badge]:selector==='[data-notification-preference]'?[preference]:[]};
+ const controller=createNotificationInbox({document,recommendations:true,openRecommendation:id=>opened.push(id),fetcher:async(url,options)=>{
+  calls.push(url);
+  if(url.startsWith('/api/notifications'))return {ok:false,status:404};
+  if(url.endsWith('notification-read')){read=JSON.parse(options.body).read;return response({ok:true});}
+  return response({items:[{...privateItem,read}],unreadCount:read?0:1});
+ }});
+ await controller.mount(host);
+ assert.equal(badge.textContent,'1');assert.equal(badge.hidden,false);assert.equal(preference.disabled,true);
+ assert.doesNotMatch(host.innerHTML,/role="alert"/);
+ await host.onclick({target:{closest:()=>({dataset:{inboxAction:'read-all'}})}});
+ assert.equal(read,true);assert.equal(badge.hidden,true);assert.ok(!calls.includes('/api/notifications/read-all'));
+ await host.onclick({target:{closest:()=>({dataset:{inboxOpen:'recommendation:one'}})}});
+ assert.deepEqual(opened,['one']);
+});
+
+test('missing general inbox fallback never hides authentication or service failures', async () => {
+ for(const status of [401,500]) {
+  const host={innerHTML:'',isConnected:true};let privateCalls=0;
+  const controller=createNotificationInbox({document:{querySelectorAll:()=>[]},recommendations:true,fetcher:async url=>{
+   if(url.includes('/api/studio/'))privateCalls++;
+   return {ok:false,status};
+  }});
+  await controller.mount(host);assert.match(host.innerHTML,/role="alert"/);assert.equal(privateCalls,0);
+ }
+});

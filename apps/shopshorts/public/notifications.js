@@ -24,6 +24,8 @@ export function createNotificationInbox({ document, fetcher = fetch, openJob, op
   let data = null, filter = 'all', error = '', busy = false, host = null, serial = 0, restoreFocus = null;
   const api = async (path = '', body) => {
     const response = await fetcher(`/api/notifications${path}`, { cache: 'no-store', signal: AbortSignal.timeout(10000), ...(body === undefined ? {} : { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }) });
+    // Pages has no general job inbox API yet; private recommendations remain available.
+    if (response.status === 404 && recommendations && body === undefined) return { items: [], unreadCount: 0, enabled: true, generalUnavailable: true };
     if (!response.ok) throw new Error(response.status === 401 ? '로그인이 만료됐어요. 다시 로그인해 주세요.' : '알림을 불러오지 못했어요. 다시 시도해 주세요.');
     return response.json();
   };
@@ -41,7 +43,8 @@ export function createNotificationInbox({ document, fetcher = fetch, openJob, op
     document.querySelectorAll('[data-notification-preference]').forEach(button => {
       button.classList.toggle('on', data?.enabled === true);
       button.setAttribute('aria-checked', String(data?.enabled === true));
-      button.disabled = busy || !data;
+      button.disabled = busy || !data || data.generalUnavailable === true;
+      button.title = data?.generalUnavailable ? '이 환경에서는 알림 숫자가 항상 표시됩니다.' : '';
       button.onclick = () => mutate('/preferences', { enabled: !data.enabled });
     });
     if (host?.isConnected) {
@@ -85,7 +88,7 @@ export function createNotificationInbox({ document, fetcher = fetch, openJob, op
     try {
       if (path === '/recommendation-read') await recommendationApi('notification-read', body);
       else {
-        await api(path, body);
+        if (!(path === '/read-all' && data?.generalUnavailable)) await api(path, body);
         if (path === '/read-all' && data?.recommendationIds?.length) await recommendationApi('notification-read', { ids: data.recommendationIds, read: true });
       }
       busy = false;

@@ -54,7 +54,7 @@ const server = createServer(async (req, res) => {
     let response = await llmAccountApi(request, env, (owner, operation, input) => accountAction(env, owner, operation, input));
     if (!response) {
       const path = new URL(request.url).pathname;
-      if (path === '/api/notifications') response = Response.json({items:[],unreadCount:0,throughSeq:0,enabled:true,queue:{}});
+      if (path === '/api/notifications') response = Response.json({error:'not found'},{status:404}); // Match production Pages: general inbox is local-only.
       else if (path === '/notifications') response = new Response(`<html lang="ko"><head><link rel="stylesheet" href="/notifications.css"></head><body><main id="inbox"></main><script type="module">import {createNotificationInbox} from '/notifications.js'; const inbox=createNotificationInbox({document,recommendations:true,openRecommendation:id=>location.assign('/studio?new=1&recommendation='+encodeURIComponent(id))});inbox.mount(document.querySelector('#inbox'));setInterval(()=>inbox.poll(),1000);</script></body></html>`,{headers:{'content-type':'text/html'}});
       else if (path === '/api/studio/config') response = Response.json({ categories: ['심리학', '건축학'], execution: 'local', capabilities: {} });
       else if (path === '/api/studio') response = Response.json({ projects: [] });
