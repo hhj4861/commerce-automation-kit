@@ -1,8 +1,9 @@
+import { startScenario, syncScenario } from './studio-scenario-account.js';
 import { CATEGORIES, VOICES, PLATFORMS, createProject, changeProject, busy, fail, validateScenes } from './studio.js';
 import { sameOrigin, workerAuthorized } from './google-auth.js';
 import { recommendBrief } from './studio-recommendations.js';
 const json = (data, status = 200) => Response.json(data, { status, headers: { 'cache-control': 'no-store' } });
-export async function studioApi(request, env, store, { localWorker = false, recommendationGenerate, recommendationAccounts = false } = {}) {
+export async function studioApi(request, env, store, { localWorker = false, recommendationGenerate, recommendationAccounts = false, scenarioAccounts } = {}) {
   const url = new URL(request.url), parts = url.pathname.replace(/^\/api\/studio\/?/, '').split('/').filter(Boolean);
   const worker = localWorker || workerAuthorized(request, env);
   try {
@@ -10,7 +11,7 @@ export async function studioApi(request, env, store, { localWorker = false, reco
     if (parts[0] === 'config' && request.method === 'GET') return json({ categories: CATEGORIES, voices: VOICES, platforms: PLATFORMS, execution: store.execution, capabilities: await store.capabilities(), recommendations: !!recommendationGenerate || recommendationAccounts, recommendationProvider: recommendationGenerate ? 'codex' : null, recommendationProviders: recommendationAccounts ? ['codex', 'claude'] : recommendationGenerate ? ['codex'] : [] });
     if (parts.length===1 && parts[0]==='recommendations' && request.method==='POST') return json(await recommendBrief(await request.json(),env,{generate:recommendationGenerate,signal:request.signal}));
     if (!parts.length) {
-      if (request.method === 'GET') return json({ projects: await store.list() });
+      if (request.method === 'GET') return json({ projects: await Promise.all((await store.list()).map(project => syncScenario(store, project, scenarioAccounts))) });
       if (request.method === 'POST') {
         const project = createProject(await request.json());
         await store.create(project); return json({ project }, 201);
@@ -30,7 +31,7 @@ export async function studioApi(request, env, store, { localWorker = false, reco
         return json({ ok: true });
       }
     }
-    if (!action && request.method === 'GET') return json({ project });
+    if (!action && request.method === 'GET') return json({ project: await syncScenario(store, project, scenarioAccounts) });
     if (action === 'assets' && assetId && request.method === 'GET') {
       const asset = project.assets[assetId] || (assetId === 'final' ? project.render : null);
       if (!asset) fail('미디어가 아직 없습니다.', 404);
@@ -64,6 +65,7 @@ export async function studioApi(request, env, store, { localWorker = false, reco
     if (body.revision !== project.revision) fail('변경된 프로젝트를 다시 불러오세요.', 409);
     if (['claim', 'complete', 'checkpoint', 'failure'].includes(action)) {
       if (!worker) fail('제작 워커만 실행할 수 있습니다.', 403);
+      if (project.task?.runner === 'llm-account') fail('이 시나리오는 연결한 계정 실행기가 처리합니다.', 409);
       const next = structuredClone(project);
       if (action === 'claim') {
         if (project.task?.state !== 'queued') fail('대기 작업이 없습니다.', 409);
@@ -86,6 +88,7 @@ export async function studioApi(request, env, store, { localWorker = false, reco
       if (busy(project) || project.upload || body.approved !== true || !project.scenes.length) fail('대본을 검수하고 확인하세요.');
       return save({ ...project, approved: true });
     }
+    if (action === 'scenario') return json({ project: await startScenario(request, env, store, project, body, scenarioAccounts) }, 202);
     return save(changeProject(project, action, body));
   } catch (e) { return json({ error: e.status ? e.message : '요청을 처리하지 못했습니다. 저장소·서버 설정을 확인하세요.' }, e.status || 500); }
 }

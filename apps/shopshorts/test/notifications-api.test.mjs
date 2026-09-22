@@ -43,7 +43,8 @@ test('real local HTTP flow: auth, queued job/studio events, read state, preferen
   assert.equal((await call('/api/jobs/test/transition', { to: 'rejected' })).status, 200);
   const worker = 'ss=notification-test-worker';
   let project = (await (await call('/api/studio', { category: '과학', topic: '알림 테스트', format: 'short', duration: 30 }, worker)).json()).project;
-  project = (await (await call(`/api/studio/${project.id}/scenario`, { revision: project.revision, confirm: true }, worker)).json()).project;
+  project = (await (await call(`/api/studio/${project.id}/scenes`, { revision: project.revision, scenes: [{ id: 'scene-1', narration: '알림 테스트', prompt: '독창적인 과학 실험 장면', duration: 30, kind: 'image' }] }, worker)).json()).project;
+  project = (await (await call(`/api/studio/${project.id}/media`, { revision: project.revision, approved: true }, worker)).json()).project;
   project = (await (await call(`/api/studio/${project.id}/claim`, { revision: project.revision }, worker)).json()).project;
   const failed = await call(`/api/studio/${project.id}/failure`, { revision: project.revision, taskId: project.task.id, error: 'test-only failure' }, worker);
   assert.equal(failed.status, 200);

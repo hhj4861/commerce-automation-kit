@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { codexEnvironment, createCodexGenerator } from './studio-codex.mjs';
 import { recommendBrief } from './lib/studio-recommendations.js';
+import { scenarioBrief } from './lib/studio-scenario.js';
 
 const failure = () => new Error('Codex 인증을 확인하지 못했습니다. 다시 연결하거나 구독 사용 한도를 확인하세요.');
 export function safeDevice(login) {
@@ -96,7 +97,7 @@ export async function executeAccountJob(value, { signal, update, env = process.e
     await rpc.close(); rpc = null;
     if (value.job.kind === 'connect') { await update({ job: { state: 'done', device: null } }); return; }
     try {
-      const result = await recommendBrief(value.job.input, env, { generate: generator({ env: runtime }), signal });
+      const result = await (value.job.kind === 'scenario' ? scenarioBrief : recommendBrief)(value.job.input, env, { generate: generator({ env: runtime }), signal });
       await persist({ credential: await credential(), job: { state: 'done', result } });
     } catch (e) {
       // Official CLI may rotate even on a failed generation; persist before cleanup.

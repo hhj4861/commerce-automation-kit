@@ -12,7 +12,7 @@ export function startStudioWorker({ env, cloud, token, workDir }) {
     running = true;
     try {
       const { projects } = await (await api('')).json();
-      for (const pending of projects.filter(p => p.task?.state === 'queued')) {
+      for (const pending of projects.filter(p => p.task?.state === 'queued' && p.task.runner !== 'llm-account')) {
         let job = pending;
         const update = async (action, body = {}) => {
           const response = await api(`/${job.id}/${action}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...body, revision: job.revision, taskId: job.task.id }) });

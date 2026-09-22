@@ -1,4 +1,5 @@
 import { readVault, writeVault } from './vault.mjs';
+import { validateBrief } from '../shopshorts/lib/studio.js';
 
 // Credentials, prompts and results are encrypted together. Only the authenticated
 // Pages service chooses an owner; browser request bodies never choose one.
@@ -33,10 +34,50 @@ export function publicAccount(value = {}, now = Date.now()) {
   };
 }
 
+// Preserve completed results separately before replacing the account job.
+// Account revision orders competing snapshots; a stale cancellation cannot
+// overwrite a newer completed result even if its eventual account CAS fails.
+const uuid = value => /^[a-f0-9-]{36}$/.test(value || '');
+const scenarioName = (owner, id) => `llm/scenario/${owner}/${id}`;
+function scenarioJob(value, now) {
+  const job = publicAccount(value, now).job;
+  if (job?.kind !== 'scenario') return null;
+  return { ...job, projectId: value.job.projectId,
+    ...(job.state === 'done' ? { result: value.job.result } : {}) };
+}
+async function retainScenario(env, owner, record, now) {
+  const value = record?.value || {};
+  const job = scenarioJob(value, now);
+  if (!job || value.job.acknowledged) return;
+  const snapshot = ['queued', 'running'].includes(job.state)
+    ? { ...job, state: 'failed', error: '계정 연결 또는 생성 요청이 취소됐습니다.' } : job;
+  const name = scenarioName(owner, job.id);
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const previous = await readVault(env, name);
+    if (previous?.value.sourceRevision >= record.revision) return;
+    try { await writeVault(env, name, { sourceRevision: record.revision, job: snapshot }, previous?.revision || 0); return; }
+    catch (error) { if (error.status !== 409 || attempt === 2) throw error; }
+  }
+}
+
 export async function accountAction(env, owner, operation, input = {}, now = Date.now()) {
   const name = nameFor(owner);
   const record = await readVault(env, name);
   const value = record?.value || {};
+  if (operation === 'scenario-status' || operation === 'scenario-ack') {
+    if (!uuid(input.id) || !uuid(input.projectId)) return problem('시나리오 요청을 확인하세요.', 400);
+    const current = value.job?.id === input.id;
+    const archived = current ? null : await readVault(env, scenarioName(owner, input.id));
+    const job = current ? scenarioJob(value, now) : archived?.value.job;
+    if (!job || job.projectId !== input.projectId) return { job: null };
+    if (operation === 'scenario-status') return { job };
+    if (current && value.job.acknowledged) return { ok: true };
+    if (['queued', 'running'].includes(job.state)) return problem('아직 생성 중입니다.');
+    if (current) await writeVault(env, name, { ...value, job: { ...value.job, result: null, acknowledged: true } }, record.revision);
+    // Keep the source revision tombstone to fence delayed archival writers.
+    else await writeVault(env, scenarioName(owner, input.id), { sourceRevision: archived.value.sourceRevision, job: null }, archived.revision);
+    return { ok: true };
+  }
   if (operation === 'notifications') {
     const items = savedRecommendations(value).map(notification);
     return { items, unreadCount: items.filter(item => !item.read).length };
@@ -58,6 +99,7 @@ export async function accountAction(env, owner, operation, input = {}, now = Dat
   if (operation === 'status') {
     const heartbeat = await readVault(env, 'llm/runtime');
     return { ...publicAccount(value, now), available: heartbeat?.value.at > now - 30000,
+      scenarioAvailable: heartbeat?.value.at > now - 30000 && heartbeat.value.scenario === true,
       providers: [{ id: 'codex', available: true }, { id: 'claude', available: true }] };
   }
   if (operation === 'code') {
@@ -71,22 +113,30 @@ export async function accountAction(env, owner, operation, input = {}, now = Dat
   }
   if (operation === 'disconnect' || operation === 'cancel') {
     if (operation === 'cancel' && input.id !== value.job?.id) return problem('이미 변경된 연결 요청입니다.');
+    await retainScenario(env, owner, record, now);
     const next = { recommendations: savedRecommendations(value), lastRequest: value.lastRequest, lastKind: value.lastKind, lastProvider: value.lastProvider,
       ...(operation === 'disconnect' || value.job?.kind === 'connect' ? {} : { credential: value.credential, account: value.account, provider: value.provider }) };
     await writeVault(env, name, next, record?.revision || 0);
     return publicAccount(next, now);
   }
-  if (!['connect', 'recommend'].includes(operation)) return problem('지원하지 않는 요청입니다.', 400);
+  if (!['connect', 'recommend', 'scenario'].includes(operation)) return problem('지원하지 않는 요청입니다.', 400);
   if (operation === 'connect' && !['codex', 'claude'].includes(input.provider)) return problem('Codex 또는 Claude를 선택하세요.', 400);
-  if (active(value.job, now) && !(value.job.state === 'running' && value.job.leaseUntil <= now)) return problem('이미 연결 또는 추천 요청을 처리 중입니다.');
+  if (active(value.job, now) && !(value.job.state === 'running' && value.job.leaseUntil <= now)) return problem('이미 연결 또는 생성 요청을 처리 중입니다.');
   if (operation === 'connect' && value.credential) return input.provider === (value.provider || 'codex') ? publicAccount(value, now) : problem('현재 계정을 해제한 뒤 다른 제공사를 연결하세요.');
-  if (operation === 'recommend' && !value.credential) return problem('LLM 계정을 먼저 연결하세요.', 428);
+  if (['recommend', 'scenario'].includes(operation) && !value.credential) return problem('LLM 계정을 먼저 연결하세요.', 428);
+  if (operation === 'scenario') {
+    if (!uuid(input.id) || !uuid(input.projectId)) return problem('시나리오 요청을 확인하세요.', 400);
+    input = { ...input, brief: validateBrief(input.brief) };
+  }
   const heartbeat = await readVault(env, 'llm/runtime');
   if (!(heartbeat?.value.at > now - 30000)) return problem('LLM 실행기가 오프라인입니다. 운영자에게 실행기 연결을 요청하세요.', 503);
+  if (operation === 'scenario' && heartbeat.value.scenario !== true) return problem('시나리오를 지원하는 LLM 실행기를 연결하세요.', 503);
   const provider = operation === 'connect' ? input.provider : value.provider || 'codex';
   if (value.lastKind === operation && value.lastProvider === provider && value.lastRequest > now - 5000) return problem('잠시 후 다시 시도하세요.', 429);
-  const job = { id: crypto.randomUUID(), kind: operation, provider, state: 'queued', createdAt: now, deadline: now + (operation === 'connect' ? 600000 : 240000),
-    ...(operation === 'recommend' ? { input: input.brief } : {}) };
+  const job = { id: operation === 'scenario' ? input.id : crypto.randomUUID(), kind: operation, provider, state: 'queued', createdAt: now, deadline: now + (operation === 'connect' ? 600000 : 240000),
+    ...(['recommend', 'scenario'].includes(operation) ? { input: input.brief } : {}),
+    ...(operation === 'scenario' ? { projectId: input.projectId } : {}) };
+  await retainScenario(env, owner, record, now);
   const next = { recommendations: savedRecommendations(value), credential: value.credential, account: value.account, provider, lastRequest: now, lastKind: operation, lastProvider: provider, job };
   await writeVault(env, name, next, record?.revision || 0);
   return publicAccount(next, now);
@@ -97,7 +147,7 @@ export async function accountAction(env, owner, operation, input = {}, now = Dat
 export async function accountRunner(env, input) {
   if (input.operation === 'poll') {
     const previous = await readVault(env, 'llm/runtime');
-    try { await writeVault(env, 'llm/runtime', { at: Date.now() }, previous?.revision || 0); }
+    try { await writeVault(env, 'llm/runtime', { at: Date.now(), scenario: input.scenario === true }, previous?.revision || 0); }
     catch (e) { if (e.status !== 409) throw e; }
     const cursor = /^[a-f0-9]{64}$/.test(input.cursor || '') ? nameFor(input.cursor) : 'llm/account/';
     const rows = await env.DB.prepare('SELECT name FROM credential_vault WHERE name > ? AND name < ? AND updated_at > ? ORDER BY name LIMIT 50')
@@ -105,7 +155,7 @@ export async function accountRunner(env, input) {
     const records = [];
     for (const row of rows.results || []) {
       const record = await readVault(env, row.name);
-      if (active(record?.value.job, Date.now())) records.push({ owner: row.name.slice('llm/account/'.length), ...record });
+      if (active(record?.value.job, Date.now()) && (record.value.job.kind !== 'scenario' || input.scenario === true)) records.push({ owner: row.name.slice('llm/account/'.length), ...record });
     }
     return { records, cursor: rows.results?.length === 50 ? rows.results.at(-1).name.slice('llm/account/'.length) : null };
   }

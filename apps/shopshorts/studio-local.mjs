@@ -50,7 +50,7 @@ export function startLocalStudio(store, env, execute = executeStudioTask) {
     running = true;
     try {
       for (const queued of await store.list()) {
-        if (queued.task?.state !== 'queued') continue;
+        if (queued.task?.state !== 'queued' || queued.task.runner === 'llm-account') continue;
         let job = { ...queued, revision: queued.revision + 1, task: { ...queued.task, state: 'running', startedAt: new Date().toISOString() } };
         if (!await store.cas(job, queued.revision)) continue;
         const update = async (result, state) => {
@@ -72,7 +72,7 @@ export function startLocalStudio(store, env, execute = executeStudioTask) {
   timer.unref();
   // A server restart never automatically retries potentially paid work or publishing.
   const recover = async () => {
-    for (const job of await store.list()) if (job.task?.state === 'running') await store.cas({ ...job, revision: job.revision + 1, task: { ...job.task, state: 'failed', error: '제작 서버가 재시작되었습니다. 생성은 다시 요청할 수 있으며, 업로드는 플랫폼 접수 여부를 먼저 확인하세요.' } }, job.revision);
+    for (const job of await store.list()) if (job.task?.state === 'running' && job.task.runner !== 'llm-account') await store.cas({ ...job, revision: job.revision + 1, task: { ...job.task, state: 'failed', error: '제작 서버가 재시작되었습니다. 생성은 다시 요청할 수 있으며, 업로드는 플랫폼 접수 여부를 먼저 확인하세요.' } }, job.revision);
   };
   return { tick, recover, stop: () => clearInterval(timer) };
 }
@@ -84,7 +84,7 @@ export async function handleLocalStudio(req, res, origin, env, store) {
   res.once('close', abort);
   const request = new Request(new URL(req.url, origin), { method: req.method, headers: req.headers, signal: controller.signal, ...(['GET', 'HEAD'].includes(req.method) ? {} : { body: Buffer.concat(chunks) }) });
   try {
-    const result = await llmAccountApi(request, env, (owner, operation, input) => accountBroker(env)('/runner/account-action', { owner, operation, input })) || await studioApi(request, env, store, { recommendationAccounts: true });
+    const result = await llmAccountApi(request, env, (owner, operation, input) => accountBroker(env)('/runner/account-action', { owner, operation, input })) || await studioApi(request, env, store, { recommendationAccounts: true, scenarioAccounts: (owner, operation, input) => accountBroker(env)('/runner/account-action', { owner, operation, input }) });
     if (!res.destroyed) await sendResponse(res, result);
   } finally { res.off('close', abort); }
 }
