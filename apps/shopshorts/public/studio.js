@@ -1,3 +1,4 @@
+import {executionStatus,renderExecutionStatus} from './studio-status.js';
 import {createEditor} from './editor.js';
 import {connectLlm,recommendWithAccount,waitForRecommendation} from './llm-connection.js';
 import {createNotificationInbox} from './notifications.js';
@@ -36,13 +37,24 @@ function progress(){
  $('#steps').querySelectorAll('button').forEach(b=>b.onclick=()=>run(async()=>{await saveCurrent();state.step=Number(b.dataset.step);render();}));
 }
 function note(){
- const p=state.project, task=p?.task;
- const caps=state.config?.capabilities || {};
- let html='';
- if(state.step>=3 && state.config?.execution==='cloud-worker' && (!caps.workerAt || Date.now()-Date.parse(caps.workerAt)>90000))html='<div class="status-note">제작 워커가 연결되지 않았습니다. 프로젝트 저장과 편집은 가능하며, 이미지·영상 생성, 렌더·업로드 요청은 워커가 연결되면 처리됩니다.</div>';
- if(task && ['queued','running'].includes(task.state))html+=`<div class="status-note"><span class="progress-dots"></span><strong>${taskNames[task.action]} ${task.state==='queued'?'대기 중':'진행 중'}</strong> — 창을 닫아도 서버에서 계속 처리합니다. ${task.action==='media'?`${p.scenes.filter(s=>p.assets[s.id]).length}/${p.scenes.length}장면 준비됨`:''}</div>`;
- if(task?.state==='failed')html+=`<div class="status-note error"><strong>${taskNames[task.action]} 실패</strong><br>${esc(task.error)}</div>`;
- $('#notice').innerHTML=html;
+ $('#notice').innerHTML=renderExecutionStatus(executionStatus(state));
+ const button=$('[data-execution-action]');
+ if(button)button.onclick=()=>run(async()=>{
+  const action=button.dataset.executionAction;
+  if(action==='retry'){state.step=2;await generateScenario();}
+  else if(action==='connect')await connectLlm({manage:true});
+  await refreshConnection();
+ });
+}
+async function refreshConnection(){
+ try{state.config=await api('/config');state.connectionUnknown=false;}
+ catch{state.connectionUnknown=true;}
+ note();
+}
+async function generateScenario(){
+ if(state.project.scenes.length&&!confirm('다시 생성하면 기존 장면과 편집 결과를 새 대본으로 교체합니다. 생성할까요?'))return;
+ if(!await connectLlm())return;
+ await action('scenario',{confirm:true});await refreshConnection();
 }
 function heading(){
  const p=state.project;$('.heading h1').textContent=p?p.title:'내 이야기로 시작하기';
@@ -114,10 +126,10 @@ function render(){
 }
 function renderScenario(){
  const p=state.project;
- $('#stage').innerHTML=`<section class="panel"><div class="panel-head"><div><h2>이야기를 장면으로 나누기</h2><p>AI가 만든 대사와 장면 설명을 읽고 자유롭게 다듬으세요.</p></div><span class="badge">2 / 5 시나리오</span></div>${p.scenes.length?`<label class="field"><span>영상 제목</span><input id="scriptTitle" maxlength="100" value="${esc(p.title)}"></label><div class="scene-list">${p.scenes.map((s,i)=>`<article class="scene-row" data-scene="${s.id}"><span class="scene-number">${String(i+1).padStart(2,'0')}</span><label class="field"><span>내레이션</span><textarea data-narration maxlength="1200">${esc(s.narration)}</textarea></label><label class="field visual-field"><span>장면 설명</span><textarea data-prompt maxlength="2000">${esc(s.prompt)}</textarea></label><label class="field"><span>길이 (초)</span><input data-duration type="number" min="1" max="30" step="0.1" value="${s.duration}"></label></article>`).join('')}</div>`:`<div class="empty"><div class="empty-icon">▤</div><h2>첫 장면은 어떤 모습일까요?</h2><p>${esc(p.brief.topic)}<br>설정한 주제와 분위기를 바탕으로 시나리오를 생성합니다.</p><button class="primary" id="generate">AI 시나리오 생성</button><small class="hint">연결한 Codex·Claude 계정을 사용하며 구독 사용량에 반영됩니다.</small></div>`}
- <p class="hint">계정이 연결되지 않았다면 생성할 때 Codex 또는 Claude를 연결할 수 있습니다.</p><div class="actions"><button class="secondary" id="back">이전</button><div>${p.scenes.length?'<button class="secondary" id="regenerate">다시 생성</button><button class="secondary" id="save">대본 저장</button><button class="primary" id="next">이미지 · 영상 선택</button>':''}</div></div></section>`;
+ $('#stage').innerHTML=`<section class="panel"><div class="panel-head"><div><h2>이야기를 장면으로 나누기</h2><p>AI가 만든 대사와 장면 설명을 읽고 자유롭게 다듬으세요.</p></div><span class="badge">2 / 5 시나리오</span></div>${p.scenes.length?`<label class="field"><span>영상 제목</span><input id="scriptTitle" maxlength="100" value="${esc(p.title)}"></label><div class="scene-list">${p.scenes.map((s,i)=>`<article class="scene-row" data-scene="${s.id}"><span class="scene-number">${String(i+1).padStart(2,'0')}</span><label class="field"><span>내레이션</span><textarea data-narration maxlength="1200">${esc(s.narration)}</textarea></label><label class="field visual-field"><span>장면 설명</span><textarea data-prompt maxlength="2000">${esc(s.prompt)}</textarea></label><label class="field"><span>길이 (초)</span><input data-duration type="number" min="1" max="30" step="0.1" value="${s.duration}"></label></article>`).join('')}</div>`:`<div class="empty"><div class="empty-icon">▤</div><h2>${taskBusy()?'대사와 장면이 여기에 모입니다':'첫 장면은 어떤 모습일까요?'}</h2><p>${esc(p.brief.topic)}<br>${taskBusy()?'완성되면 장면별 대사와 화면 구성을 확인할 수 있어요.':'설정한 주제와 분위기를 바탕으로 시나리오를 생성합니다.'}</p>${taskBusy()?'<div class="scenario-deliverables"><span>대사</span><span>장면 설명</span><span>장면별 길이</span></div>':p.task?.state==='failed'?'':'<button class="primary" id="generate">AI 시나리오 생성</button>'}<small class="hint">연결한 AI 계정의 구독 사용량으로 생성합니다.</small></div>`}
+ <div class="actions"><button class="secondary" id="back">이전</button><div>${p.scenes.length?'<button class="secondary" id="regenerate">다시 생성</button><button class="secondary" id="save">대본 저장</button><button class="primary" id="next">이미지 · 영상 선택</button>':''}</div></div></section>`;
  $('#back').onclick=()=>run(async()=>{await saveCurrent();state.step=1;});
- const generate=()=>run(async()=>{if(p.scenes.length&&!confirm('다시 생성하면 기존 장면과 편집 결과를 새 대본으로 교체합니다. 생성할까요?'))return;if(!await connectLlm())return;await action('scenario',{confirm:true});});
+ const generate=()=>run(generateScenario);
  if($('#generate'))$('#generate').onclick=generate;if($('#regenerate'))$('#regenerate').onclick=generate;
  if($('#save'))$('#save').onclick=()=>run(async()=>{await saveCurrent();toast('대본을 저장했습니다.');});
  if($('#next'))$('#next').onclick=()=>run(async()=>{await saveCurrent();state.step=3;});
@@ -165,11 +177,12 @@ async function openProject(id){
  const p=state.project;state.step=p.render||p.upload?5:p.scenes.length?(p.approved&&p.scenes.every(s=>p.assets[s.id])?4:3):2;
  $('#modes').hidden=true;$('#workspace').hidden=false;$('#projects').hidden=true;history.replaceState(null,'',`/studio?id=${p.id}`);render();
 }
-async function loadList(){const {projects}=await api();$('#projectList').innerHTML=projects.length?projects.map(p=>`<button class="project-entry" data-project="${p.id}"><span><strong>${esc(p.title)}</strong><small>${esc(p.brief.category)} · ${p.brief.format==='short'?'숏폼':'롱폼'} · ${new Date(p.updatedAt).toLocaleDateString('ko-KR')}</small></span><span class="badge">${p.upload?.state==='done'?'업로드 완료':p.task?.state==='failed'?'작업 확인 필요':p.task&&['running','queued'].includes(p.task.state)?taskNames[p.task.action]+' 중':p.render?'업로드 준비':p.scenes.length?'제작 중':'기획 완료'}</span></button>`).join(''):'<div class="empty"><h3>첫 번째 이야기를 기다리고 있어요</h3><p>위에서 자동 또는 수동 제작을 선택하세요.</p></div>';document.querySelectorAll('[data-project]').forEach(b=>b.onclick=()=>run(()=>openProject(b.dataset.project)));}
+async function loadList(){const {projects}=await api();$('#projectList').innerHTML=projects.length?projects.map(p=>`<button class="project-entry" data-project="${p.id}"><span><strong>${esc(p.title)}</strong><small>${esc(p.brief.category)} · ${p.brief.format==='short'?'숏폼':'롱폼'} · ${new Date(p.updatedAt).toLocaleDateString('ko-KR')}</small></span><span class="badge">${p.upload?.state==='done'?'업로드 완료':p.task?.state==='failed'?'작업 확인 필요':p.task&&['running','queued'].includes(p.task.state)?taskNames[p.task.action]+(p.task.state==='queued'?' 대기':' 중'):p.render?'업로드 준비':p.scenes.length?'제작 중':'기획 완료'}</span></button>`).join(''):'<div class="empty"><h3>첫 번째 이야기를 기다리고 있어요</h3><p>위에서 자동 또는 수동 제작을 선택하세요.</p></div>';document.querySelectorAll('[data-project]').forEach(b=>b.onclick=()=>run(()=>openProject(b.dataset.project)));}
 $('#manual').onclick=()=>{if(!state.config){toast('서버 연결 상태를 먼저 확인하세요.');return;}start();};$('#newProject').onclick=()=>{if(state.pending)return;if(state.dirty&&!confirm('저장하지 않은 변경이 있습니다. 새 프로젝트를 시작할까요?'))return;start();};
 $('#stage').addEventListener('input',()=>{if(state.step!==4)state.dirty=true;});
 window.addEventListener('beforeunload',e=>{if(state.dirty){e.preventDefault();e.returnValue='';}});
 (async()=>{try{state.config=await api('/config');const auth=await(await fetch('/auth/status')).json();if(auth.user)$('#account').textContent=auth.user.name||auth.user.email;const params=new URLSearchParams(location.search),id=params.get('id'),recommendationId=params.get('recommendation');if(recommendationId){const saved=(await api('/llm/recommendation?id='+encodeURIComponent(recommendationId))).recommendation;start();state.category=saved.input.category;state.format=saved.input.format;renderBrief();$('#topic').value=saved.input.topic;$('#direction').value=saved.input.direction;$('#duration').value=saved.input.duration;history.replaceState(null,'','/studio?new=1&recommendation='+encodeURIComponent(recommendationId));restoreRecommendation(saved);}else if(id)await openProject(id);else if(params.has('new'))start();else await loadList();recommendationInbox.refresh();}catch(e){$('#notice').innerHTML=`<div class="status-note error">${esc(e.message)}</div>`;}})();
-setInterval(async()=>{if(state.pending||state.dirty)return;try{if(state.project&&taskBusy()){const p=(await api('/'+state.project.id)).project;if(p.revision!==state.project.revision){const previous=state.project.task;state.project=p;if(p.task?.state==='done'&&previous?.state!=='done'){if(p.task.action==='scenario')state.step=2;if(p.task.action==='render'||p.task.action==='publish')state.step=5;}render();}}}catch(e){toast(e.message);}},4000);
+let checkingExecution=false;
+setInterval(async()=>{if(state.pending||checkingExecution||document.hidden)return;checkingExecution=true;try{await refreshConnection();if(state.project&&taskBusy()&&!state.dirty){const p=(await api('/'+state.project.id)).project;if(p.revision!==state.project.revision){const previous=state.project.task;state.project=p;if(p.task?.state==='done'&&previous?.state!=='done'){if(p.task.action==='scenario')state.step=2;if(p.task.action==='render'||p.task.action==='publish')state.step=5;}render();}}}catch{state.connectionUnknown=true;note();}finally{checkingExecution=false;}},4000);
 
 setInterval(()=>{if(!document.hidden)recommendationInbox.poll();},5000);

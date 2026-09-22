@@ -4,6 +4,17 @@ import { scenarioResult } from './studio-scenario.js';
 
 const changed = project => ({ ...project, revision: project.revision + 1, updatedAt: new Date().toISOString() });
 
+export async function scenarioRuntime(request, env, call) {
+  if(!call)return null;
+  const owner=await llmOwner(request,env);
+  if(!owner)return {connected:false,available:false,scenarioAvailable:false};
+  try {
+    const status=await call(owner,'status',{});
+    if(status.error)return {known:false};
+    return {known:true,connected:!!status.connected,available:!!status.available,scenarioAvailable:!!status.scenarioAvailable,provider:status.provider};
+  } catch { return {known:false}; }
+}
+
 export async function startScenario(request, env, store, project, body, call) {
   if (!call) fail('시나리오 계정 실행기가 설정되지 않았습니다.', 503);
   const owner = await llmOwner(request, env);
@@ -34,7 +45,12 @@ export async function startScenario(request, env, store, project, body, call) {
 }
 
 export async function syncScenario(store, project, call, now = Date.now()) {
-  if (!call || project.task?.runner !== 'llm-account') return project;
+  if (!call) return project;
+  if (project.task?.action==='scenario' && project.task.state==='queued' && project.task.runner!=='llm-account') {
+    const next=changed({...project,task:{...project.task,state:'failed',error:'이전 생성 요청은 시작되지 않았어요. 연결한 AI 계정으로 다시 생성해 주세요.'}});
+    return await store.cas(next,project.revision)?next:await store.get(project.id)||project;
+  }
+  if (project.task?.runner !== 'llm-account') return project;
   const task = project.task;
   const input = { id: task.id, projectId: project.id };
   const acknowledge = async () => {

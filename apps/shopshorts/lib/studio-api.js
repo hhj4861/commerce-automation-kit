@@ -1,4 +1,4 @@
-import { startScenario, syncScenario } from './studio-scenario-account.js';
+import { startScenario, syncScenario, scenarioRuntime } from './studio-scenario-account.js';
 import { CATEGORIES, VOICES, PLATFORMS, createProject, changeProject, busy, fail, validateScenes } from './studio.js';
 import { sameOrigin, workerAuthorized } from './google-auth.js';
 import { recommendBrief } from './studio-recommendations.js';
@@ -8,7 +8,7 @@ export async function studioApi(request, env, store, { localWorker = false, reco
   const worker = localWorker || workerAuthorized(request, env);
   try {
     if (!['GET', 'HEAD'].includes(request.method) && !sameOrigin(request)) fail('다른 사이트에서 요청할 수 없습니다.', 403);
-    if (parts[0] === 'config' && request.method === 'GET') return json({ categories: CATEGORIES, voices: VOICES, platforms: PLATFORMS, execution: store.execution, capabilities: await store.capabilities(), recommendations: !!recommendationGenerate || recommendationAccounts, recommendationProvider: recommendationGenerate ? 'codex' : null, recommendationProviders: recommendationAccounts ? ['codex', 'claude'] : recommendationGenerate ? ['codex'] : [] });
+    if (parts[0] === 'config' && request.method === 'GET') return json({ categories: CATEGORIES, voices: VOICES, platforms: PLATFORMS, execution: store.execution, capabilities: await store.capabilities(), scenarioRuntime: await scenarioRuntime(request, env, scenarioAccounts), recommendations: !!recommendationGenerate || recommendationAccounts, recommendationProvider: recommendationGenerate ? 'codex' : null, recommendationProviders: recommendationAccounts ? ['codex', 'claude'] : recommendationGenerate ? ['codex'] : [] });
     if (parts.length===1 && parts[0]==='recommendations' && request.method==='POST') return json(await recommendBrief(await request.json(),env,{generate:recommendationGenerate,signal:request.signal}));
     if (!parts.length) {
       if (request.method === 'GET') return json({ projects: await Promise.all((await store.list()).map(project => syncScenario(store, project, scenarioAccounts))) });

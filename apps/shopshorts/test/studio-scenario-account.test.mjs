@@ -9,7 +9,7 @@ import { createProject } from '../lib/studio.js';
 import { studioApi } from '../lib/studio-api.js';
 import { llmOwner } from '../lib/llm-account-api.js';
 import { scenarioBrief } from '../lib/studio-scenario.js';
-import { syncScenario } from '../lib/studio-scenario-account.js';
+import { syncScenario, scenarioRuntime } from '../lib/studio-scenario-account.js';
 import { startAccountWorker } from '../studio-account-worker.mjs';
 import { executeAccountJob } from '../studio-account-codex.mjs';
 import { executeClaudeAccountJob } from '../studio-account-claude.mjs';
@@ -195,4 +195,24 @@ test('Claude scenario uses connected setup-token without borrowing operator cred
     update: async value => { patch = value; },
   });
   assert.equal(patch.job.state, 'done'); assert.deepEqual(patch.job.result, result);
+});
+
+test('legacy queued Gemini request becomes retryable without claiming or generating',async()=>{
+ const project={...createProject(brief),task:{id:crypto.randomUUID(),action:'scenario',state:'queued'}};
+ let saved;const store={cas:async(next,revision)=>{assert.equal(revision,project.revision);saved=next;return true;}};
+ const next=await syncScenario(store,project,()=>{throw Error('must not generate');});
+ assert.equal(next.task.state,'failed');assert.match(next.task.error,/연결한 AI/);assert.equal(saved,next);
+ assert.equal(next.scenes.length,0);
+});
+
+
+test('runtime status is owner-scoped, excludes credentials, and degrades without blocking editing',async t=>{
+ const f=await fixture(t);
+ const request=new Request('https://studio.test/api/studio/config',{headers:{authorization:'Bearer worker-test'}});
+ const result=await scenarioRuntime(request,f.env,async(owner,operation)=>{
+  assert.equal(owner,f.owner);assert.equal(operation,'status');
+  return {connected:true,available:true,scenarioAvailable:true,provider:'codex',credential:auth,account:'private'};
+ });
+ assert.deepEqual(result,{known:true,connected:true,available:true,scenarioAvailable:true,provider:'codex'});
+ assert.deepEqual(await scenarioRuntime(request,f.env,async()=>{throw Error('offline');}),{known:false});
 });
