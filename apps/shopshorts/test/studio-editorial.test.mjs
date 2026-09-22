@@ -39,8 +39,9 @@ for (const provider of ['codex', 'claude']) test(`${provider} scenario uses mess
       assert.match(prompt, /실제 음성 길이를 측정한 값이 아닙니다/);
       assert.match(prompt, /부모의 표정과 손동작/); assert.match(prompt, /합계는 정확히 24초/);
       assert.match(prompt, /확인하지 못한 연구/); assert.match(prompt, /인증정보를 읽거나 수정하지/);
+      assert.match(prompt, /킬링파트 설계/); assert.match(prompt, /storyArc/);
       assert.doesNotMatch(prompt, /읽을 수 있게 짧게 쓰세요|짧은 내레이션/);
-      return { value, searched: false };
+      return { value: { ...value, storyArc: Object.fromEntries(['hook', 'payoff', 'ending'].map((key, i) => [key, { sceneId: value.scenes[i].id, line: value.scenes[i].narration }])) }, searched: false };
     },
   });
   assert.deepEqual(actual, value); assert.deepEqual(input, brief); assert.equal(calls, 1);

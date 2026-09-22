@@ -20,6 +20,7 @@ const result = { title: '잠깐, 내 마음부터', scenes: [
   { id: 'scene-2', narration: '지금 내 마음이 지쳐 있나요?', prompt: '부모가 잠시 숨을 고른다.', duration: 8, kind: 'image' },
   { id: 'scene-3', narration: '아까 날카롭게 말해서 미안해. 다시 이야기해 줄래?', prompt: '부모가 아이와 눈을 맞춘다.', duration: 8, kind: 'video' },
 ] };
+const generatedResult = { ...result, storyArc: Object.fromEntries(['hook', 'payoff', 'ending'].map((key, i) => [key, { sceneId: result.scenes[i].id, line: result.scenes[i].narration }])) };
 const auth = { auth_mode: 'chatgpt', tokens: { refresh_token: 'fixture-refresh', access_token: 'fixture-access' } };
 const waitFor = async check => { for (let i = 0; i < 100; i++) { if (await check()) return; await new Promise(r => setTimeout(r, 10)); } throw Error('Condition not reached'); };
 
@@ -54,7 +55,7 @@ async function fixture(t, provider = 'codex') {
 
 test('scenario validates narration, target duration and selected subscription model without requiring search', async () => {
   let options;
-  assert.deepEqual(await scenarioBrief(brief, { SHOPSHORTS_CLAUDE_MODEL: 'test-model' }, { provider: 'claude', generate: async (prompt, opts) => { options = opts; assert.match(prompt, /24초/); return { value: result, searched: false }; } }), result);
+  assert.deepEqual(await scenarioBrief(brief, { SHOPSHORTS_CLAUDE_MODEL: 'test-model' }, { provider: 'claude', generate: async (prompt, opts) => { options = opts; assert.match(prompt, /24초/); return { value: generatedResult, searched: false }; } }), result);
   assert.equal(options.model, 'test-model');
   for (const value of [{}, { ...result, scenes: [{ ...result.scenes[0], duration: 1 }] }, { ...result, scenes: result.scenes.map(s => ({ ...s, narration: '' })) }]) {
     await assert.rejects(scenarioBrief(brief, {}, { generate: async () => ({ value }) }));
@@ -180,7 +181,7 @@ test('Codex scenario uses isolated owner credentials and saves refreshed tokens'
   await executeAccountJob({ credential: auth, job: { kind: 'scenario', input: brief } }, {
     update: async patch => patches.push(patch),
     openServer: async env => { runtime = env; assert.deepEqual(JSON.parse(await readFile(join(env.CODEX_HOME, 'auth.json'), 'utf8')), auth); return { call: async () => ({ account: { type: 'chatgpt' } }), close: async () => {} }; },
-    generator: () => async () => { await writeFile(join(runtime.CODEX_HOME, 'auth.json'), JSON.stringify({ ...auth, tokens: { ...auth.tokens, refresh_token: 'rotated' } })); return { value: result }; },
+    generator: () => async () => { await writeFile(join(runtime.CODEX_HOME, 'auth.json'), JSON.stringify({ ...auth, tokens: { ...auth.tokens, refresh_token: 'rotated' } })); return { value: generatedResult }; },
   });
   assert.deepEqual(patches.at(-1).job.result, result); assert.equal(patches.at(-1).credential.tokens.refresh_token, 'rotated');
   await assert.rejects(stat(runtime.HOME), { code: 'ENOENT' });
@@ -191,7 +192,7 @@ test('Claude scenario uses connected setup-token without borrowing operator cred
   const credential = { kind: 'claude-setup-token-v1', accessToken: 'sk-ant-oat01-' + 'x'.repeat(90) };
   await executeClaudeAccountJob({ credential, job: { kind: 'scenario', input: brief } }, {
     env: { HOME: '/operator', PATH: '/bin', CLAUDE_CODE_OAUTH_TOKEN: 'operator-secret' },
-    generator: (env, options) => { assert.equal(env.CLAUDE_CODE_OAUTH_TOKEN, undefined); assert.equal(options.oauthToken, credential.accessToken); return async () => ({ value: result }); },
+    generator: (env, options) => { assert.equal(env.CLAUDE_CODE_OAUTH_TOKEN, undefined); assert.equal(options.oauthToken, credential.accessToken); return async () => ({ value: generatedResult }); },
     update: async value => { patch = value; },
   });
   assert.equal(patch.job.state, 'done'); assert.deepEqual(patch.job.result, result);
