@@ -1,4 +1,4 @@
-import {executionStatus,renderExecutionStatus} from './studio-status.js';
+import {executionStatus,renderExecutionStatus,resumeStep} from './studio-status.js';
 import {createEditor} from './editor.js';
 import {connectLlm,recommendWithAccount,waitForRecommendation} from './llm-connection.js';
 import {createNotificationInbox} from './notifications.js';
@@ -174,7 +174,7 @@ function renderPublish(){
 async function openProject(id){
  if(state.dirty)await saveCurrent();
  state.project=(await api('/'+id)).project;state.selected=null;state.dirty=false;
- const p=state.project;state.step=p.render||p.upload?5:p.scenes.length?(p.approved&&p.scenes.every(s=>p.assets[s.id])?4:3):2;
+ const p=state.project;state.step=resumeStep(p);
  $('#modes').hidden=true;$('#workspace').hidden=false;$('#projects').hidden=true;history.replaceState(null,'',`/studio?id=${p.id}`);render();
 }
 async function loadList(){const {projects}=await api();$('#projectList').innerHTML=projects.length?projects.map(p=>`<button class="project-entry" data-project="${p.id}"><span><strong>${esc(p.title)}</strong><small>${esc(p.brief.category)} · ${p.brief.format==='short'?'숏폼':'롱폼'} · ${new Date(p.updatedAt).toLocaleDateString('ko-KR')}</small></span><span class="badge">${p.upload?.state==='done'?'업로드 완료':p.task?.state==='failed'?'작업 확인 필요':p.task&&['running','queued'].includes(p.task.state)?taskNames[p.task.action]+(p.task.state==='queued'?' 대기':' 중'):p.render?'업로드 준비':p.scenes.length?'제작 중':'기획 완료'}</span></button>`).join(''):'<div class="empty"><h3>첫 번째 이야기를 기다리고 있어요</h3><p>위에서 자동 또는 수동 제작을 선택하세요.</p></div>';document.querySelectorAll('[data-project]').forEach(b=>b.onclick=()=>run(()=>openProject(b.dataset.project)));}

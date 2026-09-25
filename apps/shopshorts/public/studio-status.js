@@ -1,5 +1,13 @@
 const names = {scenario:'시나리오 생성',media:'이미지·영상 생성',render:'영상 렌더',publish:'업로드'};
 const steps = {scenario:2,media:3,render:4,publish:5};
+export function resumeStep(project) {
+  // An unfinished or failed task must reopen where its progress/result belongs.
+  if(['queued','running','failed'].includes(project.task?.state) && steps[project.task.action])return steps[project.task.action];
+  if(project.render || project.upload)return 5;
+  // Generated scenes still need a human review, including after leaving the page.
+  if(!project.scenes.length || !project.approved)return 2;
+  return project.scenes.every(scene=>project.assets?.[scene.id])?4:3;
+}
 export function executionStatus({project,step,config,connectionUnknown=false}, now=Date.now()) {
   const task=project?.task, name=names[task?.action] || '제작';
   const active=['queued','running'].includes(task?.state);
