@@ -19,7 +19,8 @@
     "cloud:deploy": "npx wrangler pages deploy public --project-name shopshorts-dash"
   },
   "dependencies": {
-    "jose": "6.2.3",
-    "better-sqlite3": "^11.0.0"
+    "@higgsfield/cli": "1.1.26",
+    "better-sqlite3": "^11.0.0",
+    "jose": "6.2.3"
   }
 }

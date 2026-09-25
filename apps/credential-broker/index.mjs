@@ -74,7 +74,7 @@ export async function handleRequest(request, env, verify = { github: verifyGithu
     if (path === '/runner/account-action') return response(await accountAction(env, input.owner, input.operation, input.input));
     if (path === '/runner/lease') return response(await lease(env, input.operation, input.owner));
     if (path === '/runner/secrets') return response({ values: await readSecrets(env, STATIC_KEYS, false) });
-    if (!['codex', 'youtube', 'youtube-client', 'migration/github', 'migration/pages'].includes(input.name)) return response({ error: 'unknown credential' }, 400);
+    if (!['codex', 'higgsfield', 'youtube', 'youtube-client', 'migration/github', 'migration/pages'].includes(input.name)) return response({ error: 'unknown credential' }, 400);
     if (input.operation === 'read') return response({ record: await readVault(env, input.name) });
     if (input.operation === 'write' && !input.name.startsWith('migration/') && Number.isSafeInteger(input.revision) && input.revision >= 0 && input.value && typeof input.value === 'object') {
       return response({ revision: await writeVault(env, input.name, input.value, input.revision) });

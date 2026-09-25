@@ -3,11 +3,12 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { join, resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { generateHiggsfieldScene } from './studio-higgsfield.mjs';
 import { FPS, FONTS, normalizeEdit, frameCount } from './public/editor-model.js';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const GOOGLE = 'https://generativelanguage.googleapis.com/v1beta';
-export const capabilities = env => ({ workerAt: new Date().toISOString(), scenario: false, image: !!env.GEMINI_API_KEY, video: !!env.GEMINI_API_KEY, voice: !!env.ELEVENLABS_API_KEY, shortsUpload: !!(env.UPLOAD_POST_API_KEY && env.UPLOAD_POST_USER), longUpload: !!env.YOUTUBE_CLIENT_SECRET });
+export const capabilities = env => ({ workerAt: new Date().toISOString(), scenario: false, image: env.SHOPSHORTS_MEDIA_PROVIDER === 'higgsfield' || !!env.GEMINI_API_KEY, video: env.SHOPSHORTS_MEDIA_PROVIDER === 'higgsfield' || !!env.GEMINI_API_KEY, mediaProvider: env.SHOPSHORTS_MEDIA_PROVIDER === 'higgsfield' ? 'higgsfield' : 'google', voice: !!env.ELEVENLABS_API_KEY, shortsUpload: !!(env.UPLOAD_POST_API_KEY && env.UPLOAD_POST_USER), longUpload: !!env.YOUTUBE_CLIENT_SECRET });
 export function command(bin, args, env, timeout = 600000) {
   return new Promise((resolveP, reject) => {
     const child = spawn(bin, args, { cwd: ROOT, env: { ...process.env, ...env }, stdio: ['ignore', 'pipe', 'pipe'] });
@@ -111,7 +112,7 @@ async function renderProject(job, work, env, io) {
   await io.writeAsset(key, await readFile(final), 'video/mp4');
   return { render: { key, type: 'video/mp4', createdAt: new Date().toISOString(), duration: frameCount(timeline)/FPS } };
 }
-export async function executeStudioTask(job, env, io, checkpoint, { fetcher = fetch, runCli = cli } = {}) {
+export async function executeStudioTask(job, env, io, checkpoint, { fetcher = fetch, runCli = cli, runHiggsfield } = {}) {
   const action = job.task.action;
   if (action === 'scenario') throw new Error('시나리오는 연결한 Codex·Claude 계정으로 다시 요청하세요.');
   const work = join(io.workDir, job.id);
@@ -121,8 +122,11 @@ export async function executeStudioTask(job, env, io, checkpoint, { fetcher = fe
     const assets = { ...job.assets };
     for (const scene of job.scenes) {
       if (assets[scene.id]) continue;
-      let data, type;
-      if (scene.kind === 'image') {
+      let data, type, providerInfo = {};
+      if (env.SHOPSHORTS_MEDIA_PROVIDER === 'higgsfield') {
+        const result = await generateHiggsfieldScene(job, scene, env, work, checkpoint, { run: runHiggsfield, fetcher });
+        ({ data, type } = result); providerInfo = { provider: result.provider, providerJobId: result.providerJobId };
+      } else if (scene.kind === 'image') {
         const result = await googleMediaRequest(`models/${env.SHOPSHORTS_IMAGE_MODEL || 'gemini-2.5-flash-image'}:generateContent`, { contents: [{ parts: [{ text: `${scene.prompt}\nOriginal visual, no captions or logos. ${job.brief.aspect} composition.` }] }], generationConfig: { responseModalities: ['TEXT', 'IMAGE'], imageConfig: { aspectRatio: job.brief.aspect } } }, env, fetcher);
         const image = result.candidates?.[0]?.content?.parts?.find(p => p.inlineData?.mimeType?.startsWith('image/'))?.inlineData;
         if (!image) throw new Error(`${scene.id}: 이미지가 반환되지 않았습니다. 장면 설명을 수정하세요.`);
@@ -146,7 +150,7 @@ export async function executeStudioTask(job, env, io, checkpoint, { fetcher = fe
       }
       const key = `studio/${job.id}/${job.task.id}-${scene.id}.${scene.kind === 'video' ? 'mp4' : 'png'}`;
       await io.writeAsset(key, data, type);
-      assets[scene.id] = { key, kind: scene.kind, type, source: 'ai', name: scene.id };
+      assets[scene.id] = { key, kind: scene.kind, type, source: 'ai', name: scene.id, ...providerInfo };
       await checkpoint({ assets });
     }
     return { assets };

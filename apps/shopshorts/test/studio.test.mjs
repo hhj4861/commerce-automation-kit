@@ -29,3 +29,11 @@ test('API rejects forged completion, CSRF and stale edits; only worker can claim
  assert.equal((await request('complete',{revision:2,taskId:claimed.project.task.id,result:{scenes,title:'A'}},{authorization:'Bearer worker-secret'})).status,200);
 });
 test('media upload rejects non-owned, HTML and mismatched scene assets',async()=>{const store=memoryStore(),p=ready();await store.create(p);for(const query of ['kind=image&scene=scene-1','kind=image&scene=scene-1&rights=confirmed']){const r=await studioApi(new Request(`https://studio.test/api/studio/${p.id}/assets?${query}`,{method:'POST',headers:{'content-type':'text/html'},body:'<script>x</script>'}),{},store);assert.equal(r.status,400);}});
+
+test('only current media worker can persist paid Higgsfield receipts across retries',async()=>{
+ const store=memoryStore(),p=changeProject(ready(),'media',{approved:true});p.task.state='running';await store.create(p);
+ const result={mediaJobs:{'scene-1':{provider:'higgsfield',id:'provider-id',fingerprint:'hash',state:'accepted'}}};
+ const request=(token,taskId=p.task.id)=>studioApi(new Request(`https://studio.test/api/studio/${p.id}/checkpoint`,{method:'POST',headers:{'content-type':'application/json',authorization:`Bearer ${token}`},body:JSON.stringify({revision:0,taskId,result})}),{SHOPSHORTS_TOKEN:'worker-secret'},store);
+ assert.equal((await request('wrong')).status,403);assert.equal((await request('worker-secret','stale')).status,409);
+ assert.equal((await request('worker-secret')).status,200);assert.deepEqual((await store.get(p.id)).mediaJobs,result.mediaJobs);
+});
