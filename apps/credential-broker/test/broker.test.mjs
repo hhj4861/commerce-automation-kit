@@ -109,3 +109,14 @@ test('Pages takes central credentials and fails closed if required bindings are 
   await assert.rejects(cloudSecrets({ CREDENTIALS: { getPagesSecrets: async () => ({}) } }));
   await assert.rejects(readSecrets(env(), ['NOT_ALLOWED']));
 });
+
+ test('Higgsfield OAuth uses authenticated encrypted vault and stays out of Pages/static keys',async()=>{
+  const config=env(),value={workspaceId:'fixture-workspace',credentials:{access_token:'fixture-access',refresh_token:'fixture-refresh'}};
+  const body={operation:'write',name:'higgsfield',revision:0,value};
+  assert.equal((await handleRequest(request('/runner/vault',body,''),config,verify())).status,401);
+  assert.equal((await handleRequest(request('/runner/vault',body),config,verify())).status,200);
+  assert.ok(!config.DB.rows.get('higgsfield').payload.includes('fixture-refresh'));
+  const result=await handleRequest(request('/runner/vault',{operation:'read',name:'higgsfield'}),config,verify());
+  assert.deepEqual((await result.json()).record.value,value);
+  await assert.rejects(readSecrets(config,['HIGGSFIELD_TOKEN']));
+ });

@@ -5,6 +5,7 @@ import {startStudioWorker} from '../studio-worker.mjs';
 test('dedicated service uses central secrets and stays alive without developer OAuth',async()=>{
  let options,ticks=0;const worker={tick:async()=>{ticks++;},stop:async()=>{}};
  const result=await startStudioService({env:{GEMINI_API_KEY:'stale',CODEX_HOME:'/private-user',PATH:'/bin'},call:async path=>{
+  if(path==='/runner/vault')return {record:null};
   assert.equal(path,'/runner/secrets');return {values:{SHOPSHORTS_CLOUD_URL:'https://studio.test/',SHOPSHORTS_TOKEN:'fixture'}};
  },start:value=>{options=value;return worker;}});
  assert.equal(result,worker);assert.equal(ticks,1);assert.equal(options.keepAlive,true);
@@ -12,6 +13,11 @@ test('dedicated service uses central secrets and stays alive without developer O
 });
 test('missing service credentials do not start a worker',async()=>{
  let started=false;await assert.rejects(startStudioService({call:async()=>({values:{}}),start:()=>{started=true;}}));assert.equal(started,false);
+});
+test('central Higgsfield connection selects subscription media and overrides inherited provider settings',async()=>{
+ let options;const worker={tick:async()=>{},stop:async()=>{}};
+ await startStudioService({env:{HIGGSFIELD_API_URL:'https://untrusted.test',SHOPSHORTS_MEDIA_PROVIDER:'google'},call:async path=>path==='/runner/secrets'?{values:{SHOPSHORTS_CLOUD_URL:'https://studio.test',SHOPSHORTS_TOKEN:'fixture',GEMINI_API_KEY:'legacy'}}:{record:{revision:1,value:{workspaceId:'fixture',credentials:{access_token:'fixture'}}}},start:value=>{options=value;return worker;}});
+ assert.equal(options.env.SHOPSHORTS_MEDIA_PROVIDER,'higgsfield');assert.equal(options.env.HIGGSFIELD_API_URL,undefined);assert.equal(typeof options.execute,'function');
 });
 test('worker does not claim account scenarios and gracefully drains current media job',async()=>{
  let release,started;const began=new Promise(r=>{started=r;}),gate=new Promise(r=>{release=r;});const calls=[];
