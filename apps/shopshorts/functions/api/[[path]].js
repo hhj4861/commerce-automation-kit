@@ -215,6 +215,7 @@ export async function onRequest(context) {
       if (!workerAuthorized(request, env)) return json({ error: '워커 인증 필요' }, 403);
       const input = await request.json();
       const caps = Object.fromEntries(['scenario','image','video','voice','shortsUpload','longUpload'].map(k => [k, input[k] === true]));
+      if (['google', 'higgsfield'].includes(input.mediaProvider)) caps.mediaProvider = input.mediaProvider;
       caps.workerAt = new Date().toISOString();
       await env.DB.prepare("INSERT INTO meta (key,value) VALUES ('studio_worker',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value").bind(JSON.stringify(caps)).run();
       return json({ ok: true });
