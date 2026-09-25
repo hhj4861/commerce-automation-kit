@@ -23,10 +23,14 @@ async function cli(workspace, args, env) {
   const result = await command('npm', ['run', '--silent', 'cli', '-w', workspace, '--', ...args], env);
   try { return JSON.parse(result); } catch { throw new Error(`${workspace}: 결과를 읽을 수 없습니다.`); }
 }
-async function google(path, body, env, fetcher) {
-  if (!env.GEMINI_API_KEY) throw new Error('제작 워커에 GEMINI_API_KEY를 설정하세요.');
+export async function googleMediaRequest(path, body, env, fetcher) {
+  if (!env.GEMINI_API_KEY) throw new Error('미디어 생성 인증이 설정되지 않았습니다. 관리자에게 Google 이미지·영상 API 키 설정을 요청하세요.');
   const response = await fetcher(`${GOOGLE}/${path}`, { method: body ? 'POST' : 'GET', headers: { 'x-goog-api-key': env.GEMINI_API_KEY, 'content-type': 'application/json' }, ...(body ? { body: JSON.stringify(body) } : {}), signal: AbortSignal.timeout(180000) });
-  if (!response.ok) throw new Error(`Google 생성 API 실패(${response.status}). 키·모델 사용 권한·잔액을 확인하세요.`);
+  if (!response.ok) {
+    if ([401,403].includes(response.status)) throw new Error(`미디어 생성 인증에 실패했습니다(${response.status}). 관리자에게 Google 이미지·영상 API 키와 사용 권한 확인을 요청하세요. AI 대본 계정을 다시 연결할 필요는 없습니다.`);
+    if (response.status===429) throw new Error('이미지·영상 생성 한도에 도달했습니다. 서비스 사용 한도를 확인한 뒤 다시 시도하세요.');
+    throw new Error(`Google 생성 API 실패(${response.status}). 모델 사용 권한과 서비스 상태를 확인하세요.`);
+  }
   return response.json();
 }
 async function lintProject(job, work, env, publication = false) {
@@ -119,18 +123,18 @@ export async function executeStudioTask(job, env, io, checkpoint, { fetcher = fe
       if (assets[scene.id]) continue;
       let data, type;
       if (scene.kind === 'image') {
-        const result = await google(`models/${env.SHOPSHORTS_IMAGE_MODEL || 'gemini-2.5-flash-image'}:generateContent`, { contents: [{ parts: [{ text: `${scene.prompt}\nOriginal visual, no captions or logos. ${job.brief.aspect} composition.` }] }], generationConfig: { responseModalities: ['TEXT', 'IMAGE'], imageConfig: { aspectRatio: job.brief.aspect } } }, env, fetcher);
+        const result = await googleMediaRequest(`models/${env.SHOPSHORTS_IMAGE_MODEL || 'gemini-2.5-flash-image'}:generateContent`, { contents: [{ parts: [{ text: `${scene.prompt}\nOriginal visual, no captions or logos. ${job.brief.aspect} composition.` }] }], generationConfig: { responseModalities: ['TEXT', 'IMAGE'], imageConfig: { aspectRatio: job.brief.aspect } } }, env, fetcher);
         const image = result.candidates?.[0]?.content?.parts?.find(p => p.inlineData?.mimeType?.startsWith('image/'))?.inlineData;
         if (!image) throw new Error(`${scene.id}: 이미지가 반환되지 않았습니다. 장면 설명을 수정하세요.`);
         type = image.mimeType; data = Buffer.from(image.data, 'base64');
       } else {
         // Persist the paid operation ID before polling, so a retry does not pay for the same clip again.
         const operationFile = join(work, `${scene.id}-${Buffer.from(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(JSON.stringify([scene.prompt, job.brief.aspect, env.SHOPSHORTS_VIDEO_MODEL])))).toString('hex').slice(0, 20)}.operation.json`);
-        let operation = existsSync(operationFile) ? JSON.parse(await readFile(operationFile, 'utf8')) : await google(`models/${env.SHOPSHORTS_VIDEO_MODEL || 'veo-3.1-generate-preview'}:predictLongRunning`, { instances: [{ prompt: `${scene.prompt}. No dialogue, no text overlays.` }], parameters: { aspectRatio: job.brief.aspect, durationSeconds: 8, resolution: '1080p' } }, env, fetcher);
+        let operation = existsSync(operationFile) ? JSON.parse(await readFile(operationFile, 'utf8')) : await googleMediaRequest(`models/${env.SHOPSHORTS_VIDEO_MODEL || 'veo-3.1-generate-preview'}:predictLongRunning`, { instances: [{ prompt: `${scene.prompt}. No dialogue, no text overlays.` }], parameters: { aspectRatio: job.brief.aspect, durationSeconds: 8, resolution: '1080p' } }, env, fetcher);
         if (!/^models\/[a-zA-Z0-9._-]+\/operations\/[a-zA-Z0-9_-]+$/.test(operation.name || '') && !/^operations\/[a-zA-Z0-9_-]+$/.test(operation.name || '')) throw new Error('영상 생성 요청 ID를 확인할 수 없습니다.');
         await writeFile(operationFile, JSON.stringify(operation));
         const deadline = Date.now() + 20 * 60000;
-        while (!operation.done && Date.now() < deadline) { await new Promise(r => setTimeout(r, 10000)); operation = await google(operation.name, null, env, fetcher); }
+        while (!operation.done && Date.now() < deadline) { await new Promise(r => setTimeout(r, 10000)); operation = await googleMediaRequest(operation.name, null, env, fetcher); }
         if (!operation.done) throw new Error('영상 생성이 아직 진행 중입니다. 잠시 후 다시 요청하면 기존 요청을 확인합니다.');
         if (operation.error) throw new Error(`영상 생성 실패: ${operation.error.code || 'provider'}. 장면 설명을 변경해 다시 시도하세요.`);
         const uri = operation.response?.generateVideoResponse?.generatedSamples?.[0]?.video?.uri;
