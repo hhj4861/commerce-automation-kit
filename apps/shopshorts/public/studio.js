@@ -1,4 +1,5 @@
 import {executionStatus,renderExecutionStatus,resumeStep} from './studio-status.js';
+import {mediaProgress,mediaSceneStatus,renderMediaProgress,renderMediaPlaceholder} from './studio-media.js';
 import {createEditor} from './editor.js';
 import {connectLlm,recommendWithAccount,waitForRecommendation} from './llm-connection.js';
 import {createNotificationInbox} from './notifications.js';
@@ -30,13 +31,14 @@ async function run(fn){
  try{await fn();}catch(e){failed=true;toast(e.message);}
  finally{state.pending=false;if(failed)controls.forEach(({node,disabled})=>{if(node.isConnected)node.disabled=disabled;});else if(state.project)render();else if(!$('#workspace').hidden)renderBrief();}
 }
-async function action(name,body={}){const r=await post(`/${state.project.id}/${name}`,{revision:state.project.revision,...body});state.project=r.project;state.dirty=false;return r.project;}
+async function action(name,body={}){const r=await post(`/${state.project.id}/${name}`,{revision:state.project.revision,...body});state.project=r.project;state.dirty=false;state.mediaRequestError='';return r.project;}
 function progress(){
  const p=state.project;const highest=!p?1:!p.scenes.length?2:!p.approved||p.scenes.some(s=>!p.assets[s.id])?3:!p.render?4:5;
  $('#steps').innerHTML=names.map((name,i)=>`<button class="step ${state.step===i+1?'active':i+1<highest?'done':''}" data-step="${i+1}" ${i+1>highest?'disabled':''} ${state.step===i+1?'aria-current="step"':''}><span>${i+1<highest?'✓':i+1}</span>${name}</button>`).join('');
  $('#steps').querySelectorAll('button').forEach(b=>b.onclick=()=>run(async()=>{await saveCurrent();state.step=Number(b.dataset.step);render();}));
 }
 function note(){
+ if(state.step===3 && state.project && (!state.project.task || state.project.task.action==='media')){$('#notice').innerHTML='';updateMediaStatus();return;}
  $('#notice').innerHTML=renderExecutionStatus(executionStatus(state));
  const button=$('[data-execution-action]');
  if(button)button.onclick=()=>run(async()=>{
@@ -61,7 +63,7 @@ function heading(){
  $('#intro').textContent=p?`${p.brief.category} · ${p.brief.format==='short'?'숏폼 9:16':'롱폼 16:9'} · ${p.scenes.length?p.scenes.length+'장면 / '+total(p)+'초':p.brief.duration+'초 목표'}`:'주제와 영상 형식을 정하면 AI가 시나리오를 작성합니다.';
  $('#newProject').hidden=false;
 }
-function start(){recommendationController?.abort('detached');editor?.destroy();editor=null;state.project=null;state.step=1;state.dirty=false;$('#modes').hidden=true;$('#workspace').hidden=false;$('#projects').hidden=true;history.replaceState(null,'','/studio?new=1');heading();progress();renderBrief();}
+function start(){recommendationController?.abort('detached');editor?.destroy();editor=null;state.project=null;state.step=1;state.dirty=false;state.mediaRequestError='';state.requestingMedia=false;$('#modes').hidden=true;$('#workspace').hidden=false;$('#projects').hidden=true;history.replaceState(null,'','/studio?new=1');heading();progress();renderBrief();}
 function renderBrief(){
  recommendationCleanup?.(); recommendationCleanup=null;
  const p=state.project, brief=p?.brief;
@@ -121,7 +123,7 @@ function render(){
  if(state.step!==1){recommendationCleanup?.();recommendationCleanup=null;}
  editor?.destroy();editor=null;heading();progress();note();
  if(state.step===1)renderBrief();if(state.step===2)renderScenario();if(state.step===3)renderMedia();if(state.step===4)renderEditor();if(state.step===5)renderPublish();
- if(taskBusy() || state.project?.upload)document.querySelectorAll('#stage button,#stage input,#stage textarea,#stage select').forEach(b=>b.disabled=true);
+ if(state.pending || taskBusy() || state.project?.upload)document.querySelectorAll('#stage button,#stage input,#stage textarea,#stage select').forEach(b=>b.disabled=true);
 
 }
 function renderScenario(){
@@ -139,16 +141,33 @@ async function saveCurrent(){
  if(state.step===2){const scenes=[...document.querySelectorAll('[data-scene]')].map(row=>({...p.scenes.find(s=>s.id===row.dataset.scene),narration:row.querySelector('[data-narration]').value,prompt:row.querySelector('[data-prompt]').value,duration:Number(row.querySelector('[data-duration]').value)}));await action('scenes',{title:$('#scriptTitle').value,scenes});}
  if(state.step===4)await saveEdit();
 }
-function mediaHTML(p,s,controls=false){if(!p.assets[s.id])return '<div class="placeholder">아직 생성한 미디어가 없습니다.</div>';return s.kind==='image'?`<img src="${assetUrl(p.id,s.id)}" alt="${esc(s.prompt)}">`:`<video src="${assetUrl(p.id,s.id)}" ${controls?'controls':'muted'} playsinline preload="metadata"></video>`;}
+function mediaHTML(p,s,controls=false){if(!p.assets[s.id])return `<div data-media-placeholder="${s.id}">${renderMediaPlaceholder(mediaProgress(state),s)}</div>`;return s.kind==='image'?`<img src="${assetUrl(p.id,s.id)}" alt="${esc(s.prompt)}">`:`<video src="${assetUrl(p.id,s.id)}" ${controls?'controls':'muted'} playsinline preload="metadata"></video>`;}
 function renderMedia(){
- const p=state.project,ready=p.scenes.every(s=>p.assets[s.id]);
- $('#stage').innerHTML=`<section class="panel"><div class="panel-head"><div><h2>장면에 어울리는 미디어 선택</h2><p>이미지와 영상을 섞어 만들 수 있습니다. 직접 제작한 파일도 사용할 수 있어요.</p></div><span class="badge">3 / 5 이미지 · 영상</span></div><div class="media-grid">${p.scenes.map((s,i)=>`<article class="media-card"><div class="media-view">${mediaHTML(p,s,true)}</div><div class="media-body"><div class="row"><strong>장면 ${i+1}</strong><select data-kind="${s.id}" aria-label="장면 ${i+1} 미디어 종류"><option value="image" ${s.kind==='image'?'selected':''}>이미지</option><option value="video" ${s.kind==='video'?'selected':''}>영상</option></select></div><p>${esc(s.narration)}</p><small class="muted">${s.duration}초 · ${p.assets[s.id]?'준비 완료':'생성 대기'}</small><br><label class="file-label">내 ${s.kind==='image'?'이미지':'영상'} 파일 사용<input type="file" data-file="${s.id}" accept="${s.kind==='image'?'image/png,image/jpeg,image/webp':'video/mp4'}"></label></div></article>`).join('')}</div><label class="check"><input id="approve" type="checkbox" ${p.approved?'checked':''}>대본의 사실·표현과 장면 설명을 검수했습니다. AI 생성 요청 시 사용료가 발생함을 확인합니다.</label><p class="hint">영상 생성은 장면별 8초 클립을 사용합니다. 편집 길이가 더 길면 해당 클립을 반복합니다. 사용권이 있는 파일만 등록하세요.</p><div class="actions"><button class="secondary" id="back">시나리오 수정</button><div><button class="secondary" id="approveOnly">검수 승인</button><button class="primary" id="generateMedia">${ready?'미디어 준비 완료':'미생성 장면 만들기'}</button><button class="primary" id="next" ${!ready||!p.approved?'disabled':''}>편집하기</button></div></div></section>`;
+ const p=state.project,ready=p.scenes.every(s=>p.assets[s.id]),mediaState=mediaProgress(state);
+ $('#stage').innerHTML=`<section class="panel"><div class="panel-head"><div><h2>장면에 어울리는 미디어 선택</h2><p>이미지와 영상을 섞어 만들 수 있습니다. 직접 제작한 파일도 사용할 수 있어요.</p></div><span class="badge">3 / 5 이미지 · 영상</span></div><div id="mediaStatus">${renderMediaProgress(mediaState)}</div><div class="media-grid">${p.scenes.map((s,i)=>`<article class="media-card"><div class="media-view">${mediaHTML(p,s,true)}</div><div class="media-body"><div class="row"><strong>장면 ${i+1}</strong><select data-kind="${s.id}" aria-label="장면 ${i+1} 미디어 종류"><option value="image" ${s.kind==='image'?'selected':''}>이미지</option><option value="video" ${s.kind==='video'?'selected':''}>영상</option></select></div><p>${esc(s.narration)}</p><small class="muted">${s.duration}초 · <span data-media-scene-status="${s.id}">${mediaSceneStatus(mediaState,s,p.assets[s.id]).label}</span></small><br><label class="file-label">내 ${s.kind==='image'?'이미지':'영상'} 파일 사용<input type="file" data-file="${s.id}" accept="${s.kind==='image'?'image/png,image/jpeg,image/webp':'video/mp4'}"></label></div></article>`).join('')}</div><label class="check"><input id="approve" type="checkbox" ${p.approved?'checked':''}>대본의 사실·표현과 장면 설명을 검수했습니다. AI 생성 요청 시 사용료가 발생함을 확인합니다.</label><p class="hint">영상 생성은 장면별 8초 클립을 사용합니다. 편집 길이가 더 길면 해당 클립을 반복합니다. 사용권이 있는 파일만 등록하세요.</p><div class="actions"><button class="secondary" id="back">시나리오 수정</button><div><button class="secondary" id="approveOnly">검수 승인</button><button class="primary" id="generateMedia">${state.requestingMedia?'요청 접수 중…':mediaState.active?'장면 생성 중…':ready?'미디어 준비 완료':['failed','incomplete'].includes(mediaState.kind)?'미완료 장면 다시 생성':'미생성 장면 만들기'}</button><button class="primary" id="next" ${!ready||!p.approved?'disabled':''}>편집하기</button></div></div></section>`;
  $('#generateMedia').disabled=ready;
  $('#approveOnly').onclick=()=>run(async()=>{if(!$('#approve').checked)throw Error('대본 검수 확인을 체크하세요.');await action('approve',{approved:true});toast('검수 승인했습니다.');});
- $('#generateMedia').onclick=()=>run(async()=>{if(!$('#approve').checked)throw Error('대본 검수 확인을 체크하세요.');await action('media',{approved:true});});
+ $('#generateMedia').onclick=()=>run(async()=>{
+  if(!$('#approve').checked){state.mediaRequestError='대본 검수 확인을 체크한 뒤 생성해 주세요.';return;}
+  state.mediaRequestError='';state.requestingMedia=true;render();$('#mediaStatus')?.scrollIntoView({block:'nearest'});
+  try{await action('media',{approved:true});}
+  catch(e){state.mediaRequestError=e.message;}
+  finally{state.requestingMedia=false;}
+ });
  $('#back').onclick=()=>{state.step=2;render();};$('#next').onclick=()=>{state.step=4;render();};
  document.querySelectorAll('[data-kind]').forEach(select=>select.onchange=()=>run(async()=>{if(p.assets[select.dataset.kind]&&!confirm('미디어 종류를 바꾸면 해당 장면을 다시 생성해야 합니다. 변경할까요?'))return;await action('scenes',{title:p.title,scenes:p.scenes.map(s=>s.id===select.dataset.kind?{...s,kind:select.value}:s)});}));
  document.querySelectorAll('[data-file]').forEach(input=>input.onchange=()=>run(async()=>{const s=p.scenes.find(s=>s.id===input.dataset.file);if(!p.approved)throw Error('먼저 검수 승인을 눌러주세요.');await uploadFile(input.files[0],s.kind,s.id);}));
+}
+function updateMediaStatus(){
+ const host=$('#mediaStatus');if(!host || !state.project)return;
+ const status=mediaProgress(state),html=renderMediaProgress(status);
+ if(host.innerHTML!==html)host.innerHTML=html;
+ for(const scene of state.project.scenes){
+  const placeholder=document.querySelector(`[data-media-placeholder="${scene.id}"]`);
+  if(placeholder){const content=renderMediaPlaceholder(status,scene);if(placeholder.innerHTML!==content)placeholder.innerHTML=content;}
+  const label=document.querySelector(`[data-media-scene-status="${scene.id}"]`);
+  if(label)label.textContent=mediaSceneStatus(status,scene,state.project.assets[scene.id]).label;
+ }
 }
 async function uploadFile(file,kind,scene){
  if(!file)return;if(file.size>50*1024*1024)throw Error('파일은 50MB 이하로 선택하세요.');
@@ -173,7 +192,7 @@ function renderPublish(){
 }
 async function openProject(id){
  if(state.dirty)await saveCurrent();
- state.project=(await api('/'+id)).project;state.selected=null;state.dirty=false;
+ state.project=(await api('/'+id)).project;state.selected=null;state.dirty=false;state.mediaRequestError='';
  const p=state.project;state.step=resumeStep(p);
  $('#modes').hidden=true;$('#workspace').hidden=false;$('#projects').hidden=true;history.replaceState(null,'',`/studio?id=${p.id}`);render();
 }
