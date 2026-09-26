@@ -12,6 +12,27 @@
 Dify는 실행/대화 기록을 저장하므로 기존 앱의 비저장 정책을 그대로 충족한다고 가정할 수 없다.
 실사용자 연동 전에 보존·삭제 정책과 서버 인증 어댑터가 필요하다.
 
+```mermaid
+flowchart LR
+  H[hanmadi 서버] -->|Dify hanmadi 앱 키| DH[Dify 회화 앱]
+  R[replay 서버] -->|Dify replay 앱 키| DR[Dify 영상 기획 앱]
+  DH -->|hanmadi 전용 LiteLLM 키| G[공용 LiteLLM]
+  DR -->|replay 전용 LiteLLM 키| G
+  G --> M[외부 API 또는 자체 모델 서버]
+  H -.기존 음성 경로.-> G
+  KH[검수된 교재: 후속] -.-> DH
+  KR[승인된 제작 자료: 후속] -.-> DR
+```
+
+앱 DSL과 배포 설정을 준비한 구조다. 기존 서비스의 운영 트래픽은 아직 Dify로 전환하지 않았다.
+
+검증 완료: [Dify 통합 CI](https://github.com/hhj4861/commerce-automation-kit/actions/runs/36248731036)에서
+실제 Dify/LiteLLM/PostgreSQL 컨테이너, 최초 관리자 설정, 공식 서명 플러그인 설치,
+앱별 모델 자격 등록, 두 DSL 가져오기/게시, 공개 앱 API를 통한 모의 모델 응답까지 통과했다.
+hanmadi 대화 이어가기와 다른 사용자 conversation ID 거부도 통과했다.
+설정 단위 검사 3개와 기존 게이트웨이 검사 7개 통과. CI 컨테이너 정리까지 완료했다.
+이는 연결 검증이며 실제 모델 품질·음성·클라우드 운영·백업 복구를 검증한 결과는 아니다.
+
 ## 결론
 
 하나의 **논리적 LiteLLM 게이트웨이**를 hanmadi·replay·추가 플랫폼이 함께 사용할 수 있다. 서비스마다 모델·키·예산을 분리한다. 서비스별로 다른 기반 모델이나 파인튜닝 모델을 선택해도 같은 API 주소를 유지할 수 있다. 물리적으로 영원히 한 프로세스/한 머신이어야 한다는 뜻은 아니다.
@@ -70,7 +91,7 @@ replay에서 대본·샷 계획 LLM을 개선하는 것과 실제 영상을 생�
 근거:
 
 - [LiteLLM ↔ Langfuse 공식 연동](https://langfuse.com/integrations/gateways/litellm), [Langfuse 데이터셋](https://langfuse.com/docs/evaluation/experiments/datasets), [자체 호스팅](https://langfuse.com/self-hosting).
-- [Dify 저장소](https://github.com/langgenius/dify), [공식 OpenAI 호환 공급자 플러그인](https://marketplace.dify.ai/plugin/langgenius/openai_api_compatible). OpenAI 호환 API를 이용한 LiteLLM 연결은 이 두 인터페이스에 근거한 설계이며 이 프로젝트에서 E2E 검증하지 않았다.
+- [Dify 저장소](https://github.com/langgenius/dify), [공식 OpenAI 호환 공급자 플러그인](https://marketplace.dify.ai/plugin/langgenius/openai_api_compatible). 이후 Dify를 채택하여 LiteLLM 연결을 모의 공급자 기반으로 E2E 검증했다(문서 상단 증거).
 - [Letta 문서](https://docs.letta.com/), [기억 구조](https://docs.letta.com/v1-sdk/concepts/stateful-agents).
 - [GEPA 알고리즘·피드백 계약](https://dspy.ai/3.1.1/api/optimizers/GEPA/overview/), [DSPy 최적화](https://dspy.ai/3.2.0/learn/optimization/optimizers/).
 
@@ -106,10 +127,10 @@ hanmadi 평가는 문법/의미 정확성, 한국어 설명 정확성, 학습자
 
 ## 이번에 준비한 것과 남은 것
 
-구현: [독립 서버 디렉터리](../services/ai-gateway/README.md)에 LiteLLM/Postgres Compose, 선택적 공개 HTTPS, 고정 이미지 digest, 비밀 초기화, 모델 설정 렌더, 팀/키 발급, 권한/재시작 CI 검사. 기존 hanmadi 내부의 로컬 PoC와 독립적이며 서비스 서버용 가상 키를 사용한다.
+구현: [독립 서버 디렉터리](../services/ai-gateway/README.md)에 LiteLLM/Postgres Compose, 선택적 공개 HTTPS, 고정 이미지 digest, 비밀 초기화, 모델 설정 렌더, 팀/키 발급, 권한/재시작 CI 검사. [Dify 디렉터리](../services/dify/README.md)에 공식 포크의 버전 고정, 배포 overlay, 두 앱 DSL, 실제 컨테이너 E2E 검사를 추가했다. 기존 hanmadi 내부의 로컬 PoC와 독립적이며 서비스 서버용 가상 키를 사용한다.
 
 검증: 로컬 단위 검사 7개 통과. [GitHub Actions 실행](https://github.com/hhj4861/commerce-automation-kit/actions/runs/36246648997)에서 실제 LiteLLM/PostgreSQL 컨테이너 기동, 서비스별 모델 조회/호출 허용, 다른 서비스 모델/관리 API 거부, 잘못된 키 거부, 키 중복 발급 방지, 재시작 후 키 유지, Caddy 설정 검증을 통과했다. 모델 공급자는 테스트 전용 모의 서버다. 실제 공급자 품질·청구 예산 초과 차단·공개 인증서 발급·백업 복구를 검증한 것은 아니다.
 
-미구현: 클라우드 배포, 실제 모델 공급자 선택, replay 호출 어댑터, RAG, 개인 기억, 피드백 UI/수집, Langfuse 배포/연동, DSPy 학습 작업, 파인튜닝. 이 문서의 개선 루프는 설계다.
+미구현: 클라우드 배포, 실제 모델 공급자 선택, 기존 hanmadi/replay의 Dify 호출 어댑터, RAG, 개인 기억, 서비스 피드백 UI/수집, Langfuse 배포/연동, DSPy 학습 작업, 파인튜닝. Dify 자체의 실행 기록/관리 UI와 기존 서비스에 연결된 피드백 수집은 구분한다. 이 문서의 개선 루프는 설계다.
 
-다음 순서: 독립 서버 CI → 호스팅/도메인/모델 선택 → 공개 서버 배포·앱 연결 → 서비스별 평가와 지식 저장 → 검증된 개선 루프. 새 학습 서비스를 한 번에 모두 설치하지 않는다. LiteLLM만 중계하면 GPU는 필요하지 않고, 자체 모델 서빙/학습을 택하면 그 연산 자원을 별도로 계산한다.
+다음 순서: 호스팅/도메인/모델 선택 → 서버 배포·보존 정책 확정·앱 연결 → 서비스별 평가와 지식 저장 → 검증된 개선 루프. 새 학습 서비스를 한 번에 모두 설치하지 않는다. LiteLLM만 중계하면 GPU는 필요하지 않고, 자체 모델 서빙/학습을 택하면 그 연산 자원을 별도로 계산한다.

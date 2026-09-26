@@ -86,6 +86,10 @@ Dify는 대화/워크플로 실행 기록을 DB에 저장한다. 현재 hanmadi�
 
 ## 검증
 
+2026-09-26 [실제 컨테이너 CI 통과](https://github.com/hhj4861/commerce-automation-kit/actions/runs/36248731036).
+두 앱의 공개 API → Dify → LiteLLM → 모의 공급자 응답, 대화 이어가기와 사용자 간 conversation ID 거부를 확인했다.
+검증 서버는 정리됐으며 상시 접속 가능한 운영 서버를 만든 것은 아니다.
+
 ```sh
 python3 -m pip install PyYAML==6.0.3
 python3 -m unittest discover -s services/dify -v
