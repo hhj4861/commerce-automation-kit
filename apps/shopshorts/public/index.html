@@ -6,6 +6,8 @@
 <title>Shopshorts — Content Studio</title>
 <link rel="stylesheet" href="/app-shell.css">
 <link rel="stylesheet" href="/notifications.css">
+<link rel="stylesheet" href="/studio-projects.css">
+<script type="module" src="/studio-projects.js"></script>
 <style>
   .view[hidden], .account-actions[hidden], [data-signin][hidden] { display: none; }
   .account-actions { display: flex; align-items: center; gap: 10px; }
@@ -531,6 +533,8 @@
       </div>
       <a class="new-btn" href="/studio" data-icon-before="plus"><span>영상 제작실 열기</span></a>
     </section>
+
+    <section class="studio-resume" data-studio-projects="compact" aria-label="저장한 영상"><div class="resume-loading" role="status"><strong>만들던 영상 이어하기</strong><p>저장한 영상을 불러오고 있어요.</p></div></section>
 
     <section class="creation-entry" aria-label="영상 만들기">
       <div><h2>새 영상을 시작하세요</h2><p>트렌드를 고르거나, 나만의 주제로 숏폼과 롱폼을 만들어보세요.</p></div>

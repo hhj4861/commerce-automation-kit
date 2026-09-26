@@ -53,7 +53,7 @@ for (const focus of ['topic', 'direction']) test(`${focus} recommendations estab
     assert.match(prompt, /설명할 이유와 구체적 예시/);
     assert.match(prompt, /최근 30일/); assert.match(prompt, /입력한 주제를 유지/);
     assert.match(prompt, /목표 24초는 유지/);
-    return { searched: true, value: { suggestions: Array.from({ length: 3 }, () => ({ topic: brief.topic, direction: '상황, 이해할 관점, 실제로 건넬 말 순서로 설명', reason: '검색 근거' })), sources: [{ title: '테스트 출처', url: 'https://example.org/source' }] } };
+    return { searched: true, value: { suggestions: Array.from({ length: 3 }, (_, i) => ({ topic: focus === 'direction' ? brief.topic : `${brief.topic} 관점 ${i}`, direction: `상황, 이해할 관점 ${i}, 실제로 건넬 말 순서로 설명`, reason: '검색 근거' })), sources: [{ title: '테스트 출처', url: 'https://example.org/source' }] } };
   } });
   assert.equal(result.suggestions.length, 3); assert.equal(result.focus, focus);
 });
@@ -62,4 +62,10 @@ test('editorial changes keep malformed or badly timed scenarios from being accep
   for (const scenes of [[], value.scenes.map(scene => ({ ...scene, duration: 1 })), value.scenes.map(scene => ({ ...scene, narration: '' }))]) {
     await assert.rejects(scenarioBrief(brief, {}, { generate: async () => ({ value: { ...value, scenes } }) }));
   }
+});
+
+test('generic psychology ideation does not anchor on parenting, while relevant family guidance stays intact', () => {
+ assert.doesNotMatch(editorialGuide({...brief,topic:'',direction:''}),/부모|아이/);
+ assert.doesNotMatch(editorialGuide({...brief,topic:'왜 선택이 어려울까',direction:''}),/부모|아이/);
+ assert.match(editorialGuide(brief),/아이에게 감정 돌봄을 맡기지/);
 });

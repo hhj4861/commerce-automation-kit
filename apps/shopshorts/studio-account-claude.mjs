@@ -197,13 +197,13 @@ export async function executeClaudeAccountJob(value, { signal, update, read, env
       return;
     }
     if (setupCredential(value.credential)) {
-      const result = await (value.job.kind === 'scenario' ? scenarioBrief : recommendBrief)(value.job.input, env, { generate: generator(runtime, { oauthToken: value.credential.accessToken }), signal, provider: 'claude' });
+      const result = await (value.job.kind === 'scenario' ? scenarioBrief : recommendBrief)(value.job.input, env, { history: value.recommendations, generate: generator(runtime, { oauthToken: value.credential.accessToken }), signal, provider: 'claude' });
       await update({ job: { state: 'done', result } });
       return;
     }
     await identify(runtime, signal);
     try {
-      const result = await (value.job.kind === 'scenario' ? scenarioBrief : recommendBrief)(value.job.input, env, { generate: generator(runtime), signal, provider: 'claude' });
+      const result = await (value.job.kind === 'scenario' ? scenarioBrief : recommendBrief)(value.job.input, env, { history: value.recommendations, generate: generator(runtime), signal, provider: 'claude' });
       await persist({ credential: await capture(), job: { state: 'done', result } });
     } catch (e) { await persist({ credential: await capture() }); throw e; }
   } finally {
