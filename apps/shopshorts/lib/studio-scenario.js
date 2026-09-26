@@ -36,7 +36,7 @@ export async function scenarioBrief(input, env, { generate, signal, provider = '
 ${editorialGuide(brief)}
 ${narrationGuide(brief)}
 ${storyArcGuide(brief)}
-핵심 상황, 변화, 마무리가 있는 독창적인 이야기로 구성하세요. 화면 비율은 ${brief.aspect}입니다.
+${brief.category === '심리학' ? '질문, 사례, 원리 설명, 관점 전환, 실천으로 이어지는 독창적인 해설을 구성하세요. 사용자에게 명시적인 상황극 요청이 있으면 사례의 대사와 해설을 자연스럽게 연결하세요.' : '핵심 상황, 변화, 마무리가 있는 독창적인 이야기로 구성하세요.'} 화면 비율은 ${brief.aspect}입니다.
 시나리오 작성만 하세요. 파일·인증정보를 읽거나 수정하지 말고 셸·외부 앱·MCP를 사용하지 마세요. 사실 확인이 필요하면 내장 웹 검색만 사용하세요. 타인의 영상·창작물을 복제하지 마세요. 가짜 경험담·과장된 효능·진단·절대 보장을 만들지 마세요. 심리학 내용은 일상의 예시로 설명하고 치료나 진단으로 단정하지 마세요. 상품광고는 제공된 사실만 쓰세요.
 마크다운 없이 JSON만 반환하세요. title은 한국어 1~100자, scenes는 1~100개. 각 장면 id는 scene-1부터 고유하게, narration은 한국어 1~1200자, prompt는 제작할 독창적인 화면의 구체적 설명 1~2000자, duration은 1~30초 숫자, kind는 image 또는 video입니다.
 scenes와 함께 storyArc를 반환하세요. storyArc의 hook, payoff, ending은 각각 {"sceneId":"해당 장면 id","line":"그 장면 narration에 실제 들어 있는 연속된 대사 원문"}입니다. line에는 요약이나 제작 지시를 쓰지 마세요. hook은 첫 장면, ending은 마지막 장면을 참조하며 세 대사는 대본에서 hook → payoff → ending 순서로 겹치지 않게 등장해야 합니다. 같은 장면 안에서 이어져도 됩니다. storyArc는 구성 검증용이며 영상에 읽지 않습니다.
