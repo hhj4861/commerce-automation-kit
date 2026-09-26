@@ -1,7 +1,7 @@
 name: Dify shared AI platform
 on:
   push:
-    branches: [feat/shared-ai-gateway]
+    branches: [main, feat/shared-ai-gateway]
     paths: ["services/dify/**", "services/ai-gateway/**", ".github/workflows/dify.yml"]
   pull_request:
     paths: ["services/dify/**", "services/ai-gateway/**", ".github/workflows/dify.yml"]

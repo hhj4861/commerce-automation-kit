@@ -1,7 +1,7 @@
 name: Shared AI gateway
 on:
   push:
-    branches: [feat/shared-ai-gateway]
+    branches: [main, feat/shared-ai-gateway]
     paths: ["services/ai-gateway/**", ".github/workflows/ai-gateway.yml"]
   pull_request:
     paths: ["services/ai-gateway/**", ".github/workflows/ai-gateway.yml"]
