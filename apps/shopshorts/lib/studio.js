@@ -75,9 +75,14 @@ export function validateTimeline(input, job) {
     if(!Number.isInteger(c.startFrame)||!Number.isInteger(c.endFrame)||c.startFrame<0||c.endFrame<=c.startFrame||c.endFrame>clip.outFrame-clip.inFrame)fail('자막 시간은 연결된 클립 안에 있어야 합니다.');
     if(!FONTS.some(f=>f.id===c.font)||!Number.isInteger(c.size)||c.size<20||c.size>120||!/^#[0-9a-f]{6}$/i.test(c.color)||!['top','middle','bottom'].includes(c.position)||typeof c.background!=='boolean')fail('자막 폰트·크기·색상·위치를 확인하세요.');
     let extras;try{extras=captionExtras(c);}catch(e){fail(e.message);}
-    return {...extras,id:c.id,clipId:c.clipId,text:c.text,startFrame:c.startFrame,endFrame:c.endFrame,font:c.font,size:c.size,color:c.color,position:c.position,background:c.background};
+    return {...extras,...(c.source==='script'?{source:'script'}:{}),id:c.id,clipId:c.clipId,text:c.text,startFrame:c.startFrame,endFrame:c.endFrame,font:c.font,size:c.size,color:c.color,position:c.position,background:c.background};
   });
-  return {version:2,fps:FPS,clips,captions,voice:input.voice,music:input.music||null,musicVolume:input.musicVolume,...(musicClips!==undefined?{musicClips}:{})};
+  let hiddenAudioAssets;
+  if(input.hiddenAudioAssets!==undefined){
+    if(!Array.isArray(input.hiddenAudioAssets)||input.hiddenAudioAssets.length>1000||input.hiddenAudioAssets.some(id=>typeof id!=='string'||job.assets[id]?.kind!=='audio'||job.assets[id]?.purpose==='narration'))fail('제거할 음원 파일을 확인하세요.');
+    hiddenAudioAssets=[...new Set(input.hiddenAudioAssets)];
+  }
+  return {version:2,fps:FPS,clips,captions,voice:input.voice,music:input.music||null,musicVolume:input.musicVolume,...(musicClips!==undefined?{musicClips}:{}),...(hiddenAudioAssets!==undefined?{hiddenAudioAssets}:{})};
 }
 export function createProject(input) {
   return { id: crypto.randomUUID(), revision: 0, title: input.topic?.slice(0, 100), brief: validateBrief(input), scenes: [], assets: {}, edit: null, approved: false, render: null, upload: null, task: null, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
