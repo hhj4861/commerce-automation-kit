@@ -1,7 +1,14 @@
+import {captionExtras} from '../public/caption-style.js';
 import {validateMusic} from '../public/music-timeline.js';
 import { FPS, FONTS, frameCount, assertClipPositions } from '../public/editor-model.js';
 export const CATEGORIES = ['심리학', '건축학', '상품광고', '막장드라마', '역사', '과학', '직접 입력'];
 export const VOICES = [{ id: 'none', name: '내레이션 없음' }, { id: 'n2fbxG88jqAoaVPUy3IG', name: 'Yooni · 밝고 또렷한 한국어', previewUrl: 'https://storage.googleapis.com/eleven-public-prod/database/workspace/dc9d42698272443c82f44e26ea1c9263/voices/n2fbxG88jqAoaVPUy3IG/kVgVODaebcaz7AEHhgDo.mp3' }, { id: 'ZRJMGKt2Okf3o9C38eSq', name: 'Claire · 차분한 한국어', previewUrl: 'https://storage.googleapis.com/eleven-public-prod/database/workspace/87db1f27d31f4bdd85e5e0c1028eae76/voices/ZRJMGKt2Okf3o9C38eSq/V7F37Ap0MTHMEuvlf9be.mp3' }];
+// Korean professional voices verified in this workspace via the official /v2/voices API.
+VOICES.push(
+ {id:'Kndx0DUJ5HQE1HQgiMY8',name:'Jin · 선명한 대화',previewUrl:'https://storage.googleapis.com/eleven-public-prod/database/workspace/5ebca019390f44df9102d572ef84b583/voices/Kndx0DUJ5HQE1HQgiMY8/7f3c92c2-303f-48fd-b67d-a8f94b840d5b.mp3'},
+ {id:'BbsagRO6ohd8MKPS2Ob0',name:'진건 · 차분한 남성',previewUrl:'https://storage.googleapis.com/eleven-public-prod/database/user/DKto1gNuG4avSK2jIgvUZCcuJqG2/voices/BbsagRO6ohd8MKPS2Ob0/sHiGQcmygSSDVUTzuKjA.mp3'},
+ {id:'sf8Bpb1IU97NI9BHSMRf',name:'Rumi · 부드러운 대화',previewUrl:'https://storage.googleapis.com/eleven-public-prod/database/workspace/71cd013d832b49ffbeb355d480d5353a/voices/sf8Bpb1IU97NI9BHSMRf/5Emj4Ccmi1oZzFWx7g20.mp3'}
+);
 export const PLATFORMS = ['youtube', 'instagram', 'tiktok'];
 export const busy = job => ['queued', 'running'].includes(job.task?.state);
 export function fail(message, status = 400) { throw Object.assign(new Error(message), { status }); }
@@ -67,7 +74,8 @@ export function validateTimeline(input, job) {
     if(!text(c.text,500)||/[\x00-\x08\x0B-\x1F]/.test(c.text))fail('자막은 1~500자 텍스트로 입력하세요.');
     if(!Number.isInteger(c.startFrame)||!Number.isInteger(c.endFrame)||c.startFrame<0||c.endFrame<=c.startFrame||c.endFrame>clip.outFrame-clip.inFrame)fail('자막 시간은 연결된 클립 안에 있어야 합니다.');
     if(!FONTS.some(f=>f.id===c.font)||!Number.isInteger(c.size)||c.size<20||c.size>120||!/^#[0-9a-f]{6}$/i.test(c.color)||!['top','middle','bottom'].includes(c.position)||typeof c.background!=='boolean')fail('자막 폰트·크기·색상·위치를 확인하세요.');
-    return {id:c.id,clipId:c.clipId,text:c.text,startFrame:c.startFrame,endFrame:c.endFrame,font:c.font,size:c.size,color:c.color,position:c.position,background:c.background};
+    let extras;try{extras=captionExtras(c);}catch(e){fail(e.message);}
+    return {...extras,id:c.id,clipId:c.clipId,text:c.text,startFrame:c.startFrame,endFrame:c.endFrame,font:c.font,size:c.size,color:c.color,position:c.position,background:c.background};
   });
   return {version:2,fps:FPS,clips,captions,voice:input.voice,music:input.music||null,musicVolume:input.musicVolume,...(musicClips!==undefined?{musicClips}:{})};
 }
