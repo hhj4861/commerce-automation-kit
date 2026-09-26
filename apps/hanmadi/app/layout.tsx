@@ -25,11 +25,11 @@ const plexMono = IBM_Plex_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "Hanmadi — Korean, one phrase at a time",
+    default: "Hanmadi — 한국어 · 태국어 · 일본어",
     template: "%s | Hanmadi",
   },
   description:
-    "한마디씩, 확실하게. Lesson notes, vocabulary, and homework — everything from our Korean lessons in one link.",
+    "한마디씩, 확실하게. 한국어·태국어·일본어 학습과 AI 회화, 수업 노트와 복습을 한곳에서.",
   // 개인 수업 도구 + 학생 포털 — 검색엔진 노출 차단
   robots: { index: false, follow: false },
 };
