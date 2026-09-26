@@ -1,0 +1,60 @@
+name: Dify shared AI platform
+on:
+  push:
+    branches: [feat/shared-ai-gateway]
+    paths: ["services/dify/**", "services/ai-gateway/**", ".github/workflows/dify.yml"]
+  pull_request:
+    paths: ["services/dify/**", "services/ai-gateway/**", ".github/workflows/dify.yml"]
+permissions:
+  contents: read
+jobs:
+  integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install PyYAML==6.0.3
+      - name: Configuration tests
+        run: |
+          python -m unittest discover -s services/dify -v
+          python -m unittest discover -s services/ai-gateway -v
+      - name: Prepare pinned Dify source and private secrets
+        run: |
+          python services/dify/dify.py prepare
+          python services/dify/dify.py prepare
+          python services/dify/dify.py compose config --quiet
+          python services/dify/dify.py compose config --format json | python services/dify/tests/validate_compose.py
+      - name: Configure and start gateway with synthetic providers
+        working-directory: services/ai-gateway
+        run: |
+          python gateway.py init
+          cat >> .env <<'ENV'
+          HANMADI_CHAT_MODEL=openai/gpt-4o-mini
+          HANMADI_CHAT_API_KEY=ci-not-a-provider-key
+          HANMADI_CHAT_API_BASE=http://mock:8000/v1
+          REPLAY_CHAT_MODEL=openai/gpt-4o-mini
+          REPLAY_CHAT_API_KEY=ci-not-a-provider-key
+          REPLAY_CHAT_API_BASE=http://mock:8000/v1
+          ENV
+          python gateway.py render
+          docker compose -f compose.yaml -f compose.test.yaml up -d --wait --wait-timeout 300
+          python tests/integration.py
+      - name: Start Dify chat and workflow services
+        run: python services/dify/dify.py compose up -d nginx api_websocket worker worker_beat sandbox ssrf_proxy weaviate
+      - name: Import apps and call their public APIs through LiteLLM
+        env:
+          DIFY_DISPOSABLE_CI: '1'
+        run: python services/dify/tests/integration.py
+      - name: Container status on failure (no environment or request logs)
+        if: failure()
+        run: python services/dify/dify.py compose ps -a
+      - name: Cleanup Dify containers
+        if: always()
+        run: python services/dify/dify.py compose down -v
+      - name: Cleanup gateway containers
+        if: always()
+        working-directory: services/ai-gateway
+        run: docker compose -f compose.yaml -f compose.test.yaml down -v
