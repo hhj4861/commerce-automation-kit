@@ -6,7 +6,12 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "node --import tsx --test lib/conversation.test.ts scripts/litellm.test.mjs",
+    "test:conversation": "node scripts/conversation-smoke.mjs",
+    "ai:setup": "node scripts/litellm.mjs setup",
+    "ai:start": "node scripts/litellm.mjs start",
+    "ai:check": "node scripts/litellm.mjs check"
   },
   "dependencies": {
     "next": "16.2.10",
@@ -21,6 +26,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.2.10",
     "tailwindcss": "^4",
+    "tsx": "^4.23.15",
     "typescript": "^5"
   }
 }

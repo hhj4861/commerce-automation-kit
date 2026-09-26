@@ -82,6 +82,10 @@ export default async function StudentPortalPage(props: PageProps<"/s/[slug]">) {
     student.feedback.doingWell.length > 0 || student.feedback.focusOn.length > 0;
 
   return (
+    <>
+    <div className="mx-auto max-w-5xl px-5 pt-6">
+      <Link href={`/learn?s=${encodeURIComponent(student.slug)}`} className="text-base text-accent underline">언어 학습 · AI 회화 / Language practice</Link>
+    </div>
     <PuzzleProvider slug={student.slug} groups={puzzleGroups}>
       <div className="mx-auto max-w-3xl px-5 pt-8 pb-24 sm:pt-12">
         {/* 인사 — 짧게, 바로 아래 퍼즐 히어로로 이어진다 */}
@@ -292,6 +296,7 @@ export default async function StudentPortalPage(props: PageProps<"/s/[slug]">) {
         </div>
       </div>
     </PuzzleProvider>
+    </>
   );
 }
 

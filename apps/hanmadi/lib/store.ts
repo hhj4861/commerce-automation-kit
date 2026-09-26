@@ -493,6 +493,18 @@ export async function bumpTtsDailyCount(dateKey: string): Promise<number> {
   return driver().hincrby(TTS_KEY, `gen:${dateKey}`, 1);
 }
 
+/** Shared, atomic on Redis. Failed upstream attempts still consume a reservation. */
+export async function reserveConversationTurn(actor: string, kind: "chat" | "transcribe" | "speech" = "chat"): Promise<boolean> {
+  if (process.env.NODE_ENV === "production" && storeKind() !== "redis") {
+    throw new Error("Conversation requires shared Redis in production");
+  }
+  const day = new Date().toISOString().slice(0, 10);
+  const perPerson = await driver().hincrby("hanmadi:conversation-usage", `${day}:${kind}:${actor}`, 1);
+  if (perPerson > 30) return false;
+  const total = await driver().hincrby("hanmadi:conversation-usage", `${day}:total`, 1);
+  return total <= 300;
+}
+
 /** 수업 기록 1건 추가 — /live에서 저장 시 사용. id가 같으면 덮어쓴다. */
 export async function appendLesson(
   slug: string,

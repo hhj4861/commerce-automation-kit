@@ -19,11 +19,11 @@ export function Footer() {
         <p className="font-display text-[15px]">
           Hanmadi{" "}
           <span className="font-sans text-sm text-ink-soft">
-            — Korean, one phrase at a time · 한마디씩, 확실하게
+            — 한국어 · 태국어 · 일본어 · 한마디씩, 확실하게
           </span>
         </p>
         <p className="font-mono text-[11px] text-ink-soft">
-          Romanization: National Institute of Korean Language (RR)
+          Korean romanization: National Institute of Korean Language (RR)
         </p>
       </div>
     </footer>
