@@ -12,7 +12,7 @@ const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt
 const state = { project:null, step:1, config:null, category:'심리학', format:'short', selected:null, dirty:false, pending:false, previewTimer:null };
 const names = ['기획','시나리오','이미지 · 영상','편집','업로드'];
 const platformNames = {youtube:'YouTube',instagram:'Instagram',tiktok:'TikTok'};
-const taskNames = {scenario:'시나리오 생성',media:'이미지·영상 생성',render:'최종 영상 만들기',publish:'플랫폼 업로드'};
+const taskNames = {scenario:'시나리오 생성',media:'이미지·영상 생성',narration:'대본 음성 생성',render:'최종 영상 만들기',publish:'플랫폼 업로드'};
 const taskBusy = () => ['queued','running'].includes(state.project?.task?.state);
 const total = p => p.edit?.version===2 ? Math.round(frameCount(p.edit)/FPS*100)/100 : p.edit ? p.edit.order.reduce((sum,id) => sum + p.edit.durations[id],0) : p.scenes.reduce((sum,s) => sum+s.duration,0);
 const assetUrl = (id, asset) => `/api/studio/${id}/assets/${encodeURIComponent(asset)}?v=${state.project?.revision || 0}`;
@@ -180,6 +180,7 @@ function renderEditor(){
   toast,dirty:value=>state.dirty=value,
   save:edit=>action('edit',edit),
   upload:async file=>{const before=Object.keys(state.project.assets);await uploadFile(file,'audio');const id=Object.keys(state.project.assets).find(k=>!before.includes(k));return id?{project:state.project,id}:null;},
+  narration:async()=>{await action('narration');render();},
   render:async()=>{await action('render');render();},
   navigate:step=>{state.step=step;render();},
  });

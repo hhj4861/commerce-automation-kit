@@ -75,7 +75,7 @@ export async function studioApi(request, env, store, { localWorker = false, reco
         if (action === 'failure') { next.task.state = 'failed'; next.task.error = String(body.error || '제작 실패').slice(0, 1000); }
         else {
           const result = body.result || {};
-          const legalKeys = { scenario: ['title', 'scenes'], media: ['assets', 'mediaJobs'], render: ['render'], publish: ['upload'] }[project.task.action];
+          const legalKeys = { scenario: ['title', 'scenes'], media: ['assets', 'mediaJobs'], narration: ['assets'], render: ['render'], publish: ['upload'] }[project.task.action];
           for (const field of Object.keys(result)) if (!legalKeys?.includes(field)) fail('작업 결과 필드가 일치하지 않습니다.');
           if (result.scenes) { result.scenes = validateScenes(result.scenes); next.assets = {}; next.edit = null; }
           Object.assign(next, result);
