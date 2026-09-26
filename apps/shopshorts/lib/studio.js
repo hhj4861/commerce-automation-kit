@@ -1,4 +1,5 @@
-import { FPS, FONTS, frameCount } from '../public/editor-model.js';
+import {validateMusic} from '../public/music-timeline.js';
+import { FPS, FONTS, frameCount, assertClipPositions } from '../public/editor-model.js';
 export const CATEGORIES = ['심리학', '건축학', '상품광고', '막장드라마', '역사', '과학', '직접 입력'];
 export const VOICES = [{ id: 'none', name: '내레이션 없음' }, { id: 'n2fbxG88jqAoaVPUy3IG', name: 'Yooni · 밝고 또렷한 한국어', previewUrl: 'https://storage.googleapis.com/eleven-public-prod/database/workspace/dc9d42698272443c82f44e26ea1c9263/voices/n2fbxG88jqAoaVPUy3IG/kVgVODaebcaz7AEHhgDo.mp3' }, { id: 'ZRJMGKt2Okf3o9C38eSq', name: 'Claire · 차분한 한국어', previewUrl: 'https://storage.googleapis.com/eleven-public-prod/database/workspace/87db1f27d31f4bdd85e5e0c1028eae76/voices/ZRJMGKt2Okf3o9C38eSq/V7F37Ap0MTHMEuvlf9be.mp3' }];
 export const PLATFORMS = ['youtube', 'instagram', 'tiktok'];
@@ -49,9 +50,12 @@ export function validateTimeline(input, job) {
     if(!/^[a-zA-Z0-9-]{1,80}$/.test(c.id||'')||ids.has(c.id)||!job.scenes.some(s=>s.id===c.sceneId))fail('클립 ID 또는 원본 장면을 확인하세요.');
     ids.add(c.id);
     if(!Number.isInteger(c.inFrame)||!Number.isInteger(c.outFrame)||c.inFrame<0||c.outFrame<=c.inFrame||c.outFrame>900)fail('클립은 1프레임 이상, 원본 범위는 0~900프레임입니다.');
-    return {id:c.id,sceneId:c.sceneId,inFrame:c.inFrame,outFrame:c.outFrame};
+    return {id:c.id,sceneId:c.sceneId,inFrame:c.inFrame,outFrame:c.outFrame,...(c.startFrame!==undefined?{startFrame:c.startFrame}:{})};
   });
-  if(frameCount({clips})>(job.brief.format==='short'?180:600)*FPS)fail('선택한 영상 형식의 최대 길이를 넘었습니다.');
+  try{assertClipPositions({clips});}catch(e){fail(e.message);}
+  let musicClips;
+  if(input.musicClips!==undefined){try{musicClips=validateMusic(input.musicClips,job.assets,(job.brief.format==='short'?180:600)*FPS);}catch(e){fail(e.message);}}
+  if(frameCount({clips,musicClips})>(job.brief.format==='short'?180:600)*FPS)fail('선택한 영상 형식의 최대 길이를 넘었습니다.');
   if(!VOICES.some(v=>v.id===input.voice))fail('지원하는 목소리를 선택하세요.');
   if(input.music&&job.assets[input.music]?.kind!=='audio')fail('배경음 파일을 다시 선택하세요.');
   if(!Number.isFinite(input.musicVolume)||input.musicVolume<0||input.musicVolume>1)fail('배경음 음량은 0~100%입니다.');
@@ -65,7 +69,7 @@ export function validateTimeline(input, job) {
     if(!FONTS.some(f=>f.id===c.font)||!Number.isInteger(c.size)||c.size<20||c.size>120||!/^#[0-9a-f]{6}$/i.test(c.color)||!['top','middle','bottom'].includes(c.position)||typeof c.background!=='boolean')fail('자막 폰트·크기·색상·위치를 확인하세요.');
     return {id:c.id,clipId:c.clipId,text:c.text,startFrame:c.startFrame,endFrame:c.endFrame,font:c.font,size:c.size,color:c.color,position:c.position,background:c.background};
   });
-  return {version:2,fps:FPS,clips,captions,voice:input.voice,music:input.music||null,musicVolume:input.musicVolume};
+  return {version:2,fps:FPS,clips,captions,voice:input.voice,music:input.music||null,musicVolume:input.musicVolume,...(musicClips!==undefined?{musicClips}:{})};
 }
 export function createProject(input) {
   return { id: crypto.randomUUID(), revision: 0, title: input.topic?.slice(0, 100), brief: validateBrief(input), scenes: [], assets: {}, edit: null, approved: false, render: null, upload: null, task: null, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
