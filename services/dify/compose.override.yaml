@@ -1,0 +1,14 @@
+# Requires Docker Compose >= 2.24.4 (!override).
+# Keep upstream source, branding and internal SSRF networks intact.
+services:
+  nginx:
+    ports: !override
+      - "127.0.0.1:4180:80"
+  plugin_daemon:
+    ports: !override []
+    networks:
+      - gateway
+networks:
+  gateway:
+    external: true
+    name: shared-ai-gateway_default
