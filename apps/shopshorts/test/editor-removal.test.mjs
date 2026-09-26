@@ -45,6 +45,14 @@ test('duplicate cleanup removes identical overlays only, preserving deliberate t
  const next=deduplicateCaptions(e);assert.deepEqual(next.captions.map(c=>c.id),['text-1','style','time']);assert.equal(e.captions.length,4);
 });
 
+test('merged caption position and style controls survive script refresh and duplicate cleanup',()=>{
+ const p=fixture();Object.assign(p.edit.captions[0],{x:15,y:24,outlineWidth:4,backgroundOpacity:.8});
+ const refreshed=scriptCaption(p.edit,'clip-1','바뀐 대본','unused').edit;
+ assert.deepEqual(validateEdit(refreshed,p),refreshed);
+ refreshed.captions.push({...refreshed.captions[0],id:'different-position',x:70},{...refreshed.captions[0],id:'different-outline',outlineWidth:1});
+ assert.equal(deduplicateCaptions(refreshed).captions.length,3);
+});
+
 test('API save/reload and real render keep repeated script caption single; deletion removes overlay', {timeout:60000},async()=>{
  const dir=await mkdtemp(join(tmpdir(),'editor-caption-render-')),store=localStudioStore(dir,{});
  try{

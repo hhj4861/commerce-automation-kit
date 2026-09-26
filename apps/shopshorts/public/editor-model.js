@@ -5,6 +5,10 @@ export const FONTS = [
  {id:'gothic',name:'나눔고딕',family:'Studio Gothic',file:'NanumGothic-Regular.ttf'},
  {id:'myeongjo',name:'나눔명조',family:'Studio Myeongjo',file:'NanumMyeongjo-Regular.ttf'},
  {id:'pen',name:'나눔손글씨',family:'Studio Pen',file:'NanumPenScript-Regular.ttf'},
+ {id:'dohyeon',name:'도현 · 단단한 제목',family:'Studio DoHyeon',file:'DoHyeon-Regular.ttf'},
+ {id:'jua',name:'주아 · 둥근 고딕',family:'Studio Jua',file:'Jua-Regular.ttf'},
+ {id:'blackhan',name:'검은고딕 · 굵은 강조',family:'Studio BlackHan',file:'BlackHanSans-Regular.ttf'},
+ {id:'gowun',name:'고운돋움 · 부드러운 본문',family:'Studio Gowun',file:'GowunDodum-Regular.ttf'},
 ];
 export function clipSpans(e) {
  let cursor=0;
@@ -72,7 +76,7 @@ export function scriptCaption(edit,clipId,text,id) {
 }
 export function deduplicateCaptions(edit) {
  const e=structuredClone(edit),seen=new Set();
- e.captions=e.captions.filter(c=>{const key=JSON.stringify([c.clipId,c.text,c.startFrame,c.endFrame,c.font,c.size,c.color,c.position,c.background]);if(seen.has(key))return false;seen.add(key);return true;});
+ e.captions=e.captions.filter(c=>{const key=JSON.stringify([c.clipId,c.text,c.startFrame,c.endFrame,c.font,c.size,c.color,c.position,c.background,c.x,c.y,c.outlineWidth??2,c.outlineColor??'#000000',c.backgroundColor??'#000000',c.backgroundOpacity??.65]);if(seen.has(key))return false;seen.add(key);return true;});
  return e;
 }
 export function trimClip(edit,id,start,end){const e=structuredClone(edit),c=e.clips.find(c=>c.id===id);if(!c||!Number.isInteger(start)||!Number.isInteger(end)||start<0||end<=start||end>900)throw Error('시작·끝은 0~900 사이 프레임이며 끝이 시작보다 커야 합니다.');const shift=start-c.inFrame,length=end-start;c.inFrame=start;c.outFrame=end;e.captions=e.captions.flatMap(t=>{if(t.clipId!==id)return[t];const a=Math.max(0,t.startFrame-shift),b=Math.min(length,t.endFrame-shift);return b>a?[{...t,startFrame:a,endFrame:b}]:[];});return e;}

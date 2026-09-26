@@ -1,3 +1,4 @@
+import {captionStyle,captionExtras} from './public/caption-style.js';
 import {musicClips, musicFilter} from './public/music-timeline.js';
 import { spawn } from 'node:child_process';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
@@ -70,8 +71,10 @@ export function captionFilter(caption, textPath) {
   if(!font)throw new Error('지원하지 않는 자막 폰트입니다.');
   const escapePath=p=>p.replaceAll('\\','/').replaceAll(':','\\:').replaceAll("'", "'\\\\''");
   const fontPath=join(ROOT,'apps/shopshorts/public',font.file);
-  const y={top:'h*0.08',middle:'(h-text_h)/2',bottom:'h*0.92-text_h'}[caption.position];
-  return `drawtext=fontfile='${escapePath(fontPath)}':textfile='${escapePath(textPath)}':expansion=none:fontsize=${caption.size}:fontcolor=${caption.color}:borderw=2:bordercolor=black:box=${caption.background?1:0}:boxcolor=black@0.65:boxborderw=8:x=(w-text_w)/2:y=${y}:enable='gte(n,${caption.startFrame})*lt(n,${caption.endFrame})'`;
+  captionExtras(caption);caption=captionStyle(caption);
+  const x=caption.x===undefined?'(w-text_w)/2':`(w-text_w)*${caption.x/100}`;
+  const y=caption.y===undefined?{top:'h*0.08',middle:'(h-text_h)/2',bottom:'h*0.92-text_h'}[caption.position]:`(h-text_h)*${caption.y/100}`;
+  return `drawtext=fontfile='${escapePath(fontPath)}':textfile='${escapePath(textPath)}':expansion=none:fontsize=${caption.size}:fontcolor=${caption.color}:borderw=${caption.outlineWidth}:bordercolor=${caption.outlineColor}:box=${caption.background?1:0}:boxcolor=${caption.backgroundColor}@${caption.backgroundOpacity}:boxborderw=8:x=${x}:y=${y}:enable='gte(n,${caption.startFrame})*lt(n,${caption.endFrame})'`;
 }
 async function renderProject(job, work, env, io) {
   const segments = [];
