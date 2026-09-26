@@ -250,3 +250,23 @@ test('recommendation history keeps at most ten outcomes and no browser observati
  assert.equal((await accountAction(env,a,'recommendation',{id:'outcome-0'})).status,404);
  assert.equal((await accountAction(env,a,'recommendation',{id:'outcome-10'})).recommendation.elapsedMs>=1000,true);
 });
+
+test('a new account recommendation is a fresh job and its own encrypted history reaches Codex', async t => {
+ const {env,db}=fixture();t.after(()=>db.close());
+ await accountRunner(env,{operation:'poll'});
+ const old={id:'old-job',state:'done',input:brief,result:{suggestions:[{topic:'이전 계정 소재',direction:'이전 연출'}]}};
+ await writeVault(env,`llm/account/${a}`,{credential:auth,provider:'codex',recommendations:[old],job:{id:'old-job',kind:'recommend',state:'done'}},0);
+ const request=await accountAction(env,a,'recommend',{brief});
+ assert.notEqual(request.job.id,'old-job');assert.equal(request.job.state,'queued');
+ const record=await readVault(env,`llm/account/${a}`);const patches=[];
+ await executeAccountJob(record.value,{
+  update:async patch=>patches.push(patch),
+  openServer:async()=>({call:async()=>({account:{type:'chatgpt'}}),close:async()=>{}}),
+  generator:()=>async prompt=>{
+   assert.match(prompt,/이전 계정 소재/);assert.doesNotMatch(prompt,/fixture-refresh/);
+   return {searched:true,value:{suggestions:[0,1,2].map(i=>({topic:`새 계정 소재 ${i}`,direction:'연출',reason:'근거'})),sources:[{title:'자료',url:'https://example.org/research'}]}};
+  }
+ });
+ assert.equal(patches.at(-1).job.state,'done');
+ assert.equal((await accountAction(env,b,'recommendation',{id:'old-job'})).status,404);
+});

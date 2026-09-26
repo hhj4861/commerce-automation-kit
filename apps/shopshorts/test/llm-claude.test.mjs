@@ -193,3 +193,14 @@ test('new login never calls Keychain and retains restricted recovery file if vau
     assert.equal(JSON.parse(await readFile(file, 'utf8')).accessToken, setup.accessToken);
   } finally { if(runtime) await rm(runtime.HOME, { recursive: true, force: true }); }
 });
+
+test('both Claude credential formats forward account recommendation history without exposing tokens', async () => {
+ for(const credential of [setup,{credentials:oauth('fixture-refresh'),profiles:{}}]) {
+  let generated=false;
+  await executeClaudeAccountJob({credential,job:{kind:'recommend',input:brief},recommendations:[{state:'done',input:brief,result:{suggestions:[{topic:'이전 Claude 소재',direction:'이전 연출'}]}}]}, {
+   update:async()=>{},identify:async()=>{},credential:async()=>credential.credentials,
+   generator:()=>async prompt=>{generated=true;assert.match(prompt,/이전 Claude 소재/);assert.doesNotMatch(prompt,/sk-ant-oat01|fixture-refresh/);return {searched:true,value:suggestions};},
+  });
+  assert.equal(generated,true);
+ }
+});

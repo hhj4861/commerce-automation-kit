@@ -97,7 +97,7 @@ export async function executeAccountJob(value, { signal, update, env = process.e
     await rpc.close(); rpc = null;
     if (value.job.kind === 'connect') { await update({ job: { state: 'done', device: null } }); return; }
     try {
-      const result = await (value.job.kind === 'scenario' ? scenarioBrief : recommendBrief)(value.job.input, env, { generate: generator({ env: runtime }), signal });
+      const result = await (value.job.kind === 'scenario' ? scenarioBrief : recommendBrief)(value.job.input, env, { history: value.recommendations, generate: generator({ env: runtime }), signal });
       await persist({ credential: await credential(), job: { state: 'done', result } });
     } catch (e) {
       // Official CLI may rotate even on a failed generation; persist before cleanup.

@@ -1,6 +1,7 @@
 // Only these fixed diagnostics may cross the runner boundary. Never return CLI
 // stdout/stderr: login output can contain authorization URLs and credentials.
 const messages = Object.freeze({
+  RECOMMENDATION_REPEATED: '이전 추천과 다른 기획을 완성하지 못했어요. 관심사를 구체화한 뒤 다시 추천받으세요.',
   SCENARIO_ARC_INVALID: '도입·킬링파트·마무리가 연결된 대본을 완성하지 못했습니다. 시나리오를 다시 생성해 주세요.',
   CLAUDE_LOGIN_RUNTIME_MISSING: 'Claude 연결 실행 환경이 준비되지 않았습니다. 운영자에게 확인을 요청해 주세요.',
   CLAUDE_LOGIN_FAILED: 'Claude 로그인을 완료하지 못했습니다. 다시 연결하고 새 인증 코드를 입력해 주세요.',
@@ -18,7 +19,7 @@ export const claudeFailure = (code = 'CLAUDE_REQUEST_FAILED') => Object.assign(n
 export const accountFailureCode = error => Object.hasOwn(messages, error?.code) ? error.code : 'UNKNOWN';
 export function accountFailureMessage(provider, error) {
   const code = accountFailureCode(error);
-  if (code === 'SCENARIO_ARC_INVALID') return messages[code];
+  if (['SCENARIO_ARC_INVALID', 'RECOMMENDATION_REPEATED'].includes(code)) return messages[code];
   return provider === 'claude' ? messages[code] || messages.CLAUDE_REQUEST_FAILED
     : 'Codex 요청을 완료하지 못했습니다. 다시 시도하고, 반복되면 계정 연결 상태를 확인해 주세요.';
 }
