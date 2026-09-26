@@ -1,0 +1,48 @@
+name: Shared AI gateway
+on:
+  push:
+    branches: [feat/shared-ai-gateway]
+    paths: ["services/ai-gateway/**", ".github/workflows/ai-gateway.yml"]
+  pull_request:
+    paths: ["services/ai-gateway/**", ".github/workflows/ai-gateway.yml"]
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: services/ai-gateway
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m unittest -v
+      - name: Configure isolated mock providers
+        run: |
+          python gateway.py init
+          cat >> .env <<'ENV'
+          HANMADI_CHAT_MODEL=openai/gpt-4o-mini
+          HANMADI_CHAT_API_KEY=ci-not-a-provider-key
+          HANMADI_CHAT_API_BASE=http://mock:8000/v1
+          REPLAY_CHAT_MODEL=openai/gpt-4o-mini
+          REPLAY_CHAT_API_KEY=ci-not-a-provider-key
+          REPLAY_CHAT_API_BASE=http://mock:8000/v1
+          ENV
+          python gateway.py render
+          docker compose -f compose.yaml -f compose.test.yaml config --quiet
+      - name: Start actual gateway and database
+        run: docker compose -f compose.yaml -f compose.test.yaml up -d --wait --wait-timeout 300
+      - run: python tests/integration.py
+      - name: Verify persistence after restart
+        run: |
+          docker compose restart gateway
+          docker compose -f compose.yaml -f compose.test.yaml up -d --wait --wait-timeout 120
+          python tests/integration.py
+      - name: Validate HTTPS proxy configuration
+        run: docker compose --profile public run --rm --no-deps https caddy validate --config /etc/caddy/Caddyfile
+      - name: Cleanup ephemeral CI data
+        if: always()
+        run: docker compose -f compose.yaml -f compose.test.yaml down -v
