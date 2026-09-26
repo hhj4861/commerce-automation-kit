@@ -38,7 +38,7 @@ def call(path, data=None, key=None):
             return json.load(response)
     except HTTPError as error:
         # Status/path only; provider errors can contain credentials or payloads.
-        raise RuntimeError(f"{req.method} {path}: HTTP {error.code}") from None
+        raise RuntimeError(f"{req.get_method()} {path}: HTTP {error.code}") from None
 
 
 def wait_ready():
