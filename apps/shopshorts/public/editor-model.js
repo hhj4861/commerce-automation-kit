@@ -1,3 +1,4 @@
+import {recommendedVoice} from './voice-recommendation.js';
 // Non-destructive 30fps timeline, shared by browser and renderer.
 export const FPS = 30;
 import {musicClips} from './music-timeline.js';
@@ -36,7 +37,7 @@ export function reorderClip(edit,id,to) {
  for(const c of e.clips)delete c.startFrame;
  return e;
 }
-export function normalizeEdit(p){const e=p.edit;if(e?.version===2)return structuredClone(e);return{version:2,fps:FPS,clips:(e?.order||p.scenes.map(s=>s.id)).map((id,i)=>({id:`clip-${i+1}`,sceneId:id,inFrame:0,outFrame:Math.round((e?.durations[id]??p.scenes.find(s=>s.id===id).duration)*FPS)})),captions:[],voice:e?.voice||'none',music:e?.music||null,musicVolume:e?.musicVolume??.15};}
+export function normalizeEdit(p){const e=p.edit;if(e?.version===2)return structuredClone(e);return{version:2,fps:FPS,clips:(e?.order||p.scenes.map(s=>s.id)).map((id,i)=>({id:`clip-${i+1}`,sceneId:id,inFrame:0,outFrame:Math.round((e?.durations[id]??p.scenes.find(s=>s.id===id).duration)*FPS)})),captions:[],voice:e?.voice??p.voicePreference??recommendedVoice(p).voiceId,music:e?.music||null,musicVolume:e?.musicVolume??.15};}
 export function clipAt(e,frame){for(const {clip,start,end} of clipSpans(e)){if(frame>=start&&frame<end)return{clip,start,local:frame-start};}return null;}
 export function splitClip(edit,id,offset,newId){const e=structuredClone(edit),i=e.clips.findIndex(c=>c.id===id),c=e.clips[i];if(!c||!Number.isInteger(offset)||offset<1||offset>=c.outFrame-c.inFrame)throw Error('클립 안쪽 프레임에 재생 헤드를 놓으세요.');const cut=c.inFrame+offset;e.clips.splice(i,1,{...c,outFrame:cut},{...c,id:newId,inFrame:cut,...(c.startFrame!==undefined?{startFrame:c.startFrame+offset}:{})});e.captions=e.captions.flatMap((t,index)=>{if(t.clipId!==id)return[t];const parts=[];if(t.startFrame<offset)parts.push({...t,endFrame:Math.min(t.endFrame,offset)});if(t.endFrame>offset)parts.push({...t,id:`${newId}-text-${index}`,clipId:newId,startFrame:Math.max(0,t.startFrame-offset),endFrame:t.endFrame-offset});return parts;});return e;}
 export function copyClip(e,id){const clip=e.clips.find(c=>c.id===id);if(!clip)throw Error('클립을 선택하세요.');return structuredClone({clip,captions:e.captions.filter(c=>c.clipId===id)});}

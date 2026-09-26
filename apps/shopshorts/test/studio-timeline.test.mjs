@@ -13,7 +13,7 @@ function fixture(){
  const p=createProject({category:'건축학',topic:'시간과 공간',format:'short',duration:16});
  p.scenes=[1,2].map(i=>({id:`scene-${i}`,narration:'공간을 살펴봐요.',prompt:'An original room',duration:1,kind:'image'}));
  p.approved=true;p.assets={'scene-1':{kind:'image'},'scene-2':{kind:'image'},music:{kind:'audio'},speech:{kind:'audio',purpose:'narration'}};
- p.edit=normalizeEdit(p);return p;
+ p.edit=normalizeEdit(p);p.edit.voice='none';return p;
 }
 const audio=(extra={})=>({id:'bgm',assetId:'music',startFrame:30,inFrame:15,outFrame:75,volume:.5,fadeInFrames:15,fadeOutFrames:15,...extra});
 

@@ -96,8 +96,9 @@ export function changeProject(original, action, body) {
     const scenes = validateScenes(body.scenes);
     if (scenes.reduce((sum, s) => sum + s.duration, 0) > (job.brief.format === 'short' ? 180 : 600)) fail('장면의 전체 길이가 형식의 최대 길이를 넘었습니다.');
     const old = Object.fromEntries(job.scenes.map(s => [s.id, s]));
-    for (const s of scenes) if (old[s.id]?.prompt !== s.prompt || old[s.id]?.kind !== s.kind) delete job.assets[s.id];
+    for (const s of scenes) if (old[s.id]?.prompt !== s.prompt || old[s.id]?.kind !== s.kind || (old[s.id]?.narration !== s.narration && job.assets[s.id]?.source === 'ai')) delete job.assets[s.id];
     for (const id of Object.keys(old)) if (!scenes.some(s => s.id === id)) delete job.assets[id];
+    if(job.edit?.voice!==undefined)job.voicePreference=job.edit.voice;
     job.scenes = scenes; job.title = String(body.title || job.title).slice(0, 100); job.edit = null; invalidate();
   } else if (action === 'edit') {
     job.edit = validateEdit(body, job); job.render = null; job.task = null;
@@ -106,7 +107,14 @@ export function changeProject(original, action, body) {
     invalidate(); job.task = { action, state: 'queued' };
   } else if (action === 'media') {
     if (body.approved !== true || !job.scenes.length) fail('대본을 검수하고 승인하세요.');
-    job.approved = true; job.render = null; job.task = { action, state: 'queued' };
+    if(body.sceneId!==undefined){
+      if(typeof body.sceneId!=='string'||!job.scenes.some(s=>s.id===body.sceneId))fail('다시 만들 장면을 선택하세요.');
+      if(!job.assets[body.sceneId])fail('아직 완성되지 않은 장면은 미완료 장면 다시 생성으로 이어가세요.');
+      delete job.assets[body.sceneId];
+      if(job.mediaJobs)delete job.mediaJobs[body.sceneId];
+      (job.mediaVersions ||= {})[body.sceneId]=crypto.randomUUID();
+    }
+    job.approved = true; job.render = null; job.task = { action, state: 'queued',...(body.sceneId?{sceneIds:[body.sceneId]}:{}) };
   } else if (action === 'narration') {
     if (!job.approved || !job.edit || job.edit.voice === 'none') fail('대본을 검수하고 목소리를 선택해 주세요.');
     job.task = { action, state: 'queued' };
