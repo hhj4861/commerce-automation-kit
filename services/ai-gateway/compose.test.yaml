@@ -1,0 +1,10 @@
+# CI overlay only. The upstream models here are fake and carry no provider key.
+services:
+  mock:
+    image: python:3.12-slim
+    command: ["python", "/mock.py"]
+    volumes: ["./tests/mock_provider.py:/mock.py:ro"]
+  gateway:
+    depends_on:
+      mock:
+        condition: service_started
