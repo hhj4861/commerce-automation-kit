@@ -4,6 +4,10 @@ export const FONTS = [
  {id:'gothic',name:'나눔고딕',family:'Studio Gothic',file:'NanumGothic-Regular.ttf'},
  {id:'myeongjo',name:'나눔명조',family:'Studio Myeongjo',file:'NanumMyeongjo-Regular.ttf'},
  {id:'pen',name:'나눔손글씨',family:'Studio Pen',file:'NanumPenScript-Regular.ttf'},
+ {id:'dohyeon',name:'도현 · 단단한 제목',family:'Studio DoHyeon',file:'DoHyeon-Regular.ttf'},
+ {id:'jua',name:'주아 · 둥근 고딕',family:'Studio Jua',file:'Jua-Regular.ttf'},
+ {id:'blackhan',name:'검은고딕 · 굵은 강조',family:'Studio BlackHan',file:'BlackHanSans-Regular.ttf'},
+ {id:'gowun',name:'고운돋움 · 부드러운 본문',family:'Studio Gowun',file:'GowunDodum-Regular.ttf'},
 ];
 export function clipSpans(e) {
  let cursor=0;
