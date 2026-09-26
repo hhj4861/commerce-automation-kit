@@ -40,6 +40,8 @@ for (const provider of ['codex', 'claude']) test(`${provider} scenario uses mess
       assert.match(prompt, /부모의 표정과 손동작/); assert.match(prompt, /합계는 정확히 24초/);
       assert.match(prompt, /확인하지 못한 연구/); assert.match(prompt, /인증정보를 읽거나 수정하지/);
       assert.match(prompt, /킬링파트 설계/); assert.match(prompt, /storyArc/);
+      assert.match(prompt, /질문, 사례, 원리 설명, 관점 전환, 실천/);
+      assert.match(prompt, /장면 prompt는 독립적으로 생성/);
       assert.doesNotMatch(prompt, /읽을 수 있게 짧게 쓰세요|짧은 내레이션/);
       return { value: { ...value, storyArc: Object.fromEntries(['hook', 'payoff', 'ending'].map((key, i) => [key, { sceneId: value.scenes[i].id, line: value.scenes[i].narration }])) }, searched: false };
     },
@@ -53,6 +55,7 @@ for (const focus of ['topic', 'direction']) test(`${focus} recommendations estab
     assert.match(prompt, /설명할 이유와 구체적 예시/);
     assert.match(prompt, /최근 30일/); assert.match(prompt, /입력한 주제를 유지/);
     assert.match(prompt, /목표 24초는 유지/);
+    assert.match(prompt, /중심 질문, 설명할 원리, 구체적 사례, 관점 전환/);
     return { searched: true, value: { suggestions: Array.from({ length: 3 }, (_, i) => ({ topic: focus === 'direction' ? brief.topic : `${brief.topic} 관점 ${i}`, direction: `상황, 이해할 관점 ${i}, 실제로 건넬 말 순서로 설명`, reason: '검색 근거' })), sources: [{ title: '테스트 출처', url: 'https://example.org/source' }] } };
   } });
   assert.equal(result.suggestions.length, 3); assert.equal(result.focus, focus);
@@ -68,4 +71,19 @@ test('generic psychology ideation does not anchor on parenting, while relevant f
  assert.doesNotMatch(editorialGuide({...brief,topic:'',direction:''}),/부모|아이/);
  assert.doesNotMatch(editorialGuide({...brief,topic:'왜 선택이 어려울까',direction:''}),/부모|아이/);
  assert.match(editorialGuide(brief),/아이에게 감정 돌봄을 맡기지/);
+});
+
+test('psychology explanation depth follows the selected duration without leaking to other categories', () => {
+ const input = {...brief,topic:'왜 선택을 미룰까',direction:'',format:'long'};
+ for (const [duration, expected] of [[60,/질문 하나와 사례 하나/],[120,/1~2개 소주제/],[180,/1~2개 소주제/],[300,/2~3개 소주제/],[600,/3~5개 소주제/]]) {
+  const guide=editorialGuide({...input,duration});
+  assert.match(guide,expected);
+  assert.ok(guide.includes(`목표 ${duration}초는 유지`));
+ }
+ assert.match(editorialGuide({...input,format:'short',duration:180}),/질문 하나와 사례 하나/);
+ for (const category of CATEGORIES.filter(category=>category!=='심리학')) {
+  assert.doesNotMatch(editorialGuide({...input,category,duration:600}),/심리학 해설 구성|3~5개 소주제/);
+ }
+ assert.match(editorialGuide(input),/사용자가 다른 구성을 명시하지 않았다면/);
+ assert.match(editorialGuide(input),/다른 해석이나 적용 한계/);
 });
