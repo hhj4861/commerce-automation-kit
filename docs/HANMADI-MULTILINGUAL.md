@@ -57,9 +57,9 @@ LITELLM_TTS_VOICE=<합성 모델이 지원하는 voice>
 - 순수 로직 테스트 8개: 언어·역할·길이·모델 설정·타임아웃·응답 검증·음성 요청 계약.
 - 격리 HTTP 통합 검사: 세 언어, 튜터/등록 학생 접근, 무인증 차단, 출처/크기 검사, 오류·빈 응답 처리, 31개 동시 요청에서 30회만 허용, 전사 및 바이너리 합성 응답, 기존 라이브러리.
 - Chrome 실제 UI: 일본어 퀴즈 완료·새로고침 복원, 태국어 진도 분리, 튜터 로그인, 문장 전송·답변 표시·테스트 음원 자동 재생, 실패 시 입력 보존.
-- 실서비스 LiteLLM 연결·실제 마이크 녹음·한국어/태국어/일본어 전사·발음 품질은 미검증이다. 모델 주소·키·모델명·음성을 설정한 뒤 실제 기기로 확인해야 한다. 테스트 음원은 짧은 합성 신호이며 자연어 음성 품질의 증거가 아니다.
+- 위 HTTP/UI 검사는 모의 서버와 합성 신호를 사용했다. 이후 실제 LiteLLM 음성 검증 결과는 아래 신규 구축 항목을 참조한다. 실제 마이크 녹음과 발음 품질의 사람 청취 평가는 미검증이다.
 
-## 실제 연결 점검 (2026-09-26)
+## 신규 구축 전 연결 점검 (2026-09-26)
 
 - 로컬 앱 환경변수와 Vercel `hanmadi` Production 환경변수 목록에 `LITELLM_*` 설정이 없다. `localhost:4000`도 응답하지 않았다. 다른 주소의 미공유 서버가 없다는 뜻은 아니다.
 - 프로젝트 루트 `.env`의 ElevenLabs 키: 공식 사용자 조회 API HTTP 200.
@@ -67,8 +67,52 @@ LITELLM_TTS_VOICE=<합성 모델이 지원하는 voice>
 - 프로젝트 루트 Gemini 설정: 모델 목록 조회에서 HTTP 401 `UNAUTHENTICATED` / `ACCESS_TOKEN_TYPE_UNSUPPORTED`.
 - 확인은 읽기 전용이며 키 교체·Vercel 환경변수 변경·유료 음성 생성·운영 배포는 수행하지 않았다. 실제 연결에는 LiteLLM 서버, 유효한 대화 모델 인증, 전사·합성 모델과 음성 설정이 필요하다.
 
+## 로컬 LiteLLM 신규 구축 (2026-09-26)
+
+`apps/hanmadi/ops/litellm/pyproject.toml`과 `uv.lock`에 LiteLLM 1.102.1 / Python 3.12 환경을 고정했다. DB를 사용하지 않아도 인증 오류 처리에서 Prisma를 import하는 설치 버전의 동작을 실측하여 해당 의존성도 포함했다. 가상환경은 앱의 Git·ESLint·TypeScript 검사에서 제외한다.
+
+앱 디렉터리에서:
+
+```bash
+uv sync --project ops/litellm --locked
+npm run ai:setup -- --provider-env /path/to/provider.env
+npm run ai:start
+# 다른 터미널에서 인증·모델 목록 확인 (공급자 생성 호출 없음)
+npm run ai:check
+# 짧은 대화 및 세 언어 음성 합성→전사 실호출 (공급자 사용료 발생)
+npm run ai:check -- --live
+```
+
+`--provider-env`는 선택 사항이다. 지정 파일에서 필요한 공급자 설정만 가져오며 다른 인증·Redis·학생 정보는 복사하지 않는다. 기존 `.env.litellm` 값이 우선한다. `ai:setup`은 기존 앱 `.env.local`의 다른 설정과 주석을 보존하고 `LITELLM_*` 항목만 갱신한다. 반복 실행해도 게이트웨이 키를 교체하지 않는다. 두 비공개 파일은 권한 600 / Git 제외이며 키를 출력하지 않는다.
+
+| 파일 / 설정 | 역할 |
+|---|---|
+| `.env.litellm`의 `LITELLM_MASTER_KEY` | setup에서 자동 생성한 로컬 게이트웨이 인증 키 |
+| `ELEVENLABS_API_KEY` | 공급자 키. 공통 프로젝트의 유효한 기존 키를 로컬 전용 파일에 복사 |
+| `HANMADI_CHAT_MODEL`, `HANMADI_CHAT_API_KEY` | 대화 공급자 모델 경로와 키. 현재 미설정. 유효한 값을 입력 후 `ai:setup`, 게이트웨이·Next 서버 재시작 |
+| `HANMADI_TTS_VOICE` | 기본 Yooni ID. 회화용 합성 모델은 `elevenlabs/eleven_v3` |
+| `.env.local`의 `LITELLM_*` | Next 서버 → `http://127.0.0.1:4000/v1` 연결. 공급자 키는 앱에 복사하지 않음 |
+| `.litellm/config.json` | 시작할 때 생성하는 로컬 설정. 공급자 키 값 대신 환경변수 참조를 저장 |
+
+공급자 모델은 `hanmadi-chat`, `hanmadi-stt`, `hanmadi-tts` 별칭으로 앱에 노출한다. 키가 없는 대화 별칭은 등록하지 않고 앱의 `LITELLM_MODEL`을 비워 설정 대기 안내를 유지한다. LiteLLM 자체는 모델이 아니라 게이트웨이이므로 외부 대화 공급자 인증 또는 별도 로컬 모델 서버가 필요하다.
+
+실측 결과:
+
+- 인증된 `/v1/models` HTTP 200, 무인증 요청 거부 확인.
+- `hanmadi-tts` → ElevenLabs `eleven_v3`, `hanmadi-stt` → `scribe_v1` 실제 연동 성공.
+- 한국어 34,316 bytes: `안녕하세요. 만나서 반갑습니다.` → 전사 일치.
+- 일본어 35,570 bytes: `こんにちは。はじめまして。` → 전사 일치.
+- 태국어 39,332 bytes: `สวัสดีค่ะ ยินดีที่ได้รู้จักค่ะ` → 전사 일치.
+- 실제 앱의 `synthesizeSpeech` / `transcribeAudio` 어댑터에서도 한국어 합성→WAV 변환→전사 성공. 설정 보존·반복 실행·비밀 분리를 포함한 테스트 9개, ESLint, TypeScript 검사 통과.
+- `--live` 검사는 음성 성공 여부와 별도로 대화 미설정을 보고하고 exit 2를 반환한다. 전체 연결 성공으로 처리하지 않는다. 사람이 마이크로 말한 음원이나 실제 발음 품질 평가는 아니다. 테스트 음원은 메모리에서만 사용했다.
+
+서버는 **127.0.0.1에만 바인딩**하며 `ai:start` 프로세스가 실행 중일 때만 동작한다. 재부팅 자동 실행·공개 배포는 포함하지 않는다. DB 없는 로컬 구성에서는 master key로 인증하며 가상 키·LiteLLM 금액 예산은 적용되지 않는다. 공개 운영은 별도 HTTPS 게이트웨이와 DB/앱 전용 가상 키·예산 설정이 필요하다. Vercel에서 이 Mac의 localhost로 접속할 수 없다. 운영 환경변수 변경·배포·PR 머지는 수행하지 않았다.
+
 ## 공식 근거
 
 - [LiteLLM 클라이언트 설정](https://docs.litellm.ai/docs/proxy/client_setup/overview): 게이트웨이 URL, 가상 키, 등록 모델명.
 - [Chat completions](https://docs.litellm.ai/docs/completion): OpenAI 호환 대화 요청.
 - 음성 API: [전사](https://docs.litellm.ai/docs/audio_transcription), [음성 합성](https://docs.litellm.ai/docs/text_to_speech). 공급자·모델의 한국어/태국어/일본어 지원과 실제 발음 품질은 별도 검증이 필요하다.
+- [ElevenLabs 공급자](https://docs.litellm.ai/docs/providers/elevenlabs): 전사·합성 모델 경로와 음성 ID 매핑.
+- [게이트웨이 Quickstart](https://docs.litellm.ai/docs/proxy/docker_quick_start): DB 없는 master key 인증과 가상 키·예산 제약.
+- [Ollama 공급자](https://docs.litellm.ai/docs/providers/ollama): 외부 API 키 대신 별도 로컬 모델 서버를 연결하는 대안.
