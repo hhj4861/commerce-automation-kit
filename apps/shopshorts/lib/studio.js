@@ -90,6 +90,9 @@ export function changeProject(original, action, body) {
   } else if (action === 'media') {
     if (body.approved !== true || !job.scenes.length) fail('대본을 검수하고 승인하세요.');
     job.approved = true; job.render = null; job.task = { action, state: 'queued' };
+  } else if (action === 'narration') {
+    if (!job.approved || !job.edit || job.edit.voice === 'none') fail('대본을 검수하고 목소리를 선택해 주세요.');
+    job.task = { action, state: 'queued' };
   } else if (action === 'render') {
     if (!job.approved || !job.edit || (job.edit.version===2?job.edit.clips.some(c=>!job.assets[c.sceneId]):job.scenes.some(s => !job.assets[s.id]))) fail('대본 승인·장면 생성·편집 저장을 먼저 완료하세요.');
     job.render = null; job.task = { action, state: 'queued' };

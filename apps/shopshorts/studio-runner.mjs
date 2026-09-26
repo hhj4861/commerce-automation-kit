@@ -4,6 +4,7 @@ import { existsSync } from 'node:fs';
 import { join, resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { generateHiggsfieldScene } from './studio-higgsfield.mjs';
+import { generateNarration, narrationFile } from './studio-narration.mjs';
 import { FPS, FONTS, normalizeEdit, frameCount } from './public/editor-model.js';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
@@ -80,13 +81,8 @@ async function renderProject(job, work, env, io) {
     await writeFile(source, await io.readAsset(job.assets[id].key));
     let vo = null, voDuration = 0;
     if (job.edit.voice !== 'none') {
-      if (!env.ELEVENLABS_API_KEY) throw new Error('목소리 생성에는 ELEVENLABS_API_KEY가 필요합니다.');
-      // Content-address cache survives retries while changed narration/voice always gets a new file.
-      const hash = Buffer.from(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(`${job.edit.voice}:${scene.narration}`))).toString('hex').slice(0, 24);
-      vo = join(work, `${hash}.mp3`);
-      if (!existsSync(vo)) await cli('@cak/tts-narration', ['generate', '--text', scene.narration, '--out', vo], { ...env, ELEVENLABS_VOICE_ID: job.edit.voice });
-      voDuration = Number(await command('ffprobe', ['-v', 'error', '-show_entries', 'format=duration', '-of', 'default=noprint_wrappers=1:nokey=1', vo], env));
-      if (!Number.isFinite(voDuration)) throw new Error('음성 길이를 확인할 수 없습니다.');
+      const narration = await narrationFile(job, scene, work, env, io, { runCli: cli, command });
+      vo = narration.file; voDuration = narration.duration;
     }
     const captionFilters=[];
     for(const [index,caption] of timeline.captions.filter(c=>c.clipId===clip.id).entries()) {
@@ -118,6 +114,7 @@ export async function executeStudioTask(job, env, io, checkpoint, { fetcher = fe
   const work = join(io.workDir, job.id);
   await mkdir(work, { recursive: true });
   await lintProject(job, work, env, action === 'publish');
+  if (action === 'narration') return generateNarration(job, work, env, io, checkpoint, { runCli, command });
   if (action === 'media') {
     const assets = { ...job.assets };
     for (const scene of job.scenes) {
