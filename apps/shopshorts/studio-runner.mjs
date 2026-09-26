@@ -1,3 +1,4 @@
+import {musicClips, musicFilter} from './public/music-timeline.js';
 import { spawn } from 'node:child_process';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
@@ -5,7 +6,7 @@ import { join, resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { generateHiggsfieldScene } from './studio-higgsfield.mjs';
 import { generateNarration, narrationFile } from './studio-narration.mjs';
-import { FPS, FONTS, normalizeEdit, frameCount } from './public/editor-model.js';
+import { FPS, FONTS, normalizeEdit, frameCount, clipSpans } from './public/editor-model.js';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const GOOGLE = 'https://generativelanguage.googleapis.com/v1beta';
@@ -75,7 +76,16 @@ export function captionFilter(caption, textPath) {
 async function renderProject(job, work, env, io) {
   const segments = [];
   const timeline=normalizeEdit(job);
-  for (const clip of timeline.clips) {
+  let cursor=0,gapIndex=0;
+  const gap=async frames=>{
+    if(frames<=0)return;
+    const source=join(work,'gap.png'),target=join(work,`gap-${gapIndex++}.mov`);
+    if(gapIndex===1)await command('ffmpeg',['-y','-v','error','-f','lavfi','-i','color=black:s=160x90','-frames:v','1',source],env);
+    await command('ffmpeg',sceneFfmpegArgs(source,target,{kind:'image'},timeline,job.brief.aspect,null,0,job.brief.category==='상품광고',{inFrame:0,outFrame:frames}),env);
+    segments.push(target);
+  };
+  for (const {clip,start,end} of clipSpans(timeline).sort((a,b)=>a.start-b.start)) {
+    await gap(start-cursor);cursor=end;
     const id=clip.sceneId;
     const scene = job.scenes.find(s => s.id === id), source = join(work, `${id}.source`);
     await writeFile(source, await io.readAsset(job.assets[id].key));
@@ -91,17 +101,23 @@ async function renderProject(job, work, env, io) {
       captionFilters.push(captionFilter(caption,textPath));
     }
     // PCM intermediates avoid AAC padding changing frame boundaries during concatenation.
-    const target = join(work, `${clip.id}.${job.edit.version===2?'mov':'mp4'}`);
+    const target = join(work, `${"segment-"+segments.length}.${job.edit.version===2?'mov':'mp4'}`);
     await command('ffmpeg', sceneFfmpegArgs(source, target, scene, job.edit, job.brief.aspect, vo, voDuration, job.brief.category === '상품광고', job.edit.version===2?clip:null,captionFilters), env);
     segments.push(target);
   }
+  await gap(frameCount(timeline)-cursor);
   const list = join(work, 'concat.txt'), joined = join(work, job.edit.version===2?'joined.mov':'joined.mp4'), final = join(work, 'final.mp4');
   await writeFile(list, segments.map(s => `file '${s.replaceAll("'", "'\\''")}'`).join('\n'));
   await command('ffmpeg', ['-y', '-hide_banner', '-loglevel', 'error', '-f', 'concat', '-safe', '0', '-i', list, '-c', 'copy', '-movflags', '+faststart', joined], env);
-  if (job.edit.music) {
-    const music = join(work, 'bgm.source');
-    await writeFile(music, await io.readAsset(job.assets[job.edit.music].key));
-    await command('ffmpeg', ['-y', '-hide_banner', '-loglevel', 'error', '-i', joined, '-stream_loop', '-1', '-i', music, '-filter_complex', `[1:a]volume=${job.edit.musicVolume}[bg];[0:a][bg]amix=inputs=2:duration=first:normalize=0,alimiter=limit=0.95[a]`, '-map', '0:v', '-map', '[a]', '-c:v', 'copy', '-c:a', 'aac', '-movflags', '+faststart', final], env);
+  const music=musicClips(timeline);
+  if (music.length) {
+    const inputs=[];
+    for(const [i,c] of music.entries()) {
+      const source=join(work,`bgm-${i}.source`);
+      await writeFile(source,await io.readAsset(job.assets[c.assetId].key));
+      inputs.push('-stream_loop','-1','-i',source);
+    }
+    await command('ffmpeg',['-y','-hide_banner','-loglevel','error','-i',joined,...inputs,'-filter_complex',musicFilter(music),'-map','0:v','-map','[a]','-c:v','copy','-c:a','aac','-t',String(frameCount(timeline)/FPS),'-movflags','+faststart',final],env);
   } else if(job.edit.version===2) await command('ffmpeg', ['-y','-hide_banner','-loglevel','error','-i',joined,'-c:v','copy','-c:a','aac','-movflags','+faststart',final],env);
   else await writeFile(final, await readFile(joined));
   const key = `studio/${job.id}/${job.task.id}-final.mp4`;
