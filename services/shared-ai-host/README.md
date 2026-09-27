@@ -1,10 +1,24 @@
 # 공용 AI 클라우드 배포
 
-**배포 준비 코드다. 아직 서버를 생성하거나 Hanmadi 운영 설정을 바꾸지 않았다.**
-개인 GCP `replay-live-508202`의 결제 활성화와 기존 Cloud Run 서비스 없음은 조회했다.
-Compute API는 아직 꺼져 있다. 월 예산 확정 후 실제 plan을 검토하고 apply한다.
+**2026-09-27: 개인 GCP에 서버를 생성했다. Hanmadi 운영 연결은 아직 미완료다.**
+사용자가 PR #44 머지와 월 $70 목표 인프라 구성을 승인했다. 검증된 커밋
+`5bb8c87e0cfa9259132e84e8537bb18c19d8de74`를 VM에 설치했으며, Terraform 적용 결과는
+**16 add / 0 change / 0 destroy**다. 회사 계정·프로젝트는 변경하지 않았다.
 
-2026-09-27: Terraform 1.5.7 / Google provider 7.46.1로 fmt·validate·시작 스크립트 문법 검사를 통과했다. Mac/Linux 공식 체크섬을 함께 고정했다. 개인 계정을 명시한 최종 plan은 **16 add / 0 change / 0 destroy**이며 apply는 실행하지 않았다. 새 자원의 실제 생성 권한·리전 수용량·앱 기동은 아직 검증되지 않았다.
+Terraform 1.5.7 / Google provider 7.46.1의 fmt·validate·시작 스크립트 문법 검사 및 PR #44 머지 후 CI 4건이 통과했다. VM의 Docker Compose는 2.40.3이며 시작 스크립트 `Result=success`를 확인했다.
+
+## 실제 적용 및 남은 작업
+
+- 공용 API: `https://shared-ai-d5cy7m6i7q-uc.a.run.app` (관리 UI 주소가 아님).
+- 개인 프로젝트 `replay-live-508202`, VM `shared-ai`, zone `us-central1-a`, 원격 설치 경로 `/opt/shared-ai/repo`.
+- LiteLLM·Postgres 및 Dify 컨테이너 기동. 공급자 Gemini·ElevenLabs 키는 사용자가 지정한 로컬 `.env`에서 필요한 값만 SSH로 주입했다. 앱별 모델 허용 목록, 분당 30회, 초기 30일 $5 예산을 적용했다. 이 숫자는 공급자 청구의 절대 상한을 보장하지 않는다.
+- 실제 공개 HTTPS 일본어 회화 HTTP 200, 일본어 TTS HTTP 200/audio-mpeg/47,273 bytes, 같은 음성의 STT HTTP 200 및 원문 일치를 확인했다. 미인증 401, Replay 키의 Hanmadi 모델 접근 403, 관리 경로 404를 확인했다.
+- LiteLLM/DB 재시작 후 기존 앱 키로 모델 조회 HTTP 200. salt 및 앱 키 파일 권한은 0600.
+- 서버 내 `/opt/shared-ai/backups/20260927-pre-apps`에 두 DB의 논리 백업과 비공개 설정을 보관했다. 네트워크가 없는 임시 DB에 복원하여 LiteLLM 86개·Dify 144개 public 테이블을 확인했고, 검사 컨테이너는 제거했다. 이는 아직 앱/대화가 없는 초기 상태의 복원 검증이며 전체 서버 재해 복구 시험은 아니다.
+- Terraform state와 이전 Hanmadi 배포 ID는 개발 프로젝트의 Git 제외 `data/shared-ai/`에도 0600으로 보관한다. 공급자·앱 키는 이 로컬 디렉터리에 복사하지 않았다.
+- **대기:** Dify 최초 관리자·워크스페이스 생성, 공식 플러그인/두 앱 설정, Dify 실회화, Hanmadi Vercel 비공개 변수 주입과 운영 E2E. 자동 승인 검토가 관리자 이메일·권한 범위의 구체적 승인을 요구하여 `guswhd1085@gmail.com` 단일 워크스페이스 소유자 생성 승인을 요청했다. 거부된 초기화는 실행되지 않았다.
+- Hanmadi 기존 운영 배포 `dpl_5Humr4Kq3GBe47nTWboLqHFwpYu1`와 기존 변수는 변경하지 않았다. 개인 Codex OAuth도 클라우드에 복사하지 않았다.
+- 배포된 이전 `/healthz`는 VM 내부에서 200, 공개 Cloud Run에서 404였다. 이 수정본은 공개 상태 경로를 `/health`로 변경한다. 적용 전까지 공개 상태 검사 성공으로 보고하지 않는다.
 
 ## 구성
 
@@ -40,7 +54,7 @@ bash -n startup.sh
 2. 검증된 저장소 커밋을 `git archive`로 만들어 IAP SSH/SCP로 `/opt/shared-ai/repo`에 설치한다. 해당 디렉터리의 설치와 아래 Docker 작업은 VM에서 `sudo` 권한으로 수행한다. 개발 checkout이나 `.env` 전체를 복사하지 않는다. 모든 Compose 상태는 유지되는 디스크 경로에 둔다.
 3. `services/ai-gateway/gateway.py init` 후 사용자 지정 키 파일에서 필요한 Gemini/ElevenLabs 값만 비공개 `.env`에 주입한다. `render` → `docker compose up -d --wait`. 앱별 가상 키와 사용 예산을 설정한다. 공급자 키·마스터 키를 브라우저에 전달하지 않는다.
 4. `services/dify/dify.py prepare`와 기존 README의 Compose 명령으로 Dify를 시작한다. 관리자 UI는 IAP SSH 터널의 127.0.0.1:4180으로만 열어 초기화·플러그인/앱 설정을 한다. **CI 전용 `tests/integration.py`를 운영 초기화에 사용하지 않는다.**
-5. 이 디렉터리에서 `docker compose up -d`로 API 전용 edge를 시작한다. 기존 게이트웨이의 `--profile public`은 함께 사용하지 않는다. `/healthz`는 프록시 생존만 뜻한다.
+5. 이 디렉터리에서 `docker compose up -d`로 API 전용 edge를 시작한다. 기존 게이트웨이의 `--profile public`은 함께 사용하지 않는다. `/health`는 프록시 생존만 뜻한다. Cloud Run은 일부 `z`로 끝나는 경로를 예약하므로 `/healthz`를 공개 상태 확인에 사용하지 않는다([공식 알려진 문제](https://docs.cloud.google.com/run/docs/known-issues#reserved-url-paths)).
 6. 실제 모델 회화·언어별 답변·잘못된 키·앱/계정 격리·STT/TTS·재시작 유지·백업 복원을 검증한다. 개인 Codex는 서버에서 새 device login을 하고 개발자 토큰을 자동 복사하지 않는다. 공용 Hanmadi 앱에 개인 구독 키를 공유하지 않는다.
 7. 검증 후 Hanmadi 서버의 비공개 운영 환경에 아래 값을 설정하고 새 배포에서 로그인한 회화 E2E를 수행한다. 이전 환경과 배포 ID를 비밀 저장소에 보존해 문제가 나면 복원한다.
 

@@ -16,7 +16,7 @@
             flush_interval -1
         }
     }
-    handle /healthz {
+    handle /health {
         respond "edge alive" 200
     }
     handle {

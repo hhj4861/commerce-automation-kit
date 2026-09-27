@@ -65,6 +65,8 @@ try:
         assert request(edge, path)[0] == 401, path
         code, body = request(edge, path, KEY)
         assert code == 200 and json.loads(body) == {"port": target, "path": forwarded}, path
+    assert request(8080, "/health") == (200, b"edge alive")
+    assert request(8080, "/healthz")[0] == 404
     for edge in (8080, 8081):
         for path in ("/", "/install", "/console/api/setup", "/ui", "/key/generate", "/llm/key/generate", "/v1/files", "/v1/chat-messages/../console/api/setup", "/llm/v1/responses/../../key/generate"):
             assert request(edge, path, KEY)[0] == 404, (edge, path)
