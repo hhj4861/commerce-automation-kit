@@ -7,6 +7,8 @@ export type ConversationInput = {
   level: "beginner" | "intermediate";
   messages: ChatMessage[];
   studentSlug?: string;
+  conversationId?: string;
+  storageConsent?: boolean;
 };
 export class ConversationError extends Error {
   constructor(
@@ -64,12 +66,20 @@ export function parseConversation(value: unknown): ConversationInput {
       !/^[a-zA-Z0-9가-힣_-]{1,100}$/.test(b.studentSlug))
   )
     throw new ConversationError(400, "학생 링크를 확인해 주세요.");
+  if (b.conversationId !== undefined &&
+      (typeof b.conversationId !== "string" ||
+       !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(b.conversationId)))
+    throw new ConversationError(400, "대화 정보를 확인해 주세요.");
+  if (b.storageConsent !== undefined && typeof b.storageConsent !== "boolean")
+    throw new ConversationError(400, "대화 저장 안내를 확인해 주세요.");
   return {
     language: b.language,
     lessonId: b.lessonId,
     level: b.level,
     messages,
     studentSlug: b.studentSlug as string | undefined,
+    ...(b.conversationId ? { conversationId: b.conversationId as string } : {}),
+    ...(b.storageConsent !== undefined ? { storageConsent: b.storageConsent as boolean } : {}),
   };
 }
 export type LiteLLMConfig = { baseUrl: string; apiKey: string; model: string };

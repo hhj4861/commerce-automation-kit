@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ConversationRoom } from "@/components/conversation-room";
 import { courses, getLesson, isLanguage } from "@/lib/courses";
-import { getLiteLLMConfig } from "@/lib/conversation";
+import { getConversationProvider } from "@/lib/conversation-provider";
 import { audioConfig } from "@/lib/conversation-audio";
 import { getConversationTutor } from "@/lib/conversation-access";
 import { getStoredStudent } from "@/lib/store";
@@ -23,6 +23,7 @@ export default async function ConversationPage({
   let notice = "";
   let canRecord = false;
   let canSpeak = false;
+  let storesConversation = false;
   try {
     audioConfig("transcribe");
     canRecord = true;
@@ -40,7 +41,7 @@ export default async function ConversationPage({
       "튜터로 로그인하거나 튜터에게 받은 학생 포털에서 AI 회화를 열어 주세요.";
   else {
     try {
-      getLiteLLMConfig();
+      storesConversation = getConversationProvider().provider === "dify";
     } catch {
       notice = "AI 회화 연결을 준비 중이에요. 튜터에게 문의해 주세요.";
     }
@@ -77,6 +78,7 @@ export default async function ConversationPage({
           studentSlug={student?.slug}
           canRecord={canRecord}
           canSpeak={canSpeak}
+          storesConversation={storesConversation}
         />
       )}
     </div>

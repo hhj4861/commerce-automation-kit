@@ -1,8 +1,7 @@
 import {
-  completeConversation,
-  getLiteLLMConfig,
   parseConversation,
 } from "@/lib/conversation";
+import { assertProviderInput, getConversationProvider, replyToConversation } from "@/lib/conversation-provider";
 import {
   assertConversationOrigin,
   conversationActor,
@@ -18,11 +17,10 @@ export async function POST(req: Request) {
     assertConversationOrigin(req);
     const input = parseConversation(await readConversationJson(req));
     const actor = await conversationActor(input.studentSlug);
-    const config = getLiteLLMConfig();
+    const config = getConversationProvider();
+    assertProviderInput(input, config);
     await reserveRequest(actor, "chat");
-    return conversationJson({
-      reply: await completeConversation(input, config),
-    });
+    return conversationJson(await replyToConversation(input, actor, config));
   } catch (error) {
     return conversationFailure(error);
   }

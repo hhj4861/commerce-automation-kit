@@ -10,12 +10,14 @@ export function ConversationRoom({
   studentSlug,
   canRecord,
   canSpeak,
+  storesConversation,
 }: {
   language: Language;
   lesson: Lesson;
   studentSlug?: string;
   canRecord: boolean;
   canSpeak: boolean;
+  storesConversation: boolean;
 }) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [draft, setDraft] = useState("");
@@ -23,6 +25,9 @@ export function ConversationRoom({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [voiceBusy, setVoiceBusy] = useState(false);
+  const [conversationId, setConversationId] = useState<string>();
+  const [storageConsent, setStorageConsent] = useState(false);
+  const needsConsent = storesConversation && !storageConsent;
   const voice = useRef<VoiceHandle | null>(null);
   const request = useRef<AbortController | null>(null);
   const bottom = useRef<HTMLDivElement>(null);
@@ -37,7 +42,7 @@ export function ConversationRoom({
     bottom.current?.scrollIntoView({ block: "nearest" });
   }, [messages, busy]);
   async function send() {
-    if (sending.current || voiceBusy || !draft.trim() || messages.length >= 20)
+    if (sending.current || voiceBusy || needsConsent || !draft.trim() || messages.length >= 20)
       return;
     sending.current = true;
     setBusy(true);
@@ -60,15 +65,19 @@ export function ConversationRoom({
           level,
           messages: pending,
           studentSlug,
+          conversationId,
+          storageConsent,
         }),
         signal: controller.signal,
       });
       const data = await res.json();
-      if (!res.ok || typeof data.reply !== "string")
+      if (!res.ok || typeof data.reply !== "string" ||
+          (storesConversation && typeof data.conversationId !== "string"))
         throw new Error(
           data.error || "답변을 받지 못했어요. 다시 보내 주세요.",
         );
       setMessages([...pending, { role: "assistant", content: data.reply }]);
+      setConversationId(data.conversationId);
       setDraft("");
       voice.current?.answer(data.reply);
     } catch (e) {
@@ -111,9 +120,18 @@ export function ConversationRoom({
       </div>
       <p className="mt-4 text-sm leading-relaxed text-ink-soft">
         AI 답변은 틀릴 수 있어요. 대화는 답변 생성을 위해 AI 제공업체로
-        전송됩니다. 개인정보는 입력하지 마세요. 이 앱은 대화 내용을 서버에
-        저장하지 않으며, 새로고침하면 사라져요.
+        전송됩니다. 개인정보는 입력하지 마세요.{" "}
+        {storesConversation
+          ? "대화는 AI 회화 서버에 기록되며 튜터와 운영자가 확인할 수 있어요. 새로고침하거나 새 대화를 시작해도 서버 기록은 삭제되지 않아요. 기록 삭제는 튜터에게 요청해 주세요."
+          : "이 앱은 대화 내용을 서버에 저장하지 않으며, 새로고침하면 사라져요."}
       </p>
+      {storesConversation && (
+        <label className="mt-3 flex items-start gap-2 text-sm text-ink-soft">
+          <input type="checkbox" checked={storageConsent} disabled={busy || messages.length > 0}
+            onChange={(event) => setStorageConsent(event.target.checked)} className="mt-1" />
+          대화가 회화 서버에 저장되는 것에 동의해요.
+        </label>
+      )}
       <div
         role="log"
         aria-label="대화 내용"
@@ -177,7 +195,7 @@ export function ConversationRoom({
         studentSlug={studentSlug}
         onTranscript={setDraft}
         onBusyChange={setVoiceBusy}
-        disabled={busy || messages.length >= 20}
+        disabled={busy || needsConsent || messages.length >= 20}
         canRecord={canRecord}
         canSpeak={canSpeak}
       />
@@ -217,6 +235,7 @@ export function ConversationRoom({
               onClick={() => {
                 voice.current?.reset();
                 setMessages([]);
+                setConversationId(undefined);
                 setDraft("");
                 setError("");
               }}
@@ -227,7 +246,7 @@ export function ConversationRoom({
             <button
               type="submit"
               disabled={
-                busy || voiceBusy || !draft.trim() || messages.length >= 20
+                busy || voiceBusy || needsConsent || !draft.trim() || messages.length >= 20
               }
               className="min-h-11 rounded-full bg-accent px-6 font-medium text-white hover:bg-accent-strong disabled:opacity-50"
             >
