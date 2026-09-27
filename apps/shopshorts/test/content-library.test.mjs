@@ -21,7 +21,7 @@ test('unified library keeps both storage identities and pending requests, exclud
   const input={projects:[project],jobs:[job],requests:[{slug:'waiting',topic:'대기 주제',status:'pending',requestedAt:'2026-09-27T11:00:00Z'},{slug:'same',status:'pending'},{slug:'done',status:'done'}]};
   const before=structuredClone(input),items=collectContent(input);
   assert.deepEqual(items.map(item=>item.key),['request:waiting','studio:same','job:same']);assert.deepEqual(input,before);
-  assert.equal(items[1].href,'/studio?id=same');assert.equal(items[2].href,'/?job=same');assert.equal(items[0].href,'/?request=waiting');
+  assert.equal(items[1].href,'/studio?id=same');assert.equal(items[2].href,'/studio/automatic?job=same');assert.equal(items[0].href,'/studio/automatic?request=waiting');
 });
 test('preview does not count as final; rendered and uploaded content are separate states',()=>{
   const items=collectContent({projects:[project,{...project,id:'rendered',render:{}},{...project,id:'published',render:{},upload:{state:'done'}}],jobs:[job,{...job,brief:{id:'failed'},status:'published',outputVideo:'final.mp4',upload:{state:'failed'}}]});
@@ -61,3 +61,10 @@ test('automatic request exposes authentication and service failures and accepts 
   await assert.rejects(requestAutomaticDraft('주제','',{fetcher:async()=>new Response('',{status:401})}),/로그인/);
   await assert.rejects(requestAutomaticDraft('주제','',{fetcher:async()=>Response.json({error:'제작 서비스 점검 중'},{status:503})}),/점검 중/);
 });
+
+ test('automatic studio projects resume their automatic dashboard while manual projects keep their editor route',()=>{
+  const items=collectContent({projects:[project,{...project,id:'auto-project',automation:{keyword:'자동 주제'}}]});
+  const automatic=items.find(item=>item.id==='auto-project');
+  assert.equal(automatic.mode,'auto');assert.equal(automatic.href,'/studio/automatic?project=auto-project');
+  assert.equal(items.find(item=>item.id===project.id).mode,'manual');
+ });

@@ -16,7 +16,7 @@ import { mergeRuntimeEnv } from '../credential-broker/runtime-env.mjs';
 import { authRoute, googleUser, legacyAuthorized, sameOrigin } from './lib/google-auth.js';
 import { localStudioStore, startLocalStudio, handleLocalStudio, sendResponse } from './studio-local.mjs';
 import { spawn } from 'node:child_process';
-import { mkdirSync, readFileSync, writeFileSync, existsSync, statSync, createReadStream } from 'node:fs';
+import { mkdirSync, readdirSync, readFileSync, writeFileSync, existsSync, statSync, createReadStream } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { tmpdir } from 'node:os';
@@ -522,13 +522,18 @@ const server = createServer(async (req, res) => {
     }
     if (url.pathname.startsWith('/api/studio')) { await handleLocalStudio(req, res, origin, STUDIO_ENV, studioStore); return; }
     const studioFiles = { '/caption-style.js':['caption-style.js','text/javascript'], '/DoHyeon-Regular.ttf':['DoHyeon-Regular.ttf','font/ttf'], '/Jua-Regular.ttf':['Jua-Regular.ttf','font/ttf'], '/BlackHanSans-Regular.ttf':['BlackHanSans-Regular.ttf','font/ttf'], '/GowunDodum-Regular.ttf':['GowunDodum-Regular.ttf','font/ttf'], '/studio-status.js': ['studio-status.js','text/javascript'], '/llm-connection.js': ['llm-connection.js','text/javascript'], '/notifications.js': ['notifications.js','text/javascript'], '/notifications.css': ['notifications.css','text/css'], '/editor.js': ['editor.js','text/javascript'], '/editor-model.js': ['editor-model.js','text/javascript'], '/NanumGothic-Regular.ttf': ['NanumGothic-Regular.ttf','font/ttf'], '/NanumMyeongjo-Regular.ttf': ['NanumMyeongjo-Regular.ttf','font/ttf'], '/NanumPenScript-Regular.ttf': ['NanumPenScript-Regular.ttf','font/ttf'], '/app-shell.css': ['app-shell.css','text/css'], '/studio': ['studio.html','text/html'], '/studio.html': ['studio.html','text/html'], '/studio.js': ['studio.js','text/javascript'], '/studio.css': ['studio.css','text/css'] };
+    // Serve checked-in browser modules/styles/fonts behind the same authentication gate.
+    for (const file of readdirSync(join(__dirname, 'public'))) {
+      const ext=file.match(/^[a-zA-Z0-9._-]+\.(js|css|ttf)$/)?.[1];
+      if(ext)studioFiles['/'+file]=[file,{js:'text/javascript',css:'text/css',ttf:'font/ttf'}[ext]];
+    }
     if (req.method === 'GET' && studioFiles[url.pathname]) {
       const [file, type] = studioFiles[url.pathname];
       res.writeHead(200, { 'content-type': type + '; charset=utf-8', 'cache-control': 'no-store' });
       res.end(readFileSync(join(__dirname, 'public', file))); return;
     }
     // 정적 UI
-    const appPages = ['/', '/index.html', '/contents', '/trends', '/blog', '/performance', '/affiliate-links', '/settings', '/notifications'];
+    const appPages = ['/studio/automatic', '/studio/automatic/', '/', '/index.html', '/contents', '/trends', '/blog', '/performance', '/affiliate-links', '/settings', '/notifications'];
     if (req.method === 'GET' && appPages.includes(url.pathname)) {
       res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' });
       res.end(readFileSync(join(__dirname, 'public', 'index.html')));
