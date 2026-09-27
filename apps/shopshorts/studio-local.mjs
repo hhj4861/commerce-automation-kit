@@ -1,3 +1,4 @@
+import {continueAutomatic} from './lib/studio-automatic.js';
 import { existsSync, mkdirSync, readFileSync, writeFileSync, renameSync } from 'node:fs';
 import { resolve, join, dirname, extname, sep } from 'node:path';
 import { accountBroker } from './studio-account-worker.mjs';
@@ -22,7 +23,7 @@ export function localStudioStore(dataDir, env, onPersist = () => {}) {
     async capabilities() { return {...capabilities(env),audioAccount:await audioAccount()}; },
     async list() { return load().sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)); },
     async get(id) { return load().find(p => p.id === id) || null; },
-    async create(p) { const all = load(); all.push(p); persist(all); },
+    async create(p) { const all = load(); if(all.some(item=>item.id===p.id))throw Object.assign(new Error('이미 생성된 프로젝트입니다.'),{status:409}); all.push(p); persist(all); },
     async cas(p, revision) { const all = load(), index = all.findIndex(x => x.id === p.id); if (index < 0 || all[index].revision !== revision) return false; all[index] = p; persist(all); return true; },
     async writeAsset(key, data, type) { const path = assetPath(key); mkdirSync(dirname(path), { recursive: true }); writeFileSync(path, Buffer.from(data)); writeFileSync(`${path}.type`, type); },
     async readAsset(key, request) {
@@ -58,7 +59,8 @@ export function startLocalStudio(store, env, execute = executeStudioTask) {
         const update = async (result, state) => {
           const fresh = await store.get(job.id);
           if (fresh.task?.id !== job.task.id || fresh.task.state !== 'running') throw new Error('제작 도중 프로젝트가 변경되었습니다.');
-          const next = { ...fresh, ...result, revision: fresh.revision + 1, updatedAt: new Date().toISOString(), task: { ...fresh.task, ...(state ? { state } : {}) } };
+          let next = { ...fresh, ...result, revision: fresh.revision + 1, updatedAt: new Date().toISOString(), task: { ...fresh.task, ...(state ? { state } : {}) } };
+          if(state==='done')next=continueAutomatic(next);
           if (!await store.cas(next, fresh.revision)) throw new Error('제작 결과 저장 충돌');
           job = next;
         };

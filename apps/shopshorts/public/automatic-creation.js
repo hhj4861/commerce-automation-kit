@@ -1,3 +1,4 @@
+import {connectLlm} from './llm-connection.js';
 export function draftPayload(topic,memo='') {
   const clean=String(topic).trim();
   if(!clean || clean.length>100)throw Error('주제를 1~100자로 입력해 주세요.');
@@ -12,17 +13,126 @@ export async function requestAutomaticDraft(topic,memo,{fetcher=fetch}={}) {
   if(!response.ok)throw Error(data.error || '초안을 요청하지 못했어요. 다시 시도해 주세요.');
   return {duplicate:false};
 }
-export function mountAutomaticCreation(host,{fetcher=fetch}={}) {
-  host.innerHTML=`<section class="panel automatic-brief"><div class="panel-head"><div><h2>어떤 쇼핑쇼츠를 만들까요?</h2><p>주제를 입력하면 대본 초안을 자동으로 작성합니다.</p></div></div><ol><li>주제 입력 후 대본 초안 요청</li><li>콘텐츠에서 대본 검수와 영상 생성 진행</li><li>최종 영상 확인 후 발행</li></ol><form data-auto-form><label class="field"><span>상품 또는 주제</span><input name="topic" required maxlength="100" placeholder="예: 작은 방을 정리하는 접이식 건조대"></label><label class="field"><span>대본에 참고할 내용 <small>선택</small></span><textarea name="memo" maxlength="500" placeholder="예: 좁은 공간에서 보관하는 방법을 보여주세요."></textarea></label><p class="hint">자동 생성은 현재 쇼핑쇼츠를 지원합니다. 다른 카테고리나 롱폼은 수동 생성에서 시작하세요. 대본 승인과 최종 발행은 직접 확인하며, 영상·음성 생성에 서비스별 사용료가 발생할 수 있습니다.</p><div class="actions"><a href="/studio">제작 방식 다시 선택</a><button class="primary" type="submit">자동 초안 요청</button></div><div class="auto-feedback" data-auto-feedback role="status" aria-live="polite"></div></form><div class="studio-library-link"><p>주제가 아직 없다면 검색 트렌드에서 소재를 찾아보세요.</p><a href="/trends">트렌드 탐색</a></div></section>`;
-  const form=host.querySelector('form'),feedback=host.querySelector('[data-auto-feedback]'),button=form.querySelector('button');
-  form.addEventListener('submit',async event=>{
-    event.preventDefault();if(button.disabled)return;
-    button.disabled=true;button.textContent='요청 중…';feedback.textContent='';
+const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const busy=project=>['queued','running'].includes(project.task?.state);
+export function automaticStatus(project) {
+  if(project.upload?.state==='done')return '발행 완료';
+  if(project.task?.state==='failed'||project.upload?.state==='failed')return '확인 필요';
+  if(busy(project))return ({scenario:'대본 생성',media:'장면 생성',render:'음성·자막·영상 조립',publish:'업로드',narration:'음성 생성'}[project.task.action]||'제작')+(project.task.state==='queued'?' 대기 중':' 중');
+  if(project.render)return '발행 검수';
+  if(project.scenes.length&&!project.approved)return '대본 승인';
+  return project.scenes.length?'영상 제작 이어하기':'대본 생성 필요';
+}
+export function mountAutomaticCreation(host,{fetcher=fetch,connect=connectLlm}={}) {
+  let saved=null,selected=0,pending=false,polling=false,projects=new Map(),signature='',selectedProject=new URLSearchParams(location.search).get('project');
+  let recommendationId=new URLSearchParams(location.search).get('recommendation'),started=Date.now();
+  const q=selector=>host.querySelector(selector);
+  const api=async(path,body)=>{
+    const response=await fetcher('/api/studio'+path,{cache:'no-store',signal:AbortSignal.timeout(25000),...(body===undefined?{}:{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)})});
+    const data=await response.json();if(!response.ok)throw Error(data.error||'요청을 확인하지 못했어요. 다시 시도해 주세요.');return data;
+  };
+  host.innerHTML=`<section class="auto-planner" aria-labelledby="auto-title"><header><h1 id="auto-title">관심 분야에서, 다음 영상까지</h1><p>카테고리의 최근 흐름을 찾고 키워드로 영상을 만드세요.</p></header><ol class="auto-steps" aria-label="자동 제작 순서"><li aria-current="step">카테고리</li><li>트렌드 검색</li><li>키워드</li><li>영상 제작</li></ol><form data-search><fieldset disabled><legend>어떤 분야를 만들까요?</legend><div class="auto-categories" data-categories></div><div class="auto-options"><label>영상 형식<select name="format"><option value="short">숏폼 · 세로</option><option value="long">롱폼 · 가로</option></select></label><label>목표 길이<select name="duration"><option value="32">32초</option><option value="60" selected>60초</option><option value="120">120초</option></select></label><label class="auto-interest">관심사 · 제품 정보 <span>선택</span><input name="topic" maxlength="1000" placeholder="예: 부모와 아이의 대화, 빛이 들어오는 작은 집"></label></div><button class="auto-primary" type="submit">트렌드 검색 · 키워드 찾기</button></fieldset></form><div data-search-status role="status" aria-live="polite"></div><div data-keywords></div></section><section class="auto-management" aria-labelledby="auto-management-title"><header><h2 id="auto-management-title">자동 제작 작업 관리</h2><p>대본 승인과 발행 검수</p></header><p data-management-message role="status"></p><div data-projects><p>제작 작업을 불러오고 있어요.</p></div></section>`;
+  const form=q('[data-search]'),status=q('[data-search-status]'),feedback=q('[data-management-message]');
+  const step=n=>q('.auto-steps').querySelectorAll('li').forEach((li,i)=>{li.toggleAttribute('data-done',i<n);if(i===n)li.setAttribute('aria-current','step');else li.removeAttribute('aria-current');});
+  function progress(text){status.innerHTML=`<div class="auto-progress"><progress aria-label="트렌드 검색 진행"></progress><div><strong>${esc(text)}</strong><p>최근 자료 확인 후 키워드 3개와 영상 기획을 보여드려요. 창을 닫아도 계속 진행됩니다.</p></div></div>`;}
+  function setRecommendation(id){recommendationId=id;history.replaceState(null,'','/studio/automatic?recommendation='+encodeURIComponent(id));}
+  function result(item){
+    saved=item;pending=false;form.querySelector('fieldset').disabled=false;step(2);status.textContent='검색 완료 · 영상으로 만들 키워드를 선택하세요.';
+    const data=item.result;
+    q('[data-keywords]').innerHTML=`<fieldset class="auto-keywords"><legend>검색에서 찾은 키워드</legend>${data.suggestions.map((s,i)=>`<label class="auto-keyword"><input type="radio" name="keyword" value="${i}" ${i===0?'checked':''}><span><strong>${esc(s.keyword)}</strong><b>${esc(s.topic)}</b><span>${esc(s.reason)}</span><small>${esc(s.direction)}</small></span></label>`).join('')}</fieldset><details class="auto-sources"><summary>검색 근거 ${data.sources.length}개 · ${esc(data.checkedAt?.slice(0,10))}</summary>${data.sources.map(s=>{let safe=false;try{safe=new URL(s.url).protocol==='https:';}catch{}return safe?`<a href="${esc(s.url)}" target="_blank" rel="noopener noreferrer">${esc(s.title)}</a>`:'';}).join('')}</details><button type="button" class="auto-primary" data-create>선택한 키워드로 영상 만들기</button><p class="auto-note">대본 승인 후 장면·음성·자막을 생성하고 영상을 조립합니다. 생성 서비스 사용료가 발생할 수 있어요.</p>`;
+    selected=0;
+    q('[data-keywords]').onchange=e=>{if(e.target.name==='keyword')selected=Number(e.target.value);};
+    q('[data-create]').onclick=async e=>{
+      const button=e.currentTarget;button.disabled=true;button.textContent='대본 생성 요청 중…';
+      try {
+        const data=await api('/automatic',{recommendationId:item.id,index:selected});selectedProject=data.project.id;step(3);
+        history.replaceState(null,'','/studio/automatic?project='+encodeURIComponent(selectedProject));
+        feedback.textContent=data.error||'제작을 시작했어요. 대본이 준비되면 이곳에서 승인해 주세요.';
+        signature='';await refreshProjects();q('.auto-management').scrollIntoView({behavior:'smooth',block:'start'});button.textContent='작업에서 이어하기';
+      } catch(error){status.textContent=error.message;button.textContent='다시 영상 만들기';}
+      finally{button.disabled=false;}
+    };
+  }
+  async function checkRecommendation(){
+    if(!recommendationId||!pending)return;
+    const {recommendation:item}=await api('/llm/recommendation?id='+encodeURIComponent(recommendationId));
+    if(item?.input?.intent!=='keywords')throw Error('자동 제작 키워드 검색을 다시 시작해 주세요.');
+    if(item.state==='failed')throw Error(item.error||'검색을 완료하지 못했어요. 다시 시도해 주세요.');
+    if(item.state==='done'){result(item);return;}
+    step(1);progress(item.state==='queued'?'검색 요청 대기 중':`트렌드 검색·키워드 산출 중 · ${Math.max(0,Math.round((Date.now()-started)/1000))}초`);
+  }
+  form.onchange=e=>{
+    if(e.target.name==='format')form.elements.duration.innerHTML=(e.target.value==='short'?[[32,'32초'],[60,'60초'],[120,'120초']]:[[120,'2분'],[300,'5분'],[600,'10분']]).map(([v,t])=>`<option value="${v}">${t}</option>`).join('');
+    if(!pending)step(0);
+    if(saved){saved=null;recommendationId=null;q('[data-keywords]').innerHTML='';status.textContent='선택한 조건으로 다시 검색해 주세요.';step(0);history.replaceState(null,'','/studio/automatic');}
+  };
+  form.onsubmit=async e=>{
+    e.preventDefault();if(pending)return;pending=true;saved=null;q('[data-keywords]').innerHTML='';form.querySelector('fieldset').disabled=true;progress('AI 계정 확인 중');
     try {
-      const result=await requestAutomaticDraft(form.elements.topic.value,form.elements.memo.value,{fetcher});
-      feedback.innerHTML=`<p>${result.duplicate?'이미 요청한 주제예요. 콘텐츠에서 진행 상태를 확인하세요.':'초안을 요청했어요. 콘텐츠에 저장되었으며, 제작 서비스가 처리하면 대본을 검수할 수 있습니다.'}</p><a class="workspace-link" href="/contents?status=working">콘텐츠에서 진행 상태 보기</a>`;
-      button.textContent=result.duplicate?'이미 요청됨':'요청 완료';
-      form.elements.topic.disabled=true;form.elements.memo.disabled=true;
-    } catch(error) {feedback.textContent=error.message;button.disabled=false;button.textContent='다시 요청';}
-  });
+      if(!await connect())throw Error('계정을 연결한 뒤 검색해 주세요.');
+      const input={intent:'keywords',focus:'topic',category:form.elements.category.value,format:form.elements.format.value,duration:Number(form.elements.duration.value),topic:form.elements.topic.value,direction:''};
+      const response=await api('/recommendations',input);if(!response.job?.id)throw Error('검색 요청을 확인하지 못했어요.');
+      started=Date.now();setRecommendation(response.job.id);step(1);await checkRecommendation();
+    }catch(error){pending=false;form.querySelector('fieldset').disabled=false;status.textContent=error.message;}
+  };
+  const asset=p=>`/api/studio/${encodeURIComponent(p.id)}/assets/final?v=${p.revision}`;
+  function projectMarkup(p){
+    const running=busy(p),failed=p.task?.state==='failed',published=!!p.upload;
+    let controls='';
+    if(!running&&!published){
+      if(!p.scenes.length)controls='<button data-action="scenario" class="auto-primary">대본 생성 다시 시도</button>';
+      else if(!p.approved)controls='<label class="auto-check"><input type="checkbox" data-approve>대본과 장면 설명을 확인했습니다.</label><p class="auto-note">승인하면 장면·음성 생성과 영상 조립을 진행하며 서비스 사용료가 발생할 수 있어요.</p><button data-action="media" class="auto-primary" disabled>대본 승인 · 영상 자동 제작</button>';
+      else if(p.render)controls=`<video controls preload="metadata" src="${asset(p)}"></video><form data-publish><label>게시 제목<input name="title" required maxlength="100" value="${esc(p.title)}"></label><label>플랫폼<select name="platform"><option value="youtube">YouTube</option>${p.brief.format==='short'?'<option value="instagram">Instagram</option><option value="tiktok">TikTok</option>':''}</select></label><label>공개 범위<select name="privacy"><option value="private">비공개</option><option value="unlisted">일부 공개</option><option value="public">공개</option></select></label><label class="auto-check"><input name="reviewed" type="checkbox" required>최종 영상과 발행 정보를 확인했습니다.</label><button class="auto-primary">검수 완료 · 업로드</button></form>`;
+      else controls=`<button data-action="${p.scenes.every(s=>p.assets[s.id])&&p.edit?'render':'media'}" class="auto-primary">영상 제작 이어하기</button>`;
+    }
+    return `<details class="auto-project" data-project="${p.id}" ${selectedProject===p.id?'open':''}><summary><span><small>${esc(p.brief.category)} · ${esc(p.automation.keyword)}</small><strong>${esc(p.title)}</strong></span><b class="${failed?'auto-error':''}">${esc(automaticStatus(p))}</b></summary><div class="auto-project-body">${running?`<div class="auto-progress"><progress aria-label="${esc(automaticStatus(p))}"></progress><p>${esc(automaticStatus(p))}<br>창을 닫아도 서버에서 계속 처리합니다.</p></div>`:''}${failed?`<p role="alert" class="auto-error">${esc(p.task.error)}</p>`:''}${p.upload?`<p>${p.upload.state==='done'?'발행을 완료했어요.':'업로드 결과를 제작실에서 확인해 주세요.'}</p>`:''}${p.scenes.length?`<ol class="auto-script">${p.scenes.map(s=>`<li><p>${esc(s.narration)}</p><small>${esc(s.kind==='video'?'영상':'이미지')} · ${esc(s.duration)}초 · ${esc(s.prompt)}</small></li>`).join('')}</ol>`:''}<a href="/studio?id=${p.id}">대본·영상 직접 편집</a><div class="auto-project-controls">${controls}</div></div></details>`;
+  }
+  async function refreshProjects(){
+    const {projects:items}=await api('');const automatic=items.filter(p=>p.automation);
+    automatic.sort((a,b)=>{const attention=p=>!busy(p)&&!p.upload;return Number(attention(b))-Number(attention(a))||b.updatedAt.localeCompare(a.updatedAt);});
+    projects=new Map(automatic.map(p=>[p.id,p]));const next=JSON.stringify(automatic.map(p=>[p.id,p.revision]));if(next===signature)return;
+    const activeCard=document.activeElement?.closest('[data-project]');
+    if(activeCard&&activeCard.dataset.revision===String(projects.get(activeCard.dataset.project)?.revision))return;
+    signature=next;
+    const list=q('[data-projects]');
+    if(!automatic.length){list.innerHTML='<p class="auto-empty">키워드로 영상을 시작하면 이곳에서 대본과 완성 영상을 확인할 수 있어요.</p>';return;}
+    const cards=new Map([...list.querySelectorAll('[data-project]')].map(el=>[el.dataset.project,el]));
+    // Keep untouched forms and video players mounted while another job advances.
+    for(const p of automatic){
+      let card=cards.get(p.id);
+      if(!card || card.dataset.revision!==String(p.revision)){
+        const template=document.createElement('template');template.innerHTML=projectMarkup(p);const nextCard=template.content.firstElementChild;
+        nextCard.dataset.revision=String(p.revision);if(card?.open)nextCard.open=true;
+        if(card)card.replaceWith(nextCard);card=nextCard;
+      }
+      if(p.id===selectedProject)card.open=true;
+      list.append(card);cards.delete(p.id);
+    }
+    for(const card of cards.values())card.remove();
+    for(const child of [...list.children])if(!child.matches('[data-project]'))child.remove();
+  }
+  async function act(card,action,body={}){
+    const p=projects.get(card.dataset.project);card.querySelectorAll('button').forEach(b=>b.disabled=true);feedback.textContent='';
+    try {await api(`/${p.id}/${action}`,{revision:p.revision,...body});signature='';await refreshProjects();}
+    catch(error){feedback.textContent=error.message;signature='';await refreshProjects().catch(()=>{});}
+  }
+  q('[data-projects]').onchange=e=>{if(e.target.matches('[data-approve]'))e.target.closest('[data-project]').querySelector('[data-action="media"]').disabled=!e.target.checked;};
+  q('[data-projects]').onclick=e=>{const button=e.target.closest('[data-action]');if(!button||button.disabled)return;const action=button.dataset.action;void act(button.closest('[data-project]'),action,action==='scenario'?{confirm:true}:action==='media'?{approved:true}:{});};
+  q('[data-projects]').onsubmit=e=>{if(!e.target.matches('[data-publish]'))return;e.preventDefault();const f=e.target;void act(f.closest('[data-project]'),'publish',{reviewed:f.elements.reviewed.checked,platforms:[f.elements.platform.value],privacy:f.elements.privacy.value,title:f.elements.title.value});};
+  async function poll(){
+    if(polling)return;polling=true;
+    try {await checkRecommendation();}catch(error){status.textContent=error.message;pending=false;form.querySelector('fieldset').disabled=false;}
+    try {await refreshProjects();}catch(error){feedback.textContent='작업 목록을 확인하지 못했어요. 자동으로 다시 확인합니다. '+error.message;}
+    finally{polling=false;}
+  }
+  const ready=(async()=>{
+    try{
+      const config=await api('/config');q('[data-categories]').innerHTML=config.categories.map((c,i)=>`<label><input type="radio" name="category" value="${esc(c)}" ${i===0?'checked':''}><span>${esc(c)}</span></label>`).join('');form.querySelector('fieldset').disabled=false;
+      if(recommendationId){pending=true;form.querySelector('fieldset').disabled=true;const {recommendation:item}=await api('/llm/recommendation?id='+encodeURIComponent(recommendationId));if(item?.input){form.elements.category.value=item.input.category;form.elements.format.value=item.input.format;form.elements.topic.value=item.input.topic;form.elements.duration.innerHTML=`<option value="${Number(item.input.duration)}">${Number(item.input.duration)}초</option>`;}await checkRecommendation();}
+      await refreshProjects();
+      if(selectedProject&&projects.has(selectedProject)){const p=projects.get(selectedProject);form.elements.category.value=p.brief.category;form.elements.format.value=p.brief.format;form.elements.duration.innerHTML=`<option value="${p.brief.duration}">${p.brief.duration}초</option>`;step(3);q('.auto-management').scrollIntoView({block:'start'});}
+    }catch(error){status.textContent=error.message;pending=false;form.querySelector('fieldset').disabled=false;}
+  })();
+  const timer=setInterval(()=>{if(host.isConnected&&!host.closest('[hidden]')&&!document.hidden)void poll();},4000);
+  return {ready,refresh:poll,destroy:()=>clearInterval(timer)};
 }

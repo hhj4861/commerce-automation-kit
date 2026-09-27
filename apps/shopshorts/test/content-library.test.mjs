@@ -21,7 +21,7 @@ test('unified library keeps both storage identities and pending requests, exclud
   const input={projects:[project],jobs:[job],requests:[{slug:'waiting',topic:'대기 주제',status:'pending',requestedAt:'2026-09-27T11:00:00Z'},{slug:'same',status:'pending'},{slug:'done',status:'done'}]};
   const before=structuredClone(input),items=collectContent(input);
   assert.deepEqual(items.map(item=>item.key),['request:waiting','studio:same','job:same']);assert.deepEqual(input,before);
-  assert.equal(items[1].href,'/studio?id=same');assert.equal(items[2].href,'/?job=same');assert.equal(items[0].href,'/?request=waiting');
+  assert.equal(items[1].href,'/studio?id=same');assert.equal(items[2].href,'/studio/automatic?job=same');assert.equal(items[0].href,'/studio/automatic?request=waiting');
 });
 test('preview does not count as final; rendered and uploaded content are separate states',()=>{
   const items=collectContent({projects:[project,{...project,id:'rendered',render:{}},{...project,id:'published',render:{},upload:{state:'done'}}],jobs:[job,{...job,brief:{id:'failed'},status:'published',outputVideo:'final.mp4',upload:{state:'failed'}}]});

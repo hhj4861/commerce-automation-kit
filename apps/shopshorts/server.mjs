@@ -16,7 +16,7 @@ import { mergeRuntimeEnv } from '../credential-broker/runtime-env.mjs';
 import { authRoute, googleUser, legacyAuthorized, sameOrigin } from './lib/google-auth.js';
 import { localStudioStore, startLocalStudio, handleLocalStudio, sendResponse } from './studio-local.mjs';
 import { spawn } from 'node:child_process';
-import { mkdirSync, readFileSync, writeFileSync, existsSync, statSync, createReadStream } from 'node:fs';
+import { mkdirSync, readdirSync, readFileSync, writeFileSync, existsSync, statSync, createReadStream } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { tmpdir } from 'node:os';
@@ -33,6 +33,7 @@ const DATA_DIR = process.env.SHOPSHORTS_DATA_DIR ? resolve(process.env.SHOPSHORT
 const JOBS_PATH = join(DATA_DIR, 'jobs.json');
 const DRAFT_REQ_PATH = join(DATA_DIR, 'draft-requests.json');
 const PORT = Number(process.env.SHOPSHORTS_PORT ?? 5178);
+const PUBLIC_STATIC_FILES = Object.fromEntries(readdirSync(join(__dirname, 'public')).filter(file => /^[a-zA-Z0-9-]+\.(js|css|ttf)$/.test(file)).map(file => ['/' + file, [file, file.endsWith('.js') ? 'text/javascript' : file.endsWith('.css') ? 'text/css' : 'font/ttf']]));
 /**
  * 조립(finalize) 내레이션 보이스 — Yooni(Natural & Clear, 사용자 청음 선택 2026-07-28).
  * ElevenLabs 공유 보이스라 계정에 1회 추가돼 있어야 한다(voice add — 미추가 시 TTS 400).
@@ -521,14 +522,14 @@ const server = createServer(async (req, res) => {
       return;
     }
     if (url.pathname.startsWith('/api/studio')) { await handleLocalStudio(req, res, origin, STUDIO_ENV, studioStore); return; }
-    const studioFiles = { '/caption-style.js':['caption-style.js','text/javascript'], '/DoHyeon-Regular.ttf':['DoHyeon-Regular.ttf','font/ttf'], '/Jua-Regular.ttf':['Jua-Regular.ttf','font/ttf'], '/BlackHanSans-Regular.ttf':['BlackHanSans-Regular.ttf','font/ttf'], '/GowunDodum-Regular.ttf':['GowunDodum-Regular.ttf','font/ttf'], '/studio-status.js': ['studio-status.js','text/javascript'], '/llm-connection.js': ['llm-connection.js','text/javascript'], '/notifications.js': ['notifications.js','text/javascript'], '/notifications.css': ['notifications.css','text/css'], '/editor.js': ['editor.js','text/javascript'], '/editor-model.js': ['editor-model.js','text/javascript'], '/NanumGothic-Regular.ttf': ['NanumGothic-Regular.ttf','font/ttf'], '/NanumMyeongjo-Regular.ttf': ['NanumMyeongjo-Regular.ttf','font/ttf'], '/NanumPenScript-Regular.ttf': ['NanumPenScript-Regular.ttf','font/ttf'], '/app-shell.css': ['app-shell.css','text/css'], '/studio': ['studio.html','text/html'], '/studio.html': ['studio.html','text/html'], '/studio.js': ['studio.js','text/javascript'], '/studio.css': ['studio.css','text/css'] };
+    const studioFiles = { ...PUBLIC_STATIC_FILES, '/caption-style.js':['caption-style.js','text/javascript'], '/DoHyeon-Regular.ttf':['DoHyeon-Regular.ttf','font/ttf'], '/Jua-Regular.ttf':['Jua-Regular.ttf','font/ttf'], '/BlackHanSans-Regular.ttf':['BlackHanSans-Regular.ttf','font/ttf'], '/GowunDodum-Regular.ttf':['GowunDodum-Regular.ttf','font/ttf'], '/studio-status.js': ['studio-status.js','text/javascript'], '/llm-connection.js': ['llm-connection.js','text/javascript'], '/notifications.js': ['notifications.js','text/javascript'], '/notifications.css': ['notifications.css','text/css'], '/editor.js': ['editor.js','text/javascript'], '/editor-model.js': ['editor-model.js','text/javascript'], '/NanumGothic-Regular.ttf': ['NanumGothic-Regular.ttf','font/ttf'], '/NanumMyeongjo-Regular.ttf': ['NanumMyeongjo-Regular.ttf','font/ttf'], '/NanumPenScript-Regular.ttf': ['NanumPenScript-Regular.ttf','font/ttf'], '/app-shell.css': ['app-shell.css','text/css'], '/studio': ['studio.html','text/html'], '/studio.html': ['studio.html','text/html'], '/studio.js': ['studio.js','text/javascript'], '/studio.css': ['studio.css','text/css'] };
     if (req.method === 'GET' && studioFiles[url.pathname]) {
       const [file, type] = studioFiles[url.pathname];
       res.writeHead(200, { 'content-type': type + '; charset=utf-8', 'cache-control': 'no-store' });
       res.end(readFileSync(join(__dirname, 'public', file))); return;
     }
     // 정적 UI
-    const appPages = ['/', '/index.html', '/contents', '/trends', '/blog', '/performance', '/affiliate-links', '/settings', '/notifications'];
+    const appPages = ['/studio/automatic', '/automatic', '/', '/index.html', '/contents', '/trends', '/blog', '/performance', '/affiliate-links', '/settings', '/notifications'];
     if (req.method === 'GET' && appPages.includes(url.pathname)) {
       res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' });
       res.end(readFileSync(join(__dirname, 'public', 'index.html')));

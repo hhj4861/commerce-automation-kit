@@ -8,8 +8,8 @@ export function collectContent({projects=[],jobs=[],requests=[]}={}) {
   const items = projects.map(project => {
     const summary = projectSummary(project);
     const scene = project.scenes?.find(scene => project.assets?.[scene.id]?.kind === 'image');
-    return {key:`studio:${project.id}`,id:project.id,source:'studio',mode:'manual',title:project.title || project.brief?.topic || '제목 없는 영상',category:project.brief?.category || '',format:project.brief?.format === 'long' ? '롱폼' : '숏폼',updatedAt:project.updatedAt,
-      ready:!!project.render,published:project.upload?.state === 'done',attention:project.task?.state === 'failed' || project.upload?.state === 'failed',label:project.upload?.state === 'failed' ? '업로드 확인 필요' : summary.label,action:summary.action,href:summary.href,
+    return {key:`studio:${project.id}`,id:project.id,source:'studio',mode:project.automation?'auto':'manual',title:project.title || project.brief?.topic || '제목 없는 영상',category:project.brief?.category || '',format:project.brief?.format === 'long' ? '롱폼' : '숏폼',updatedAt:project.updatedAt,
+      ready:!!project.render,published:project.upload?.state === 'done',attention:project.task?.state === 'failed' || project.upload?.state === 'failed',label:project.upload?.state === 'failed' ? '업로드 확인 필요' : summary.label,action:summary.action,href:project.automation?`/studio/automatic?project=${encode(project.id)}`:summary.href,
       poster:scene ? `/api/studio/${encode(project.id)}/assets/${encode(scene.id)}?v=${encode(project.revision)}` : null};
   });
   for (const job of jobs) {
@@ -17,11 +17,11 @@ export function collectContent({projects=[],jobs=[],requests=[]}={}) {
     const published = job.upload?.state === 'done' || (job.status === 'published' && !job.upload && !!job.publishRef);
     const attention = ['failed','error'].includes(job.upload?.state) || job.finalize?.state === 'error' || job.status === 'rejected';
     const label = attention ? '확인 필요' : published ? '업로드 완료' : ['requested','uploading'].includes(job.upload?.state) ? '업로드 진행 중' : jobLabels[job.status] || '제작 중';
-    items.push({key:`job:${job.brief.id}`,id:job.brief.id,source:'job',mode:'auto',title:job.script?.title || job.brief.productName || job.brief.keyword || '제목 없는 영상',category:job.brief.category || '',format:'숏폼',updatedAt:job.updatedAt,ready,published,attention,label,action:published?'콘텐츠 보기':'확인하고 이어하기',href:`/?job=${encode(job.brief.id)}`});
+    items.push({key:`job:${job.brief.id}`,id:job.brief.id,source:'job',mode:'auto',title:job.script?.title || job.brief.productName || job.brief.keyword || '제목 없는 영상',category:job.brief.category || '',format:'숏폼',updatedAt:job.updatedAt,ready,published,attention,label,action:published?'콘텐츠 보기':'확인하고 이어하기',href:`/studio/automatic?job=${encode(job.brief.id)}`});
   }
   const jobIds = new Set(jobs.map(job => job.brief.id));
   for (const request of requests.filter(request => request.status === 'pending' && !jobIds.has(request.slug))) {
-    items.push({key:`request:${request.slug}`,id:request.slug,source:'request',mode:'auto',title:request.topic,category:'초안 요청',format:'숏폼',updatedAt:request.requestedAt || request.requested_at,ready:false,published:false,attention:false,label:'대본 작성 대기',action:'요청 관리',href:`/?request=${encode(request.slug)}`});
+    items.push({key:`request:${request.slug}`,id:request.slug,source:'request',mode:'auto',title:request.topic,category:'초안 요청',format:'숏폼',updatedAt:request.requestedAt || request.requested_at,ready:false,published:false,attention:false,label:'대본 작성 대기',action:'요청 관리',href:`/studio/automatic?request=${encode(request.slug)}`});
   }
   return items.sort((a,b) => (Date.parse(b.updatedAt)||0)-(Date.parse(a.updatedAt)||0) || a.key.localeCompare(b.key));
 }
