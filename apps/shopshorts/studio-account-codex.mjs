@@ -5,8 +5,9 @@ import { join } from 'node:path';
 import { codexEnvironment, createCodexGenerator } from './studio-codex.mjs';
 import { recommendBrief } from './lib/studio-recommendations.js';
 import { scenarioBrief } from './lib/studio-scenario.js';
+import { codexFailure, classifyCodexFailure } from './lib/llm-account-errors.js';
 
-const failure = () => new Error('Codex 인증을 확인하지 못했습니다. 다시 연결하거나 구독 사용 한도를 확인하세요.');
+const failure = () => codexFailure('CODEX_AUTH_FAILED');
 export function safeDevice(login) {
   const url = new URL(login.verificationUrl);
   if (url.origin !== 'https://auth.openai.com' || url.pathname !== '/codex/device' || url.search || url.hash || url.username || url.password || !/^[A-Za-z0-9-]{4,32}$/.test(login.userCode || '')) throw failure();
@@ -17,14 +18,16 @@ export function safeDevice(login) {
 // private endpoints, token exchange implementation or developer-home credentials.
 export async function openAccountServer(env, { signal, spawnProcess = spawn } = {}) {
   const child = spawnProcess('codex', ['app-server'], { cwd: env.CODEX_HOME, env: codexEnvironment(env), stdio: ['pipe', 'pipe', 'pipe'], shell: false });
-  const pending = new Map(); let seq = 0, buffer = '', closed = false, onNotification = () => {};
+  const pending = new Map(); let seq = 0, buffer = '', diagnostic = '', closed = false, onNotification = () => {};
   const closedPromise = new Promise(resolve => child.once('close', resolve));
-  const rejectPending = () => { for (const p of pending.values()) { clearTimeout(p.timer); p.reject(failure()); } pending.clear(); };
+  const rejectPending = (error = codexFailure(classifyCodexFailure(diagnostic))) => { for (const p of pending.values()) { clearTimeout(p.timer); p.reject(error); } pending.clear(); };
   const abort = () => { child.kill('SIGTERM'); const timer = setTimeout(() => child.kill('SIGKILL'), 1500); timer.unref(); closedPromise.then(() => clearTimeout(timer)); };
   signal?.addEventListener('abort', abort, { once: true });
-  child.on('error', () => { closed = true; rejectPending(); });
+  child.on('error', error => { closed = true; rejectPending(codexFailure(error.code === 'ENOENT' ? 'CODEX_NOT_INSTALLED' : 'CODEX_RUNTIME_FAILED',503)); });
   child.once('close', () => { closed = true; rejectPending(); signal?.removeEventListener('abort', abort); onNotification({ method: 'closed' }); });
-  child.stderr.resume(); child.stdin.on('error', () => {}); child.stdout.setEncoding('utf8');
+  child.stderr.setEncoding('utf8');
+  child.stderr.on('data', chunk => { diagnostic = (diagnostic + chunk).slice(-16384); });
+  child.stdin.on('error', () => {}); child.stdout.setEncoding('utf8');
   child.stdout.on('data', chunk => {
     buffer += chunk;
     if (buffer.length > 1024 * 1024) { abort(); return; }
@@ -33,16 +36,16 @@ export async function openAccountServer(env, { signal, spawnProcess = spawn } = 
       const line = buffer.slice(0, index); buffer = buffer.slice(index + 1);
       let event; try { event = JSON.parse(line); } catch { abort(); return; }
       if (event.method && event.id !== undefined) { child.stdin.write(JSON.stringify({ id: event.id, error: { code: -32601, message: 'Unsupported request' } }) + '\n'); continue; }
-      if (event.id !== undefined) { const p = pending.get(event.id); if (p) { pending.delete(event.id); clearTimeout(p.timer); event.error ? p.reject(failure()) : p.resolve(event.result); } }
+      if (event.id !== undefined) { const p = pending.get(event.id); if (p) { pending.delete(event.id); clearTimeout(p.timer); event.error ? p.reject(codexFailure(classifyCodexFailure(JSON.stringify(event.error)))) : p.resolve(event.result); } }
       else onNotification(event);
     }
   });
   const rpc = {
     set notification(fn) { onNotification = fn; },
     call(method, params) {
-      if (closed || signal?.aborted) return Promise.reject(failure());
+      if (closed || signal?.aborted) return Promise.reject(codexFailure('CODEX_REQUEST_FAILED',signal?.aborted?499:502));
       return new Promise((resolve, reject) => {
-        const id = ++seq, timer = setTimeout(() => { pending.delete(id); reject(failure()); abort(); }, 30000);
+        const id = ++seq, timer = setTimeout(() => { pending.delete(id); reject(codexFailure('CODEX_TIMEOUT',504)); abort(); }, 30000);
         pending.set(id, { resolve, reject, timer });
         child.stdin.write(JSON.stringify({ id, method, params }) + '\n');
       });

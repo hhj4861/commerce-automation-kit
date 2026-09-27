@@ -4,6 +4,7 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fail } from './lib/studio.js';
+import { codexFailure, classifyCodexFailure } from './lib/llm-account-errors.js';
 const execFileAsync=promisify(execFile);
 
 // Let the official CLI manage its existing ChatGPT credentials and refresh flow.
@@ -41,25 +42,28 @@ async function restrictMcp({cwd,signal,env}) {
     const args=disabledMcpArgs(await list([]));
     if((await list(args)).some(server=>server.enabled)) fail('추천 실행의 외부 도구 제한을 확인할 수 없습니다.',503);
     return args;
-  } catch {
-    fail('Codex 실행 준비에 실패했습니다. CLI 설치 및 설정을 확인하세요.',503);
+  } catch (error) {
+    throw codexFailure(error.code === 'ENOENT' ? 'CODEX_NOT_INSTALLED' : 'CODEX_RUNTIME_FAILED',503);
   }
 }
 
 export function parseCodexEvents(output) {
-  let completed=false, searched=false, answer='', failed=false;
+  let completed=false, searched=false, answer='', failureCode=null;
   for (const line of output.split('\n').filter(Boolean)) {
     let event;
-    try { event=JSON.parse(line); } catch { fail('Codex 응답을 읽을 수 없습니다.',502); }
-    if (event.type==='turn.failed' || event.type==='error') failed=true;
+    try { event=JSON.parse(line); } catch { throw codexFailure('CODEX_OUTPUT_INVALID'); }
+    if (event.type==='turn.failed' || event.type==='error') {
+      const code=classifyCodexFailure(JSON.stringify(event.error ?? event.message ?? ''));
+      if (!failureCode || code!=='CODEX_REQUEST_FAILED') failureCode=code;
+    }
     if (event.type==='turn.completed') completed=true;
     if (event.type==='item.completed' && event.item?.type==='web_search' && event.item.status!=='failed') searched=true;
     if (event.type==='item.completed' && event.item?.type==='agent_message') answer=event.item.text;
   }
-  if (failed || !completed) fail('Codex 추천이 완료되지 않았습니다. 로그인 상태와 구독 사용 한도를 확인하세요.',502);
+  if (failureCode || !completed) throw codexFailure(failureCode || 'CODEX_REQUEST_FAILED');
   let value;
   try { value=JSON.parse(answer.replace(/^\s*```(?:json)?\s*/,'').replace(/\s*```\s*$/,'')); }
-  catch { fail('Codex 추천 형식이 올바르지 않습니다. 다시 시도하세요.',502); }
+  catch { throw codexFailure('CODEX_OUTPUT_INVALID'); }
   return {value,searched};
 }
 
@@ -79,16 +83,16 @@ export function createCodexGenerator({spawnProcess=spawn, prepare=restrictMcp, t
       return await new Promise((resolve,reject) => {
         const child=spawnProcess('codex',args,{cwd,env:codexEnvironment(env),stdio:['pipe','pipe','pipe'],shell:false});
         child.stdout.setEncoding('utf8');
-        let output='', size=0, failure, killTimer;
-        const stop=(message,status) => {
+        let output='', diagnostic='', size=0, failure, killTimer;
+        const stop=(message,status,code) => {
           if (failure) return;
-          failure=Object.assign(new Error(message),{status});
+          failure=Object.assign(new Error(message),{status,...(code?{code}:{})});
           child.kill('SIGTERM');
           killTimer=setTimeout(()=>child.kill('SIGKILL'),1500);
           killTimer.unref();
         };
         const abort=()=>stop('추천 요청이 취소되었습니다.',499);
-        const timer=setTimeout(()=>stop('Codex 추천 시간이 초과됐습니다. 잠시 후 다시 시도하세요.',504),timeoutMs);
+        const timer=setTimeout(()=>stop(codexFailure('CODEX_TIMEOUT').message,504,'CODEX_TIMEOUT'),timeoutMs);
         signal?.addEventListener('abort',abort,{once:true});
         if(signal?.aborted) abort();
         child.stdout.on('data',chunk=>{
@@ -96,14 +100,21 @@ export function createCodexGenerator({spawnProcess=spawn, prepare=restrictMcp, t
           if(size>2*1024*1024) stop('Codex 추천 응답이 너무 큽니다.',502);
           else output+=chunk.toString();
         });
-        // Drain diagnostic output, but never expose credential-bearing CLI errors.
-        child.stderr.resume();
+        // Keep only a bounded in-memory tail; return allowlisted codes, never CLI output.
+        child.stderr.setEncoding('utf8');
+        child.stderr.on('data',chunk=>{diagnostic=(diagnostic+chunk).slice(-16384);});
         child.stdin.on('error',()=>{});
-        child.once('error',()=>{failure=Object.assign(new Error('Codex CLI를 실행할 수 없습니다. 설치 및 codex login 상태를 확인하세요.'),{status:503});});
+        child.once('error',error=>{failure=codexFailure(error.code==='ENOENT'?'CODEX_NOT_INSTALLED':'CODEX_RUNTIME_FAILED',503);});
         child.once('close',code=>{
           clearTimeout(timer);clearTimeout(killTimer);signal?.removeEventListener('abort',abort);
           if(failure) return reject(failure);
-          if(code!==0) return reject(Object.assign(new Error('Codex 추천 실행에 실패했습니다. codex login 상태와 구독 사용 한도를 확인하세요.'),{status:502}));
+          if(code!==0) {
+            let failureCode=classifyCodexFailure(diagnostic);
+            try { parseCodexEvents(output); } catch(error) {
+              if (error.code && !['CODEX_REQUEST_FAILED','CODEX_OUTPUT_INVALID'].includes(error.code)) failureCode=error.code;
+            }
+            return reject(codexFailure(failureCode));
+          }
           try {resolve(parseCodexEvents(output));} catch(error) {reject(error);}
         });
         child.stdin.end(prompt);

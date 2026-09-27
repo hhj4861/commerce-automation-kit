@@ -1,6 +1,14 @@
 // Only these fixed diagnostics may cross the runner boundary. Never return CLI
 // stdout/stderr: login output can contain authorization URLs and credentials.
 const messages = Object.freeze({
+  CODEX_AUTH_FAILED: 'Codex 인증이 만료되었거나 유효하지 않습니다. 계정을 다시 연결해 주세요.',
+  CODEX_RATE_LIMITED: 'Codex 구독 사용 한도에 도달했습니다. 한도가 회복된 뒤 다시 시도해 주세요.',
+  CODEX_NETWORK_FAILED: 'Codex 서버에 연결하지 못했습니다. 잠시 후 다시 시도해 주세요.',
+  CODEX_TIMEOUT: 'Codex 응답 시간이 초과됐습니다. 잠시 후 다시 시도해 주세요.',
+  CODEX_NOT_INSTALLED: '실행기에 Codex가 설치되어 있지 않습니다. 운영자에게 확인을 요청해 주세요.',
+  CODEX_RUNTIME_FAILED: 'Codex 실행 환경을 준비하지 못했습니다. 운영자에게 확인을 요청해 주세요.',
+  CODEX_OUTPUT_INVALID: 'Codex 생성 결과를 읽지 못했습니다. 다시 시도해 주세요.',
+  CODEX_REQUEST_FAILED: 'Codex 요청을 완료하지 못했습니다. 잠시 후 다시 시도하고, 반복되면 운영자에게 확인을 요청해 주세요.',
   RECOMMENDATION_REPEATED: '이전 추천과 다른 기획을 완성하지 못했어요. 관심사를 구체화한 뒤 다시 추천받으세요.',
   SCENARIO_ARC_INVALID: '도입·킬링파트·마무리가 연결된 대본을 완성하지 못했습니다. 시나리오를 다시 생성해 주세요.',
   CLAUDE_LOGIN_RUNTIME_MISSING: 'Claude 연결 실행 환경이 준비되지 않았습니다. 운영자에게 확인을 요청해 주세요.',
@@ -16,12 +24,21 @@ const messages = Object.freeze({
   CLAUDE_REQUEST_FAILED: 'Claude 요청을 완료하지 못했습니다. 다시 시도하고, 반복되면 운영자에게 확인을 요청해 주세요.',
 });
 export const claudeFailure = (code = 'CLAUDE_REQUEST_FAILED') => Object.assign(new Error(messages[code] || messages.CLAUDE_REQUEST_FAILED), { code });
+export const codexFailure = (code = 'CODEX_REQUEST_FAILED', status = 502) => Object.assign(new Error(messages[code] || messages.CODEX_REQUEST_FAILED), { code, status });
 export const accountFailureCode = error => Object.hasOwn(messages, error?.code) ? error.code : 'UNKNOWN';
 export function accountFailureMessage(provider, error) {
   const code = accountFailureCode(error);
   if (['SCENARIO_ARC_INVALID', 'RECOMMENDATION_REPEATED'].includes(code)) return messages[code];
   return provider === 'claude' ? messages[code] || messages.CLAUDE_REQUEST_FAILED
-    : 'Codex 요청을 완료하지 못했습니다. 다시 시도하고, 반복되면 계정 연결 상태를 확인해 주세요.';
+    : code.startsWith('CODEX_') ? messages[code] : messages.CODEX_REQUEST_FAILED;
+}
+export function classifyCodexFailure(text = '') {
+  if (/usage_limit_reached|rate_limit|rate limit|usage limit|hit your limit|exceeded.*limit|\b429\b/i.test(text)) return 'CODEX_RATE_LIMITED';
+  if (/authentication_error|invalid_grant|refresh_token_reused|invalid.*token|expired.*token|token.*expired|not logged in|login expired|\b401\b/i.test(text)) return 'CODEX_AUTH_FAILED';
+  if (/ECONNRESET|ECONNREFUSED|ENOTFOUND|EAI_AGAIN|fetch failed|unable to connect|network error|connection.*(?:closed|reset)|error sending request|stream disconnected/i.test(text)) return 'CODEX_NETWORK_FAILED';
+  if (/timed? out|timeout/i.test(text)) return 'CODEX_TIMEOUT';
+  if (/model.*(?:not found|not supported|does not exist)|error loading config|unexpected argument/i.test(text)) return 'CODEX_RUNTIME_FAILED';
+  return 'CODEX_REQUEST_FAILED';
 }
 export function classifyClaudeFailure(text) {
   if (/keychain|errSec|user interaction is not allowed/i.test(text)) return 'CLAUDE_KEYCHAIN_FAILED';
