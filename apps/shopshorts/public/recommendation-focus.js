@@ -101,8 +101,8 @@ export function createRecommendationFocus({ input, anchor, summary, onCancel, on
     if (cancelled) { close(); return; }
     dialog.dataset.state = 'failed'; title.textContent = '추천을 완료하지 못했어요';
     dialog.querySelector('.recommend-activity').hidden = true; dialog.querySelector('.recommend-deliverable').hidden = true;
-    results.hidden = false; results.innerHTML = `<div class="recommend-failure"><p role="alert">${escape(error.message)}</p><p>입력 내용은 그대로예요. 연결 상태를 확인한 뒤 다시 시도하세요.</p><button class="primary" data-retry>다시 추천받기</button></div>`;
-    dialog.querySelector('[data-footer-note]').textContent = '닫은 뒤 AI 계정 연결 관리에서 계정을 확인할 수 있어요.';
+    results.hidden = false; results.innerHTML = `<div class="recommend-failure"><p role="alert">${escape(error.message)}</p><p>입력 내용은 그대로예요. 위 안내를 확인한 뒤 다시 시도하세요.</p><button class="primary" data-retry>다시 추천받기</button></div>`;
+    dialog.querySelector('[data-footer-note]').textContent = '창을 닫아도 입력 내용은 유지돼요.';
     results.querySelector('[data-retry]').onclick = () => { close(); onRetry(); };
     open(); if (dialog.open) title.focus();
   }
