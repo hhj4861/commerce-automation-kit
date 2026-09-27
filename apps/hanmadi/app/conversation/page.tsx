@@ -1,6 +1,9 @@
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
+import { LEARNING_LANGUAGE_COOKIE, languageSelectionHref, resolveLearningLanguage } from "@/lib/learning-language";
 import Link from "next/link";
 import { ConversationRoom } from "@/components/conversation-room";
-import { courses, getLesson, isLanguage } from "@/lib/courses";
+import { courses, getLesson } from "@/lib/courses";
 import { getConversationProvider } from "@/lib/conversation-provider";
 import { audioConfig } from "@/lib/conversation-audio";
 import { getConversationTutor } from "@/lib/conversation-access";
@@ -12,7 +15,8 @@ export default async function ConversationPage({
   searchParams: Promise<{ language?: string; lesson?: string; s?: string }>;
 }) {
   const params = await searchParams;
-  const language = isLanguage(params.language) ? params.language : "ko";
+  const language = resolveLearningLanguage(params.language, (await cookies()).get(LEARNING_LANGUAGE_COOKIE)?.value);
+  if (!language) redirect(languageSelectionHref(`/conversation?${new URLSearchParams(params)}`));
   const lesson =
     getLesson(language, params.lesson ?? "") ?? courses[language][0];
   const tutor = await getConversationTutor();

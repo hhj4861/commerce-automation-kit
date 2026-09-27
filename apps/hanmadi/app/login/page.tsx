@@ -2,6 +2,7 @@
 
 import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { languageSelectionHref } from "@/lib/learning-language";
 import { Logo } from "@/components/header";
 
 /**
@@ -40,7 +41,7 @@ function LoginForm() {
         body: JSON.stringify({ pin }),
       });
       if (res.ok) {
-        router.replace(from);
+        router.replace(languageSelectionHref(from));
         router.refresh();
         return;
       }

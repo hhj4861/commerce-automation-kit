@@ -7,12 +7,13 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "node --import tsx --test lib/conversation.test.ts lib/conversation-provider.test.ts scripts/litellm.test.mjs",
+    "test": "node --import tsx --test lib/conversation.test.ts lib/conversation-provider.test.ts scripts/litellm.test.mjs lib/learning-language.test.ts",
     "test:dify": "node scripts/dify-smoke.mjs",
     "test:conversation": "node scripts/conversation-smoke.mjs",
     "ai:setup": "node scripts/litellm.mjs setup",
     "ai:start": "node scripts/litellm.mjs start",
-    "ai:check": "node scripts/litellm.mjs check"
+    "ai:check": "node scripts/litellm.mjs check",
+    "test:language-flow": "node scripts/language-flow-smoke.mjs"
   },
   "dependencies": {
     "next": "16.2.10",
@@ -26,6 +27,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.2.10",
+    "playwright": "1.58.1",
     "tailwindcss": "^4",
     "tsx": "^4.23.1",
     "typescript": "^5"

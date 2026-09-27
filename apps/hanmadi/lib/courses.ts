@@ -23,7 +23,37 @@ export type Language = keyof typeof languages;
 export function isLanguage(value: unknown): value is Language {
   return typeof value === "string" && Object.hasOwn(languages, value);
 }
-export type Phrase = { text: string; reading: string; meaning: string };
+/** Reading aids, not IPA: tone, vowel length and pitch still need listening practice. */
+export const koreanReadings: Readonly<Record<string, string>> = {
+  "こんにちは": "곤니치와",
+  "はじめまして": "하지메마시테",
+  "私はミナです": "와타시와 미나 데스",
+  "よろしくお願いします": "요로시쿠 오네가이시마스",
+  "コーヒーをひとつください": "코오히이오 히토츠 쿠다사이",
+  "アイスでお願いします": "아이스데 오네가이시마스",
+  "いくらですか": "이쿠라 데스카",
+  "ありがとうございます": "아리가토오 고자이마스",
+  "すみません": "스미마센",
+  "駅はどこですか": "에키와 도코 데스카",
+  "トイレはどこですか": "토이레와 도코 데스카",
+  "ここです": "코코 데스",
+  "สวัสดี": "싸왓디이",
+  "สวัสดีครับ": "싸왓디이 크랍",
+  "สวัสดีค่ะ": "싸왓디이 카",
+  "ยินดีที่ได้รู้จัก": "인디이 티이 다이 루우짝",
+  "ขอกาแฟหนึ่งแก้ว": "커어 까아패애 느응 깨애우",
+  "ไม่หวาน": "마이 와안",
+  "เท่าไหร่": "타오라이",
+  "ขอบคุณ": "커업 쿤",
+  "ขอโทษ": "커어 토옷",
+  "สถานีอยู่ที่ไหน": "싸타아니이 유우 티이 나이",
+  "ห้องน้ำอยู่ที่ไหน": "허엉 남 유우 티이 나이",
+  "ตรงนี้": "뜨롱 니이",
+  "ห้องน้ำ": "허엉 남",
+  "สถานี": "싸타아니이",
+  "กาแฟ": "까아패애"
+};
+export type Phrase = { text: string; reading: string; meaning: string; koreanReading?: string };
 export type Lesson = {
   id: string;
   title: string;
@@ -41,6 +71,7 @@ const phrase = (text: string, reading: string, meaning: string): Phrase => ({
   text,
   reading,
   meaning,
+  ...(koreanReadings[text] ? { koreanReading: koreanReadings[text] } : {}),
 });
 export const courses: Record<Language, Lesson[]> = {
   ko: [

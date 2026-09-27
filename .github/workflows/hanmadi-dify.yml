@@ -29,6 +29,11 @@ jobs:
           node node_modules/next/dist/bin/next typegen
           node node_modules/typescript/bin/tsc --noEmit
           npm run build
+      - name: Language selection browser regression
+        working-directory: apps/hanmadi
+        run: |
+          npx playwright install --with-deps chromium
+          npm run test:language-flow
       - name: Prepare Dify
         run: |
           python services/dify/dify.py prepare
