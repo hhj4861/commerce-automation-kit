@@ -1,3 +1,4 @@
+import {createManualDashboard} from './manual-dashboard.js';
 import {executionStatus,renderExecutionStatus,resumeStep} from './studio-status.js';
 import {mediaProgress,mediaSceneStatus,renderMediaProgress,renderMediaPlaceholder} from './studio-media.js';
 import {createEditor} from './editor.js';
@@ -17,7 +18,7 @@ const taskBusy = () => ['queued','running'].includes(state.project?.task?.state)
 const total = p => p.edit?.version===2 ? Math.round(frameCount(p.edit)/FPS*100)/100 : p.edit ? p.edit.order.reduce((sum,id) => sum + p.edit.durations[id],0) : p.scenes.reduce((sum,s) => sum+s.duration,0);
 const assetUrl = (id, asset) => `/api/studio/${id}/assets/${encodeURIComponent(asset)}?v=${state.project?.revision || 0}`;
 function toast(text){ $('#toast').textContent=text;$('#toast').hidden=false;clearTimeout(toast.timer);toast.timer=setTimeout(()=>$('#toast').hidden=true,5000); }
-const recommendationInbox=createNotificationInbox({document,recommendations:true,openJob:id=>location.assign('/?job='+encodeURIComponent(id)),openStudio:id=>location.assign('/studio?id='+encodeURIComponent(id)),openRecommendation:id=>location.assign('/studio?new=1&recommendation='+encodeURIComponent(id))});
+const recommendationInbox=createNotificationInbox({document,recommendations:true,openJob:id=>location.assign('/studio/automatic?job='+encodeURIComponent(id)),openStudio:id=>location.assign('/studio?id='+encodeURIComponent(id)),openRecommendation:id=>location.assign('/studio?new=1&recommendation='+encodeURIComponent(id))});
 async function api(path='', options={}) {
   const response=await fetch('/api/studio'+path,options);
   if(response.status===401){location.href='/login';throw Error('로그인이 필요합니다.');}
@@ -62,8 +63,9 @@ function heading(){
  const p=state.project;$('.heading h1').textContent=p?p.title:'내 이야기로 시작하기';
  $('#intro').textContent=p?`${p.brief.category} · ${p.brief.format==='short'?'숏폼 9:16':'롱폼 16:9'} · ${p.scenes.length?p.scenes.length+'장면 / '+total(p)+'초':p.brief.duration+'초 목표'}`:'주제와 영상 형식을 정하면 AI가 시나리오를 작성합니다.';
  $('#newProject').hidden=false;
+ $('.heading .back').href='/studio?mode=manual';$('.heading .back').textContent='수동 제작 관리';
 }
-function start(){recommendationController?.abort('detached');editor?.destroy();editor=null;state.project=null;state.step=1;state.dirty=false;state.mediaRequestError='';state.requestingMedia=false;$('#modes').hidden=true;$('#workspace').hidden=false;$('#creationStart').hidden=true;$('#automaticWorkspace').hidden=true;history.replaceState(null,'','/studio?new=1');heading();progress();renderBrief();}
+function start(){recommendationController?.abort('detached');editor?.destroy();editor=null;state.project=null;state.step=1;state.dirty=false;state.mediaRequestError='';state.requestingMedia=false;$('#modes').hidden=true;$('#workspace').hidden=false;$('#creationStart').hidden=true;$('#manualDashboard').hidden=true;history.replaceState(null,'','/studio?new=1');heading();progress();renderBrief();}
 function renderBrief(){
  recommendationCleanup?.(); recommendationCleanup=null;
  const p=state.project, brief=p?.brief;
@@ -196,13 +198,34 @@ async function openProject(id){
  if(state.dirty)await saveCurrent();
  state.project=(await api('/'+id)).project;state.selected=null;state.dirty=false;state.mediaRequestError='';
  const p=state.project;state.step=resumeStep(p);
- $('#modes').hidden=true;$('#workspace').hidden=false;$('#creationStart').hidden=true;$('#automaticWorkspace').hidden=true;history.replaceState(null,'',`/studio?id=${p.id}`);render();
+ $('#modes').hidden=true;$('#workspace').hidden=false;$('#creationStart').hidden=true;$('#manualDashboard').hidden=true;history.replaceState(null,'',`/studio?id=${p.id}`);render();
 }
-$('#manual').onclick=event=>{event.preventDefault();if(!state.config){toast('서버 연결 상태를 먼저 확인하세요.');return;}start();};$('#newProject').onclick=()=>{if(state.pending)return;if(state.dirty&&!confirm('저장하지 않은 변경이 있습니다. 새 영상을 시작할까요?'))return;state.dirty=false;location.assign('/studio');};
+$('#newProject').onclick=()=>{if(state.pending)return;if(state.dirty&&!confirm('저장하지 않은 변경이 있습니다. 새 영상을 만들까요?'))return;state.dirty=false;location.assign('/studio?new=1');};
 $('#stage').addEventListener('input',()=>{if(state.step!==4)state.dirty=true;});
 window.addEventListener('beforeunload',e=>{if(state.dirty){e.preventDefault();e.returnValue='';}});
-(async()=>{try{state.config=await api('/config');const auth=await(await fetch('/auth/status')).json();if(auth.user)$('#account').textContent=auth.user.name||auth.user.email;const params=new URLSearchParams(location.search),id=params.get('id'),recommendationId=params.get('recommendation');if(recommendationId){const saved=(await api('/llm/recommendation?id='+encodeURIComponent(recommendationId))).recommendation;if(saved.input?.intent==='keywords'){location.replace('/studio/automatic?recommendation='+encodeURIComponent(recommendationId));return;}start();state.category=saved.input.category;state.format=saved.input.format;renderBrief();$('#topic').value=saved.input.topic;$('#direction').value=saved.input.direction;$('#duration').value=saved.input.duration;history.replaceState(null,'','/studio?new=1&recommendation='+encodeURIComponent(recommendationId));restoreRecommendation(saved);}else if(id)await openProject(id);else if(params.has('new'))start();else if(params.get('mode')==='auto'){location.replace('/studio/automatic');}recommendationInbox.refresh();}catch(e){$('#notice').innerHTML=`<div class="status-note error">${esc(e.message)}</div>`;}})();
+(async()=>{
+ const params=new URLSearchParams(location.search),id=params.get('id'),recommendationId=params.get('recommendation');
+ if(params.get('mode')==='auto'&&!id&&!recommendationId&&!params.has('new')){location.replace('/studio/automatic');return;}
+ fetch('/auth/status').then(r=>r.json()).then(auth=>{if(auth.user)$('#account').textContent=auth.user.name||auth.user.email;}).catch(()=>{});
+ recommendationInbox.refresh();
+ if(params.get('mode')==='manual'&&!id&&!recommendationId&&!params.has('new')){
+  $('#creationStart').hidden=true;$('#manualDashboard').hidden=false;
+  $('.heading h1').textContent='수동 제작 관리';$('#intro').textContent='제작 단계를 확인하고, 저장한 영상의 다음 작업을 이어가세요.';
+  $('.heading .back').href='/studio';$('.heading .back').textContent='제작 방식 선택';$('.heading .back').hidden=true;
+  document.title='수동 제작 관리 · Shopshorts';
+  const dashboard=createManualDashboard();await dashboard.mount($('#manualDashboard'));
+  window.addEventListener('pageshow',event=>{if(event.persisted)dashboard.refresh();});
+  setInterval(()=>{if(!document.hidden)dashboard.refresh();},12000);
+  return;
+ }
+ if(!id&&!recommendationId&&!params.has('new'))return;
+ try{
+  state.config=await api('/config');
+  if(recommendationId){const saved=(await api('/llm/recommendation?id='+encodeURIComponent(recommendationId))).recommendation;if(saved.input?.intent==='keywords'){location.replace('/studio/automatic?recommendation='+encodeURIComponent(recommendationId));return;}start();state.category=saved.input.category;state.format=saved.input.format;renderBrief();$('#topic').value=saved.input.topic;$('#direction').value=saved.input.direction;$('#duration').value=saved.input.duration;history.replaceState(null,'','/studio?new=1&recommendation='+encodeURIComponent(recommendationId));restoreRecommendation(saved);}
+  else if(id)await openProject(id);else start();
+ }catch(e){$('#notice').innerHTML=`<div class="status-note error">${esc(e.message)}</div>`;}
+})();
 let checkingExecution=false;
-setInterval(async()=>{if(state.pending||checkingExecution||document.hidden)return;checkingExecution=true;try{await refreshConnection();if(state.project&&taskBusy()&&!state.dirty){const p=(await api('/'+state.project.id)).project;if(p.revision!==state.project.revision){const previous=state.project.task;state.project=p;if(p.task?.state==='done'&&previous?.state!=='done'){if(p.task.action==='scenario')state.step=2;if(p.task.action==='render'||p.task.action==='publish')state.step=5;}render();}}}catch{state.connectionUnknown=true;note();}finally{checkingExecution=false;}},4000);
+setInterval(async()=>{if(!state.config||state.pending||checkingExecution||document.hidden)return;checkingExecution=true;try{await refreshConnection();if(state.project&&taskBusy()&&!state.dirty){const p=(await api('/'+state.project.id)).project;if(p.revision!==state.project.revision){const previous=state.project.task;state.project=p;if(p.task?.state==='done'&&previous?.state!=='done'){if(p.task.action==='scenario')state.step=2;if(p.task.action==='render'||p.task.action==='publish')state.step=5;}render();}}}catch{state.connectionUnknown=true;note();}finally{checkingExecution=false;}},4000);
 
 setInterval(()=>{if(!document.hidden)recommendationInbox.poll();},5000);

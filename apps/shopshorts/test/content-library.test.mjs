@@ -61,3 +61,10 @@ test('automatic request exposes authentication and service failures and accepts 
   await assert.rejects(requestAutomaticDraft('주제','',{fetcher:async()=>new Response('',{status:401})}),/로그인/);
   await assert.rejects(requestAutomaticDraft('주제','',{fetcher:async()=>Response.json({error:'제작 서비스 점검 중'},{status:503})}),/점검 중/);
 });
+
+ test('automatic studio projects resume their automatic dashboard while manual projects keep their editor route',()=>{
+  const items=collectContent({projects:[project,{...project,id:'auto-project',automation:{keyword:'자동 주제'}}]});
+  const automatic=items.find(item=>item.id==='auto-project');
+  assert.equal(automatic.mode,'auto');assert.equal(automatic.href,'/studio/automatic?project=auto-project');
+  assert.equal(items.find(item=>item.id===project.id).mode,'manual');
+ });

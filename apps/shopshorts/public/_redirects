@@ -1,11 +1,11 @@
-/studio/automatic /index.html 200
-/automatic       /index.html 200
-/contents        /index.html 200
-/trends         /index.html 200
-/performance    /index.html 200
-/affiliate-links /index.html 200
-/settings       /index.html 200
-/blog           /index.html 200
+/studio/automatic / 200
+/automatic       / 200
+/contents        / 200
+/trends         / 200
+/performance    / 200
+/affiliate-links / 200
+/settings       / 200
+/blog           / 200
 
 # Pages serves matching HTML at extensionless paths automatically.
 # Rewriting /login or /studio to its .html file creates a canonicalization loop.

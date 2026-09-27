@@ -80,10 +80,10 @@ export function mountAutomaticCreation(host,{fetcher=fetch,connect=connectLlm}={
     const running=busy(p),failed=p.task?.state==='failed',published=!!p.upload;
     let controls='';
     if(!running&&!published){
-      if(!p.scenes.length)controls='<button data-action="scenario" class="auto-primary">대본 생성 다시 시도</button>';
-      else if(!p.approved)controls='<label class="auto-check"><input type="checkbox" data-approve>대본과 장면 설명을 확인했습니다.</label><p class="auto-note">승인하면 장면·음성 생성과 영상 조립을 진행하며 서비스 사용료가 발생할 수 있어요.</p><button data-action="media" class="auto-primary" disabled>대본 승인 · 영상 자동 제작</button>';
+      if(!p.scenes.length)controls='<button data-auto-action="scenario" class="auto-primary">대본 생성 다시 시도</button>';
+      else if(!p.approved)controls='<label class="auto-check"><input type="checkbox" data-approve>대본과 장면 설명을 확인했습니다.</label><p class="auto-note">승인하면 장면·음성 생성과 영상 조립을 진행하며 서비스 사용료가 발생할 수 있어요.</p><button data-auto-action="media" class="auto-primary" disabled>대본 승인 · 영상 자동 제작</button>';
       else if(p.render)controls=`<video controls preload="metadata" src="${asset(p)}"></video><form data-publish><label>게시 제목<input name="title" required maxlength="100" value="${esc(p.title)}"></label><label>플랫폼<select name="platform"><option value="youtube">YouTube</option>${p.brief.format==='short'?'<option value="instagram">Instagram</option><option value="tiktok">TikTok</option>':''}</select></label><label>공개 범위<select name="privacy"><option value="private">비공개</option><option value="unlisted">일부 공개</option><option value="public">공개</option></select></label><label class="auto-check"><input name="reviewed" type="checkbox" required>최종 영상과 발행 정보를 확인했습니다.</label><button class="auto-primary">검수 완료 · 업로드</button></form>`;
-      else controls=`<button data-action="${p.scenes.every(s=>p.assets[s.id])&&p.edit?'render':'media'}" class="auto-primary">영상 제작 이어하기</button>`;
+      else controls=`<button data-auto-action="${p.scenes.every(s=>p.assets[s.id])&&p.edit?'render':'media'}" class="auto-primary">영상 제작 이어하기</button>`;
     }
     return `<details class="auto-project" data-project="${p.id}" ${selectedProject===p.id?'open':''}><summary><span><small>${esc(p.brief.category)} · ${esc(p.automation.keyword)}</small><strong>${esc(p.title)}</strong></span><b class="${failed?'auto-error':''}">${esc(automaticStatus(p))}</b></summary><div class="auto-project-body">${running?`<div class="auto-progress"><progress aria-label="${esc(automaticStatus(p))}"></progress><p>${esc(automaticStatus(p))}<br>창을 닫아도 서버에서 계속 처리합니다.</p></div>`:''}${failed?`<p role="alert" class="auto-error">${esc(p.task.error)}</p>`:''}${p.upload?`<p>${p.upload.state==='done'?'발행을 완료했어요.':'업로드 결과를 제작실에서 확인해 주세요.'}</p>`:''}${p.scenes.length?`<ol class="auto-script">${p.scenes.map(s=>`<li><p>${esc(s.narration)}</p><small>${esc(s.kind==='video'?'영상':'이미지')} · ${esc(s.duration)}초 · ${esc(s.prompt)}</small></li>`).join('')}</ol>`:''}<a href="/studio?id=${p.id}">대본·영상 직접 편집</a><div class="auto-project-controls">${controls}</div></div></details>`;
   }
@@ -112,12 +112,13 @@ export function mountAutomaticCreation(host,{fetcher=fetch,connect=connectLlm}={
     for(const child of [...list.children])if(!child.matches('[data-project]'))child.remove();
   }
   async function act(card,action,body={}){
-    const p=projects.get(card.dataset.project);card.querySelectorAll('button').forEach(b=>b.disabled=true);feedback.textContent='';
+    const p=projects.get(card.dataset.project),buttons=[...card.querySelectorAll('button')].map(button=>({button,disabled:button.disabled}));buttons.forEach(({button})=>button.disabled=true);feedback.textContent='';
     try {await api(`/${p.id}/${action}`,{revision:p.revision,...body});signature='';await refreshProjects();}
     catch(error){feedback.textContent=error.message;signature='';await refreshProjects().catch(()=>{});}
+    finally{buttons.forEach(({button,disabled})=>{if(button.isConnected)button.disabled=disabled;});}
   }
-  q('[data-projects]').onchange=e=>{if(e.target.matches('[data-approve]'))e.target.closest('[data-project]').querySelector('[data-action="media"]').disabled=!e.target.checked;};
-  q('[data-projects]').onclick=e=>{const button=e.target.closest('[data-action]');if(!button||button.disabled)return;const action=button.dataset.action;void act(button.closest('[data-project]'),action,action==='scenario'?{confirm:true}:action==='media'?{approved:true}:{});};
+  q('[data-projects]').onchange=e=>{if(e.target.matches('[data-approve]'))e.target.closest('[data-project]').querySelector('[data-auto-action="media"]').disabled=!e.target.checked;};
+  q('[data-projects]').onclick=e=>{const button=e.target.closest('[data-auto-action]');if(!button||button.disabled)return;const action=button.dataset.autoAction;void act(button.closest('[data-project]'),action,action==='scenario'?{confirm:true}:action==='media'?{approved:true}:{});};
   q('[data-projects]').onsubmit=e=>{if(!e.target.matches('[data-publish]'))return;e.preventDefault();const f=e.target;void act(f.closest('[data-project]'),'publish',{reviewed:f.elements.reviewed.checked,platforms:[f.elements.platform.value],privacy:f.elements.privacy.value,title:f.elements.title.value});};
   async function poll(){
     if(polling)return;polling=true;
