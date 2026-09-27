@@ -47,15 +47,41 @@ def noninteractive_auth():
     Authenticator.get_access_token = serialized
 
 
+def response_text(response):
+    def as_dict(value):
+        return value.model_dump() if hasattr(value, "model_dump") else value
+    completed_text = []
+    if hasattr(response, "model_dump") or isinstance(response, dict):
+        data = as_dict(response)
+    else:
+        # ChatGPT's backend always streams. The pinned SDK can return an
+        # iterator even when stream was not requested. Require terminal success.
+        data = None
+        for item in response:
+            event = as_dict(item)
+            if event.get("type") == "response.completed":
+                data = event["response"]
+            elif event.get("type") == "response.output_text.done":
+                completed_text.append(event.get("text", ""))
+            elif event.get("type") in ("error", "response.failed", "response.incomplete"):
+                raise RuntimeError("Subscription response did not complete")
+        if data is None:
+            raise RuntimeError("Subscription stream ended without completion")
+    text = "".join(part.get("text", "") for item in (data.get("output") or []) for part in (item.get("content") or []) if part.get("type") == "output_text")
+    # The subscription backend can omit output from its terminal event.
+    # Completed text events are usable only after terminal success was received.
+    text = text or "".join(completed_text)
+    if not text.strip():
+        raise RuntimeError("No model response")
+    return text
+
+
 def probe():
     import litellm
     litellm.set_verbose = False
     litellm.turn_off_message_logging = True
-    response = litellm.responses(model="chatgpt/" + os.environ["SUBSCRIPTION_MODEL"], input="Reply with only OK.", timeout=90, num_retries=0)
-    data = response.model_dump()
-    text = "".join(part.get("text", "") for item in data.get("output", []) for part in (item.get("content") or []) if part.get("type") == "output_text")
-    if not text.strip():
-        raise RuntimeError("No model response")
+    response = litellm.responses(model="chatgpt/" + os.environ["SUBSCRIPTION_MODEL"], input=[{"role": "user", "content": [{"type": "input_text", "text": "Reply with only OK."}]}], timeout=90, num_retries=0)
+    response_text(response)
     return {"state": "connected", "verified": True, "model_response_received": True}
 
 

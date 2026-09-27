@@ -77,6 +77,8 @@ python3 subscriptions.py provision --account dean --budget-usd 5
 
 `status`의 `cached`는 로컬 자격이 있다는 의미이며 실제 연결 성공이 아니다. `probe`만 인증·모델 접근·실응답을 확인한다. 계정 플랜의 모델 지원과 사용 한도가 적용된다. LiteLLM 비용 수치/달러 예산은 구독 한도를 대체하거나 무제한 사용·청구 상한을 보장하지 않는다. 실패 시 유료 API 계정으로 자동 전환하지 않는다.
 
+현재 구독 백엔드의 Responses 호출은 `input`에 문자열 대신 메시지 배열을 사용한다. 예: `[{"role":"user","content":[{"type":"input_text","text":"안녕하세요"}]}]`. Chat Completions는 기존 `messages` 배열을 그대로 사용한다.
+
 모델이 지원 종료되거나 계정에서 사용할 수 없다면 `python3 subscriptions.py set-model --account dean --model <사용가능한-모델>`로 설정만 변경하고 `probe`로 검증한다. 기존 OAuth 자격과 내부 키는 보존한다. `gpt-5.4`는 ChatGPT 로그인 기반 Codex에서 2026-08-31 지원 종료되었으므로 LiteLLM 문서의 예시를 그대로 운영 모델로 쓰지 않는다. [OpenAI 모델 안내](https://learn.chatgpt.com/docs/models)
 
 ```sh

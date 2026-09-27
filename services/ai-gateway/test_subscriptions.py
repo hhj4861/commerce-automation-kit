@@ -153,6 +153,21 @@ class SubscriptionTest(unittest.TestCase):
             self.assertNotIn("private-test-token", output.getvalue())
             self.assertEqual(json.loads(output.getvalue())["state"], "error")
 
+    def test_subscription_stream_requires_terminal_success(self):
+        completed = {"output": [{"type": "reasoning", "content": None}, {"type": "message", "content": [{"type": "output_text", "text": "OK"}]}]}
+        stream = iter([{"type": "response.output_text.delta", "delta": "O"}, {"type": "response.completed", "response": completed}])
+        self.assertEqual(runtime.response_text(stream), "OK")
+        self.assertEqual(runtime.response_text(completed), "OK")
+        self.assertEqual(runtime.response_text(iter([
+            {"type": "response.output_text.done", "text": "OK"},
+            {"type": "response.completed", "response": {"status": "completed", "output": []}},
+        ])), "OK")
+        with self.assertRaises(RuntimeError):
+            runtime.response_text(iter([{"type": "response.output_text.done", "text": "partial"}]))
+        for ending in ([], [{"type": "response.failed"}], [{"type": "response.incomplete"}], [{"type": "error"}]):
+            with self.assertRaises(RuntimeError):
+                runtime.response_text(iter([{"type": "response.output_text.delta", "delta": "partial"}, *ending]))
+
 
 if __name__ == "__main__":
     unittest.main()
