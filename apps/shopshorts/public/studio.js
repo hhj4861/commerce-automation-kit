@@ -52,6 +52,7 @@ function note(){
 async function refreshConnection(){
  try{state.config=await api('/config');state.connectionUnknown=false;}
  catch{state.connectionUnknown=true;}
+ editor?.updateCapabilities(state.config?.capabilities);
  note();
 }
 async function generateScenario(){
