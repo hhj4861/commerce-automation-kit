@@ -33,7 +33,7 @@ test('real local HTTP flow: auth, queued job/studio events, read state, preferen
   assert.equal((await fetch(base + '/api/notifications')).status, 401);
   const redirect = await fetch(base + '/notifications', { redirect: 'manual' });
   assert.equal(redirect.status, 302);
-  for (const file of ['/notifications', '/notifications.js', '/notifications.css']) assert.equal((await call(file)).status, 200);
+  for (const file of ['/notifications', '/notifications.js', '/notifications.css', '/studio/automatic', '/manual-dashboard.js', '/content-library.js', '/automatic-creation.js', '/workspace.css', '/studio-media.js', '/ai-account.js']) assert.equal((await call(file)).status, 200);
   let result = await (await call('/api/notifications')).json();
   assert.equal(result.unreadCount, 1); const initialId = result.items[0].id;
   assert.equal((await fetch(base + '/api/notifications/read-all', { method: 'POST', headers: { cookie: one, origin: 'https://evil.test' }, body: '{}' })).status, 403);
