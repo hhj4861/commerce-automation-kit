@@ -26,6 +26,7 @@ jobs:
         run: |
           npm ci --prefix . --workspaces=false
           npm test
+          node node_modules/next/dist/bin/next typegen
           node node_modules/typescript/bin/tsc --noEmit
           npm run build
       - name: Prepare Dify
@@ -60,9 +61,9 @@ jobs:
           HANMADI_DIFY_CI_FILE: '${{ github.workspace }}/services/dify/.runtime/hanmadi-client.json'
         run: npm run test:dify
       - name: Cleanup Dify containers
-        if: always()
+        if: always() && hashFiles('services/dify/.upstream/dify/docker/.env') != ''
         run: python services/dify/dify.py compose down -v
       - name: Cleanup gateway containers
-        if: always()
+        if: always() && hashFiles('services/ai-gateway/.env') != ''
         working-directory: services/ai-gateway
         run: docker compose -f compose.yaml -f compose.test.yaml down -v

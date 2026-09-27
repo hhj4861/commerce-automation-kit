@@ -41,6 +41,9 @@ const mock = createServer(async (req, res) => {
 const audioFixture = spawnSync("ffmpeg", ["-hide_banner", "-loglevel", "error", "-f", "lavfi", "-i",
   "sine=frequency=440:duration=0.25", "-f", "mp3", "pipe:1"]);
 assert.equal(audioFixture.status, 0, "ffmpeg is required for a synthetic audio fixture");
+const recordedFixture = spawnSync("ffmpeg", ["-hide_banner", "-loglevel", "error", "-f", "lavfi", "-i",
+  "sine=frequency=440:duration=0.25", "-c:a", "libopus", "-f", "webm", "pipe:1"]);
+assert.equal(recordedFixture.status, 0, "ffmpeg must support browser-compatible WebM/Opus");
 const voice = createServer(async (req, res) => {
   assert.equal(req.headers.authorization, "Bearer audio-smoke-only");
   const chunks = [];
@@ -149,7 +152,7 @@ try {
   assert.equal(student.status, 200);
   assert.equal((await post({ ...base, studentSlug: "dify-smoke-student" }, { cookie: "" })).status, 200);
   const form = new FormData();
-  form.set("file", new Blob([audioFixture.stdout], { type: "audio/mpeg" }), "synthetic.mp3"); form.set("language", "ja");
+  form.set("file", new Blob([recordedFixture.stdout], { type: "audio/webm" }), "synthetic.webm"); form.set("language", "ja");
   const transcribed = await fetch(origin + "/api/conversation/transcribe", { method: "POST", headers: { origin, cookie }, body: form });
   assert.equal(transcribed.status, 200);
   const transcript = (await transcribed.json()).text;
