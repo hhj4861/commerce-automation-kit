@@ -25,7 +25,7 @@ export default async function Home() {
       {/* 브랜드 헤더 */}
       <section className="pt-16 pb-12 sm:pt-24">
         <p className="font-mono text-[12px] tracking-[0.2em] text-ink-soft">
-          HANMADI — 한국어 튜터 스튜디오
+          HANMADI — 언어 학습 스튜디오
         </p>
         <h1 className="mt-4 max-w-[18ch] font-display text-5xl leading-[1.15] sm:text-6xl">
           한마디씩, <span className="text-accent">확실하게</span>
@@ -49,6 +49,10 @@ export default async function Home() {
       </section>
 
       {/* 3대 퀵런치 — 대형 버튼, 키보드 접근 가능 */}
+      <div className="mb-6 flex flex-wrap gap-3">
+        <Link href="/learn" className="rounded-full bg-accent px-5 py-3 text-white">한국어 · 태국어 · 일본어 배우기</Link>
+        <Link href="/conversation" className="rounded-full border border-ink-faint px-5 py-3">AI 회화 연습</Link>
+      </div>
       <section aria-label="빠른 실행" className="grid gap-4 sm:grid-cols-3">
         <LaunchCard
           href="/trial"

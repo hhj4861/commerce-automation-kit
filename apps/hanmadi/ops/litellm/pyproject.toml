@@ -1,0 +1,6 @@
+[project]
+name = "hanmadi-litellm"
+version = "0.1.0"
+requires-python = ">=3.12,<3.13"
+# LiteLLM's auth error handler imports prisma even in database-free mode.
+dependencies = ["litellm[proxy]==1.102.1", "prisma>=0.11.0,<1.0"]

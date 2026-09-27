@@ -92,6 +92,15 @@ def main():
         call(CONSOLE + f"/apps/{app_id}/workflows/publish", {})
         key = call(CONSOLE + f"/apps/{app_id}/api-keys", {})["token"]
         if app == "hanmadi":
+            if os.environ.get("DIFY_EXPORT_HANMADI_CI") == "1":
+                # Only reachable inside the disposable CI guard in main().
+                # Used by the actual Next.js adapter test; never printed or uploaded.
+                sys.path.insert(0, str(ROOT))
+                from dify import private_write
+                (ROOT / ".runtime").mkdir(exist_ok=True)
+                private_write(ROOT / ".runtime/hanmadi-client.json", json.dumps({
+                    "DIFY_BASE_URL": BASE + "/v1", "DIFY_API_KEY": key,
+                }))
             payload = {"inputs": {"language": "태국어", "level": "입문", "scenario": "카페 주문"}, "query": "인사부터 연습할래요", "user": "ci-learner-one", "response_mode": "blocking"}
             result = call("/v1/chat-messages", payload, key)
             assert result["answer"] == "CI mock response", "Hanmadi did not reach mock provider through LiteLLM"

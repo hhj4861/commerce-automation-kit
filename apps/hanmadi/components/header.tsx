@@ -28,6 +28,8 @@ export function Logo({ size = 26 }: { size?: number }) {
 
 /** 튜터 전용 내비 — 학생에게는 한 링크도 보이지 않는다 */
 const TUTOR_NAV = [
+  { href: "/learn", label: "언어 학습" },
+  { href: "/conversation", label: "AI 회화" },
   { href: "/trial", label: "체험수업" },
   { href: "/live", label: "라이브 노트" },
   { href: "/library", label: "학습 팩" },
@@ -82,7 +84,7 @@ export function Header({ isTutor = false }: { isTutor?: boolean }) {
 
         {isPortal || !isTutor ? (
           <p className="shrink-0 font-mono text-[10px] text-ink-soft sm:text-[11px]">
-            Korean, one phrase at a time
+            <Link href="/learn" className="underline">한국어 · ไทย · 日本語</Link>
           </p>
         ) : (
           // 링크 4개 — 좁은 화면에서는 줄바꿈 대신 가로 스크롤로 흘린다

@@ -53,6 +53,7 @@ export default function LibraryPage() {
       </p>
 
       {/* 튜터 전용 안내 배너 — 토글 가능, 한국어 */}
+      <Link href="/learn" className="mt-6 inline-block text-accent underline">한국어 · 태국어 · 일본어 입문 회화와 AI 연습</Link>
       <div className="mt-8 rounded-2xl border border-amber-line bg-amber-wash p-5">
         <button
           type="button"
