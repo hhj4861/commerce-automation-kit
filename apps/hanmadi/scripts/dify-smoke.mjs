@@ -110,7 +110,7 @@ try {
   async function login(pin) {
     const res = await fetch(origin + "/api/auth", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ pin }) });
     assert.equal(res.status, 200);
-    return res.headers.get("set-cookie").split(";")[0];
+    return res.headers.getSetCookie().find(value => value.startsWith("hanmadi_tutor="))?.split(";")[0];
   }
   const cookie = await login("864209");
   const otherCookie = await login("973105");

@@ -1,7 +1,8 @@
 "use client";
+import { languageSelectionHref } from "@/lib/learning-language";
 import Link from "next/link";
 import { useState, useSyncExternalStore } from "react";
-import { courses, languages, type Language, type Lesson } from "@/lib/courses";
+import { courses, languages, koreanReadings, type Language, type Lesson } from "@/lib/courses";
 
 export function LearningStudio({
   initialLanguage,
@@ -10,7 +11,7 @@ export function LearningStudio({
   initialLanguage: Language;
   studentSlug?: string;
 }) {
-  const [language, setLanguage] = useState(initialLanguage);
+  const language = initialLanguage;
   const [lessonId, setLessonId] = useState("greetings");
   const [sessionCompleted, setCompleted] = useState<string[]>([]);
   const [storageNote, setStorageNote] = useState("");
@@ -51,27 +52,14 @@ export function LearningStudio({
   return (
     <div lang="ko" className="mx-auto max-w-5xl px-5 py-12 sm:py-16">
       <h1 className="font-display text-4xl sm:text-5xl">
-        오늘은 어떤 말로 인사할까요?
+        {languages[language].name}로 한마디씩
       </h1>
       <p className="mt-4 text-ink-soft">
         표현을 익히고, 퀴즈로 확인하고, AI와 한마디씩 대화해요.
       </p>
-      <div aria-label="학습 언어" className="my-8 flex flex-wrap gap-3">
-        {(Object.keys(languages) as Language[]).map((code) => (
-          <button
-            type="button"
-            key={code}
-            aria-pressed={language === code}
-            onClick={() => {
-              setLanguage(code);
-              setLessonId("greetings");
-            }}
-            className={`min-h-14 rounded-xl border px-5 py-3 ${language === code ? "border-accent bg-accent-wash text-accent" : "border-ink-faint bg-card"}`}
-          >
-            <span lang={code}>{languages[code].native}</span>
-            <span className="ml-3 text-sm">{languages[code].name}</span>
-          </button>
-        ))}
+      <div className="my-8 flex flex-wrap items-center gap-4">
+        <span className="rounded-full bg-accent-wash px-4 py-2 text-accent">학습 중 · {languages[language].name}</span>
+        <Link href={languageSelectionHref(`/learn?${query}`)} className="text-sm text-accent underline">학습 언어 변경</Link>
       </div>
       <div className="grid gap-8 md:grid-cols-[220px_1fr]">
         <aside>
@@ -130,11 +118,13 @@ export function LearningStudio({
                 <dt lang={language} className="text-2xl leading-relaxed">
                   {p.text}
                 </dt>
+                {p.koreanReading && <dd className="mt-2 font-medium text-accent">한글 발음 · {p.koreanReading}</dd>}
                 <dd className="mt-1 text-sm text-ink-soft">{p.reading}</dd>
                 <dd className="mt-2 text-base">{p.meaning}</dd>
               </div>
             ))}
           </dl>
+          {language !== "ko" && <p className="mt-3 text-xs text-ink-soft">한글 발음은 읽기 보조예요. 태국어 성조와 일본어 장음·억양을 완전히 표현하지 못해요.</p>}
           <p className="my-6 rounded-xl bg-accent-wash p-5 text-base leading-relaxed">
             {lesson.note}
           </p>
@@ -188,6 +178,7 @@ function LessonQuiz({
             className={`min-h-11 rounded-lg border px-4 py-2 ${answer === i ? "border-accent bg-accent-wash" : "border-ink-faint"}`}
           >
             {choice}
+            {koreanReadings[choice] && <span className="mt-1 block text-sm text-ink-soft">{koreanReadings[choice]}</span>}
           </button>
         ))}
       </div>

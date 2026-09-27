@@ -1,3 +1,4 @@
+import { LEARNING_LANGUAGE_COOKIE } from "@/lib/learning-language";
 import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import {
@@ -80,6 +81,7 @@ export async function POST(req: Request) {
     name: session.n,
     role: session.r,
   });
+  res.cookies.delete(LEARNING_LANGUAGE_COOKIE);
   res.cookies.set(TUTOR_COOKIE, await signSession(session, getAuthSecret(process.env)), {
     httpOnly: true,
     sameSite: "lax",
@@ -94,5 +96,6 @@ export async function POST(req: Request) {
 export async function DELETE() {
   const res = NextResponse.json({ ok: true });
   res.cookies.delete(TUTOR_COOKIE);
+  res.cookies.delete(LEARNING_LANGUAGE_COOKIE);
   return res;
 }

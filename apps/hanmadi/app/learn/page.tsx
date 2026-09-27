@@ -1,17 +1,11 @@
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 import { LearningStudio } from "@/components/learning-studio";
-import { isLanguage } from "@/lib/courses";
-export const metadata = { title: "한국어 · 태국어 · 일본어 학습" };
-export default async function LearnPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ language?: string; s?: string }>;
-}) {
+import { LEARNING_LANGUAGE_COOKIE, languageSelectionHref, resolveLearningLanguage } from "@/lib/learning-language";
+export const metadata = { title: "언어 학습", referrer: "no-referrer" };
+export default async function LearnPage({ searchParams }: { searchParams: Promise<{ language?: string; s?: string }> }) {
   const params = await searchParams;
-  return (
-    <LearningStudio
-      key={`${params.language ?? "ko"}:${params.s ?? "guest"}`}
-      initialLanguage={isLanguage(params.language) ? params.language : "ko"}
-      studentSlug={params.s}
-    />
-  );
+  const language = resolveLearningLanguage(params.language, (await cookies()).get(LEARNING_LANGUAGE_COOKIE)?.value);
+  if (!language) redirect(languageSelectionHref(`/learn?${new URLSearchParams(params)}`));
+  return <LearningStudio key={`${language}:${params.s ?? "guest"}`} initialLanguage={language} studentSlug={params.s} />;
 }

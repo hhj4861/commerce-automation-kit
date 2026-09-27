@@ -41,6 +41,10 @@ test("only the current message and validated lesson inputs reach Dify", async ()
       assert.equal(body.inputs.language, name);
       assert.equal(body.inputs.level, "입문");
       assert.ok(body.inputs.scenario.length <= 300);
+      if (language !== "ko") {
+        assert.ok(body.inputs.scenario.includes(`${name} 원문으로 먼저`));
+        assert.ok(body.inputs.scenario.includes("한글 발음과 한국어 뜻"));
+      }
       assert.equal(body.query, "こんにちは");
       assert.equal(body.user, difyUser("actor", parsed, env.DIFY_USER_SECRET));
       assert.equal(body.messages, undefined);

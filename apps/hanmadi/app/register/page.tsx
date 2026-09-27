@@ -75,7 +75,7 @@ function RegisterForm() {
       });
       const data = (await res.json()) as { ok: boolean; error?: string };
       if (data.ok) {
-        router.replace("/");
+        router.replace("/languages");
         router.refresh();
         return;
       }

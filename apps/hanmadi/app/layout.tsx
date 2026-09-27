@@ -1,3 +1,5 @@
+import { cookies } from "next/headers";
+import { LEARNING_LANGUAGE_COOKIE, resolveLearningLanguage } from "@/lib/learning-language";
 import type { Metadata } from "next";
 import { Gowun_Dodum, IBM_Plex_Sans_KR, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
@@ -45,14 +47,16 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const session = await getTutorSession();
+  const language = resolveLearningLanguage(undefined, (await cookies()).get(LEARNING_LANGUAGE_COOKIE)?.value);
 
   return (
     <html
-      lang="en"
+      lang="ko"
+      data-scroll-behavior="smooth"
       className={`${gowun.variable} ${plexKr.variable} ${plexMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        <Header isTutor={session !== null} />
+        <Header isTutor={session !== null} savedLanguage={language} />
         <main className="flex-1">{children}</main>
         <Footer />
       </body>

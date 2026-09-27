@@ -159,7 +159,7 @@ try {
     body: JSON.stringify({ pin: "864209" }),
   });
   assert.equal(login.status, 200);
-  const cookie = login.headers.get("set-cookie").split(";")[0];
+  const cookie = login.headers.getSetCookie().find(value => value.startsWith("hanmadi_tutor="))?.split(";")[0];
   const base = {
     language: "ja",
     lessonId: "cafe",

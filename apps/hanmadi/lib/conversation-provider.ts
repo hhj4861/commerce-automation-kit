@@ -64,6 +64,11 @@ export async function replyToConversation(
   if (config.provider === "litellm")
     return { reply: await completeConversation(input, config.config, fetcher) };
   const lesson = getLesson(input.language, input.lessonId)!;
+  const language = languages[input.language].name;
+  const guidance = input.language === "ko"
+    ? "한국어로 짧게 답하고 한국어 질문 하나를 이어가세요."
+    : `${language} 원문으로 먼저 답하고 질문도 ${language}로 하세요. 각 문장 아래 한글 발음과 한국어 뜻을 붙이세요. 참고: ${lesson.phrases.slice(0, 2).map(p => `${p.text}=${p.koreanReading}`).join("; ")}`;
+  const scenario = `${lesson.title}: ${lesson.goal} ${guidance}`.slice(0, 300);
   let response: Response;
   try {
     response = await fetcher(`${config.baseUrl}/chat-messages`, {
@@ -73,7 +78,7 @@ export async function replyToConversation(
         inputs: {
           language: languages[input.language].name,
           level: input.level === "beginner" ? "입문" : "중급",
-          scenario: `${lesson.title}: ${lesson.goal}`.slice(0, 300),
+          scenario,
         },
         query: input.messages.at(-1)!.content,
         user: difyUser(actor, input, config.userSecret),

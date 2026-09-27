@@ -118,6 +118,7 @@ export function ConversationRoom({
           </select>
         </label>
       </div>
+      <p className="mt-4 text-sm text-accent">{languages[language].name}로 대화해요.{language !== "ko" ? " 답변에 한글 발음과 한국어 뜻을 함께 보여 드려요." : ""}</p>
       <p className="mt-4 text-sm leading-relaxed text-ink-soft">
         AI 답변은 틀릴 수 있어요. 대화는 답변 생성을 위해 AI 제공업체로
         전송됩니다. 개인정보는 입력하지 마세요.{" "}
@@ -155,7 +156,8 @@ export function ConversationRoom({
                   lang={language}
                   className="rounded-full bg-accent-wash px-4 py-2 text-base text-accent"
                 >
-                  {p.text}
+                  <span className="block">{p.text}</span>
+                  {p.koreanReading && <span lang="ko" className="mt-1 block text-sm">{p.koreanReading}</span>}
                 </button>
               ))}
             </div>

@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { languages, type Language } from "@/lib/courses";
+import { resolveLearningLanguage, languageSelectionHref } from "@/lib/learning-language";
+import { usePathname, useSearchParams } from "next/navigation";
 
 /** 말풍선 안의 한 — Hanmadi 마크 */
 export function Logo({ size = 26 }: { size?: number }) {
@@ -33,7 +35,7 @@ const TUTOR_NAV = [
   { href: "/trial", label: "체험수업" },
   { href: "/live", label: "라이브 노트" },
   { href: "/library", label: "학습 팩" },
-  { href: "/admin/students", label: "학생 관리" },
+  { href: "/tutor", label: "튜터 도구" },
 ];
 
 /**
@@ -44,8 +46,17 @@ const TUTOR_NAV = [
  * /library는 학생에게도 열려 있으므로(lib/auth.ts의 isOpenPath) 여기서 가리지 않으면
  * 튜터 전용 링크가 학생에게 그대로 노출된다.
  */
-export function Header({ isTutor = false }: { isTutor?: boolean }) {
+export function Header({ isTutor = false, savedLanguage }: { isTutor?: boolean; savedLanguage?: Language }) {
   const pathname = usePathname();
+  const params = useSearchParams();
+  const language = resolveLearningLanguage(params.get("language"), savedLanguage);
+  let portalSlug: string | undefined;
+  try { if (pathname?.startsWith("/s/")) portalSlug = decodeURIComponent(pathname.split("/")[2]); }
+  catch { /* A malformed URL must not break navigation. */ }
+  const studentSlug = params.get("s") ?? portalSlug;
+  const query = new URLSearchParams({ ...(language ? { language } : {}), ...(studentSlug ? { s: studentSlug } : {}) });
+  const learnHref = `/learn?${query}`;
+  const changeHref = languageSelectionHref(`${pathname === "/conversation" ? "/conversation" : "/learn"}?${query}`);
 
   // 로그인·등록·체험수업은 자체 크롬을 가진 전체화면 — 글로벌 헤더 숨김.
   // 특히 /trial은 학생에게 공유되는 공개 페이지라 튜터 내비가 보이면 안 된다.
@@ -61,8 +72,8 @@ export function Header({ isTutor = false }: { isTutor?: boolean }) {
   // 학생 포털은 로고만 + 상단 고정 없음 (학생 화면은 콘텐츠 우선)
   const isPortal = pathname?.startsWith("/s/") ?? false;
 
-  // 포털은 제자리 링크, 튜터는 홈, 학생은 로그인으로 튕기지 않게 학습 팩으로
-  const homeHref = isPortal ? pathname! : isTutor ? "/" : "/library";
+  // 포털은 제자리 링크, 튜터는 선택 언어 학습, 게스트는 언어 선택으로
+  const homeHref = isPortal ? pathname! : isTutor ? learnHref : "/languages";
 
   return (
     <header
@@ -84,15 +95,18 @@ export function Header({ isTutor = false }: { isTutor?: boolean }) {
 
         {isPortal || !isTutor ? (
           <p className="shrink-0 font-mono text-[10px] text-ink-soft sm:text-[11px]">
-            <Link href="/learn" className="underline">한국어 · ไทย · 日本語</Link>
+            <Link href={changeHref} className="underline">{language ? `${languages[language].name} · 언어 변경` : "학습 언어 선택"}</Link>
           </p>
         ) : (
-          // 링크 4개 — 좁은 화면에서는 줄바꿈 대신 가로 스크롤로 흘린다
+          // 좁은 화면에서도 모든 학습 메뉴에 접근하도록 가로 스크롤을 허용한다
           <nav className="-mx-1 flex min-w-0 items-center gap-0.5 overflow-x-auto px-1 text-[13px] [scrollbar-width:none] sm:gap-1 sm:text-[15px] [&::-webkit-scrollbar]:hidden">
-            {TUTOR_NAV.map((item) => (
+            <HeaderLink href={changeHref} active={pathname === "/languages"}>
+              {language ? `${languages[language].name} · 변경` : "언어 선택"}
+            </HeaderLink>
+            {TUTOR_NAV.filter((item) => language === "ko" || !["/trial", "/live", "/library"].includes(item.href)).map((item) => (
               <HeaderLink
                 key={item.href}
-                href={item.href}
+                href={["/learn", "/conversation"].includes(item.href) ? `${item.href}?${query}` : item.href}
                 active={isActive(pathname, item.href)}
               >
                 {item.label}
