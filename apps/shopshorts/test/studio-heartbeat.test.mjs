@@ -56,3 +56,10 @@ test('unauthorized callers cannot change the media provider', async () => {
   const { capabilities } = await (await request('GET', 'config')).json();
   assert.equal(capabilities.mediaProvider, 'google');
 });
+
+test('worker audio account reaches config with billing and secrets stripped',async()=>{
+ const request=fixture();
+ await request('PUT','worker',{voice:true,audioAccount:{state:'ready',checkedAt:new Date().toISOString(),tier:'creator',used:12,limit:100,apiKey:'private',open_invoices:['private']}});
+ const {capabilities}=await(await request('GET','config')).json();
+ assert.equal(capabilities.audioAccount.remaining,88);assert.equal(capabilities.audioAccount.apiKey,undefined);assert.equal(capabilities.audioAccount.open_invoices,undefined);
+});

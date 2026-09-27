@@ -4,8 +4,10 @@ import { accountBroker } from './studio-account-worker.mjs';
 import { llmAccountApi } from './lib/llm-account-api.js';
 import { studioApi } from './lib/studio-api.js';
 import { executeStudioTask, capabilities } from './studio-runner.mjs';
+import {createAudioAccountReader} from './lib/audio-account.js';
 
 export function localStudioStore(dataDir, env, onPersist = () => {}) {
+  const audioAccount=createAudioAccountReader(env);
   const file = join(dataDir, 'studio-projects.json');
   const mediaRoot = resolve(dataDir, 'studio-media');
   const load = () => existsSync(file) ? JSON.parse(readFileSync(file, 'utf8')) : [];
@@ -17,7 +19,7 @@ export function localStudioStore(dataDir, env, onPersist = () => {}) {
   };
   return {
     execution: 'local', workDir: join(dataDir, 'studio-work'),
-    async capabilities() { return capabilities(env); },
+    async capabilities() { return {...capabilities(env),audioAccount:await audioAccount()}; },
     async list() { return load().sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)); },
     async get(id) { return load().find(p => p.id === id) || null; },
     async create(p) { const all = load(); all.push(p); persist(all); },

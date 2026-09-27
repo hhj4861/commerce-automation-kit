@@ -1,0 +1,10 @@
+{$GATEWAY_DOMAIN} {
+    # Only inference endpoints are public. Administration stays on loopback/SSH.
+    @inference path /v1/models /v1/chat/completions /v1/embeddings /v1/audio/speech /v1/audio/transcriptions
+    handle @inference {
+        reverse_proxy gateway:4000
+    }
+    handle {
+        respond "Not found" 404
+    }
+}

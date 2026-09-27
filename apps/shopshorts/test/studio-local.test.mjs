@@ -64,7 +64,7 @@ test('frame timeline renders reordered source ranges and captions on exact frame
   let p=createProject({category:'건축학',topic:'공간의 색',format:'long',duration:16});
   p=changeProject(p,'scenes',{scenes:[{id:'scene-1',narration:'공간의 색을 살펴봐요.',prompt:'An original room.',duration:2,kind:'video'}]});p.approved=true;
   for(const [id,file,kind,type] of [['scene-1',source,'video','video/mp4'],['music',music,'audio','audio/wav']]){const key=`studio/${p.id}/${id}`;await store.writeAsset(key,await readFile(file),type);p.assets[id]={key,kind,type};}
-  const e=normalizeEdit(p);e.clips=[{id:'blue',sceneId:'scene-1',inFrame:30,outFrame:45},{id:'red',sceneId:'scene-1',inFrame:0,outFrame:15},{id:'one-frame',sceneId:'scene-1',inFrame:45,outFrame:46}];e.music='music';e.musicVolume=.2;
+  const e=normalizeEdit(p);e.voice='none';e.clips=[{id:'blue',sceneId:'scene-1',inFrame:30,outFrame:45},{id:'red',sceneId:'scene-1',inFrame:0,outFrame:15},{id:'one-frame',sceneId:'scene-1',inFrame:45,outFrame:46}];e.music='music';e.musicVolume=.2;
   e.captions=[{id:'text-1',clipId:'blue',text:'한글 100% %{n}',startFrame:3,endFrame:10,font:'myeongjo',size:80,color:'#ffffff',position:'middle',background:true}];
   p=changeProject(p,'edit',e);p=changeProject(p,'render',{});p.task.state='running';
   const result=await executeStudioTask(p,{},store,async()=>{});assert.equal(result.render.duration,31/30);

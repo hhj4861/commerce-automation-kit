@@ -1,12 +1,13 @@
+import {sceneMediaPrompt} from './lib/scene-media-prompt.js';
 import { createHash } from 'node:crypto';
 import { readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { higgsfieldCommand } from './studio-higgsfield-auth.mjs';
 
-export function higgsfieldPlan(scene,aspect) {
+export function higgsfieldPlan(scene,aspect,job={brief:{aspect}}) {
   const image=scene.kind==='image';
   return {model:image?'nano_banana_2':'seedance_2_0',kind:scene.kind,
-    prompt:`${scene.prompt}\nOriginal visual, no captions or logos.${image?'':' No dialogue.'}`,
+    prompt:sceneMediaPrompt(job,scene),generation:job.mediaVersions?.[scene.id],
     aspect,resolution:image?'2k':'1080p',...(image?{}:{duration:Math.max(4,Math.min(15,Math.ceil(scene.duration)))})};
 }
 function parameters(plan){return ['--prompt',plan.prompt,'--aspect_ratio',plan.aspect,'--resolution',plan.resolution,...(plan.kind==='video'?['--duration',String(plan.duration),'--mode','std','--generate_audio','false']:[])];}
@@ -33,7 +34,7 @@ export async function downloadHiggsfield(url,kind,fetcher=fetch){
   throw Error('Higgsfield 다운로드 리디렉션을 확인해 주세요.');
 }
 export async function generateHiggsfieldScene(job,scene,env,work,checkpoint,{run=args=>higgsfieldCommand(args,env),fetcher=fetch,sleep=ms=>new Promise(r=>setTimeout(r,ms)),now=Date.now}={}){
-  const plan=higgsfieldPlan(scene,job.brief.aspect),params=parameters(plan);
+  const plan=higgsfieldPlan(scene,job.brief.aspect,job),params=parameters(plan);
   const fingerprint=createHash('sha256').update(JSON.stringify(plan)).digest('hex');
   const receipt=join(work,`${scene.id}-${fingerprint}.higgsfield.json`);
   const jobs=job.mediaJobs ||= {};

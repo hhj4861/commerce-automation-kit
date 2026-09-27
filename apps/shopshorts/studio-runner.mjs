@@ -1,3 +1,5 @@
+import {sceneMediaPrompt} from './lib/scene-media-prompt.js';
+import {captionStyle,captionExtras} from './public/caption-style.js';
 import {musicClips, musicFilter} from './public/music-timeline.js';
 import { spawn } from 'node:child_process';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
@@ -70,8 +72,10 @@ export function captionFilter(caption, textPath) {
   if(!font)throw new Error('지원하지 않는 자막 폰트입니다.');
   const escapePath=p=>p.replaceAll('\\','/').replaceAll(':','\\:').replaceAll("'", "'\\\\''");
   const fontPath=join(ROOT,'apps/shopshorts/public',font.file);
-  const y={top:'h*0.08',middle:'(h-text_h)/2',bottom:'h*0.92-text_h'}[caption.position];
-  return `drawtext=fontfile='${escapePath(fontPath)}':textfile='${escapePath(textPath)}':expansion=none:fontsize=${caption.size}:fontcolor=${caption.color}:borderw=2:bordercolor=black:box=${caption.background?1:0}:boxcolor=black@0.65:boxborderw=8:x=(w-text_w)/2:y=${y}:enable='gte(n,${caption.startFrame})*lt(n,${caption.endFrame})'`;
+  captionExtras(caption);caption=captionStyle(caption);
+  const x=caption.x===undefined?'(w-text_w)/2':`(w-text_w)*${caption.x/100}`;
+  const y=caption.y===undefined?{top:'h*0.08',middle:'(h-text_h)/2',bottom:'h*0.92-text_h'}[caption.position]:`(h-text_h)*${caption.y/100}`;
+  return `drawtext=fontfile='${escapePath(fontPath)}':textfile='${escapePath(textPath)}':expansion=none:fontsize=${caption.size}:fontcolor=${caption.color}:borderw=${caption.outlineWidth}:bordercolor=${caption.outlineColor}:box=${caption.background?1:0}:boxcolor=${caption.backgroundColor}@${caption.backgroundOpacity}:boxborderw=8:x=${x}:y=${y}:enable='gte(n,${caption.startFrame})*lt(n,${caption.endFrame})'`;
 }
 async function renderProject(job, work, env, io) {
   const segments = [];
@@ -134,20 +138,21 @@ export async function executeStudioTask(job, env, io, checkpoint, { fetcher = fe
   if (action === 'media') {
     const assets = { ...job.assets };
     for (const scene of job.scenes) {
-      if (assets[scene.id]) continue;
+      if (assets[scene.id] || (job.task.sceneIds && !job.task.sceneIds.includes(scene.id))) continue;
+      const mediaPrompt=sceneMediaPrompt(job,scene);
       let data, type, providerInfo = {};
       if (env.SHOPSHORTS_MEDIA_PROVIDER === 'higgsfield') {
         const result = await generateHiggsfieldScene(job, scene, env, work, checkpoint, { run: runHiggsfield, fetcher });
         ({ data, type } = result); providerInfo = { provider: result.provider, providerJobId: result.providerJobId };
       } else if (scene.kind === 'image') {
-        const result = await googleMediaRequest(`models/${env.SHOPSHORTS_IMAGE_MODEL || 'gemini-2.5-flash-image'}:generateContent`, { contents: [{ parts: [{ text: `${scene.prompt}\nOriginal visual, no captions or logos. ${job.brief.aspect} composition.` }] }], generationConfig: { responseModalities: ['TEXT', 'IMAGE'], imageConfig: { aspectRatio: job.brief.aspect } } }, env, fetcher);
+        const result = await googleMediaRequest(`models/${env.SHOPSHORTS_IMAGE_MODEL || 'gemini-2.5-flash-image'}:generateContent`, { contents: [{ parts: [{ text: mediaPrompt }] }], generationConfig: { responseModalities: ['TEXT', 'IMAGE'], imageConfig: { aspectRatio: job.brief.aspect } } }, env, fetcher);
         const image = result.candidates?.[0]?.content?.parts?.find(p => p.inlineData?.mimeType?.startsWith('image/'))?.inlineData;
         if (!image) throw new Error(`${scene.id}: 이미지가 반환되지 않았습니다. 장면 설명을 수정하세요.`);
         type = image.mimeType; data = Buffer.from(image.data, 'base64');
       } else {
         // Persist the paid operation ID before polling, so a retry does not pay for the same clip again.
-        const operationFile = join(work, `${scene.id}-${Buffer.from(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(JSON.stringify([scene.prompt, job.brief.aspect, env.SHOPSHORTS_VIDEO_MODEL])))).toString('hex').slice(0, 20)}.operation.json`);
-        let operation = existsSync(operationFile) ? JSON.parse(await readFile(operationFile, 'utf8')) : await googleMediaRequest(`models/${env.SHOPSHORTS_VIDEO_MODEL || 'veo-3.1-generate-preview'}:predictLongRunning`, { instances: [{ prompt: `${scene.prompt}. No dialogue, no text overlays.` }], parameters: { aspectRatio: job.brief.aspect, durationSeconds: 8, resolution: '1080p' } }, env, fetcher);
+        const operationFile = join(work, `${scene.id}-${Buffer.from(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(JSON.stringify([mediaPrompt, job.brief.aspect, env.SHOPSHORTS_VIDEO_MODEL,job.mediaVersions?.[scene.id]])))).toString('hex').slice(0, 20)}.operation.json`);
+        let operation = existsSync(operationFile) ? JSON.parse(await readFile(operationFile, 'utf8')) : await googleMediaRequest(`models/${env.SHOPSHORTS_VIDEO_MODEL || 'veo-3.1-generate-preview'}:predictLongRunning`, { instances: [{ prompt: mediaPrompt }], parameters: { aspectRatio: job.brief.aspect, durationSeconds: 8, resolution: '1080p' } }, env, fetcher);
         if (!/^models\/[a-zA-Z0-9._-]+\/operations\/[a-zA-Z0-9_-]+$/.test(operation.name || '') && !/^operations\/[a-zA-Z0-9_-]+$/.test(operation.name || '')) throw new Error('영상 생성 요청 ID를 확인할 수 없습니다.');
         await writeFile(operationFile, JSON.stringify(operation));
         const deadline = Date.now() + 20 * 60000;

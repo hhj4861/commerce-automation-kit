@@ -70,7 +70,7 @@ test('failed checkpoint reuses completed local audio; synthesis errors are redac
     await assert.rejects(generateNarration(p, work, { ELEVENLABS_API_KEY: 'fixture' }, io, async () => { throw Error('checkpoint unavailable'); }, tools), /checkpoint unavailable/);
     await generateNarration(p, work, {}, io, async () => {}, tools); assert.equal(calls, 1);
     p.scenes[0].narration = '새 대본';
-    await assert.rejects(generateNarration(p, work, { ELEVENLABS_API_KEY: 'fixture' }, io, async () => assert.fail('no failed output'), { ...tools, runCli: async () => { throw Error('secret raw provider response'); } }), e => /인증과 사용 한도/.test(e.message) && !e.message.includes('secret'));
+    await assert.rejects(generateNarration(p, work, { ELEVENLABS_API_KEY: 'fixture' }, io, async () => assert.fail('no failed output'), { ...tools, runCli: async () => { throw Error('secret raw provider response'); } }), e => /목소리 선택은 유지/.test(e.message) && !e.message.includes('secret'));
     assert.equal(narrationReady(p, p.edit), false);
   } finally { await rm(work, { recursive: true, force: true }); }
 });

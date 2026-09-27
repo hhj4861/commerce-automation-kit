@@ -1,0 +1,56 @@
+name: shared-ai-gateway
+services:
+  gateway:
+    # Official main-stable manifest resolved 2026-09-26; immutable multi-arch digest.
+    image: ghcr.io/berriai/litellm@sha256:87f34979b9f8cb274fac90ca8a4fdda07d8480de22755562a26adeb95ce20d02
+    command: ["--config", "/app/platform-config.json", "--host", "0.0.0.0", "--port", "4000"]
+    env_file: .env
+    environment:
+      LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY:?run gateway.py init}
+      LITELLM_SALT_KEY: ${LITELLM_SALT_KEY:?run gateway.py init}
+      DATABASE_URL: postgresql://litellm:${POSTGRES_PASSWORD:?run gateway.py init}@db:5432/litellm
+      STORE_MODEL_IN_DB: "False"
+      LITELLM_TELEMETRY: "False"
+    ports: ["127.0.0.1:4100:4000"]
+    volumes: ["./.runtime/litellm.json:/app/platform-config.json:ro"]
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:4000/health/readiness', timeout=5)"]
+      interval: 15s
+      timeout: 10s
+      retries: 20
+      start_period: 60s
+  db:
+    image: postgres:16@sha256:1a6ab3f5345eb6dbe04a1349529caabdb0ab09293a09590fad07b2246bfa4b54
+    environment:
+      POSTGRES_USER: litellm
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?run gateway.py init}
+      POSTGRES_DB: litellm
+    volumes: ["postgres-data:/var/lib/postgresql/data"]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U litellm -d litellm"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+  https:
+    profiles: ["public"]
+    image: caddy:2@sha256:0c994536bddb66445885237f1a5dcc1916bccea922661c76b4e9fc24061f9b52
+    environment:
+      GATEWAY_DOMAIN: ${GATEWAY_DOMAIN:-localhost}
+    ports: ["80:80", "443:443"]
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      gateway:
+        condition: service_healthy
+    restart: unless-stopped
+volumes:
+  postgres-data:
+  caddy-data:
+  caddy-config:

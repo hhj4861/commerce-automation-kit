@@ -1,6 +1,8 @@
 import { executeStudioTask, capabilities } from './studio-runner.mjs';
+import {createAudioAccountReader} from './lib/audio-account.js';
 export function startStudioWorker({ env, cloud, token, workDir, keepAlive = false, fetcher = fetch, execute = executeStudioTask }) {
   let running = false, stopped = false, pending = null;
+  const audioAccount=createAudioAccountReader(env,fetcher);
   async function api(path, options = {}) {
     const response = await fetcher(`${cloud}/api/studio${path}`, { ...options, headers: { authorization: `Bearer ${token}`, ...options.headers }, signal: AbortSignal.timeout(180000) });
     if (!response.ok) throw new Error(`studio API ${response.status}`);
@@ -35,7 +37,7 @@ export function startStudioWorker({ env, cloud, token, workDir, keepAlive = fals
       }
     } finally { running = false; }
   }
-  const heartbeat=()=>api('/worker',{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify(capabilities(env))});
+  const heartbeat=async()=>api('/worker',{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify({...capabilities(env),audioAccount:await audioAccount()})});
   function tick(){if(pending)return pending;pending=performTick().finally(()=>{pending=null;});return pending;}
   const timer = setInterval(() => (pending?heartbeat():tick()).catch(e => console.error('[studio-worker]', e.message)), 10000);
   if(!keepAlive)timer.unref();

@@ -1,0 +1,8 @@
+{
+  "repository": "https://github.com/socar-hyunz/dify.git",
+  "upstream": "https://github.com/langgenius/dify",
+  "release": "1.17.1",
+  "commit": "8387590ace4a094de812b7847fc6a4c3a27cd52b",
+  "provider": "langgenius/openai_api_compatible/openai_api_compatible",
+  "plugin": "langgenius/openai_api_compatible:0.0.68@ba61c5eccb814be7364117c0bec3710a51e09b20f31e37243e747a00f9377969"
+}
