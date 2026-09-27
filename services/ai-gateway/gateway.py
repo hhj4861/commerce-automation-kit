@@ -59,6 +59,8 @@ def render(root=ROOT):
         model = env.get(f"{app}_CHAT_MODEL", "")
         if not model:
             continue
+        if model.startswith("chatgpt/"):
+            raise ValueError("ChatGPT subscriptions require an isolated account; use subscriptions.py create.")
         local = model.startswith(("ollama/", "ollama_chat/"))
         if not local and not env.get(f"{app}_CHAT_API_KEY"):
             raise ValueError(f"{app}_CHAT_API_KEY is required for this provider.")
@@ -77,6 +79,8 @@ def render(root=ROOT):
         for alias, model in (("hanmadi-stt", "scribe_v1"), ("hanmadi-tts", "eleven_v3")):
             models.append({"model_name": alias, "litellm_params": {
                 "model": f"elevenlabs/{model}", "api_key": "os.environ/ELEVENLABS_API_KEY"}})
+    from subscriptions import routes
+    models.extend(routes(root))
     config = {"model_list": models,
               "general_settings": {"master_key": "os.environ/LITELLM_MASTER_KEY", "store_prompts_in_spend_logs": False},
               "litellm_settings": {"set_verbose": False, "turn_off_message_logging": True,
@@ -118,12 +122,16 @@ class Client:
 
 
 def provision(app, budget, base, root=ROOT, client=None):
+    return provision_scope(app, APPS[app], budget, base, root, client)
+
+
+def provision_scope(app, model_scope, budget, base, root=ROOT, client=None):
     if not math.isfinite(budget) or budget <= 0:
         raise ValueError("Choose an explicit positive 30-day USD budget.")
     env = read_env(root / ".env")
     client = client or Client(base, env["LITELLM_MASTER_KEY"])
     available = {m["id"] for m in client.call("/v1/models")["data"]}
-    allowed = [m for m in APPS[app] if m in available]
+    allowed = [m for m in model_scope if m in available]
     if not allowed:
         raise ValueError("No configured models for this app; refusing an empty/unrestricted key.")
     team_id = f"cak-{app}"
@@ -154,7 +162,7 @@ def provision(app, budget, base, root=ROOT, client=None):
                                            "models": allowed, "max_budget": budget,
                                            "budget_duration": "30d", "rpm_limit": 30})
     values = {"LITELLM_BASE_URL": base.rstrip("/") + "/v1", "LITELLM_API_KEY": response["key"],
-              "LITELLM_MODEL": "hanmadi-chat" if "hanmadi-chat" in allowed else "replay-video-planner" if "replay-video-planner" in allowed else ""}
+              "LITELLM_MODEL": "hanmadi-chat" if "hanmadi-chat" in allowed else "replay-video-planner" if "replay-video-planner" in allowed else allowed[0] if app.startswith("codex-") else ""}
     if app == "hanmadi":
         values.update(LITELLM_STT_MODEL="hanmadi-stt" if "hanmadi-stt" in allowed else "",
                       LITELLM_TTS_MODEL="hanmadi-tts" if "hanmadi-tts" in allowed else "",

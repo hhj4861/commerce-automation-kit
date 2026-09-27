@@ -32,17 +32,43 @@ jobs:
           REPLAY_CHAT_API_BASE=http://mock:8000/v1
           ENV
           python gateway.py render
-          docker compose -f compose.yaml -f compose.test.yaml config --quiet
+          python tests/subscriptions_integration.py prepare
+          docker compose -f compose.yaml -f compose.test.yaml -f .runtime/subscriptions.compose.json config --quiet
       - name: Start actual gateway and database
-        run: docker compose -f compose.yaml -f compose.test.yaml up -d --wait --wait-timeout 300
+        run: docker compose -f compose.yaml -f compose.test.yaml -f .runtime/subscriptions.compose.json up -d --wait --wait-timeout 300
       - run: python tests/integration.py
+      - run: python tests/subscriptions_integration.py
+      - name: Check pinned OAuth interface and noninteractive guard without login
+        run: |
+          docker compose -f compose.yaml -f .runtime/subscriptions.compose.json run --rm --no-deps -T --entrypoint python codex-alice -c '
+          import sys
+          sys.path.insert(0, "/app")
+          import importlib.util
+          spec = importlib.util.spec_from_file_location("runtime", "/app/subscription-runtime.py")
+          runtime = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(runtime)
+          runtime.noninteractive_auth()
+          from litellm.llms.chatgpt.authenticator import Authenticator
+          try:
+              Authenticator()._login_device_code()
+          except RuntimeError:
+              print("PASS: interactive login is blocked in inference workers")
+          else:
+              raise AssertionError("Unexpected device flow")
+          '
       - name: Verify persistence after restart
         run: |
           docker compose restart gateway
-          docker compose -f compose.yaml -f compose.test.yaml up -d --wait --wait-timeout 120
+          docker compose -f compose.yaml -f compose.test.yaml -f .runtime/subscriptions.compose.json up -d --wait --wait-timeout 120
           python tests/integration.py
+          python tests/subscriptions_integration.py
       - name: Validate HTTPS proxy configuration
         run: docker compose --profile public run --rm --no-deps https caddy validate --config /etc/caddy/Caddyfile
       - name: Cleanup ephemeral CI data
         if: always()
-        run: docker compose -f compose.yaml -f compose.test.yaml down -v
+        run: |
+          if test -f .runtime/subscriptions.compose.json; then
+            docker compose -f compose.yaml -f compose.test.yaml -f .runtime/subscriptions.compose.json down -v
+          else
+            docker compose -f compose.yaml -f compose.test.yaml down -v
+          fi

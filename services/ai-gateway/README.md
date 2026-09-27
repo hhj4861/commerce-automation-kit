@@ -57,6 +57,49 @@ python3 gateway.py provision --app replay --budget-usd 5
 
 ## 검사와 적용 상태
 
+### 개인 ChatGPT/Codex 구독 연결
+
+LiteLLM의 `chatgpt/` 공급자로 계정을 연결한다. 각 계정은 **별도 LiteLLM 프로세스·토큰 디렉터리·내부 키·모델 별칭**을 가진다. 공용 게이트웨이에는 OAuth 토큰을 넣지 않는다. 기존 Codex/브라우저/다른 프로젝트의 토큰을 복사하지 않으며, 본인이 새 기기 인증 절차를 완료한다.
+
+```sh
+# gateway.py init으로 기본 .env가 준비된 서버에서 실행
+python3 subscriptions.py create --account dean --provider codex --model gpt-6-sol
+python3 subscriptions.py login --account dean
+# 화면의 공식 인증 주소에서 본인이 승인. 짧은 실모델 응답까지 성공해야 connected.
+docker compose -f compose.yaml -f .runtime/subscriptions.compose.json up -d --wait
+python3 subscriptions.py status --account dean
+python3 subscriptions.py probe --account dean
+# 아래 5달러는 예시. 운영자가 선택한 예산으로 실행한다.
+python3 subscriptions.py provision --account dean --budget-usd 5
+```
+
+발급된 `.runtime/codex-dean.env`에는 **`codex-dean`만 허용하는** 게이트웨이 가상 키가 저장된다. 클라이언트는 기존 게이트웨이 `/v1/chat/completions` 또는 `/v1/responses`로 그 별칭을 호출한다. 각 이용자에게 본인의 키만 전달해야 한다. Hanmadi/Replay의 공용 앱 키에는 개인 구독 모델을 자동 추가하지 않는다. 공개 SaaS의 이용자 연결 화면, 로그인 사용자→계정 소유권 매핑, 암호화된 중앙 자격 저장소는 이 서버 관리 CLI와 별도 구현 대상이다. 공유 Dify 앱 한 개에 개인 구독 키를 넣어 모든 이용자가 소모하게 하지 않는다.
+
+`status`의 `cached`는 로컬 자격이 있다는 의미이며 실제 연결 성공이 아니다. `probe`만 인증·모델 접근·실응답을 확인한다. 계정 플랜의 모델 지원과 사용 한도가 적용된다. LiteLLM 비용 수치/달러 예산은 구독 한도를 대체하거나 무제한 사용·청구 상한을 보장하지 않는다. 실패 시 유료 API 계정으로 자동 전환하지 않는다.
+
+모델이 지원 종료되거나 계정에서 사용할 수 없다면 `python3 subscriptions.py set-model --account dean --model <사용가능한-모델>`로 설정만 변경하고 `probe`로 검증한다. 기존 OAuth 자격과 내부 키는 보존한다. `gpt-5.4`는 ChatGPT 로그인 기반 Codex에서 2026-08-31 지원 종료되었으므로 LiteLLM 문서의 예시를 그대로 운영 모델로 쓰지 않는다. [OpenAI 모델 안내](https://learn.chatgpt.com/docs/models)
+
+```sh
+python3 subscriptions.py logout --account dean
+```
+
+해제는 해당 워커를 먼저 중지하고 **해당 계정의 로컬 OAuth 자격만 삭제**한다. 공급자 측 승인 자체의 취소는 계정 관리 화면에서 별도로 수행한다. 재로그인 전에는 해당 별칭 호출이 실패한다. 키 회수까지 필요하면 기존 게이트웨이 관리 절차로 그 계정의 가상 키를 폐기한다. 로그인/검사 실패 시 워커를 자동 재시작하지 않는다. 추론 워커는 인증 만료/갱신 실패 때 대화 요청으로 새 기기 인증을 시작하지 않고 오류를 반환한다.
+
+같은 계정의 로그인·검사·해제·추론 서버는 인증 디렉터리의 실행 잠금으로 동시 실행을 거부한다. 계정 워커는 한 프로세스로 실행하며 그 안의 토큰 갱신도 직렬화한다.
+
+계정 추가·설정 재생성 후에는 반드시 생성된 Compose overlay를 포함해 `up -d` 한다. 기본 `compose.yaml`만 사용하면 계정 워커와 내부 키 주입이 빠진다. OAuth 디렉터리는 0700, 비밀 파일은 0600으로 유지되며 `.runtime/` 전체가 Git 제외다. 서버에서는 암호화 디스크/백업과 제한된 관리자 접근을 사용한다. 이 구현은 디스크 내용을 자체 암호화하는 Vault가 아니다.
+
+Docker 없는 Mac의 **격리된 로그인/모델 확인만** 수행할 때는 같은 LiteLLM 버전이 설치된 Python을 지정할 수 있다. `--python` 모드는 운영 Docker 워커와 동시에 실행하지 않는다. 계정별 추론 서버·공용 게이트웨이 기동은 위 Docker 경로를 사용한다.
+
+```sh
+python3 subscriptions.py login --account dean --python /absolute/path/to/venv/bin/python
+python3 subscriptions.py probe --account dean --python /absolute/path/to/venv/bin/python
+```
+
+Claude 개인 구독 토큰 중계는 지원하지 않는다. `--provider claude`는 비밀을 요청하거나 파일을 만들기 전에 거부한다. 공식 정책은 제3자 서비스의 Claude.ai 자격 수집·보관·중계를 제한한다. Claude 모델은 기존 `anthropic/<model>` API 키 또는 지원 클라우드 공급자로 연결한다. 원본 Claude Code에 사용자가 직접 로그인하는 호스팅 조건은 별도이며, 개인 토큰을 LiteLLM에 중계하는 허가로 해석하지 않는다.
+
+근거: [LiteLLM ChatGPT 구독 공급자](https://docs.litellm.ai/docs/providers/chatgpt), [Claude 인증 사용 제한](https://code.claude.com/docs/en/legal-and-compliance). 고정 이미지 리비전 `d09bbae1c6df463e425558f60d460437193635da`의 LiteLLM 버전은 `1.102.1`이다. 비대화형 인증 가드는 해당 버전 내부 인터페이스를 사용하므로 이미지 변경 시 CI 호환성 검사를 통과해야 한다. CI는 실제 프록시·DB와 **가짜 공급자/자격**으로 계정 격리를 검사한다. CI 성공을 실제 구독 승인이나 운영 연결 완료로 보고하지 않는다.
+
 ```sh
 python3 -m unittest -v
 # Docker 통합검사는 .github/workflows/ai-gateway.yml 참조
