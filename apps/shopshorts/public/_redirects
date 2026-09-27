@@ -1,3 +1,4 @@
+# Proxy to the canonical root; /index.html redirects to / and loses the requested app route.
 /studio/automatic / 200
 /automatic       / 200
 /contents        / 200
