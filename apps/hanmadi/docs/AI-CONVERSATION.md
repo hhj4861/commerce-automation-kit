@@ -50,6 +50,7 @@ DIFY_USER_SECRET=your-independent-random-secret-at-least-32-characters
 cd apps/hanmadi
 npm ci --prefix . --workspaces=false
 npm test
+node node_modules/next/dist/bin/next typegen
 node node_modules/typescript/bin/tsc --noEmit
 npm run test:dify
 ```
@@ -64,6 +65,11 @@ CI `Hanmadi Dify connection`은 실제 Dify/LiteLLM/PostgreSQL과 한마디 Next
 사용자·수업 경계, 저장 동의, 튜터/학생 접근, 음성 전사 → 회화 → 음성 응답을 검사한다.
 CI 앱 키는 비공개 임시 JSON 파일로만 전달하며 로그나 artifact에 올리지 않는다.
 실제 모델의 교수 품질·실제 마이크/스피커·운영 서버 연결은 별도 검증 대상이다.
+
+2026-09-27 검증: 단위 테스트 15개, 타입 검사, 프로덕션 빌드와
+[실제 Dify/LiteLLM 통합 CI](https://github.com/hhj4861/commerce-automation-kit/actions/runs/36282994191)가 통과했다.
+로컬 Chrome에서 합성 데이터로 저장 동의 전 전송 차단, 일본어 예문 전송,
+응답·음성 플레이어 표시 및 새 대화 초기화를 확인했다. 운영 Dify 서버와 실제 모델 연결은 아직 미설정이다.
 
 공식 근거: [Chatflow API](https://docs.dify.ai/en/api-reference/guides/chatflow),
 [사용자 식별](https://docs.dify.ai/en/api-reference/guides/end-user-identity),
