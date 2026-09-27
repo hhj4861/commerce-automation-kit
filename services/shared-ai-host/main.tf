@@ -49,6 +49,12 @@ resource "google_compute_subnetwork" "ai" {
   ip_cidr_range            = "10.78.0.0/24"
   private_ip_google_access = true
 }
+resource "google_compute_subnetwork" "proxy" {
+  name                     = "shared-ai-proxy"
+  network                  = google_compute_network.ai.id
+  ip_cidr_range            = "10.79.0.0/26"
+  private_ip_google_access = true
+}
 resource "google_compute_firewall" "iap_ssh" {
   name          = "shared-ai-iap-ssh"
   network       = google_compute_network.ai.name
@@ -60,10 +66,10 @@ resource "google_compute_firewall" "iap_ssh" {
   }
 }
 resource "google_compute_firewall" "api" {
-  name        = "shared-ai-private-api"
-  network     = google_compute_network.ai.name
-  source_tags = ["shared-ai-proxy"]
-  target_tags = ["shared-ai-host"]
+  name          = "shared-ai-private-api"
+  network       = google_compute_network.ai.name
+  source_ranges = [google_compute_subnetwork.proxy.ip_cidr_range]
+  target_tags   = ["shared-ai-host"]
   allow {
     protocol = "tcp"
     ports    = ["8080"]
@@ -145,8 +151,7 @@ resource "google_cloud_run_v2_service" "proxy" {
       egress = "PRIVATE_RANGES_ONLY"
       network_interfaces {
         network    = google_compute_network.ai.name
-        subnetwork = google_compute_subnetwork.ai.name
-        tags       = ["shared-ai-proxy"]
+        subnetwork = google_compute_subnetwork.proxy.name
       }
     }
     containers {

@@ -4,14 +4,14 @@
 개인 GCP `replay-live-508202`의 결제 활성화와 기존 Cloud Run 서비스 없음은 조회했다.
 Compute API는 아직 꺼져 있다. 월 예산 확정 후 실제 plan을 검토하고 apply한다.
 
-2026-09-27: Terraform 1.5.7 / Google provider 7.46.1로 fmt·validate·시작 스크립트 문법 검사 통과. 개인 계정을 명시한 plan 결과는 **15 add / 0 change / 0 destroy**다. apply는 실행하지 않았다. 새 자원의 실제 생성 권한·리전 수용량·앱 기동은 아직 검증되지 않았다.
+2026-09-27: Terraform 1.5.7 / Google provider 7.46.1로 fmt·validate·시작 스크립트 문법 검사를 통과했다. Mac/Linux 공식 체크섬을 함께 고정했다. 개인 계정을 명시한 최종 plan은 **16 add / 0 change / 0 destroy**이며 apply는 실행하지 않았다. 새 자원의 실제 생성 권한·리전 수용량·앱 기동은 아직 검증되지 않았다.
 
 ## 구성
 
 - Iowa VM: 기본 `e2-standard-2`(2 vCPU/8 GiB), 80 GiB balanced 영구 디스크. 여유 구성은 `e2-standard-4`(4 vCPU/16 GiB).
 - Dify/LiteLLM은 기존 Compose와 별도 DB를 유지한다. 개인 Codex 워커는 계정별로 추가한다.
 - Cloud Run은 TLS 프록시만 담당하며 관리형 `run.app` 주소를 제공한다. 별도 도메인을 구매하지 않는다.
-- Direct VPC로 VM의 8080 포트에 연결한다. 해당 포트는 프록시 네트워크 태그에서만 접근한다.
+- Direct VPC로 VM의 8080 포트에 연결한다. 프록시 전용 서브넷(`10.79.0.0/26`)만 해당 포트에 접근한다. Cloud Run 네트워크 태그는 egress 규칙용이므로 VM ingress의 source tag로 사용하지 않는다.
 - VM 외부 IP는 패키지/모델 통신용이다. 인터넷에 22/80/443/8080을 개방하지 않는다. SSH는 IAP 범위만 허용한다.
 - VM에는 서비스 계정을 붙이지 않는다. 프록시 서비스 계정에도 프로젝트 역할을 부여하지 않는다.
 - 디스크 자동 삭제 방지, VM/Cloud Run 삭제 방지, 매일 스냅샷/7일 보존을 설정한다. 스냅샷은 crash-consistent이며 DB 논리 백업·복원 시험의 대체가 아니다.
