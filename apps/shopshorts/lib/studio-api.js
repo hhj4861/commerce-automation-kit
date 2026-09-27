@@ -2,6 +2,7 @@ import { startScenario, syncScenario, scenarioRuntime } from './studio-scenario-
 import { CATEGORIES, VOICES, PLATFORMS, createProject, changeProject, busy, fail, validateScenes } from './studio.js';
 import { sameOrigin, workerAuthorized } from './google-auth.js';
 import { recommendBrief } from './studio-recommendations.js';
+import {startAutomatic, continueAutomatic} from './studio-automatic.js';
 const json = (data, status = 200) => Response.json(data, { status, headers: { 'cache-control': 'no-store' } });
 export async function studioApi(request, env, store, { localWorker = false, recommendationGenerate, recommendationAccounts = false, scenarioAccounts } = {}) {
   const url = new URL(request.url), parts = url.pathname.replace(/^\/api\/studio\/?/, '').split('/').filter(Boolean);
@@ -10,6 +11,7 @@ export async function studioApi(request, env, store, { localWorker = false, reco
     if (!['GET', 'HEAD'].includes(request.method) && !sameOrigin(request)) fail('다른 사이트에서 요청할 수 없습니다.', 403);
     if (parts[0] === 'config' && request.method === 'GET') return json({ categories: CATEGORIES, voices: VOICES, platforms: PLATFORMS, execution: store.execution, capabilities: await store.capabilities(), scenarioRuntime: await scenarioRuntime(request, env, scenarioAccounts), recommendations: !!recommendationGenerate || recommendationAccounts, recommendationProvider: recommendationGenerate ? 'codex' : null, recommendationProviders: recommendationAccounts ? ['codex', 'claude'] : recommendationGenerate ? ['codex'] : [] });
     if (parts.length===1 && parts[0]==='recommendations' && request.method==='POST') return json(await recommendBrief(await request.json(),env,{generate:recommendationGenerate,signal:request.signal}));
+    if (parts.length===1 && parts[0]==='automatic' && request.method==='POST') return json(await startAutomatic(request, env, store, await request.json(), scenarioAccounts), 201);
     if (!parts.length) {
       if (request.method === 'GET') return json({ projects: await Promise.all((await store.list()).map(project => syncScenario(store, project, scenarioAccounts))) });
       if (request.method === 'POST') {
@@ -82,7 +84,7 @@ export async function studioApi(request, env, store, { localWorker = false, reco
           if (action === 'complete') next.task.state = 'done';
         }
       }
-      return save(next);
+      return save(action === 'complete' ? continueAutomatic(next) : next);
     }
     if (action === 'approve') {
       if (busy(project) || project.upload || body.approved !== true || !project.scenes.length) fail('대본을 검수하고 확인하세요.');

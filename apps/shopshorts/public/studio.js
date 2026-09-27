@@ -221,7 +221,7 @@ window.addEventListener('beforeunload',e=>{if(state.dirty){e.preventDefault();e.
  if(!id&&!recommendationId&&!params.has('new'))return;
  try{
   state.config=await api('/config');
-  if(recommendationId){const saved=(await api('/llm/recommendation?id='+encodeURIComponent(recommendationId))).recommendation;start();state.category=saved.input.category;state.format=saved.input.format;renderBrief();$('#topic').value=saved.input.topic;$('#direction').value=saved.input.direction;$('#duration').value=saved.input.duration;history.replaceState(null,'','/studio?new=1&recommendation='+encodeURIComponent(recommendationId));restoreRecommendation(saved);}
+  if(recommendationId){const saved=(await api('/llm/recommendation?id='+encodeURIComponent(recommendationId))).recommendation;if(saved.input?.intent==='keywords'){location.replace('/studio/automatic?recommendation='+encodeURIComponent(recommendationId));return;}start();state.category=saved.input.category;state.format=saved.input.format;renderBrief();$('#topic').value=saved.input.topic;$('#direction').value=saved.input.direction;$('#duration').value=saved.input.duration;history.replaceState(null,'','/studio?new=1&recommendation='+encodeURIComponent(recommendationId));restoreRecommendation(saved);}
   else if(id)await openProject(id);else start();
  }catch(e){$('#notice').innerHTML=`<div class="status-note error">${esc(e.message)}</div>`;}
 })();

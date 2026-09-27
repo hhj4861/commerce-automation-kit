@@ -6,7 +6,7 @@
 <title>Shopshorts — Content Studio</title>
 <link rel="stylesheet" href="/app-shell.css">
 <link rel="stylesheet" href="/notifications.css">
-<link rel="stylesheet" href="/workspace.css"><link rel="stylesheet" href="/llm-connection.css"><link rel="stylesheet" href="/ai-account.css"><script type="module" src="/ai-account.js"></script>
+<link rel="stylesheet" href="/automatic-creation.css"><link rel="stylesheet" href="/workspace.css"><link rel="stylesheet" href="/llm-connection.css"><link rel="stylesheet" href="/ai-account.css"><script type="module" src="/ai-account.js"></script>
 <style>
   .view[hidden], .account-actions[hidden], [data-signin][hidden] { display: none; }
   .account-actions { display: flex; align-items: center; gap: 10px; }
@@ -542,8 +542,9 @@
     </div>
     <div class="view production-dashboard" id="automaticView" hidden>
     <nav class="production-nav" aria-label="제작 방식"><a href="/studio">제작 방식 선택</a><a href="/studio/automatic" aria-current="page">자동 제작</a><a href="/studio?mode=manual">수동 제작</a><a href="/contents">전체 콘텐츠</a></nav>
-    <header class="production-heading"><div><h1>자동 제작 관리</h1><p>작성 요청부터 대본 승인과 발행 검수까지, 작업을 선택해 이어가세요.</p></div></header>
-    <details class="production-create" id="automaticCreate"><summary>새 자동 제작 요청</summary><div id="automaticCreation"></div></details>
+    <div id="automaticCreation"></div>
+    <section id="legacyWorkspace" class="legacy-workspace" aria-label="기존 쇼핑쇼츠 작업" hidden>
+    <h2>기존 쇼핑쇼츠 작업 · 대본 승인과 발행 검수</h2>
     <div id="automaticErrors" role="status"></div>
     <section aria-label="자동 제작 현황">
     <section class="summary" id="summary" data-section="summary"></section>
@@ -566,6 +567,7 @@
       <aside class="detail" id="detail">
         <div class="detail-empty">콘텐츠를 선택하면<br>상세 내용을 보여드려요.</div>
       </aside>
+    </section>
     </section>
     </div>
     <div class="view" id="pageView" hidden></div>
@@ -735,7 +737,11 @@ async function api(path, opts) {
   return data;
 }
 
+function updateLegacyVisibility() {
+  document.getElementById('legacyWorkspace').hidden = !state.jobs.length && !state.requests.length && !Object.keys(state.autoErrors).length;
+}
 function renderSummary() {
+  updateLegacyVisibility();
   const needs = state.jobs.filter(j => ['draft','generated','assembled','review','rejected'].includes(j.status)).length;
   const generating = state.jobs.filter(j => j.status === 'script-approved' || j.finalize?.state === 'running').length;
   const published = state.jobs.filter(j => j.status === 'published').length;
@@ -1200,6 +1206,7 @@ async function runTool(tool, j) {
 }
 
 function showAutomaticErrors() {
+  updateLegacyVisibility();
   const messages=Object.values(state.autoErrors);
   const host=document.getElementById('automaticErrors');
   host.innerHTML=messages.length?`<div class="content-error" role="alert"><strong>최신 작업 상태를 확인하지 못했어요.</strong><p>${messages.map(escapeHtml).join('<br>')}<br>표시된 작업은 마지막으로 조회한 상태입니다.</p><button data-auto-retry>다시 불러오기</button></div>`:'';
@@ -1293,7 +1300,7 @@ const ROUTES = {
   dashboard:'/', automatic:'/studio/automatic', content:'/contents', trends:'/trends', performance:'/performance',
   blog:'/blog', links:'/affiliate-links', settings:'/settings', notifications:'/notifications'
 };
-const ROUTE_NAMES = Object.fromEntries(Object.entries(ROUTES).map(([key,value]) => [value,key]));
+const ROUTE_NAMES = {...Object.fromEntries(Object.entries(ROUTES).map(([key,value]) => [value,key])), '/automatic':'automatic'};
 function currentRoute() {
   const path=location.pathname.replace(/\/+$/, '') || '/';
   if(path==='/' && ['job','request'].some(key=>new URLSearchParams(location.search).has(key)))return 'automatic';
@@ -1951,7 +1958,7 @@ setInterval(() => {
 import { createNotificationInbox } from '/notifications.js';
 import {createContentLibrary} from '/content-library.js';
 import {mountAutomaticCreation} from '/automatic-creation.js';
-mountAutomaticCreation(document.getElementById('automaticCreation'),{onRequested:async()=>{state.filter='draft';state.search='';await loadHot();}});
+window.automaticCreationController=mountAutomaticCreation(document.getElementById('automaticCreation'));
 window.workspaceContent=createContentLibrary({
   onDelete:async id=>{
     try {
