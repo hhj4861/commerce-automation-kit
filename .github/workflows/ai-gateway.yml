@@ -38,6 +38,8 @@ jobs:
         run: docker compose -f compose.yaml -f compose.test.yaml -f .runtime/subscriptions.compose.json up -d --wait --wait-timeout 300
       - run: python tests/integration.py
       - run: python tests/subscriptions_integration.py
+      - name: Verify pinned subscription stream recovery
+        run: docker compose -f compose.yaml -f .runtime/subscriptions.compose.json run --rm --no-deps -T --entrypoint python codex-alice - /app/subscription-runtime.py < tests/subscription_sdk.py
       - name: Check pinned OAuth interface and noninteractive guard without login
         run: |
           docker compose -f compose.yaml -f .runtime/subscriptions.compose.json run --rm --no-deps -T --entrypoint python codex-alice -c '

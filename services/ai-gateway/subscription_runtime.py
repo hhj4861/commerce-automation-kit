@@ -47,6 +47,44 @@ def noninteractive_auth():
     Authenticator.get_access_token = serialized
 
 
+def repair_subscription_bridge():
+    """Pinned 1.102.1 bridge drops output when the terminal SSE snapshot is empty.
+
+    Reuse the provider's own SSE recovery; apply only to ChatGPT streams in this
+    private worker. No credentials, request routing, or upstream calls change.
+    """
+    from litellm.completion_extras.litellm_responses_transformation.handler import ResponsesToCompletionBridgeHandler as Bridge
+    from litellm.llms.chatgpt.responses.transformation import ChatGPTResponsesAPIConfig
+    original_sync = Bridge._collect_response_from_stream
+    original_async = Bridge._collect_response_from_stream_async
+    if getattr(original_sync, "_subscription_repair", False):
+        return
+
+    def restore(stream, events):
+        response, error = ChatGPTResponsesAPIConfig()._extract_completed_response_from_sse(
+            body_text="\n".join("data: " + json.dumps(e.model_dump() if hasattr(e, "model_dump") else e) for e in events)
+        )
+        if response is None or error:
+            raise RuntimeError("Subscription stream did not complete")
+        stream.completed_response.response = response
+
+    def collect(self, stream):
+        if getattr(stream, "custom_llm_provider", None) == "chatgpt":
+            events = list(stream)
+            restore(stream, events)
+        return original_sync(self, stream)
+
+    async def collect_async(self, stream):
+        if getattr(stream, "custom_llm_provider", None) == "chatgpt":
+            events = [event async for event in stream]
+            restore(stream, events)
+        return await original_async(self, stream)
+
+    collect._subscription_repair = True
+    Bridge._collect_response_from_stream = collect
+    Bridge._collect_response_from_stream_async = collect_async
+
+
 def response_text(response):
     def as_dict(value):
         return value.model_dump() if hasattr(value, "model_dump") else value
@@ -110,6 +148,7 @@ def main():
             result = probe()
         elif action == "serve":
             noninteractive_auth()
+            repair_subscription_bridge()
             if cached_status()["state"] == "not_connected":
                 raise RuntimeError("Login required before serving")
             sys.argv = ["litellm", *sys.argv[2:]]

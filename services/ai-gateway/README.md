@@ -102,6 +102,10 @@ Claude 개인 구독 토큰 중계는 지원하지 않는다. `--provider claude
 
 근거: [LiteLLM ChatGPT 구독 공급자](https://docs.litellm.ai/docs/providers/chatgpt), [Claude 인증 사용 제한](https://code.claude.com/docs/en/legal-and-compliance). 고정 이미지 리비전 `d09bbae1c6df463e425558f60d460437193635da`의 LiteLLM 버전은 `1.102.1`이다. 비대화형 인증 가드는 해당 버전 내부 인터페이스를 사용하므로 이미지 변경 시 CI 호환성 검사를 통과해야 한다. CI는 실제 프록시·DB와 **가짜 공급자/자격**으로 계정 격리를 검사한다. CI 성공을 실제 구독 승인이나 운영 연결 완료로 보고하지 않는다.
 
+고정 SDK의 Chat Completions 변환은 구독 응답의 마지막 SSE 이벤트에서 `output`이 비면 앞서 받은 본문을 놓친다. 계정 워커는 `chatgpt` 스트림에 한해 **LiteLLM 자체 SSE 복원기**로 완료된 출력 항목을 복원한다. 인증·호출 주소는 변경하지 않는다. 동기/비동기 복원, 미완료 거부, 메타데이터 보존은 실제 고정 SDK를 사용하는 별도 CI 회귀검사로 확인한다.
+
+2026-09-27 로컬 실측: 새 기기 인증 후 `gpt-6-sol` 구독 probe 성공, 계정 워커의 `/v1/chat/completions`와 `/v1/responses` 모두 HTTP 200 및 실제 응답 확인. 일본어 주문 표현과 한국어 뜻을 받았다. 잘못된 키는 HTTP 400으로 거부됐다. 검사 서버는 종료했으며 클라우드 상시 서버·Hanmadi/Dify 운영 적용 완료를 의미하지 않는다. 개인 OAuth 자격은 Git 제외 로컬 디렉터리에만 저장된다.
+
 ```sh
 python3 -m unittest -v
 # Docker 통합검사는 .github/workflows/ai-gateway.yml 참조
