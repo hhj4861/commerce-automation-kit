@@ -1,0 +1,27 @@
+name: Shared AI cloud deployment
+on:
+  pull_request:
+    paths: ["services/shared-ai-host/**", "services/ai-gateway/Caddyfile", ".github/workflows/shared-ai-host.yml"]
+  push:
+    branches: [main]
+    paths: ["services/shared-ai-host/**", "services/ai-gateway/Caddyfile", ".github/workflows/shared-ai-host.yml"]
+permissions:
+  contents: read
+jobs:
+  configuration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.5.7
+      - run: terraform fmt -check
+        working-directory: services/shared-ai-host
+      - run: terraform init -backend=false -input=false -lockfile=readonly
+        working-directory: services/shared-ai-host
+      - run: terraform validate
+        working-directory: services/shared-ai-host
+      - run: bash -n services/shared-ai-host/startup.sh
+      - run: docker pull caddy:2@sha256:0c994536bddb66445885237f1a5dcc1916bccea922661c76b4e9fc24061f9b52
+      - run: python3 services/shared-ai-host/tests/edge.py

@@ -1,0 +1,25 @@
+{
+    admin off
+    auto_https off
+}
+:8080 {
+    @llm path /llm/v1/models /llm/v1/chat/completions /llm/v1/responses /llm/v1/embeddings /llm/v1/audio/speech /llm/v1/audio/transcriptions
+    handle @llm {
+        uri strip_prefix /llm
+        reverse_proxy 127.0.0.1:4100 {
+            flush_interval -1
+        }
+    }
+    @dify path /v1/chat-messages /v1/workflows/run
+    handle @dify {
+        reverse_proxy 127.0.0.1:4180 {
+            flush_interval -1
+        }
+    }
+    handle /healthz {
+        respond "edge alive" 200
+    }
+    handle {
+        respond "Not found" 404
+    }
+}
