@@ -1,3 +1,4 @@
+import {mountAutomaticCreation} from './automatic-creation.js';
 import {executionStatus,renderExecutionStatus,resumeStep} from './studio-status.js';
 import {mediaProgress,mediaSceneStatus,renderMediaProgress,renderMediaPlaceholder} from './studio-media.js';
 import {createEditor} from './editor.js';
@@ -63,7 +64,7 @@ function heading(){
  $('#intro').textContent=p?`${p.brief.category} · ${p.brief.format==='short'?'숏폼 9:16':'롱폼 16:9'} · ${p.scenes.length?p.scenes.length+'장면 / '+total(p)+'초':p.brief.duration+'초 목표'}`:'주제와 영상 형식을 정하면 AI가 시나리오를 작성합니다.';
  $('#newProject').hidden=false;
 }
-function start(){recommendationController?.abort('detached');editor?.destroy();editor=null;state.project=null;state.step=1;state.dirty=false;state.mediaRequestError='';state.requestingMedia=false;$('#modes').hidden=true;$('#workspace').hidden=false;$('#projects').hidden=true;history.replaceState(null,'','/studio?new=1');heading();progress();renderBrief();}
+function start(){recommendationController?.abort('detached');editor?.destroy();editor=null;state.project=null;state.step=1;state.dirty=false;state.mediaRequestError='';state.requestingMedia=false;$('#modes').hidden=true;$('#workspace').hidden=false;$('#creationStart').hidden=true;$('#automaticWorkspace').hidden=true;history.replaceState(null,'','/studio?new=1');heading();progress();renderBrief();}
 function renderBrief(){
  recommendationCleanup?.(); recommendationCleanup=null;
  const p=state.project, brief=p?.brief;
@@ -196,12 +197,12 @@ async function openProject(id){
  if(state.dirty)await saveCurrent();
  state.project=(await api('/'+id)).project;state.selected=null;state.dirty=false;state.mediaRequestError='';
  const p=state.project;state.step=resumeStep(p);
- $('#modes').hidden=true;$('#workspace').hidden=false;$('#projects').hidden=true;history.replaceState(null,'',`/studio?id=${p.id}`);render();
+ $('#modes').hidden=true;$('#workspace').hidden=false;$('#creationStart').hidden=true;$('#automaticWorkspace').hidden=true;history.replaceState(null,'',`/studio?id=${p.id}`);render();
 }
-$('#manual').onclick=()=>{if(!state.config){toast('서버 연결 상태를 먼저 확인하세요.');return;}start();};$('#newProject').onclick=()=>{if(state.pending)return;if(state.dirty&&!confirm('저장하지 않은 변경이 있습니다. 새 프로젝트를 시작할까요?'))return;start();};
+$('#manual').onclick=event=>{event.preventDefault();if(!state.config){toast('서버 연결 상태를 먼저 확인하세요.');return;}start();};$('#newProject').onclick=()=>{if(state.pending)return;if(state.dirty&&!confirm('저장하지 않은 변경이 있습니다. 새 영상을 시작할까요?'))return;state.dirty=false;location.assign('/studio');};
 $('#stage').addEventListener('input',()=>{if(state.step!==4)state.dirty=true;});
 window.addEventListener('beforeunload',e=>{if(state.dirty){e.preventDefault();e.returnValue='';}});
-(async()=>{try{state.config=await api('/config');const auth=await(await fetch('/auth/status')).json();if(auth.user)$('#account').textContent=auth.user.name||auth.user.email;const params=new URLSearchParams(location.search),id=params.get('id'),recommendationId=params.get('recommendation');if(recommendationId){const saved=(await api('/llm/recommendation?id='+encodeURIComponent(recommendationId))).recommendation;start();state.category=saved.input.category;state.format=saved.input.format;renderBrief();$('#topic').value=saved.input.topic;$('#direction').value=saved.input.direction;$('#duration').value=saved.input.duration;history.replaceState(null,'','/studio?new=1&recommendation='+encodeURIComponent(recommendationId));restoreRecommendation(saved);}else if(id)await openProject(id);else if(params.has('new'))start();recommendationInbox.refresh();}catch(e){$('#notice').innerHTML=`<div class="status-note error">${esc(e.message)}</div>`;}})();
+(async()=>{try{state.config=await api('/config');const auth=await(await fetch('/auth/status')).json();if(auth.user)$('#account').textContent=auth.user.name||auth.user.email;const params=new URLSearchParams(location.search),id=params.get('id'),recommendationId=params.get('recommendation');if(recommendationId){const saved=(await api('/llm/recommendation?id='+encodeURIComponent(recommendationId))).recommendation;start();state.category=saved.input.category;state.format=saved.input.format;renderBrief();$('#topic').value=saved.input.topic;$('#direction').value=saved.input.direction;$('#duration').value=saved.input.duration;history.replaceState(null,'','/studio?new=1&recommendation='+encodeURIComponent(recommendationId));restoreRecommendation(saved);}else if(id)await openProject(id);else if(params.has('new'))start();else if(params.get('mode')==='auto'){$('#creationStart').hidden=true;$('#automaticWorkspace').hidden=false;$('.heading h1').textContent='자동 생성';$('#intro').textContent='주제를 입력하고, 초안이 준비되면 콘텐츠에서 검수하세요.';mountAutomaticCreation($('#automaticWorkspace'));}recommendationInbox.refresh();}catch(e){$('#notice').innerHTML=`<div class="status-note error">${esc(e.message)}</div>`;}})();
 let checkingExecution=false;
 setInterval(async()=>{if(state.pending||checkingExecution||document.hidden)return;checkingExecution=true;try{await refreshConnection();if(state.project&&taskBusy()&&!state.dirty){const p=(await api('/'+state.project.id)).project;if(p.revision!==state.project.revision){const previous=state.project.task;state.project=p;if(p.task?.state==='done'&&previous?.state!=='done'){if(p.task.action==='scenario')state.step=2;if(p.task.action==='render'||p.task.action==='publish')state.step=5;}render();}}}catch{state.connectionUnknown=true;note();}finally{checkingExecution=false;}},4000);
 

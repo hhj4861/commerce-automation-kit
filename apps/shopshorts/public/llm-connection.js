@@ -14,7 +14,16 @@ function pause(signal) {
   });
 }
 
-export async function connectLlm({ signal, manage = false, onProgress = () => {} } = {}) {
+let connection = null;
+export function connectLlm(options = {}) {
+  if (connection) return connection;
+  connection = openLlmConnection(options).finally(() => {
+    connection = null;
+    globalThis.window?.dispatchEvent(new Event('llm-account-change'));
+  });
+  return connection;
+}
+async function openLlmConnection({ signal, manage = false, onProgress = () => {} } = {}) {
   onProgress({ stage: 'account' });
   const status = await request('llm/status', undefined, signal);
   if (status.connected && !manage) return true;
@@ -68,7 +77,7 @@ export async function connectLlm({ signal, manage = false, onProgress = () => {}
       const mark = provider => `<span class="llm-mark llm-mark-${provider.id}" aria-hidden="true">${provider.id === 'codex' ? 'C<span>↗</span>' : '✳'}</span>`;
       const error = message || (current.job?.state === 'failed' ? current.job.error : '');
       dialog.innerHTML = `<div class="llm-dialog-head"><h2 id="llm-dialog-title">${pending ? `${selected.name} 연결` : current.connected ? '연결된 AI 계정' : '어떤 AI와 함께할까요?'}</h2><button class="llm-close" data-close data-focus="close" aria-label="계정 연결 닫기">✕</button></div>
-        <p class="llm-intro">${pending ? '로그인을 마치면 추천을 이어갈게요.' : current.connected ? '이 계정으로 영상 아이디어를 추천받아요.' : '사용 중인 구독 계정으로 아이디어를 추천받으세요.'}</p>
+        <p class="llm-intro">${pending ? '로그인을 마치면 AI 기획을 사용할 수 있어요.' : current.connected ? '이 계정으로 아이디어와 시나리오를 만들어요.' : 'Codex 또는 Claude 구독 계정을 연결하세요.'}</p>
         ${!pending && !current.connected ? `<div class="llm-providers">${providers.map(provider => `<button class="llm-provider" data-connect="${provider.id}" data-focus="${provider.id}" aria-label="${provider.name} 연결" ${busy || !current.available ? 'disabled' : ''}>${mark(provider)}<span class="llm-provider-label"><strong>${provider.name}</strong><span>${provider.plan}</span></span><span class="llm-provider-action" aria-hidden="true">연결 <span>↗</span></span></button>`).join('')}</div>` : ''}
         ${current.connected && !pending ? `<section class="llm-connected">${mark(selected)}<div class="llm-provider-label"><strong>${selected.name} <span class="llm-connected-badge">연결됨</span></strong><span class="llm-account">${escape(current.account)}</span></div></section><div class="llm-manage"><button class="llm-text-button" data-disconnect data-focus="disconnect" ${busy ? 'disabled' : ''}>연결 해제</button><button class="llm-cta" data-continue data-focus="continue" ${busy ? 'disabled' : ''}>${manage ? '완료' : '추천받기'}</button></div>` : ''}
         ${!current.available ? '<p role="status" class="llm-error">LLM 실행기가 오프라인입니다. 잠시 후 다시 확인해 주세요.</p>' : ''}
