@@ -5,6 +5,7 @@ import { getLesson, isLanguage, languages, type Language } from "./courses";
 
 export type ChatMessage = { role: "user" | "assistant"; content: string };
 export type ConversationInput = {
+  modelSelection?: string;
   language: Language;
   lessonId: string;
   level: LearningLevel;
@@ -81,7 +82,10 @@ export function parseConversation(value: unknown): ConversationInput {
     throw new ConversationError(400, "학습 정보를 확인해 주세요.");
   if (b.guidedStep !== undefined && (typeof b.guidedStep !== "number" || !Number.isInteger(b.guidedStep) || !speakingSteps(b.language, b.lessonId)[b.guidedStep] || b.conversationId || messages.length !== 1))
     throw new ConversationError(400, "말하기 연습 단계를 확인해 주세요.");
+  if (b.modelSelection !== undefined && (typeof b.modelSelection !== "string" || (b.modelSelection !== "default" && !/^[a-f0-9]{32}:[a-zA-Z0-9.-]{1,100}$/.test(b.modelSelection))))
+    throw new ConversationError(400, "AI 모델을 다시 선택해 주세요.");
   return {
+    ...(typeof b.modelSelection === "string" ? { modelSelection: b.modelSelection } : {}),
     ...(b.guidedStep !== undefined ? { guidedStep: b.guidedStep as number } : {}),
     ...(typeof b.learningRevision === "string" ? { learningRevision: b.learningRevision } : {}),
     language: b.language,

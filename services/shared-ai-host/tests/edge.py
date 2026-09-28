@@ -43,7 +43,7 @@ def request(port, path, key=None):
 
 servers, processes = [], []
 try:
-    for port in (4000, 4100, 4180):
+    for port in (4000, 4100, 4180, 4190):
         server = ThreadingHTTPServer(("127.0.0.1", port), Upstream)
         servers.append(server)
         threading.Thread(target=server.serve_forever, daemon=True).start()
@@ -61,7 +61,7 @@ try:
             time.sleep(1)
         else:
             raise RuntimeError("Caddy did not start")
-    for edge, path, target, forwarded in ((8080, "/llm/v1/responses", 4100, "/v1/responses"), (8080, "/llm/v1/chat/completions", 4100, "/v1/chat/completions"), (8080, "/llm/v1/audio/transcriptions", 4100, "/v1/audio/transcriptions"), (8080, "/v1/chat-messages", 4180, "/v1/chat-messages"), (8080, "/v1/workflows/run", 4180, "/v1/workflows/run"), (8081, "/v1/responses", 4000, "/v1/responses")):
+    for edge, path, target, forwarded in ((8080, "/accounts/connections", 4190, "/connections"), (8080, "/accounts/v1/chat/completions", 4190, "/v1/chat/completions"), (8080, "/llm/v1/responses", 4100, "/v1/responses"), (8080, "/llm/v1/chat/completions", 4100, "/v1/chat/completions"), (8080, "/llm/v1/audio/transcriptions", 4100, "/v1/audio/transcriptions"), (8080, "/v1/chat-messages", 4180, "/v1/chat-messages"), (8080, "/v1/workflows/run", 4180, "/v1/workflows/run"), (8081, "/v1/responses", 4000, "/v1/responses")):
         assert request(edge, path)[0] == 401, path
         code, body = request(edge, path, KEY)
         assert code == 200 and json.loads(body) == {"port": target, "path": forwarded}, path

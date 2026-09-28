@@ -10,6 +10,11 @@
             flush_interval -1
         }
     }
+    @accounts path /accounts/connections /accounts/connections/* /accounts/v1/chat/completions
+    handle @accounts {
+        uri strip_prefix /accounts
+        reverse_proxy 127.0.0.1:4190
+    }
     @dify path /v1/chat-messages /v1/workflows/run
     handle @dify {
         reverse_proxy 127.0.0.1:4180 {

@@ -2,8 +2,8 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { LEARNING_LANGUAGE_COOKIE, languageSelectionHref, resolveLearningLanguage } from "@/lib/learning-language";
 import Link from "next/link";
-import { GuidedSpeakingRoom } from "@/components/guided-speaking-room";
-import { ConversationRoom } from "@/components/conversation-room";
+import { ModelConversation } from "@/components/model-conversation";
+import { getConversationTutor } from "@/lib/conversation-access";
 import { courses, getLesson } from "@/lib/courses";
 import { getConversationProvider } from "@/lib/conversation-provider";
 import { audioConfig } from "@/lib/conversation-audio";
@@ -31,6 +31,7 @@ export default async function ConversationPage({
   let canRecord = false;
   let canSpeak = false;
   let storesConversation = false;
+  const canConnect = Boolean((await getConversationTutor())?.tid);
   try {
     audioConfig("transcribe");
     canRecord = true;
@@ -51,7 +52,6 @@ export default async function ConversationPage({
     }
   }
   const guided = language !== "ko" && profile?.level === "beginner" && params.mode !== "free";
-  const Room = guided ? GuidedSpeakingRoom : ConversationRoom;
   return (
     <div lang="ko" className="mx-auto max-w-3xl px-5 py-6 sm:py-12">
       <Link
@@ -77,7 +77,9 @@ export default async function ConversationPage({
           )}
         </div>
       ) : (
-        <Room
+        <ModelConversation
+          guided={guided}
+          canConnect={canConnect}
           key={`${language}:${lesson.id}:${params.s ?? actor}:${profile?.revision ?? "legacy"}`}
           cacheKey={`${guided ? "hanmadi:speaking:v1" : "hanmadi:conversation:v2"}:${actor}:${language}:${lesson.id}:${profile?.revision ?? "legacy"}`}
           language={language}
