@@ -77,3 +77,23 @@ resumed. The initial two recovery commands were installed and reconciled their
 target calls successfully. The timeout extension is additive and requires all
 previously installed recovery helpers to match the committed source exactly;
 it preserves other sessions' installed hook extensions.
+
+## Local application result
+
+- Final regression: **24 tests passed** against the concurrently updated local
+  hook, including preservation of that other session's extensions.
+- Both installer executions finished with exit 0 and timestamped backups. A
+  stale-SHA installation attempt correctly refused to overwrite a concurrent
+  update; tests were rerun before applying against its new SHA.
+- The three original outstanding records were reconciled as `interrupted`,
+  `declined`, and `not_started`, each retaining a null original exit code.
+- Official `reconcile` exited 0 in the project and implementation worktree.
+  Both had no unknown files, no coverage problem, and no hold. The worktree
+  had no pending calls, and the unmodified completion checker returned `[]`.
+- Four unrelated Hanmadi QA files were excluded only after reviewing their
+  diffs and existing commits; they were not edited or included in this work.
+- Implementation commit `06607616b0a2434eae25ad6849746389c34c6d99` matched its
+  configured upstream and live remote; the worktree was clean.
+- Review: [commerce-automation-kit PR #58](https://github.com/hhj4861/commerce-automation-kit/pull/58),
+  targeting `feat/common-video-generator`. The PR was not merged. The local
+  hook is installed; this does not represent a Shopshorts production deployment.
