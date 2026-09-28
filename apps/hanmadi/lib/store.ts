@@ -66,6 +66,7 @@ type Driver = {
   hget(key: string, field: string): Promise<string | null>;
   hset(key: string, field: string, value: string): Promise<void>;
   hdel(key: string, field: string): Promise<void>;
+  hsetnx(key: string, field: string, value: string): Promise<boolean>;
   hincrby(key: string, field: string, by: number): Promise<number>;
 };
 
@@ -145,6 +146,9 @@ function createRedisDriver(config: { url: string; token: string }): Driver {
         ["PERSIST", key],
       ]);
     },
+    async hsetnx(key, field, value) {
+      return Number(await command(["EVAL", "local n=redis.call(\"HSETNX\",KEYS[1],ARGV[1],ARGV[2]); redis.call(\"PERSIST\",KEYS[1]); return n", 1, key, field, value])) === 1;
+    },
     async hdel(key, field) {
       await command(["HDEL", key, field]);
     },
@@ -185,6 +189,13 @@ function createFileDriver(): Driver {
       const data = read();
       data[key] = { ...(data[key] ?? {}), [field]: value };
       write(data);
+    },
+    async hsetnx(key, field, value) {
+      const data = read();
+      if (Object.hasOwn(data[key] ?? {}, field)) return false;
+      data[key] = { ...(data[key] ?? {}), [field]: value };
+      write(data);
+      return true;
     },
     async hdel(key, field) {
       const data = read();
@@ -522,4 +533,23 @@ export async function appendLesson(
   const updated: Student = { ...student, lessons };
   await saveStudent(updated);
   return updated;
+}
+
+/** Per-actor/language event fields avoid read-modify-write loss across tabs. */
+function learningKey(actor: string, language: string) {
+  if (!/^[a-f0-9]{64}$/.test(actor) || !["ko", "ja", "th"].includes(language)) throw new Error("Invalid learning identity");
+  if (process.env.NODE_ENV === "production" && storeKind() !== "redis") throw new Error("Learning profiles require Redis in production");
+  return `hanmadi:learning:v1:${actor}:${language}`;
+}
+export async function getLearningRecords(actor: string, language: string): Promise<string[]> {
+  return Object.values(await driver().hgetall(learningKey(actor, language)));
+}
+export async function addLearningRecord(actor: string, language: string, id: string, value: string): Promise<boolean> {
+  return driver().hsetnx(learningKey(actor, language), id, value);
+}
+
+export async function reserveLearningAssessment(actor: string): Promise<boolean> {
+  learningKey(actor, "ko"); // Validate the actor and production driver before writing.
+  const day = new Date().toISOString().slice(0, 10);
+  return (await driver().hincrby("hanmadi:learning-assessment-usage", `${day}:${actor}`, 1)) <= 10;
 }

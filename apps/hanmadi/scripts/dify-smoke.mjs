@@ -28,7 +28,7 @@ const mock = createServer(async (req, res) => {
   const body = JSON.parse(raw);
   assert.match(body.user, /^[0-9a-f]{64}$/);
   assert.ok(["한국어", "태국어", "일본어"].includes(body.inputs.language));
-  assert.ok(["입문", "중급"].includes(body.inputs.level));
+  assert.ok(["입문", "초급", "중급"].includes(body.inputs.level));
   calls++;
   res.setHeader("content-type", "application/json");
   if (body.conversation_id && contexts.get(body.conversation_id) !== body.user) {
@@ -119,28 +119,38 @@ try {
   const post = (body = base, extra = {}) => fetch(origin + "/api/conversation", {
     method: "POST", headers: { "content-type": "application/json", origin, cookie, ...extra }, body: JSON.stringify(body),
   });
+  const revisions = {};
   for (const language of ["ko", "th", "ja"]) {
+    const full = { greeting: 0, meaning: 1, request: 2, past: 0, reason: 1, situation: 2 };
+    const answers = language === "ja" ? full : language === "th" ? { ...full, reason: -1, situation: -1 } : Object.fromEntries(Object.keys(full).map(key => [key, -1]));
+    const placement = await fetch(origin + "/api/learning-profile", { method: "POST", headers: { "content-type": "application/json", origin, cookie },
+      body: JSON.stringify({ action: "assess", language, answers, minutes: 15, days: 5, timeZone: "Asia/Seoul" }) });
+    assert.equal(placement.status, 200);
+    const profile = (await placement.json()).profile;
+    revisions[language] = profile.revision;
+    const current = { ...base, language, learningRevision: profile.revision };
     const page = await fetch(`${origin}/conversation?language=${language}&lesson=cafe`, { headers: { cookie } });
     assert.equal(page.status, 200);
     const html = await page.text();
     assert.ok(html.includes("대화가 회화 서버에 저장되는 것에 동의해요"));
     assert.ok(!html.includes(fixture.DIFY_API_KEY));
-    const first = await post({ ...base, language });
+    const first = await post(current);
     assert.equal(first.status, 200);
     const answer = await first.json();
     assert.equal(answer.reply, "CI mock response");
     assert.ok(answer.conversationId);
-    const continuation = { ...base, language, conversationId: answer.conversationId, messages: [
+    const continuation = { ...current, conversationId: answer.conversationId, messages: [
       ...base.messages, { role: "assistant", content: answer.reply }, { role: "user", content: "한 번 더 연습할게요" }] };
     const second = await post(continuation);
     assert.equal(second.status, 200);
     assert.equal((await second.json()).conversationId, answer.conversationId);
     // Client-supplied identity cannot override the server's authenticated actor.
     assert.equal((await post({ ...continuation, user: "Smoke" }, { cookie: otherCookie })).status, 409);
-    assert.equal((await post({ ...continuation, level: "intermediate" })).status, 409);
-    const reset = await post({ ...base, language });
+    assert.equal((await post({ ...continuation, learningRevision: "stale" })).status, 409);
+    const reset = await post(current);
     assert.notEqual((await reset.json()).conversationId, answer.conversationId);
   }
+  base.learningRevision = revisions.ja;
   const before = calls;
   assert.equal((await post(base, { cookie: "" })).status, 401);
   assert.equal((await post(base, { origin: "https://other.example" })).status, 403);

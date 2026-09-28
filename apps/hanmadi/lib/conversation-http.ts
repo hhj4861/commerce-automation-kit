@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { ConversationError } from "./conversation";
 import { getConversationTutor } from "./conversation-access";
 import { getStoredStudent, reserveConversationTurn } from "./store";
+import { canAccessStudent } from "./students";
 
 export function assertConversationOrigin(req: Request) {
   const expected = new URL(req.url);
@@ -58,9 +59,11 @@ export async function conversationActor(
     throw new ConversationError(400, "학생 링크를 확인해 주세요.");
   const tutor = await getConversationTutor();
   const student =
-    !tutor && studentSlug
+    studentSlug
       ? await getStoredStudent(studentSlug as string)
       : null;
+  if (studentSlug && (!student || (tutor && !canAccessStudent(student, tutor))))
+    throw new ConversationError(tutor ? 403 : 401, "이 학생의 학습 링크를 확인해 주세요.");
   if (!tutor && !student)
     throw new ConversationError(
       401,
@@ -68,7 +71,7 @@ export async function conversationActor(
     );
   return createHash("sha256")
     .update(
-      tutor ? `tutor:${tutor.tid ?? tutor.n}` : `student:${student!.slug}`,
+      student ? `student:${student.slug}` : `tutor:${tutor!.tid ?? tutor!.n}`,
     )
     .digest("hex");
 }

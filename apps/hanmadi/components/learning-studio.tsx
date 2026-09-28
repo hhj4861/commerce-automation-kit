@@ -1,4 +1,6 @@
 "use client";
+import { LearningPlan } from "./learning-plan";
+import { learningTask, type LearningProfile, type studyPlan } from "@/lib/adaptive-learning";
 import { languageSelectionHref } from "@/lib/learning-language";
 import Link from "next/link";
 import { useState, useSyncExternalStore } from "react";
@@ -7,12 +9,16 @@ import { courses, languages, koreanReadings, type Language, type Lesson } from "
 export function LearningStudio({
   initialLanguage,
   studentSlug,
+  initialLessonId, initialProfile, initialPlan,
 }: {
   initialLanguage: Language;
   studentSlug?: string;
+  initialLessonId?: string; initialProfile?: LearningProfile | null; initialPlan?: ReturnType<typeof studyPlan>;
 }) {
   const language = initialLanguage;
-  const [lessonId, setLessonId] = useState("greetings");
+  const [lessonId, setLessonId] = useState(courses[language].find(l => l.id === initialLessonId)?.id ?? "greetings");
+  const [profile, setProfile] = useState(initialProfile);
+  const [plan, setPlan] = useState(initialPlan);
   const [sessionCompleted, setCompleted] = useState<string[]>([]);
   const [storageNote, setStorageNote] = useState("");
   const progressKey = `hanmadi:courses:v1:${studentSlug ?? "guest"}`;
@@ -35,7 +41,7 @@ export function LearningStudio({
   } catch {
     /* A corrupt cache does not prevent a new lesson. */
   }
-  const completed = [...new Set([...saved, ...sessionCompleted])];
+  const completed = profile ? profile.completed.map(id => `${language}:${id}`) : [...new Set([...saved, ...sessionCompleted])];
   const lesson = courses[language].find((l) => l.id === lessonId)!;
   function complete() {
     const next = [...new Set([...completed, `${language}:${lesson.id}`])];
@@ -46,6 +52,14 @@ export function LearningStudio({
     } catch {
       setStorageNote("진도를 저장하지 못했어요. 현재 화면에서만 유지돼요.");
     }
+  }
+  async function recordAnswer(answer: number) {
+    if (!profile) { if (answer === lesson.quiz.answer) complete(); return; }
+    const response = await fetch("/api/learning-profile", { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "quiz", language, studentSlug, assessmentId: profile.assessmentId, revision: profile.revision, lessonId: lesson.id, answer }), signal: AbortSignal.timeout(15000) });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || "진도 저장에 실패했어요. 다시 선택해 주세요.");
+    setProfile(data.profile); setPlan(data.plan);
   }
   const query = new URLSearchParams({ language, lesson: lesson.id });
   if (studentSlug) query.set("s", studentSlug);
@@ -61,6 +75,7 @@ export function LearningStudio({
         <span className="rounded-full bg-accent-wash px-4 py-2 text-accent">학습 중 · {languages[language].name}</span>
         <Link href={languageSelectionHref(`/learn?${query}`)} className="text-sm text-accent underline">학습 언어 변경</Link>
       </div>
+      {profile && plan ? <LearningPlan language={language} profile={profile} plan={plan} studentSlug={studentSlug} /> : <p className="mb-6 text-sm text-ink-soft">미리보기예요. 로그인하거나 학생 개인 링크로 열면 레벨 체크와 맞춤 계획을 저장할 수 있어요.</p>}
       <div className="grid gap-8 md:grid-cols-[220px_1fr]">
         <aside>
           <h2 className="font-display text-xl">입문 회화</h2>
@@ -95,7 +110,7 @@ export function LearningStudio({
             </Link>
           )}
           <p className="mt-6 text-xs leading-relaxed text-ink-soft">
-            진도는 이 브라우저에 저장돼요. 언어별로 따로 기록합니다.
+            {profile ? "진도와 계획은 언어별로 서버에 저장돼요. 확인 문제는 하루 첫 응답으로 복습을 정해요." : "미리보기 진도는 이 브라우저에 저장돼요."}
           </p>
           {storageNote && (
             <p role="status" className="mt-3 text-sm text-amber">
@@ -112,6 +127,7 @@ export function LearningStudio({
           </p>
           <h2 className="font-display text-3xl">{lesson.title}</h2>
           <p className="mt-2 text-ink-soft">{lesson.goal}</p>
+          {profile && <p className="mt-4 rounded-xl bg-accent-wash p-4">오늘의 연습 · {learningTask(profile.level, lesson.id)}</p>}
           <dl className="mt-6 divide-y divide-ink-faint border-y border-ink-faint">
             {lesson.phrases.map((p) => (
               <div key={p.text} className="py-5">
@@ -131,7 +147,7 @@ export function LearningStudio({
           <LessonQuiz
             key={`${language}:${lesson.id}`}
             lesson={lesson}
-            onComplete={complete}
+            onAnswer={recordAnswer}
           />
           <Link
             href={`/conversation?${query}`}
@@ -154,13 +170,15 @@ function subscribeProgress(callback: () => void) {
 }
 function LessonQuiz({
   lesson,
-  onComplete,
+  onAnswer,
 }: {
   lesson: Lesson;
-  onComplete: () => void;
+  onAnswer: (answer: number) => Promise<void>;
 }) {
   const [answer, setAnswer] = useState<number | null>(null);
   const correct = answer === lesson.quiz.answer;
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
   return (
     <fieldset className="rounded-xl border border-ink-faint p-5">
       <legend className="px-2 font-medium">배운 표현 확인하기</legend>
@@ -171,9 +189,13 @@ function LessonQuiz({
             type="button"
             key={choice}
             aria-pressed={answer === i}
-            onClick={() => {
-              setAnswer(i);
-              if (i === lesson.quiz.answer) onComplete();
+            disabled={busy}
+            onClick={async () => {
+              if (busy) return;
+              setBusy(true); setError("");
+              try { if (answer === null) await onAnswer(i); setAnswer(i); }
+              catch (e) { setError(e instanceof Error ? e.message : "저장하지 못했어요. 다시 선택해 주세요."); }
+              finally { setBusy(false); }
             }}
             className={`min-h-11 rounded-lg border px-4 py-2 ${answer === i ? "border-accent bg-accent-wash" : "border-ink-faint"}`}
           >
@@ -182,9 +204,10 @@ function LessonQuiz({
           </button>
         ))}
       </div>
+      {error && <p role="alert" className="mt-4 text-amber">{error}</p>}
       <p role="status" className="mt-4 text-base">
         {answer === null
-          ? "정답을 고르면 수업 완료로 기록돼요."
+          ? "첫 응답을 기록해 다음 복습에 반영해요."
           : correct
             ? `정답이에요! ${lesson.quiz.explanation}`
             : "다시 골라 보세요. 위의 표현을 참고해도 좋아요."}

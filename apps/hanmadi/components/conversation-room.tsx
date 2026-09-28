@@ -1,4 +1,6 @@
 "use client";
+import { learningLevels, type LearningProfile, type Difficulty } from "@/lib/adaptive-learning";
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { languages, type Language, type Lesson } from "@/lib/courses";
 import type { ChatMessage } from "@/lib/conversation";
@@ -11,6 +13,7 @@ export function ConversationRoom({
   canRecord,
   canSpeak,
   storesConversation,
+  learningProfile,
 }: {
   language: Language;
   lesson: Lesson;
@@ -18,10 +21,14 @@ export function ConversationRoom({
   canRecord: boolean;
   canSpeak: boolean;
   storesConversation: boolean;
+  learningProfile?: LearningProfile | null;
 }) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [draft, setDraft] = useState("");
-  const [level, setLevel] = useState<"beginner" | "intermediate">("beginner");
+  const level = learningProfile?.level ?? "beginner";
+  const [feedbackBusy, setFeedbackBusy] = useState(false);
+  const [feedbackDone, setFeedbackDone] = useState(false);
+  const [feedbackError, setFeedbackError] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [voiceBusy, setVoiceBusy] = useState(false);
@@ -42,7 +49,7 @@ export function ConversationRoom({
     bottom.current?.scrollIntoView({ block: "nearest" });
   }, [messages, busy]);
   async function send() {
-    if (sending.current || voiceBusy || needsConsent || !draft.trim() || messages.length >= 20)
+    if (sending.current || feedbackBusy || feedbackDone || voiceBusy || needsConsent || !draft.trim() || messages.length >= 20)
       return;
     sending.current = true;
     setBusy(true);
@@ -63,6 +70,7 @@ export function ConversationRoom({
           language,
           lessonId: lesson.id,
           level,
+          learningRevision: learningProfile?.revision,
           messages: pending,
           studentSlug,
           conversationId,
@@ -96,8 +104,27 @@ export function ConversationRoom({
       request.current = null;
     }
   }
+  async function feedback(difficulty: Difficulty) {
+    if (!learningProfile || feedbackBusy || busy) return;
+    setFeedbackBusy(true); setFeedbackError("");
+    try {
+      const response = await fetch("/api/learning-profile", { method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "feedback", language, studentSlug, assessmentId: learningProfile.assessmentId, revision: learningProfile.revision, difficulty }), signal: AbortSignal.timeout(15000) });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "난이도를 저장하지 못했어요.");
+      setFeedbackDone(true);
+    } catch (e) { setFeedbackError(e instanceof Error ? e.message : "잠시 후 다시 시도해 주세요."); }
+    finally { setFeedbackBusy(false); }
+  }
   return (
     <section className="mt-8" aria-label="AI 회화 연습">
+      {learningProfile && <div className="mb-6 rounded-2xl bg-accent-wash p-5">
+        <h2 className="font-display text-xl">{learningProfile.confirmed ? "지금 난이도는 어떤가요?" : "2 / 2단계 · 짧은 회화로 확인해요"}</h2>
+        <p className="mt-2 text-sm">{learningProfile.confirmed ? "하루 한 번 체감 난이도를 알려 주면 다음 연습과 계획에 반영해요." : "AI와 두 번 주고받고 체감 난이도를 선택해 주세요. 문제 결과와 체감을 함께 반영해 시작 단계를 정해요."}</p>
+        <p className="mt-2 text-sm text-ink-soft">{learningLevels[level].task}. AI가 텍스트를 교정하지만 말하기 능력을 공인 채점하지는 않아요.</p>
+        {feedbackDone ? <p role="status" className="mt-4"><Link href={`/learn?${new URLSearchParams({ language, ...(studentSlug ? { s: studentSlug } : {}) })}`} className="font-medium text-accent underline">나의 학습 계획 보기 →</Link></p> : learningProfile.feedbackToday ? <p className="mt-4 text-sm">오늘의 난이도 피드백이 저장됐어요. 다음 피드백은 내일 남길 수 있어요.</p> : <div className="mt-4 flex flex-wrap gap-2">{([["hard", "어려워요"], ["right", "적당해요"], ["easy", "쉬워요"]] as const).map(([value, label]) => <button key={value} type="button" disabled={feedbackBusy || busy || voiceBusy || Math.max(learningProfile.todayChatTurns, messages.length / 2) < 2} onClick={() => void feedback(value)} className="min-h-11 rounded-full border border-accent/30 bg-card px-4 disabled:opacity-40">{label}</button>)}</div>}
+        {feedbackError && <p role="alert" className="mt-3 text-amber">{feedbackError}</p>}
+      </div>}
       <div className="flex flex-wrap items-center justify-between gap-4 border-y border-ink-faint py-4">
         <div>
           <p className="font-medium">
@@ -105,18 +132,7 @@ export function ConversationRoom({
           </p>
           <p className="mt-1 text-sm text-ink-soft">{lesson.goal}</p>
         </div>
-        <label className="text-sm">
-          난이도{" "}
-          <select
-            value={level}
-            disabled={busy || messages.length > 0}
-            onChange={(e) => setLevel(e.target.value as typeof level)}
-            className="ml-2 rounded-lg border border-ink-faint bg-card p-2"
-          >
-            <option value="beginner">입문</option>
-            <option value="intermediate">중급</option>
-          </select>
-        </label>
+        <p className="rounded-full bg-accent-wash px-4 py-2 text-sm text-accent">맞춤 난이도 · {learningLevels[level].label}</p>
       </div>
       <p className="mt-4 text-sm text-accent">{languages[language].name}로 대화해요.{language !== "ko" ? " 답변에 한글 발음과 한국어 뜻을 함께 보여 드려요." : ""}</p>
       <p className="mt-4 text-sm leading-relaxed text-ink-soft">
@@ -197,7 +213,7 @@ export function ConversationRoom({
         studentSlug={studentSlug}
         onTranscript={setDraft}
         onBusyChange={setVoiceBusy}
-        disabled={busy || needsConsent || messages.length >= 20}
+        disabled={busy || feedbackBusy || feedbackDone || needsConsent || messages.length >= 20}
         canRecord={canRecord}
         canSpeak={canSpeak}
       />
@@ -233,7 +249,7 @@ export function ConversationRoom({
           <div className="flex gap-3">
             <button
               type="button"
-              disabled={busy}
+              disabled={busy || feedbackBusy || feedbackDone}
               onClick={() => {
                 voice.current?.reset();
                 setMessages([]);
@@ -248,7 +264,7 @@ export function ConversationRoom({
             <button
               type="submit"
               disabled={
-                busy || voiceBusy || needsConsent || !draft.trim() || messages.length >= 20
+                busy || feedbackBusy || feedbackDone || voiceBusy || needsConsent || !draft.trim() || messages.length >= 20
               }
               className="min-h-11 rounded-full bg-accent px-6 font-medium text-white hover:bg-accent-strong disabled:opacity-50"
             >
