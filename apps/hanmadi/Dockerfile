@@ -5,6 +5,7 @@
 FROM node:20-alpine AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
+COPY vendor/ ./vendor/
 RUN npm ci
 
 # ── 2) 빌드 ─────────────────────────────────────────────────────

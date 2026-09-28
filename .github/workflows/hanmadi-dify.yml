@@ -2,9 +2,9 @@ name: Hanmadi Dify connection
 on:
   push:
     branches: [main, feat/hanmadi-multilingual-ai]
-    paths: ["apps/hanmadi/**", "services/dify/**", "services/ai-gateway/**", ".github/workflows/hanmadi-dify.yml"]
+    paths: ["apps/hanmadi/**", "packages/litellm-client/**", "services/dify/**", "services/ai-gateway/**", ".github/workflows/hanmadi-dify.yml"]
   pull_request:
-    paths: ["apps/hanmadi/**", "services/dify/**", "services/ai-gateway/**", ".github/workflows/hanmadi-dify.yml"]
+    paths: ["apps/hanmadi/**", "packages/litellm-client/**", "services/dify/**", "services/ai-gateway/**", ".github/workflows/hanmadi-dify.yml"]
 permissions:
   contents: read
 jobs:
