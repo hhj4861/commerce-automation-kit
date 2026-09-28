@@ -9,6 +9,7 @@ export type LearningLevel = keyof typeof learningLevels;
 export type Difficulty = "easy" | "right" | "hard";
 export type LearningEvent =
   | { kind: "assessment"; id: string; at: number; level: LearningLevel; score: number; minutes: 10 | 15 | 20; days: 3 | 5 | 7; timeZone: string }
+  | { kind: "settings"; id: string; at: number; assessmentId: string; minutes: 10 | 15 | 20; days: 3 | 5 | 7 }
   | { kind: "feedback"; id: string; at: number; assessmentId: string; difficulty: Difficulty }
   | { kind: "quiz"; id: string; at: number; assessmentId: string; lessonId: string; correct: boolean }
   | { kind: "chat"; id: string; at: number; assessmentId: string; lessonId: string };
@@ -39,13 +40,14 @@ export function learningProfile(events: LearningEvent[], now = Date.now()): Lear
   const feedback = active.filter((e) => e.kind === "feedback");
   let level = assessment.level;
   for (const e of feedback) level = adjustLevel(level, e.difficulty);
+  const settings = active.filter(e => e.kind === "settings").at(-1);
   const quizzes = active.filter((e) => e.kind === "quiz");
   return {
     assessmentId: assessment.id, assessedAt: assessment.at, score: assessment.score, baseline: assessment.level,
     level, confirmed: feedback.length > 0, chatTurns: active.filter((e) => e.kind === "chat").length,
     todayChatTurns: active.filter(e => e.kind === "chat" && localDay(e.at, assessment.timeZone) === localDay(now, assessment.timeZone)).length,
     feedbackToday: feedback.some(e => localDay(e.at, assessment.timeZone) === localDay(now, assessment.timeZone)),
-    minutes: assessment.minutes, days: assessment.days, timeZone: assessment.timeZone,
+    minutes: settings?.minutes ?? assessment.minutes, days: settings?.days ?? assessment.days, timeZone: assessment.timeZone,
     completed: [...new Set(quizzes.filter(e => e.correct).map(e => e.lessonId))],
     review: [...new Map(quizzes.map(e => [e.lessonId, { lessonId: e.lessonId, at: e.at, correct: e.correct }])).values()],
     revision: feedback.at(-1)?.id ?? assessment.id,

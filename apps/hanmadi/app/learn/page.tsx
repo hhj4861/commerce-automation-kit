@@ -19,8 +19,8 @@ export default async function LearnPage({ searchParams }: { searchParams: Promis
   }
   const profile = actor ? await readLearningProfile(actor, language) : null;
   if (actor && !profile) redirect(assessmentHref(language, params.s, `/learn?${new URLSearchParams(params)}`));
-  if (profile && !profile.confirmed) redirect(`/conversation?${new URLSearchParams({ language, ...(params.s ? { s: params.s } : {}) })}`);
+  if (profile && !profile.confirmed) redirect(`/conversation?${new URLSearchParams({ language, ...(params.lesson ? { lesson: params.lesson } : {}), ...(params.s ? { s: params.s } : {}) })}`);
   const plan = profile ? studyPlan(language, profile) : undefined;
-  return <LearningStudio key={`${language}:${params.s ?? actor ?? "guest"}:${profile?.revision ?? "preview"}`} initialLanguage={language}
+  return <LearningStudio key={`${language}:${params.s ?? actor ?? "guest"}:${profile?.revision ?? "preview"}:${params.lesson ?? "today"}`} initialLanguage={language}
     initialLessonId={params.lesson ?? plan?.[0]?.lessonId} studentSlug={params.s} initialProfile={profile} initialPlan={plan} />;
 }

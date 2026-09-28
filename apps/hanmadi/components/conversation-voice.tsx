@@ -6,8 +6,10 @@ import {
   useState,
   type Ref,
 } from "react";
+import { useSessionDraft } from "@/lib/use-session-draft";
 import type { Language } from "@/lib/courses";
 
+const isBoolean = (value: unknown): value is boolean => typeof value === "boolean";
 export type VoiceHandle = { answer: (text: string) => void; reset: () => void };
 export function ConversationVoice({
   ref,
@@ -17,7 +19,7 @@ export function ConversationVoice({
   onBusyChange,
   disabled,
   canRecord,
-  canSpeak,
+  canSpeak, restoredAnswer, preferencesKey,
 }: {
   ref: Ref<VoiceHandle>;
   language: Language;
@@ -27,12 +29,14 @@ export function ConversationVoice({
   disabled: boolean;
   canRecord: boolean;
   canSpeak: boolean;
+  restoredAnswer?: string;
+  preferencesKey: string;
 }) {
   const [status, setStatus] = useState<
     "idle" | "permission" | "recording" | "transcribing"
   >("idle");
   const [note, setNote] = useState("");
-  const [autoListen, setAutoListen] = useState(true);
+  const [autoListen, setAutoListen] = useSessionDraft(preferencesKey, true, isBoolean);
   const [speechBusy, setSpeechBusy] = useState(false);
   const [lastAnswer, setLastAnswer] = useState("");
   const [audioUrl, setAudioUrl] = useState("");
@@ -273,6 +277,7 @@ export function ConversationVoice({
       }
     }
   }
+  const replayText = lastAnswer || restoredAnswer || "";
   return (
     <div className="mt-5 rounded-xl border border-ink-faint p-4">
       <div className="flex flex-wrap items-center gap-3">
@@ -283,7 +288,7 @@ export function ConversationVoice({
               if (recorder.current?.state === "recording")
                 recorder.current.stop();
             }}
-            className="min-h-11 rounded-full bg-accent px-5 text-white"
+            className="min-h-11 rounded-full bg-accent px-5 text-accent-ink"
           >
             녹음 끝내고 문장 확인
           </button>
@@ -319,11 +324,11 @@ export function ConversationVoice({
           />
           답변 자동 듣기
         </label>
-        {lastAnswer && (
+        {replayText && (
           <button
             type="button"
             disabled={!canSpeak || speechBusy || status !== "idle"}
-            onClick={() => void play(lastAnswer)}
+            onClick={() => void play(replayText)}
             className="min-h-11 px-3 text-sm underline disabled:opacity-50"
           >
             {speechBusy ? "음성 만드는 중…" : "마지막 답변 다시 듣기"}

@@ -11,7 +11,8 @@
   --ink: #2b2420;          /* 딥 차콜 (웜) */
   --ink-soft: #75655a;     /* 보조 텍스트 — 로마자(RR) 등 */
   --ink-faint: #f0e2d3;    /* 괘선/보더 */
-  --accent: #d9480f;       /* 탠저린 — 유일한 액센트 */
+  --accent: #c9400b;       /* 탠저린 — 유일한 액센트 */
+  --accent-ink: #ffffff;
   --accent-strong: #b53c0a;/* 호버/강조 */
   --accent-wash: #ffe9da;  /* 칩/배지 배경 */
   --card: #ffffff;
@@ -29,6 +30,7 @@
     --ink-soft: #bfae9f;
     --ink-faint: #3e332a;
     --accent: #ff8a50;
+    --accent-ink: #211a14;
     --accent-strong: #ffa273;
     --accent-wash: #46281a;
     --card: #2b2219;
@@ -46,6 +48,7 @@
   --color-ink-soft: var(--ink-soft);
   --color-ink-faint: var(--ink-faint);
   --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
   --color-accent-strong: var(--accent-strong);
   --color-accent-wash: var(--accent-wash);
   --color-card: var(--card);

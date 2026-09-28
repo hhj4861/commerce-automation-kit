@@ -32,7 +32,12 @@ export async function POST(req: Request) {
       if (!profile) throw new ConversationError(428, "먼저 레벨 체크를 마쳐 주세요.");
       if (b.assessmentId !== profile.assessmentId || b.revision !== profile.revision)
         throw new ConversationError(409, "다른 화면에서 학습 설정이 바뀌었어요. 새로고침해 주세요.");
-      if (b.action === "feedback") {
+      if (b.action === "settings") {
+        if (![10, 15, 20].includes(b.minutes as number) || ![3, 5, 7].includes(b.days as number))
+          throw new ConversationError(400, "학습 시간과 요일 수를 선택해 주세요.");
+        await recordLearningEvent(actor, language, { kind: "settings", id: randomUUID(), at: now, assessmentId: profile.assessmentId,
+          minutes: b.minutes as 10 | 15 | 20, days: b.days as 3 | 5 | 7 });
+      } else if (b.action === "feedback") {
         if (!["easy", "right", "hard"].includes(b.difficulty as string)) throw new ConversationError(400, "체감 난이도를 선택해 주세요.");
         if (profile.todayChatTurns < 2) throw new ConversationError(400, "오늘 AI와 두 번 대화한 뒤 난이도를 알려 주세요.");
         saved = await recordLearningEvent(actor, language, { kind: "feedback", id: `feedback:${profile.assessmentId}:${localDay(now, profile.timeZone)}`, at: now,
