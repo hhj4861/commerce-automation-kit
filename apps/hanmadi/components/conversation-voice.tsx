@@ -10,7 +10,7 @@ import { useSessionDraft } from "@/lib/use-session-draft";
 import type { Language } from "@/lib/courses";
 
 const isBoolean = (value: unknown): value is boolean => typeof value === "boolean";
-export type VoiceHandle = { answer: (text: string) => void; reset: () => void };
+export type VoiceHandle = { answer: (text: string) => void; reset: () => void; listen: (text: string) => void };
 export function ConversationVoice({
   ref,
   language,
@@ -19,8 +19,10 @@ export function ConversationVoice({
   onBusyChange,
   disabled,
   canRecord,
-  canSpeak, restoredAnswer, preferencesKey,
+  canSpeak, restoredAnswer, preferencesKey, speakingFirst = false, listenOnly = false,
 }: {
+  speakingFirst?: boolean;
+  listenOnly?: boolean;
   ref: Ref<VoiceHandle>;
   language: Language;
   studentSlug?: string;
@@ -37,6 +39,7 @@ export function ConversationVoice({
   >("idle");
   const [note, setNote] = useState("");
   const [autoListen, setAutoListen] = useSessionDraft(preferencesKey, true, isBoolean);
+  const [speed, setSpeed] = useState(1);
   const [speechBusy, setSpeechBusy] = useState(false);
   const [lastAnswer, setLastAnswer] = useState("");
   const [audioUrl, setAudioUrl] = useState("");
@@ -156,6 +159,7 @@ export function ConversationVoice({
       if (autoListen) void play(text);
     },
     reset,
+    listen: text => { setLastAnswer(text); void play(text); },
   }));
 
   async function startRecording() {
@@ -165,7 +169,7 @@ export function ConversationVoice({
       typeof MediaRecorder === "undefined"
     ) {
       setNote(
-        "이 브라우저에서는 녹음할 수 없어요. HTTPS로 접속하거나 텍스트로 연습해 주세요.",
+        "이 브라우저에서는 녹음할 수 없어요. HTTPS로 접속하거나, 소리를 듣고 마이크 없이 따라 말해 주세요.",
       );
       return;
     }
@@ -176,7 +180,7 @@ export function ConversationVoice({
     ].find((t) => MediaRecorder.isTypeSupported(t));
     if (!mimeType) {
       setNote(
-        "이 브라우저의 녹음 형식을 지원하지 않아요. 다른 브라우저나 텍스트 입력을 사용해 주세요.",
+        "이 브라우저의 녹음 형식을 지원하지 않아요. 다른 브라우저를 사용하거나 마이크 없이 따라 말해 주세요.",
       );
       return;
     }
@@ -242,7 +246,7 @@ export function ConversationVoice({
             throw new Error(result.error || "음성을 인식하지 못했어요.");
           if (token === sequence.current) {
             onTranscript(result.text);
-            setNote("인식한 문장을 확인하고 보내기를 눌러 주세요.");
+            setNote(speakingFirst ? "말씀하신 내용을 AI에게 보냈어요. 인식이 달랐다면 다시 말해도 괜찮아요." : "인식한 문장을 확인하고 보내기를 눌러 주세요.");
           }
         } catch (error) {
           if (token === sequence.current)
@@ -272,7 +276,7 @@ export function ConversationVoice({
       if (token === sequence.current) {
         cancelRecording();
         setNote(
-          "마이크를 사용할 수 없어요. 브라우저의 마이크 권한과 연결을 확인하거나 텍스트로 입력해 주세요.",
+          "마이크를 사용할 수 없어요. 브라우저의 마이크 권한과 연결을 확인해 주세요. 마이크 없이 소리를 따라 말해도 괜찮아요.",
         );
       }
     }
@@ -281,7 +285,7 @@ export function ConversationVoice({
   return (
     <div className="mt-5 rounded-xl border border-ink-faint p-4">
       <div className="flex flex-wrap items-center gap-3">
-        {status === "recording" ? (
+        {!listenOnly && (status === "recording" ? (
           <button
             type="button"
             onClick={() => {
@@ -290,7 +294,7 @@ export function ConversationVoice({
             }}
             className="min-h-11 rounded-full bg-accent px-5 text-accent-ink"
           >
-            녹음 끝내고 문장 확인
+            {speakingFirst ? "말 다 했어요 · AI에게 보내기" : "녹음 끝내고 문장 확인"}
           </button>
         ) : (
           <button
@@ -303,9 +307,9 @@ export function ConversationVoice({
               ? "마이크 권한 기다리는 중"
               : status === "transcribing"
                 ? "음성 인식 중…"
-                : "마이크로 말하기"}
+                : speakingFirst ? "눌러서 말하기" : "마이크로 말하기"}
           </button>
-        )}
+        ))}
         {status !== "idle" && (
           <button
             type="button"
@@ -315,41 +319,41 @@ export function ConversationVoice({
             녹음 취소
           </button>
         )}
-        <label className="flex items-center gap-2 text-sm">
+        {!listenOnly && <label className="flex items-center gap-2 text-sm">
           <input
             type="checkbox"
             checked={autoListen}
             disabled={!canSpeak}
             onChange={(e) => setAutoListen(e.target.checked)}
           />
-          답변 자동 듣기
-        </label>
-        {replayText && (
+          {speakingFirst ? "AI 대답 자동 듣기" : "답변 자동 듣기"}
+        </label>}
+        {speakingFirst && <label className="flex items-center gap-2 text-sm">듣기 속도<select aria-label="듣기 속도" value={speed} onChange={e => { const rate = Number(e.target.value); setSpeed(rate); if (player.current) player.current.playbackRate = rate; }} className="min-h-11 rounded-lg bg-paper px-3"><option value={0.75}>천천히</option><option value={1}>보통</option></select></label>}
+        {replayText && !listenOnly && (
           <button
             type="button"
             disabled={!canSpeak || speechBusy || status !== "idle"}
             onClick={() => void play(replayText)}
             className="min-h-11 px-3 text-sm underline disabled:opacity-50"
           >
-            {speechBusy ? "음성 만드는 중…" : "마지막 답변 다시 듣기"}
+            {speechBusy ? "음성 만드는 중…" : speakingFirst ? "방금 음성 다시 듣기" : "마지막 답변 다시 듣기"}
           </button>
         )}
       </div>
-      <p className="mt-3 text-xs leading-relaxed text-ink-soft">
+      {!listenOnly && <p className="mt-3 text-xs leading-relaxed text-ink-soft">
         최대 45초씩 녹음해요. 녹음 종료 후 음성이 AI 제공업체로 전송되며, 앱에는
-        저장하지 않아요. 답변 음성은 AI가 만든 소리예요.
-      </p>
+        저장하지 않아요. 답변 음성은 AI가 만든 소리예요. {speakingFirst && "녹음을 끝내면 인식한 내용을 자동으로 전송해요. 글자를 고칠 필요는 없어요."}
+      </p>}
       {(!canRecord || !canSpeak) && (
         <p className="mt-2 text-sm text-amber">
           {!canRecord ? "음성 인식" : ""}
           {!canRecord && !canSpeak ? "·" : ""}
-          {!canSpeak ? "답변 듣기" : ""} 연결을 준비 중이에요. 텍스트 회화는
-          이용할 수 있어요.
+          {!canSpeak ? "답변 듣기" : ""} 연결을 준비 중이에요. {speakingFirst ? "마이크 없이 소리 내어 연습하고 다음으로 넘어가도 괜찮아요." : "텍스트 회화는 이용할 수 있어요."}
         </p>
       )}
       {status === "recording" && (
         <p role="status" className="mt-3 text-sm text-accent">
-          녹음 중 · 말을 마치면 ‘녹음 끝내고 문장 확인’을 눌러 주세요.
+          녹음 중 · 말을 마치면 위의 녹음 종료 버튼을 눌러 주세요.
         </p>
       )}
       {note && (
@@ -362,7 +366,8 @@ export function ConversationVoice({
         controls
         hidden={!audioUrl}
         className="mt-3 w-full"
-        aria-label="AI 답변 음성"
+        aria-label={speakingFirst ? "연습 표현 음성" : "AI 답변 음성"}
+        onLoadedMetadata={() => { if (player.current) player.current.playbackRate = speed; }}
         onError={() =>
           setNote("음성을 재생할 수 없어요. 텍스트 답변을 확인해 주세요.")
         }

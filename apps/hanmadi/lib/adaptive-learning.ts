@@ -1,23 +1,25 @@
 import { courses, type Language } from "./courses";
 
 export const learningLevels = {
-  beginner: { label: "입문", difyLevel: "입문", guide: "한 번에 짧은 표현 하나와 따라 말할 예시를 제시하세요. 선택형 질문으로 도와주세요.", task: "표현을 보고 한 문장씩 따라 말하기", reviewDays: 1 },
+  beginner: { label: "입문", difyLevel: "입문", guide: "한 번에 짧은 표현 하나와 따라 말할 예시를 제시하세요. 선택형 질문으로 도와주세요.", task: "소리를 듣고 따라 말한 뒤, 짧은 상황에서 주고받기", reviewDays: 1 },
   elementary: { label: "기초", difyLevel: "초급", guide: "쉬운 문장 두 개로 답하고 예시를 조금씩 줄이세요. 주문·위치 같은 일상 질문을 하세요.", task: "이름·수량·장소를 바꿔 두 문장 만들기", reviewDays: 2 },
   intermediate: { label: "중급 연습", difyLevel: "중급", guide: "일상 역할극에서 이유·경험을 묻고 세 문장 이내로 대화를 이어가세요. 완성 답안보다 힌트를 먼저 주세요.", task: "예시 없이 상황을 설명하고 이유 덧붙이기", reviewDays: 3 },
 } as const;
 export type LearningLevel = keyof typeof learningLevels;
 export type Difficulty = "easy" | "right" | "hard";
 export type LearningEvent =
-  | { kind: "assessment"; id: string; at: number; level: LearningLevel; score: number; minutes: 10 | 15 | 20; days: 3 | 5 | 7; timeZone: string }
+  | { kind: "assessment"; id: string; at: number; level: LearningLevel; score: number; minutes: 10 | 15 | 20; days: 3 | 5 | 7; timeZone: string; source?: "first-speaking" }
   | { kind: "settings"; id: string; at: number; assessmentId: string; minutes: 10 | 15 | 20; days: 3 | 5 | 7 }
   | { kind: "feedback"; id: string; at: number; assessmentId: string; difficulty: Difficulty }
   | { kind: "quiz"; id: string; at: number; assessmentId: string; lessonId: string; correct: boolean }
+  | { kind: "speaking"; id: string; at: number; assessmentId: string; lessonId: string; confidence: "repeat" | "help" | "alone" }
   | { kind: "chat"; id: string; at: number; assessmentId: string; lessonId: string };
 export type LearningProfile = {
   assessmentId: string; assessedAt: number; score: number; baseline: LearningLevel; level: LearningLevel;
   confirmed: boolean; chatTurns: number; todayChatTurns: number; feedbackToday: boolean; minutes: 10 | 15 | 20; days: 3 | 5 | 7; timeZone: string;
   completed: string[]; review: { lessonId: string; at: number; correct: boolean }[];
-  revision: string;
+  speakingReview?: { lessonId: string; at: number; confidence: "repeat" | "help" | "alone" }[];
+  revision: string; source?: "first-speaking";
 };
 const order: LearningLevel[] = ["beginner", "elementary", "intermediate"];
 export function learningTask(level: LearningLevel, lessonId: string): string {
@@ -42,14 +44,17 @@ export function learningProfile(events: LearningEvent[], now = Date.now()): Lear
   for (const e of feedback) level = adjustLevel(level, e.difficulty);
   const settings = active.filter(e => e.kind === "settings").at(-1);
   const quizzes = active.filter((e) => e.kind === "quiz");
+  const speaking = active.filter(e => e.kind === "speaking");
   return {
     assessmentId: assessment.id, assessedAt: assessment.at, score: assessment.score, baseline: assessment.level,
-    level, confirmed: feedback.length > 0, chatTurns: active.filter((e) => e.kind === "chat").length,
+    ...(assessment.source ? { source: assessment.source } : {}),
+    level, confirmed: assessment.source === "first-speaking" || speaking.length > 0 || feedback.length > 0, chatTurns: active.filter((e) => e.kind === "chat").length,
     todayChatTurns: active.filter(e => e.kind === "chat" && localDay(e.at, assessment.timeZone) === localDay(now, assessment.timeZone)).length,
     feedbackToday: feedback.some(e => localDay(e.at, assessment.timeZone) === localDay(now, assessment.timeZone)),
     minutes: settings?.minutes ?? assessment.minutes, days: settings?.days ?? assessment.days, timeZone: assessment.timeZone,
     completed: [...new Set(quizzes.filter(e => e.correct).map(e => e.lessonId))],
     review: [...new Map(quizzes.map(e => [e.lessonId, { lessonId: e.lessonId, at: e.at, correct: e.correct }])).values()],
+    speakingReview: [...new Map(speaking.map(e => [e.lessonId, { lessonId: e.lessonId, at: e.at, confidence: e.confidence }])).values()],
     revision: feedback.at(-1)?.id ?? assessment.id,
   };
 }
@@ -62,9 +67,11 @@ function addDays(day: string, days: number) {
 }
 export function studyPlan(language: Language, profile: LearningProfile, now = Date.now()) {
   const today = localDay(now, profile.timeZone);
-  const latest = new Map(profile.review.map(e => [e.lessonId, e]));
-  const projected = new Map(profile.review.map(e => [e.lessonId, { day: localDay(e.at, profile.timeZone), correct: e.correct }]));
-  const practicedToday = [...profile.review].filter(e => localDay(e.at, profile.timeZone) === today).sort((a, b) => a.at - b.at)[0];
+  // Self-reported oral confidence affects scheduling, never quiz correctness or assessed proficiency.
+  const practice = [...profile.review, ...(profile.speakingReview ?? []).map(e => ({ ...e, correct: e.confidence === "alone" }))].sort((a, b) => a.at - b.at);
+  const latest = new Map(practice.map(e => [e.lessonId, e]));
+  const projected = new Map(practice.map(e => [e.lessonId, { day: localDay(e.at, profile.timeZone), correct: e.correct }]));
+  const practicedToday = [...practice].filter(e => localDay(e.at, profile.timeZone) === today).sort((a, b) => a.at - b.at)[0];
   return Array.from({ length: profile.days }, (_, i) => {
     const date = addDays(today, Math.floor(i * 7 / profile.days));
     function priority(id: string) {
@@ -83,7 +90,7 @@ export function studyPlan(language: Language, profile: LearningProfile, now = Da
     if (!done) projected.set(lesson.id, { day: date, correct: true });
     return { date, lessonId: lesson.id, title: lesson.title, minutes: profile.minutes,
       type: review ? "복습" : "표현 연습", task: learningTask(profile.level, lesson.id),
-      reason: projectedProgress && !projectedProgress.correct ? "지난 확인 문제를 다시 연습해요." : review ? "익힌 표현을 다시 꺼내 말해요." : "새 상황에서 한마디를 연습해요.",
+      reason: projectedProgress && !projectedProgress.correct ? "도움이 필요했던 표현을 다시 듣고 말해요." : review ? "익힌 표현을 다시 꺼내 말해요." : "새 상황에서 한마디를 연습해요.",
       expressionMinutes: Math.ceil(profile.minutes * (profile.level === "beginner" ? 0.6 : 0.3)), done };
   });
 }

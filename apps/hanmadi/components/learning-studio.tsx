@@ -41,6 +41,7 @@ export function LearningStudio({
   } catch {
     /* A corrupt cache does not prevent a new lesson. */
   }
+  const speakingFirst = profile?.level === "beginner" && language !== "ko";
   const completed = profile ? profile.completed.map(id => `${language}:${id}`) : [...new Set([...saved, ...sessionCompleted])];
   const lesson = courses[language].find((l) => l.id === lessonId)!;
   function complete() {
@@ -69,7 +70,7 @@ export function LearningStudio({
         {languages[language].name}로 한마디씩
       </h1>
       <p className="mt-4 text-ink-soft">
-        표현을 익히고, 퀴즈로 확인하고, AI와 한마디씩 대화해요.
+        {speakingFirst ? "글자를 몰라도, 짧은 소리를 듣고 따라 말하며 시작해요." : "표현을 익히고, 퀴즈로 확인하고, AI와 한마디씩 대화해요."}
       </p>
       <div className="my-8 flex flex-wrap items-center gap-4">
         <span className="rounded-full bg-accent-wash px-4 py-2 text-accent">학습 중 · {languages[language].name}</span>
@@ -81,11 +82,11 @@ export function LearningStudio({
           <h2 className="font-display text-xl">학습할 주제</h2>
           <p className="my-2 text-sm text-ink-soft">
             {
-              courses[language].filter((l) =>
+              speakingFirst ? profile.speakingReview?.length ?? 0 : courses[language].filter((l) =>
                 completed.includes(`${language}:${l.id}`),
               ).length
             }{" "}
-            / {courses[language].length} 수업 완료
+            / {courses[language].length} {speakingFirst ? "말해 본 주제" : "선택 문제 확인"}
           </p>
           <nav aria-label="수업 선택" className="mt-4 flex flex-col gap-2">
             {courses[language].map((l, i) => (
@@ -127,6 +128,8 @@ export function LearningStudio({
           <h2 className="font-display text-3xl">{lesson.title}</h2>
           <p className="mt-2 text-ink-soft">{lesson.goal}</p>
           {profile && <p className="mt-4 rounded-xl bg-accent-wash p-4">오늘의 연습 · {learningTask(profile.level, lesson.id)}</p>}
+          {speakingFirst && <Link href={`/conversation?${query}`} className="mt-5 inline-flex min-h-12 items-center rounded-full bg-accent px-6 text-accent-ink">이 주제로 듣고 말하기 →</Link>}
+          <details open={!speakingFirst} className="mt-4"><summary className="min-h-11 cursor-pointer py-3 text-sm text-accent">표현 글자와 선택 문제 · 필요할 때만 보기</summary>
           <dl className="mt-6 divide-y divide-ink-faint border-y border-ink-faint">
             {lesson.phrases.map((p) => (
               <div key={p.text} className="py-5">
@@ -148,12 +151,13 @@ export function LearningStudio({
             lesson={lesson}
             onAnswer={recordAnswer}
           />
-          <Link
+          </details>
+          {!speakingFirst && <Link
             href={`/conversation?${query}`}
             className="mt-8 inline-flex min-h-12 items-center rounded-full bg-accent px-6 py-3 font-medium text-accent-ink hover:bg-accent-strong"
           >
             이 주제로 AI와 대화하기
-          </Link>
+          </Link>}
         </section>
       </div>
     </div>

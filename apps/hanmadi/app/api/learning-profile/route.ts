@@ -18,14 +18,14 @@ export async function POST(req: Request) {
     const actor = await conversationActor(b.studentSlug);
     const now = Date.now();
     let saved = true;
-    if (b.action === "assess") {
+    if (b.action === "assess" || b.action === "start-speaking") {
       if (![10, 15, 20].includes(b.minutes as number) || ![3, 5, 7].includes(b.days as number) || typeof b.timeZone !== "string" || b.timeZone.length > 80)
         throw new ConversationError(400, "학습 시간과 요일 수를 선택해 주세요.");
       let result;
-      try { localDay(now, b.timeZone); result = scoreAssessment(language, b.answers); }
+      try { localDay(now, b.timeZone); result = b.action === "start-speaking" ? { score: 0, level: "beginner" as const } : scoreAssessment(language, b.answers); }
       catch (e) { throw new ConversationError(400, e instanceof RangeError ? "시간대를 확인해 주세요." : (e as Error).message); }
       if (!(await reserveLearningAssessment(actor))) throw new ConversationError(429, "오늘 레벨 체크를 여러 번 했어요. 저장된 결과로 연습하고 내일 다시 체크해 주세요.");
-      await recordLearningEvent(actor, language, { kind: "assessment", id: randomUUID(), at: now, ...result,
+      await recordLearningEvent(actor, language, { kind: "assessment", id: randomUUID(), at: now, ...result, ...(b.action === "start-speaking" ? { source: "first-speaking" as const } : {}),
         minutes: b.minutes as 10 | 15 | 20, days: b.days as 3 | 5 | 7, timeZone: b.timeZone });
     } else {
       const profile = await readLearningProfile(actor, language);
@@ -42,6 +42,11 @@ export async function POST(req: Request) {
         if (profile.todayChatTurns < 2) throw new ConversationError(400, "오늘 AI와 두 번 대화한 뒤 난이도를 알려 주세요.");
         saved = await recordLearningEvent(actor, language, { kind: "feedback", id: `feedback:${profile.assessmentId}:${localDay(now, profile.timeZone)}`, at: now,
           assessmentId: profile.assessmentId, difficulty: b.difficulty as Difficulty });
+      } else if (b.action === "speaking") {
+        if (typeof b.lessonId !== "string" || !getLesson(language, b.lessonId) || !["repeat", "help", "alone"].includes(b.confidence as string))
+          throw new ConversationError(400, "연습한 수업과 말하기 체감을 선택해 주세요.");
+        saved = await recordLearningEvent(actor, language, { kind: "speaking", id: `speaking:${profile.assessmentId}:${b.lessonId}:${localDay(now, profile.timeZone)}`, at: now,
+          assessmentId: profile.assessmentId, lessonId: b.lessonId, confidence: b.confidence as "repeat" | "help" | "alone" });
       } else if (b.action === "quiz") {
         const lesson = typeof b.lessonId === "string" ? getLesson(language, b.lessonId) : null;
         if (!profile.confirmed || !lesson || typeof b.answer !== "number" || !Number.isInteger(b.answer) || b.answer < 0 || b.answer >= lesson.quiz.choices.length)
