@@ -115,6 +115,43 @@ class AccountAPI(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(self.app.state.store.get(id)['state'], 'connected')
 
 
+class RevocationRace(unittest.TestCase):
+    def test_disconnect_cannot_be_undone_by_an_inflight_refresh(self):
+        from concurrent.futures import ThreadPoolExecutor, TimeoutError
+        from threading import Event
+        with tempfile.TemporaryDirectory() as temp:
+            store = Accounts(temp, Fernet.generate_key().decode())
+            scope = ('hanmadi', 'a' * 64)
+            id = store.create(scope, 'codex')['id']
+            store.update(id, state='connected', secret={'token': 'old'})
+            encrypting, release, revoking = Event(), Event(), Event()
+            original = store.seal
+            def paused_seal(id, value):
+                encrypting.set()
+                if not release.wait(3):
+                    raise RuntimeError('test release timed out')
+                return original(id, value)
+            def revoke():
+                revoking.set()
+                store.disconnect(id, scope)
+            with ThreadPoolExecutor(2) as pool, patch.object(store, 'seal', paused_seal):
+                refresh = pool.submit(store.update, id, state='connected', secret={'token': 'new'})
+                self.assertTrue(encrypting.wait(1))
+                deletion = pool.submit(revoke)
+                try:
+                    self.assertTrue(revoking.wait(1))
+                    # The write lock must span the state check and encryption.
+                    with self.assertRaises(TimeoutError):
+                        deletion.result(timeout=.2)
+                finally:
+                    release.set()
+                refresh.result(timeout=2)
+                deletion.result(timeout=2)
+            row = store.get(id)
+            self.assertEqual(row['state'], 'disconnected')
+            self.assertIsNone(row['secret'])
+
+
 class PinnedWorker(unittest.TestCase):
     def test_sdk_device_flow_uses_encrypted_storage_and_selected_model(self):
         import litellm

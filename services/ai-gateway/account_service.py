@@ -73,6 +73,8 @@ class Accounts:
 
     def update(self, id, *, state=None, secret=None, challenge=None):
         with self.db() as db:
+            # Serialize state checks with revocation before encrypting refreshes.
+            db.execute('BEGIN IMMEDIATE')
             row = db.execute('SELECT state FROM accounts WHERE id=?', (id,)).fetchone()
             if row is None or row['state'] == 'disconnected':
                 raise HTTPException(409, 'connection_disconnected')

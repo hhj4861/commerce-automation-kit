@@ -6,7 +6,7 @@ Default conversation preserves Dify → LiteLLM → Gemini. Logged-in tutors may
 
 ## Verified locally
 
-- 9 Python tests passed: authenticated HTTP service, user/platform isolation, encrypted persistence and record binding, model allowlist, disconnect and late credential rejection, cancellation of pending login, duplicate/body limits, account locking, pinned real SDK device-flow interface with upstream I/O mocked.
+- 10 Python tests passed: authenticated HTTP service, user/platform isolation, encrypted persistence and record binding, model allowlist, disconnect and late credential rejection, cancellation of pending login, duplicate/body limits, account locking, pinned real SDK device-flow interface with upstream I/O mocked.
 - 3 TypeScript connection tests passed: safe projection, exact official challenge URL, expiry, selected-model validation, server configuration constraints.
 - Existing Hanmadi 28 tests passed. Next production build, generated-route typecheck and targeted ESLint passed.
 - New browser E2E passed: PIN login → Japanese first-speaking assessment → default Gemini-labelled conversation → Codex challenge → second-model selection → Claude API connection → disconnect → guided request → quota failure with no fallback → other-user/CSRF rejection. Real Next, FastAPI and encrypted SQLite; only OAuth/inference upstream mocked. No production credentials used.
@@ -26,3 +26,5 @@ The assessment E2E initially clicked during navigation/hydration. Waiting for th
 Setup and recovery: `services/ai-gateway/ACCOUNTS.md`. Regression commands: the new workflow `.github/workflows/hanmadi-model-connections.yml` and existing `.github/workflows/hanmadi-dify.yml`.
 
 CI discovery initially imported the new account tests into existing standard-library-only gateway jobs. The dependency-bearing suite now lives under `services/ai-gateway/tests/test_accounts.py` and its dedicated pinned-LiteLLM CI runs it explicitly. Existing gateway/subscription suites remain discovered and executed unchanged.
+
+A real SQLite/threaded regression pauses credential encryption while disconnect starts. The transaction locks before checking account state, so disconnect executes after refresh and leaves the record disconnected with no secret.
