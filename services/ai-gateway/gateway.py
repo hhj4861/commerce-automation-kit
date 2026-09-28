@@ -13,7 +13,7 @@ import urllib.request
 
 ROOT = Path(__file__).resolve().parent
 APPS = {"hanmadi": ["hanmadi-chat", "hanmadi-stt", "hanmadi-tts"],
-        "replay": ["replay-video-planner"]}
+        "replay": ["replay-video-planner"], "festa": ["festa-travel"]}
 
 
 def private_write(path, data):
@@ -55,7 +55,7 @@ def render(root=ROOT):
     if any(c not in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_" for c in env["POSTGRES_PASSWORD"]):
         raise ValueError("POSTGRES_PASSWORD must be URL-safe (letters/digits/-/_).")
     models = []
-    for app, alias in (("HANMADI", "hanmadi-chat"), ("REPLAY", "replay-video-planner")):
+    for app, alias in (("HANMADI", "hanmadi-chat"), ("REPLAY", "replay-video-planner"), ("FESTA", "festa-travel")):
         model = env.get(f"{app}_CHAT_MODEL", "")
         if not model:
             continue
@@ -162,7 +162,7 @@ def provision_scope(app, model_scope, budget, base, root=ROOT, client=None):
                                            "models": allowed, "max_budget": budget,
                                            "budget_duration": "30d", "rpm_limit": 30})
     values = {"LITELLM_BASE_URL": base.rstrip("/") + "/v1", "LITELLM_API_KEY": response["key"],
-              "LITELLM_MODEL": "hanmadi-chat" if "hanmadi-chat" in allowed else "replay-video-planner" if "replay-video-planner" in allowed else allowed[0] if app.startswith("codex-") else ""}
+              "LITELLM_MODEL": "hanmadi-chat" if "hanmadi-chat" in allowed else "replay-video-planner" if "replay-video-planner" in allowed else "festa-travel" if "festa-travel" in allowed else allowed[0] if app.startswith("codex-") else ""}
     if app == "hanmadi":
         values.update(LITELLM_STT_MODEL="hanmadi-stt" if "hanmadi-stt" in allowed else "",
                       LITELLM_TTS_MODEL="hanmadi-tts" if "hanmadi-tts" in allowed else "",

@@ -1,6 +1,6 @@
 # Shared AI gateway
 
-앱과 독립적으로 배포하는 LiteLLM + PostgreSQL 서버. `hanmadi` / `replay`는 각각 팀·가상 키·모델 허용목록·30일 예산을 가진다. 이 디렉터리만 별도 저장소나 서버로 옮길 수 있으며 npm 모노레포 또는 앱 코드를 import하지 않는다. 학습·기억·RAG 서버는 아직 포함하지 않는다. 설계·기존 솔루션 조사: [SHARED-AI-PLATFORM](../../docs/SHARED-AI-PLATFORM.md).
+앱과 독립적으로 배포하는 LiteLLM + PostgreSQL 서버. `hanmadi` / `replay` / `festa`는 각각 팀·가상 키·모델 허용목록·30일 예산을 가진다. 이 디렉터리만 별도 저장소나 서버로 옮길 수 있으며 npm 모노레포 또는 앱 코드를 import하지 않는다. 학습·기억·RAG 서버는 아직 포함하지 않는다. 설계·기존 솔루션 조사: [SHARED-AI-PLATFORM](../../docs/SHARED-AI-PLATFORM.md).
 
 ## 시작
 
@@ -23,6 +23,7 @@ docker compose up -d --wait --wait-timeout 300
 |---|---|---|
 | hanmadi 대화 | `HANMADI_CHAT_MODEL`, `HANMADI_CHAT_API_KEY`, 선택 `HANMADI_CHAT_API_BASE` | `hanmadi-chat` |
 | replay 기획·대본 | `REPLAY_CHAT_MODEL`, `REPLAY_CHAT_API_KEY`, 선택 `REPLAY_CHAT_API_BASE` | `replay-video-planner` |
+| festa 축제 인터뷰·일정 | `FESTA_CHAT_MODEL`, `FESTA_CHAT_API_KEY`, 선택 `FESTA_CHAT_API_BASE` | `festa-travel` |
 | hanmadi 음성 | `ELEVENLABS_API_KEY` | `hanmadi-stt` / `hanmadi-tts` |
 
 모델 경로는 공급자의 실제 지원 모델을 선택한다. `openai/<model-id>`, `gemini/<model-id>`, `ollama_chat/<installed-model>` 등이 가능하다. Ollama는 외부 API 키 없이 별도 서버의 `*_CHAT_API_BASE`가 필요하다. 컨테이너의 `localhost`는 호스트 Mac 또는 다른 컨테이너가 아니다. 클라우드에서는 모델 서버의 내부 DNS를 사용한다. 외부 공급자 주소에 자격증명을 포함하지 않는다. 키·모델이 없으면 해당 모델은 등록하지 않으며 누락된 키를 가짜 값으로 채우지 않는다. 같은 기반 모델을 두 별칭에 연결해도 지식이나 가중치가 서비스별로 학습되는 것은 아니다.
@@ -116,3 +117,27 @@ python3 -m unittest -v
 2026-09-26: 로컬 단위 검사 7개 통과. 로컬 Mac에는 Docker가 없어 Compose 기동 검사는 GitHub Actions에서 수행하도록 구성했다. 클라우드 미선정, 공개 서버 미배포, 공급자 모델·운영 키 미설정이다. 기본 설정은 실사용 가능한 대화 모델이 0개인 준비 상태다.
 
 이미지는 공식 레지스트리에서 확인한 immutable digest로 고정했다. `main-stable` 조회 당시 digest를 고정한 것이며 앞선 로컬 pip 버전과 동일하다고 가정하지 않는다. 업그레이드는 새 digest와 통합검사를 함께 변경한다.
+
+
+## Festa 연결 준비
+
+Festa는 Dify를 거치지 않고 서버에서 LiteLLM의 JSON Schema 응답을 사용합니다.
+공급자 설정 `FESTA_CHAT_MODEL`과 `FESTA_CHAT_API_KEY`를 명시해야 `festa-travel`이 등록됩니다.
+다른 앱의 모델이나 키를 자동으로 복사하지 않으며, 미설정 상태에서는 기존 앱만 유지합니다.
+
+서버 PR 승인·배포 후 공급자 설정을 비공개 `.env`에 주입하고 `gateway.py render`,
+기존 Compose 운영 절차로 게이트웨이를 갱신합니다. 다음 발급 명령의 예산은 예시이며
+실제 실행에는 사용자가 선택한 30일 예산을 사용합니다.
+
+```sh
+python3 gateway.py provision --app festa --budget-usd 5
+```
+
+이 명령은 `cak-festa` 팀과 `festa-travel`만 허용하는 전용 키를 만들고 RPM 30 및
+명시한 30일 예산을 적용합니다. `.runtime/festa.env`는 0600으로 저장되며 재실행 시
+기존 키·정책을 확인하고 보존합니다. 키를 로컬에 다운로드하거나 로그에 출력하지 않습니다.
+Festa의 Cloudflare Preview 서버 Secret `LITELLM_API_KEY`에 안전하게 주입하고,
+`LITELLM_BASE_URL=https://shared-ai-d5cy7m6i7q-uc.a.run.app/llm/v1`,
+`LITELLM_MODEL=festa-travel`, `AI_PROVIDER=litellm`을 설정합니다.
+Preview에서 인터뷰·태국 일정·세계 축제 일정의 JSON 응답과 추천 적용을 검증한 후 운영으로 전환합니다.
+이 코드 변경은 운영 키 발급이나 서버 배포 완료를 의미하지 않습니다.
