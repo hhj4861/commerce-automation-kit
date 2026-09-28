@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
-import {manualItems,manualCounts,filterManual,fetchManualProjects,createManualDashboard} from '../public/manual-dashboard.js';
+import {manualItems,manualCounts,filterManual,fetchManualProjects,createManualDashboard,automaticItems,fetchAutomaticProjects} from '../public/manual-dashboard.js';
 
 const base={id:'idea',title:'작은 집 이야기',brief:{category:'건축학',format:'short'},scenes:[],assets:{},updatedAt:'2026-09-27T01:00:00Z'};
 const scene={id:'scene-1',kind:'image'};
@@ -50,7 +50,7 @@ test('home and automatic route expose separate views; legacy job/request links r
   const context={URLSearchParams,location:{pathname:'/',search:''},state:{},window:{scrollTo(){}},document:{querySelectorAll:()=>[],querySelector:()=>({textContent:''}),getElementById:id=>nodes[id]},activateNav(){},applyRequestedDraft(){},renderSummary(){},renderPipeline(){},renderJobs(){},renderDetail(){},renderPage(){}};
   vm.runInNewContext(source+';navigate(currentRoute(),false);',context);
   assert.equal(nodes.dashboardView.hidden,false);assert.equal(nodes.automaticView.hidden,true);
-  for(const path of ['/studio/automatic','/']){
+  for(const path of ['/studio/dashboard','/studio/automatic','/']){
     context.location={pathname:path,search:'?job=existing'};
     vm.runInNewContext('navigate(currentRoute(),false);',context);
     assert.equal(nodes.dashboardView.hidden,true);assert.equal(nodes.automaticView.hidden,false);assert.equal(context.state.selected,'existing');
@@ -77,3 +77,22 @@ test('dashboard inline scripts remain syntactically valid after moving managemen
  test('automatically generated studio projects never appear in the manual dashboard',()=>{
   assert.deepEqual(manualItems([{...base,id:'auto',automation:{keyword:'자동 주제'}},base]).map(i=>i.id),['idea']);
  });
+
+test('automatic management combines studio, legacy and pending work without manual or materialized duplicates',()=>{
+  const automatic={...base,id:'auto',automation:{keyword:'건축'},task:{action:'scenario',state:'running'}};
+  const jobs=[{brief:{id:'legacy',productName:'기존 작업'},status:'review'},{brief:{id:'done'},status:'published',publishRef:'https://example.com/video'}];
+  const items=automaticItems({projects:[base,automatic],jobs,requests:[{slug:'pending',topic:'요청',status:'pending'},{slug:'legacy',status:'pending'}]});
+  assert.equal(items.length,4);assert.ok(items.every(item=>item.mode==='auto'));
+  assert.deepEqual(manualCounts(items),{all:4,working:3,busy:2,attention:0,done:1});
+  assert.deepEqual(filterManual(items,{phase:'5'}).map(item=>item.id),['legacy']);
+});
+test('automatic dashboard retains its complete last known list when any source fails and recovers on retry',async()=>{
+  let fail=false;const calls=[];
+  const fetcher=async url=>{calls.push(url);return fail&&url==='/api/jobs'?new Response('',{status:503}):Response.json(url==='/api/studio'?{projects:[{...base,automation:{keyword:'집'}}]}:url==='/api/jobs'?{jobs:[]}:{requests:[]});};
+  const host=dashboardHost(),ui=createManualDashboard({mode:'auto',fetcher});
+  await ui.mount(host);assert.match(host.querySelector('[data-manual-rows]').innerHTML,/작은 집 이야기/);
+  fail=true;await ui.refresh();assert.match(host.querySelector('[data-manual-error]').innerHTML,/503/);assert.match(host.querySelector('[data-manual-rows]').innerHTML,/작은 집 이야기/);
+  fail=false;await ui.refresh();assert.equal(host.querySelector('[data-manual-error]').innerHTML,'');
+  assert.ok(calls.includes('/api/hot-keywords'));
+  await assert.rejects(fetchAutomaticProjects(async()=>Response.json({})),/응답/);
+});

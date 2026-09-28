@@ -529,7 +529,7 @@ const server = createServer(async (req, res) => {
       res.end(readFileSync(join(__dirname, 'public', file))); return;
     }
     // 정적 UI
-    const appPages = ['/studio/automatic', '/studio/automatic/', '/automatic', '/', '/index.html', '/contents', '/trends', '/blog', '/performance', '/affiliate-links', '/settings', '/notifications'];
+    const appPages = ['/studio/dashboard', '/studio/dashboard/', '/studio/automatic', '/studio/automatic/', '/automatic', '/', '/index.html', '/contents', '/trends', '/blog', '/performance', '/affiliate-links', '/settings', '/notifications'];
     if (req.method === 'GET' && appPages.includes(url.pathname)) {
       res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' });
       res.end(readFileSync(join(__dirname, 'public', 'index.html')));
