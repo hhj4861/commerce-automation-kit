@@ -24,6 +24,11 @@ both calls pending.
   reconciled evidence, reproduce the two-pending-envelope cause, authenticate the
   unique host refusal before any command execution, and preserve `declined` with
   unknown exit code. Never retry the rejected action.
+- `approval-timeout-plan` / `approve-approval-timeout`: authenticate a two-command
+  batch's actual first-step native exit and yielded result, then the matching
+  cross-turn wait's exact host approval-timeout response. Record the second step
+  as `not_started`, with unknown exit code. Shell output containing timeout text,
+  running prefixes, conflicting native execution, and forced waits are rejected.
 
 Each approval requires the current plan digest. Existing file observation,
 ownership, unknown-file, hold, commit/push, Stop, and reconciliation functions
@@ -66,3 +71,9 @@ hook's plan/approve commands with `--call-id`, `--expect-source-digest`, and a
 specific `--reason`; run ordinary `reconcile` and completion checks afterwards.
 Installation and actual reconciliation must be reported separately from this
 committed verification record.
+
+An additional timeout occurred when the diagnostic was interrupted and later
+resumed. The initial two recovery commands were installed and reconciled their
+target calls successfully. The timeout extension is additive and requires all
+previously installed recovery helpers to match the committed source exactly;
+it preserves other sessions' installed hook extensions.

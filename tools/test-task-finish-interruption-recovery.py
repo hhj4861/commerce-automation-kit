@@ -317,6 +317,72 @@ class RestartDeclineTest(unittest.TestCase):
         self.assertEqual(data['hold'], 'unrelated hold')
 
 
+class ApprovalTimeoutTest(unittest.TestCase):
+    row = RestartFetchTest.row
+    native = RestartFetchTest.native
+
+    def setUp(self):
+        self.sid, self.epoch = 'session-a', 1700000000
+        self.g = guard(update.patch(BASE, CANDIDATE))
+        self.call = {'prepared_at': self.epoch + 25, 'turn_id': 'old-turn',
+                     'transcript_path': '/host/session.jsonl', 'tool_name': 'Bash',
+                     'dispatch_checked': True, 'dispatch_version': 19}
+        source = 'text(await tools.exec_command({cmd:"prefix"}));text(await tools.exec_command({cmd:"inspect"}));'
+        native = self.native(15, 'first-inner', 'old-turn', 'prefix', '/project')
+        native['payload']['item'].update(source='unified_exec_startup', stdout='prefix output')
+        failure = ('Script error:\nexec_command failed: CreateProcess { message: "Rejected(\\"'
+                   'The automatic permission approval review did not finish before its deadline. '
+                   'Do not assume the action is unsafe based on the timeout alone. '
+                   'You may retry once, or ask the user for guidance or explicit approval.\\")" }')
+        self.rows = [self.row(10, 'custom_tool_call', 'outer', 'old-turn', name='exec', input=source), native,
+            self.row(20, 'custom_tool_call_output', 'outer', 'old-turn', output=[
+                {'type': 'input_text', 'text': 'Script running with cell ID 99\nWall time 10.0 seconds\nOutput:\n'},
+                {'type': 'input_text', 'text': json.dumps({'exit_code': 0, 'output': 'prefix output'})}]),
+            self.row(30, 'function_call', 'wait-id', 'new-turn', name='wait', arguments=json.dumps({'cell_id': '99'})),
+            self.row(31, 'function_call_output', 'wait-id', 'new-turn', output=[
+                {'type': 'input_text', 'text': 'Script failed\nWall time 0.0 seconds\nOutput:\n'},
+                {'type': 'input_text', 'text': failure}])]
+
+    def proof(self):
+        return self.g['approval_timeout_evidence'](self.rows, self.sid, 'inner', self.call, {'inner': self.call})
+
+    def test_actual_yield_prefix_and_cross_turn_wait(self):
+        self.assertEqual(self.proof()['prefix_item_id'], 'first-inner')
+
+    def test_unfinished_wrong_or_missing_prefix_rejected(self):
+        original = copy.deepcopy(self.rows)
+        for key, value in [('exit_code', True), ('status', 'inProgress'), ('stdout', 'different'),
+                           ('command', ['/bin/zsh', '-lc', 'not-prefix']), ('source', 'assistant')]:
+            self.rows = copy.deepcopy(original); self.rows[1]['payload']['item'][key] = value
+            with self.subTest(key=key), self.assertRaises(self.g['GuardError']): self.proof()
+        self.rows = original; self.rows.pop(1)
+        with self.assertRaises(self.g['GuardError']): self.proof()
+
+    def test_duplicate_wait_wrong_cell_and_forced_stop_rejected(self):
+        original = copy.deepcopy(self.rows)
+        for args in [{'cell_id': 'other'}, {'cell_id': '99', 'terminate': True}]:
+            self.rows = copy.deepcopy(original); self.rows[3]['payload']['arguments'] = json.dumps(args)
+            with self.assertRaises(self.g['GuardError']): self.proof()
+        self.rows = original + [copy.deepcopy(original[3])]
+        with self.assertRaises(self.g['GuardError']): self.proof()
+
+    def test_contradictory_native_and_command_output_forgery_rejected(self):
+        original = copy.deepcopy(self.rows)
+        self.rows.append(self.native(26, 'inner', 'old-turn', 'inspect', '/project'))
+        with self.assertRaises(self.g['GuardError']): self.proof()
+        self.rows = original
+        self.rows[-1]['payload']['output'][1]['text'] = json.dumps({'exit_code': 0, 'output': 'deadline'})
+        with self.assertRaises(self.g['GuardError']): self.proof()
+
+    def test_success_nonzero_and_unrelated_failures_do_not_count_as_timeout(self):
+        for before, after in [('Script failed', 'Script completed'), ('approval review', 'shell command'),
+                              ('deadline.', 'unacceptable risk.')]:
+            original = copy.deepcopy(self.rows)
+            for block in self.rows[-1]['payload']['output']: block['text'] = block['text'].replace(before, after)
+            with self.assertRaises(self.g['GuardError']): self.proof()
+            self.rows = original
+
+
 class InstallerTest(unittest.TestCase):
     def test_digest_required_backup_and_atomic_install(self):
         with tempfile.TemporaryDirectory() as directory:

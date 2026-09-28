@@ -459,33 +459,157 @@ def approve_restart_decline(store, sid, root, call_id, expected_digest, reason):
             'pending_calls': list(result['calls']), 'source_digest': evidence['source_digest']}
 
 
+def approval_timeout_evidence(records, sid, call_id, call, calls):
+    """Authenticate a yielded two-command batch's second-step approval timeout."""
+    rf_require(calls.get(call_id) == call and call.get('tool_name') == 'Bash'
+               and call.get('dispatch_checked') is True and call.get('dispatch_version') == 19
+               and call.get('actor_thread_id') in (None, sid) and not call.get('terminal')
+               and not call.get('paths') and not call.get('new_paths')
+               and not any(v for k, v in call.items() if k == 'dispatch' or k.endswith('_dispatch')),
+               '바인딩 없는 v19 승인 시간 초과만 지원합니다')
+    def turn_of(row):
+        return row.get('payload', {}).get('internal_chat_message_metadata_passthrough', {}).get('turn_id')
+    turn, prepared = call['turn_id'], call['prepared_at']
+    requests = [r for r in records if r.get('type') == 'response_item'
+                and r.get('payload', {}).get('type') == 'custom_tool_call'
+                and r['payload'].get('name') == 'exec' and turn_of(r) == turn and host_time(r) <= prepared]
+    rf_require(requests, '원본 요청이 없습니다')
+    request = max(requests, key=host_time); p = request['payload']; outer = p['call_id']
+    steps = literal_batch(p.get('input'))
+    rf_require(steps and len(steps) == 2 and all(s[0] == 'Bash' for s in steps), '두 순차 Bash 호출만 지원합니다')
+    rows = [r for r in records if r.get('type') == 'response_item' and r.get('payload', {}).get('call_id') == outer]
+    rf_require(len(rows) == 2 and rows[0] == request and rows[1]['payload'].get('type') == 'custom_tool_call_output'
+               and turn_of(rows[1]) == turn, '원본 요청·yield 응답이 유일하지 않습니다')
+    yielded = rows[1]; output = host_output(yielded['payload'].get('output')); cell = yielded_cell(yielded['payload'].get('output'))
+    rf_require(cell and output and len(output) == 2, '첫 단계 결과를 포함한 단일 yield가 필요합니다')
+    result = json.loads(output[1]['text'])
+    rf_require(isinstance(result, dict) and type(result.get('exit_code')) is int and result['exit_code'] == 0
+               and not result.get('session_id'), '첫 단계의 실제 종료 결과가 필요합니다')
+    waits = [r for r in records if r.get('type') == 'response_item'
+             and r.get('payload', {}).get('type') == 'function_call' and r['payload'].get('name') == 'wait'
+             and host_time(r) > host_time(yielded)
+             and json.loads(r['payload'].get('arguments', '{}')).get('cell_id') == cell]
+    rf_require(len(waits) == 1, '유일한 실제 wait가 필요합니다')
+    wait = waits[0]; args = json.loads(wait['payload']['arguments'])
+    rf_require(not args.get('terminate'), '강제 종료는 승인 시간 초과가 아닙니다')
+    wait_rows = [r for r in records if r.get('type') == 'response_item'
+                 and r.get('payload', {}).get('call_id') == wait['payload']['call_id']]
+    rf_require(len(wait_rows) == 2 and wait_rows[0] == wait
+               and wait_rows[1]['payload'].get('type') == 'function_call_output'
+               and turn_of(wait_rows[1]) == turn_of(wait), '실제 wait 종료 응답이 필요합니다')
+    reply = wait_rows[1]; blocks = host_output(reply['payload'].get('output'))
+    expected = ('Script error:\nexec_command failed: CreateProcess { message: "Rejected(\\"'
+                'The automatic permission approval review did not finish before its deadline. '
+                'Do not assume the action is unsafe based on the timeout alone. '
+                'You may retry once, or ask the user for guidance or explicit approval.\\")" }')
+    rf_require(blocks and len(blocks) == 2 and blocks[1]['text'] == expected
+               and re.fullmatch(r'Script failed\nWall time [0-9.]+ seconds\nOutput:\n', blocks[0]['text']),
+               '정확한 호스트 승인 시간 초과 응답이 아닙니다')
+    started, ended = host_time(request), host_time(reply)
+    rf_require(started < host_time(yielded) <= prepared < host_time(wait) < ended, '호출·준비·wait 시각 불일치')
+    natives = [r for r in records if r.get('type') == 'event_msg'
+               and r.get('payload', {}).get('type') == 'item_completed' and r['payload'].get('turn_id') == turn
+               and started <= host_time(r) <= ended]
+    rf_require(len(natives) == 1, '첫 단계 외에 실행된 명령이 있습니다')
+    proof = natives[0]; e = proof['payload']; item = e.get('item', {}); command = item.get('command')
+    rf_require(e.get('thread_id') == sid and item.get('type') == 'CommandExecution'
+               and item.get('source') == 'unified_exec_startup' and item.get('status') == 'completed'
+               and item.get('id') != call_id and type(item.get('exit_code')) is int and item['exit_code'] == 0
+               and isinstance(command, list) and len(command) == 3 and command[1] in ('-c', '-lc')
+               and command[2] == steps[0][1] and canonical_cwd(item.get('cwd'))
+               and started <= e.get('started_at_ms', -1) / 1000
+               <= e.get('completed_at_ms', -1) / 1000 <= host_time(proof) <= host_time(yielded)
+               and result.get('output') == item.get('stdout', item.get('aggregated_output')),
+               '첫 단계 native 종료 증거 불일치')
+    for row in records:
+        event = row.get('payload', {}); value = event.get('item', {})
+        if row.get('type') == 'event_msg' and event.get('type') in ('item_started', 'item_completed'):
+            rf_require(value.get('id') != call_id, '시간 초과 대상의 실제 실행 기록이 있습니다')
+            if event.get('turn_id') == turn and value.get('id') != item.get('id'):
+                rf_require(not started <= event.get('started_at_ms', -1) / 1000 <= ended,
+                           '원본 턴의 다른 실행과 모순됩니다')
+        if row.get('type') == 'response_item' and turn_of(row) == turn:
+            rf_require(not (started <= host_time(row) <= prepared and row != request
+                            and event.get('type') in ('custom_tool_call', 'function_call')), '모호한 동시 호출')
+    outstanding = [k for k, v in calls.items() if v.get('turn_id') == turn
+                   and v.get('transcript_path') == call['transcript_path'] and started <= v.get('prepared_at', -1) < ended]
+    rf_require(outstanding == [call_id], '준비된 명령이 유일하지 않습니다')
+    return {'outer_call_id': outer, 'cell_id': cell, 'step_index': 1, 'prefix_item_id': item['id'],
+            'source_sha256': hashlib.sha256(p['input'].encode()).hexdigest(),
+            'records_sha256': rf_digest([request, yielded, proof, wait, reply])}
+
+
+def approval_timeout_plan(store, sid, root, call_id):
+    data = store.get(sid, root); call = data['calls'].get(call_id)
+    rf_require(call and not data.get('coverage_problem'), '호출 또는 파일 관찰이 불완전합니다')
+    doc = rf_records(call['transcript_path'], sid, root)
+    rf_require(doc and doc[0] == sid, '실제 호스트 기록이 필요합니다')
+    proof = approval_timeout_evidence(list(doc[2]), sid, call_id, call, data['calls'])
+    evidence = {'session': sid, 'root': root, 'call_id': call_id, 'call_sha256': rf_digest(call),
+                'file_basis_sha256': rf_digest(observation_basis(data)), 'head': head(root), 'timeout': proof}
+    return dict(evidence, source_digest=rf_digest(evidence))
+
+
+def approve_approval_timeout(store, sid, root, call_id, expected_digest, reason):
+    rf_require(expected_digest and reason and reason.strip(), '복구 사유와 plan digest가 필요합니다')
+    evidence = approval_timeout_plan(store, sid, root, call_id)
+    rf_require(evidence['source_digest'] == expected_digest, '시간 초과 증거가 변경됐습니다')
+    with store.transaction():
+        data = store.get(sid, root)
+        rf_require(rf_digest(data['calls'].get(call_id)) == evidence['call_sha256']
+                   and rf_digest(observation_basis(data)) == evidence['file_basis_sha256'] and head(root) == evidence['head'],
+                   '검증 중 관찰 상태가 변경됐습니다')
+        receipt = {'source': 'host-approval-timeout', 'status': 'not_started', 'exit_code': None,
+                   'reason': reason.strip(), 'evidence': evidence, 'recorded_at': time.time(), 'approved_by_session': sid}
+        data.setdefault('approval_timeout_resolutions', []).append(receipt)
+        data['calls'][call_id]['terminal'] = receipt
+        store.save(sid, root, data)
+    result = reconcile_calls(store, sid, root, only=call_id)
+    return {'status': 'not_started', 'original_exit_code': None, 'completion': 'not-evaluated',
+            'pending_calls': list(result['calls']), 'source_digest': evidence['source_digest']}
+
+
 def patch(installed, candidate):
-    if 'def restart_fetch_plan(' in installed:
-        raise ValueError('Recovery already installed')
     for name in ('leading_poll_batch', 'host_records', 'host_time', 'observation_basis', 'reconcile_calls'):
         function(installed, name)
     before = function(installed, 'main')
-    anchor = "choices=['hook', 'status',"
+    anchor = "choices=["
     dispatch = "    if args.action in ('unused-handoff-plan', 'unused-handoff'):"
     if before.count(anchor) != 1 or before.count(dispatch) != 1:
         raise ValueError('Unrecognized CLI layout')
-    after = before.replace(anchor, "choices=['restart-fetch-plan', 'approve-restart-fetch', 'restart-decline-plan', 'approve-restart-decline', 'hook', 'status',", 1)
+    already = 'def restart_fetch_plan(' in installed
+    after = before if already else before.replace(anchor, "choices=['restart-fetch-plan', 'approve-restart-fetch', 'restart-decline-plan', 'approve-restart-decline',", 1)
     if "parser.add_argument('--call-id')" not in after:
         after = after.replace("    parser.add_argument('--session')", "    parser.add_argument('--call-id')\n    parser.add_argument('--session')", 1)
-    after = after.replace(dispatch,
+    if not already:
+        after = after.replace(dispatch,
         "    if args.action in ('restart-fetch-plan', 'approve-restart-fetch'):\n"
         "        result = restart_fetch_plan(store, sid, root, args.call_id) if args.action == 'restart-fetch-plan' else approve_restart_fetch(store, sid, root, args.call_id, args.expect_source_digest, args.reason)\n"
         "        print(json.dumps(result, ensure_ascii=False))\n        return 0\n" + dispatch, 1)
-    after = after.replace(dispatch,
+    if not already:
+        after = after.replace(dispatch,
         "    if args.action in ('restart-decline-plan', 'approve-restart-decline'):\n"
         "        result = restart_decline_plan(store, sid, root, args.call_id) if args.action == 'restart-decline-plan' else approve_restart_decline(store, sid, root, args.call_id, args.expect_source_digest, args.reason)\n"
         "        print(json.dumps(result, ensure_ascii=False))\n        return 0\n" + dispatch, 1)
     names = ('rf_require', 'rf_digest', 'rf_source', 'rf_records', 'rf_envelope', 'rf_probe_command',
              'rf_archived_restart', 'rf_restart', 'rf_run', 'rf_verify',
-             'restart_fetch_plan', 'approve_restart_fetch', 'rd_evidence', 'restart_decline_plan', 'approve_restart_decline')
-    if any(isinstance(n, ast.FunctionDef) and n.name in names for n in ast.parse(installed).body):
-        raise ValueError('Partial or conflicting recovery already installed')
-    helpers = '\n\n\n'.join(function(candidate, name) for name in names)
+             'restart_fetch_plan', 'approve_restart_fetch', 'rd_evidence', 'restart_decline_plan', 'approve_restart_decline',
+             'approval_timeout_evidence', 'approval_timeout_plan', 'approve_approval_timeout')
+    present = {n.name for n in ast.parse(installed).body if isinstance(n, ast.FunctionDef)}
+    for name in names:
+        if name in present and function(installed, name) != function(candidate, name):
+            raise ValueError('Conflicting recovery already installed: ' + name)
+    missing = [name for name in names if name not in present]
+    if not missing:
+        raise ValueError('Recovery already installed')
+    if already and set(missing) != {'approval_timeout_evidence', 'approval_timeout_plan', 'approve_approval_timeout'}:
+        raise ValueError('Partial recovery installation')
+    after = after.replace(anchor, "choices=['approval-timeout-plan', 'approve-approval-timeout',", 1)
+    after = after.replace(dispatch,
+        "    if args.action in ('approval-timeout-plan', 'approve-approval-timeout'):\n"
+        "        result = approval_timeout_plan(store, sid, root, args.call_id) if args.action == 'approval-timeout-plan' else approve_approval_timeout(store, sid, root, args.call_id, args.expect_source_digest, args.reason)\n"
+        "        print(json.dumps(result, ensure_ascii=False))\n        return 0\n" + dispatch, 1)
+    helpers = '\n\n\n'.join(function(candidate, name) for name in missing)
     result = installed.replace(before, helpers + '\n\n\n' + after, 1)
     compile(result, '<restart-fetch-candidate>', 'exec')
     return result
