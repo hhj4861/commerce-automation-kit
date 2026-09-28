@@ -73,3 +73,14 @@ test("all three levels reach both providers with matching learning tasks and dis
   }
   assert.equal(users.size, 3);
 });
+
+test("changing the study budget preserves level, feedback, quiz history and conversation revision", () => {
+  const quiz: LearningEvent = { kind: "quiz", id: "q", assessmentId: "a", at: now + 2, lessonId: "cafe", correct: true };
+  const before = learningProfile([assessment, feedback, quiz], now + 100)!;
+  const settings: LearningEvent = { kind: "settings", id: "s", at: now + 3, assessmentId: "a", minutes: 10, days: 3 };
+  const after = learningProfile([assessment, feedback, quiz, settings], now + 100)!;
+  assert.deepEqual(after, { ...before, minutes: 10, days: 3 });
+  assert.equal(studyPlan("ja", after, now).length, 3);
+  const retaken = learningProfile([assessment, feedback, quiz, settings, { ...assessment, id: "new", at: now + 4 }], now + 100)!;
+  assert.equal(retaken.minutes, 15); assert.equal(retaken.days, 5);
+});

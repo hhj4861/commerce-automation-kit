@@ -54,7 +54,7 @@ export function Header({ isTutor = false, savedLanguage }: { isTutor?: boolean; 
   try { if (pathname?.startsWith("/s/")) portalSlug = decodeURIComponent(pathname.split("/")[2]); }
   catch { /* A malformed URL must not break navigation. */ }
   const studentSlug = params.get("s") ?? portalSlug;
-  const query = new URLSearchParams({ ...(language ? { language } : {}), ...(studentSlug ? { s: studentSlug } : {}) });
+  const query = new URLSearchParams({ ...(params.get("lesson") ? { lesson: params.get("lesson")! } : {}), ...(language ? { language } : {}), ...(studentSlug ? { s: studentSlug } : {}) });
   const learnHref = `/learn?${query}`;
   const changeHref = languageSelectionHref(`${pathname === "/conversation" ? "/conversation" : "/learn"}?${query}`);
 
@@ -137,6 +137,7 @@ function HeaderLink({
   return (
     <Link
       href={href}
+      aria-current={active ? "page" : undefined}
       className={`inline-flex h-11 shrink-0 items-center whitespace-nowrap rounded-full px-2.5 font-medium transition-colors sm:px-3.5 ${
         active
           ? "bg-accent-wash text-accent"

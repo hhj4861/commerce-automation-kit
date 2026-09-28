@@ -52,10 +52,10 @@ export default async function ConversationPage({
   return (
     <div lang="ko" className="mx-auto max-w-3xl px-5 py-12">
       <Link
-        href={`/learn?${new URLSearchParams({ language, ...(params.s ? { s: params.s } : {}) })}`}
+        href={profile && !profile.confirmed ? assessmentHref(language, params.s, `/conversation?${new URLSearchParams({ language, lesson: lesson.id })}`) : `/learn?${new URLSearchParams({ language, lesson: lesson.id, ...(params.s ? { s: params.s } : {}) })}#lesson`}
         className="text-sm text-accent underline"
       >
-        언어 학습으로 돌아가기
+        {profile && !profile.confirmed ? "레벨 체크 결과 보기" : "연습하던 수업으로 돌아가기"}
       </Link>
       <h1 className="mt-6 font-display text-4xl">AI와 한마디</h1>
       <p className="mt-3 text-ink-soft">
@@ -76,6 +76,7 @@ export default async function ConversationPage({
       ) : (
         <ConversationRoom
           key={`${language}:${lesson.id}:${params.s ?? actor}:${profile?.revision ?? "legacy"}`}
+          cacheKey={`hanmadi:conversation:v2:${actor}:${language}:${lesson.id}:${profile?.revision ?? "legacy"}`}
           language={language}
           lesson={lesson}
           studentSlug={params.s}

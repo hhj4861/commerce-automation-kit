@@ -16,7 +16,7 @@ export function LearningStudio({
   initialLessonId?: string; initialProfile?: LearningProfile | null; initialPlan?: ReturnType<typeof studyPlan>;
 }) {
   const language = initialLanguage;
-  const [lessonId, setLessonId] = useState(courses[language].find(l => l.id === initialLessonId)?.id ?? "greetings");
+  const lessonId = (courses[language].find(l => l.id === initialLessonId)?.id ?? "greetings");
   const [profile, setProfile] = useState(initialProfile);
   const [plan, setPlan] = useState(initialPlan);
   const [sessionCompleted, setCompleted] = useState<string[]>([]);
@@ -75,10 +75,10 @@ export function LearningStudio({
         <span className="rounded-full bg-accent-wash px-4 py-2 text-accent">학습 중 · {languages[language].name}</span>
         <Link href={languageSelectionHref(`/learn?${query}`)} className="text-sm text-accent underline">학습 언어 변경</Link>
       </div>
-      {profile && plan ? <LearningPlan language={language} profile={profile} plan={plan} studentSlug={studentSlug} /> : <p className="mb-6 text-sm text-ink-soft">미리보기예요. 로그인하거나 학생 개인 링크로 열면 레벨 체크와 맞춤 계획을 저장할 수 있어요.</p>}
+      {profile && plan ? <LearningPlan language={language} profile={profile} plan={plan} studentSlug={studentSlug} onUpdate={(next, nextPlan) => { setProfile(next); setPlan(nextPlan); }} /> : <p className="mb-6 text-sm text-ink-soft">미리보기예요. 로그인하거나 학생 개인 링크로 열면 레벨 체크와 맞춤 계획을 저장할 수 있어요.</p>}
       <div className="grid gap-8 md:grid-cols-[220px_1fr]">
         <aside>
-          <h2 className="font-display text-xl">입문 회화</h2>
+          <h2 className="font-display text-xl">학습할 주제</h2>
           <p className="my-2 text-sm text-ink-soft">
             {
               courses[language].filter((l) =>
@@ -89,16 +89,15 @@ export function LearningStudio({
           </p>
           <nav aria-label="수업 선택" className="mt-4 flex flex-col gap-2">
             {courses[language].map((l, i) => (
-              <button
+              <Link
                 key={l.id}
-                type="button"
+                href={`/learn?${new URLSearchParams({ language, lesson: l.id, ...(studentSlug ? { s: studentSlug } : {}) })}#lesson`}
                 aria-current={l.id === lessonId ? "step" : undefined}
-                onClick={() => setLessonId(l.id)}
                 className={`rounded-lg px-3 py-3 text-left text-base ${l.id === lessonId ? "bg-ink text-paper" : "hover:bg-accent-wash"}`}
               >
                 {i + 1}. {l.title}
                 {completed.includes(`${language}:${l.id}`) ? " ✓" : ""}
-              </button>
+              </Link>
             ))}
           </nav>
           {language === "ko" && (
@@ -118,7 +117,7 @@ export function LearningStudio({
             </p>
           )}
         </aside>
-        <section aria-label={lesson.title}>
+        <section id="lesson" tabIndex={-1} className="scroll-mt-24" aria-label={lesson.title}>
           <p
             lang={language}
             className="mb-6 break-words font-display text-4xl text-accent sm:text-5xl"
@@ -151,7 +150,7 @@ export function LearningStudio({
           />
           <Link
             href={`/conversation?${query}`}
-            className="mt-8 inline-flex min-h-12 items-center rounded-full bg-accent px-6 py-3 font-medium text-white hover:bg-accent-strong"
+            className="mt-8 inline-flex min-h-12 items-center rounded-full bg-accent px-6 py-3 font-medium text-accent-ink hover:bg-accent-strong"
           >
             이 주제로 AI와 대화하기
           </Link>
@@ -212,6 +211,7 @@ function LessonQuiz({
             ? `정답이에요! ${lesson.quiz.explanation}`
             : "다시 골라 보세요. 위의 표현을 참고해도 좋아요."}
       </p>
+      {answer !== null && <p className="mt-2 text-sm text-ink-soft">다시 고르는 것은 연습이에요. 오늘 처음 고른 답을 기준으로 다음 복습을 정해요.</p>}
     </fieldset>
   );
 }

@@ -31,7 +31,7 @@ function LoginForm() {
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (busy) return;
+    if (busy || !pin.trim()) return;
     setBusy(true);
     setError(null);
     try {
@@ -39,6 +39,7 @@ function LoginForm() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ pin }),
+        signal: AbortSignal.timeout(15000),
       });
       if (res.ok) {
         router.replace(languageSelectionHref(from));
@@ -63,13 +64,14 @@ function LoginForm() {
         <div className="flex justify-center">
           <Logo size={36} />
         </div>
-        <p className="mt-4 font-display text-xl">튜터 전용 페이지</p>
+        <h1 className="mt-4 font-display text-xl">Hanmadi 시작하기</h1>
         <p className="mt-1.5 text-sm text-ink-soft">
-          PIN을 입력해 주세요. 학생용 링크는
-          <br />
-          포털(/s/…)과 학습 팩(/library)입니다.
+          발급받은 PIN으로 로그인해 주세요. 학생 개인 링크를 받았다면 그 링크에서 바로 학습할 수 있어요.
         </p>
         <input
+          aria-label="PIN"
+          aria-invalid={!!error}
+          aria-describedby={error ? "login-error" : undefined}
           type="password"
           inputMode="numeric"
           autoComplete="off"
@@ -84,11 +86,11 @@ function LoginForm() {
             error ? "border-accent" : "border-ink-faint"
           }`}
         />
-        {error && <p className="mt-2 text-sm text-accent">{error}</p>}
+        {error && <p id="login-error" role="alert" className="mt-2 text-sm text-accent">{error}</p>}
         <button
           type="submit"
-          disabled={busy}
-          className="mt-4 min-h-11 w-full rounded-full bg-accent px-5 py-2 font-medium text-white transition-colors hover:bg-accent-strong disabled:opacity-60"
+          disabled={busy || !pin.trim()}
+          className="mt-4 min-h-11 w-full rounded-full bg-accent px-5 py-2 font-medium text-accent-ink transition-colors hover:bg-accent-strong disabled:opacity-60"
         >
           {busy ? "확인 중…" : "열기"}
         </button>
