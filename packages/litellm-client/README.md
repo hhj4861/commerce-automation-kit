@@ -70,3 +70,16 @@ SDK 전송/인터페이스 수정은 **패키지 버전 갱신 후 앱 재빌드
 npm test --prefix packages/litellm-client --workspaces=false
 npm pack ./packages/litellm-client --pack-destination /tmp
 ```
+
+### Personal account HTTP adapter (0.2)
+
+```js
+const accounts = createAccountClient({ baseUrl, apiKey: platformKey, subject: serverDerivedSubject });
+await accounts.connect('codex'); // poll list() for the short-lived official device challenge
+await accounts.connect('claude', { apiKey: userProvidedAnthropicApiKey });
+const connections = await accounts.list();
+await accounts.client(`${connections[0].id}:${connections[0].models[0]}`).generateJSON({ messages, name, schema });
+await accounts.disconnect(connections[0].id);
+```
+
+Use one private platform key per application; derive the 64-hex subject on the server from that application's identity. The browser never chooses a subject, destination or platform key. `allowLocalhost: true` is explicit for local tests only. `ttlSeconds` (60–2592000) is available for browser-bound connections that must expire. A disconnected/unavailable personal model never falls back to default credits. Application authentication, CSRF checks and UI consent remain in the application; lifecycle validation and transport are shared. The private backend lives in `services/ai-gateway` (`ACCOUNTS.md`).

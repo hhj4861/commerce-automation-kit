@@ -47,12 +47,16 @@ def execute(action, id, model, messages):
         else:
             secret = store.unseal(id, row['secret'])
             route = {'model': 'anthropic/' + model, 'api_key': secret['api_key']}
-        reply = litellm.completion(**route, messages=messages if action == 'chat' else [{'role': 'user', 'content': 'Reply with only OK.'}], max_tokens=700, timeout=28, num_retries=0)
+        options = {}
+        if action == 'chat' and isinstance(messages, dict):
+            options = {k: messages[k] for k in ('response_format', 'max_tokens') if k in messages}
+            messages = messages['messages']
+        reply = litellm.completion(**route, messages=messages if action == 'chat' else [{'role': 'user', 'content': 'Reply with only OK.'}], timeout=28, num_retries=0, **{'max_tokens': 700, **options})
         choice = reply.choices[0]
         if choice.finish_reason != 'stop' or getattr(choice.message, 'refusal', None):
             raise RuntimeError('Incomplete or refused model response')
         text = choice.message.content
-        if not isinstance(text, str) or not text.strip() or len(text) > 2000:
+        if not isinstance(text, str) or not text.strip() or len(text) > (8000 if options.get('response_format') else 2000):
             raise RuntimeError('Invalid model response')
         store.update(id, state='connected', challenge={})
         return {'reply': text.strip()}

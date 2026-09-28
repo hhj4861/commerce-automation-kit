@@ -114,6 +114,39 @@ class AccountAPI(unittest.IsolatedAsyncioTestCase):
                     self.fail('lock should reject')
         self.assertEqual(self.app.state.store.get(id)['state'], 'connected')
 
+    async def test_browser_connection_expiry_erases_secrets_and_rejects_refresh(self):
+        id = await self.connect(extra={'ttlSeconds': 60})
+        with patch('account_service.time.time', return_value=9999999999):
+            self.app.state.store.purge_expired()
+            row = self.app.state.store.get(id)
+            self.assertEqual(row['state'], 'expired')
+            self.assertIsNone(row['secret'])
+            with self.assertRaises(HTTPException):
+                self.app.state.store.update(id, state='connected', secret={'late': 'token'})
+            response = await self.client.post('/v1/chat/completions', headers=self.headers, json={'model': id + ':gpt-test', 'messages': [{'role': 'user', 'content': 'hi'}]})
+            self.assertEqual(response.status_code, 409)
+
+    async def test_json_options_reach_worker_and_unsafe_limits_are_rejected(self):
+        seen = []
+        async def runner(action, id, model, messages, store):
+            if action == 'connect':
+                store.update(id, state='connected')
+            else:
+                seen.append(messages)
+            return {'reply': '{"reason":"ok"}'}
+        app = create_app(self.env, runner)
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url='http://test') as client:
+            response = await client.post('/connections', headers=self.headers, json={'provider': 'codex'})
+            id = response.json()['id']
+            await asyncio.sleep(0)
+            data = {'model': id + ':gpt-test', 'messages': [{'role': 'user', 'content': 'plan'}], 'max_tokens': 1500,
+                    'response_format': {'type': 'json_schema', 'json_schema': {'name': 'plan', 'schema': {'type': 'object'}}}}
+            self.assertEqual((await client.post('/v1/chat/completions', headers=self.headers, json=data)).status_code, 200)
+            self.assertEqual(seen[0]['response_format'], data['response_format'])
+            self.assertEqual(seen[0]['max_tokens'], 1500)
+            data['max_tokens'] = 99999
+            self.assertEqual((await client.post('/v1/chat/completions', headers=self.headers, json=data)).status_code, 400)
+
 
 class RevocationRace(unittest.TestCase):
     def test_disconnect_cannot_be_undone_by_an_inflight_refresh(self):
@@ -181,6 +214,11 @@ class PinnedWorker(unittest.TestCase):
                 self.assertNotIn(b'private-fixture-token', (store.root / 'accounts.sqlite3').read_bytes())
                 with self.assertRaises(RuntimeError):
                     Authenticator()._login_device_code()
+                response.choices[0].message.content = json.dumps({'reason': 'plan' * 600})
+                schema = {'type': 'json_schema', 'json_schema': {'name': 'plan', 'schema': {'type': 'object'}}}
+                execute('chat', row['id'], 'gpt-test', {'messages': [{'role': 'user', 'content': 'plan'}], 'max_tokens': 1500, 'response_format': schema})
+                self.assertEqual(complete.call_args.kwargs['response_format'], schema)
+                self.assertEqual(complete.call_args.kwargs['max_tokens'], 1500)
                 response.choices[0].finish_reason = 'length'
                 with self.assertRaises(RuntimeError):
                     execute('chat', row['id'], 'gpt-test', [{'role': 'user', 'content': 'hello'}])

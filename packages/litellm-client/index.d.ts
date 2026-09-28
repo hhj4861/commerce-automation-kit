@@ -46,3 +46,6 @@ export function createModelSession(options: {
   disconnect(id: string): Promise<void>;
   client(selection?: string): LiteLLMClient;
 };
+
+export { createAccountClient, publicAccountConnections, assertAccountSelection, accountSelectionPattern } from "./accounts.mjs";
+export type { AccountConnection } from "./accounts.mjs";

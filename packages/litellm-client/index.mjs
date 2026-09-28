@@ -197,3 +197,5 @@ export function createModelSession({ scope, defaultRoute, adapter, fetch: fetche
     },
   });
 }
+
+export { createAccountClient, publicAccountConnections, assertAccountSelection, accountSelectionPattern } from "./accounts.mjs";
