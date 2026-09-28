@@ -119,6 +119,17 @@ python3 -m unittest -v
 이미지는 공식 레지스트리에서 확인한 immutable digest로 고정했다. `main-stable` 조회 당시 digest를 고정한 것이며 앞선 로컬 pip 버전과 동일하다고 가정하지 않는다. 업그레이드는 새 digest와 통합검사를 함께 변경한다.
 
 
+## 공통 LiteLLM 클라이언트
+
+Festa·Hanmadi 등 소비 플랫폼은 [`@cak/litellm-client`](../../packages/litellm-client/README.md)를
+서버에서 import하여 연결 설정·텍스트/JSON·음성 호출·오류 처리를 공유한다.
+플랫폼 로그인은 통합하지 않는다. 개인 연결도 플랫폼의 기존 인증을 공통 adapter 계약에 연결한다.
+모델 별칭·공급자·예산은 게이트웨이에서 관리하므로 앱마다 공급자 SDK를 수정하지 않는다.
+
+연결 수명주기 인터페이스와 실제 OAuth/API 키 저장 어댑터는 구분한다.
+이번 SDK는 개인 연결 웹 서버/화면을 배포하지 않는다.
+적용 현황은 [`공통 모듈 설계`](../../docs/architecture/shared-ai-accounts.md)를 참조한다.
+
 ## Festa 연결 준비
 
 Festa는 Dify를 거치지 않고 서버에서 LiteLLM의 JSON Schema 응답을 사용합니다.

@@ -1,0 +1,25 @@
+{
+  "name": "@cak/litellm-client",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Server-side LiteLLM transport and platform-scoped connection lifecycle; no shared login required",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "import": "./index.mjs",
+      "default": "./index.mjs"
+    }
+  },
+  "files": [
+    "index.mjs",
+    "index.d.ts",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.mjs"
+  }
+}

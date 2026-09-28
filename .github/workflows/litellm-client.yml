@@ -1,0 +1,19 @@
+name: Shared LiteLLM client
+on:
+  pull_request:
+    paths: ["packages/litellm-client/**", ".github/workflows/litellm-client.yml"]
+  push:
+    branches: [main]
+    paths: ["packages/litellm-client/**", ".github/workflows/litellm-client.yml"]
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm test --prefix packages/litellm-client --workspaces=false
+      - run: npm pack ./packages/litellm-client --dry-run

@@ -1,3 +1,4 @@
+import { createLiteLLMClient, normalizeConfig, LiteLLMError } from "@cak/litellm-client";
 import { guidedInstruction, speakingSteps } from "./guided-speaking";
 import { learningLevels, learningTask, type LearningLevel } from "./adaptive-learning";
 import { getLesson, isLanguage, languages, type Language } from "./courses";
@@ -107,24 +108,7 @@ export function getLiteLLMConfig(
       "AI 회화 연결을 준비 중이에요. 튜터에게 문의해 주세요.",
     );
   try {
-    const url = new URL(base);
-    if (
-      url.username ||
-      url.password ||
-      url.search ||
-      url.hash ||
-      !(
-        url.protocol === "https:" ||
-        (url.protocol === "http:" &&
-          ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname))
-      )
-    )
-      throw new Error();
-    return {
-      baseUrl: url.href.replace(/\/+$/, "").replace(/\/v1$/, "") + "/v1",
-      apiKey: key,
-      model,
-    };
+    return normalizeConfig({ baseUrl: base, apiKey: key, model, allowLocalhost: true });
   } catch {
     throw new ConversationError(
       503,
@@ -147,55 +131,19 @@ export async function completeConversation(
   config: LiteLLMConfig,
   fetcher: typeof fetch = fetch,
 ): Promise<string> {
-  let response: Response;
   try {
-    response = await fetcher(`${config.baseUrl}/chat/completions`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${config.apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: config.model,
-        messages: [
-          { role: "system", content: tutorPrompt(input) },
-          ...input.messages,
-        ],
-        max_tokens: 700,
-        stream: false,
-      }),
-      signal: AbortSignal.timeout(30000),
-      cache: "no-store",
-      redirect: "error",
+    return await createLiteLLMClient({ ...config, allowLocalhost: true, fetch: fetcher }).completeText({
+      messages: [{ role: "system", content: tutorPrompt(input) }, ...input.messages],
+      maxTokens: 700,
+      maxChars: 2000,
     });
-  } catch {
+  } catch (error) {
+    const status = error instanceof LiteLLMError ? error.status : 502;
     throw new ConversationError(
-      504,
-      "AI 응답을 받지 못했어요. 잠시 후 다시 보내 주세요.",
-    );
-  }
-  if (!response.ok)
-    throw new ConversationError(
-      response.status === 429 ? 429 : 502,
-      response.status === 429
-        ? "AI 사용량이 많아요. 잠시 후 다시 시도해 주세요."
-        : "AI 연결에 문제가 있어요. 잠시 후 다시 시도해 주세요.",
-    );
-  try {
-    const data = await response.json();
-    const answer: unknown = data?.choices?.[0]?.message?.content;
-    if (
-      data?.choices?.[0]?.finish_reason === "length" ||
-      typeof answer !== "string" ||
-      !answer.trim() ||
-      answer.length > 2000
-    )
-      throw new Error();
-    return answer.trim();
-  } catch {
-    throw new ConversationError(
-      502,
-      "AI 답변을 완성하지 못했어요. 다시 보내 주세요.",
+      status === 429 ? 429 : status === 504 ? 504 : 502,
+      status === 429 ? "AI 사용량이 많아요. 잠시 후 다시 시도해 주세요."
+        : status === 504 ? "AI 응답을 받지 못했어요. 잠시 후 다시 보내 주세요."
+        : "AI 답변을 완성하지 못했어요. 다시 보내 주세요.",
     );
   }
 }
