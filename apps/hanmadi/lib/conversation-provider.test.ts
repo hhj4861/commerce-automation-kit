@@ -1,3 +1,4 @@
+import { spokenReply } from "./guided-speaking";
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { ConversationError, parseConversation } from "./conversation";
@@ -97,4 +98,35 @@ test("LiteLLM remains available when Dify is not configured", async () => {
   assert.deepEqual(await replyToConversation(input(), "actor", direct, async () => Response.json({
     choices: [{ message: { content: "direct" }, finish_reason: "stop" }],
   })), { reply: "direct" });
+});
+
+test("guided speaking validates step and isolates provider history with server-owned oral instructions", async () => {
+  for (const language of ["ja", "th"] as const) for (const lessonId of ["greetings", "cafe", "directions"]) {
+    const free = { ...input(), language, lessonId };
+    for (const guidedStep of [0, 1]) {
+      const guided = parseConversation({ ...free, guidedStep });
+      assert.notEqual(difyUser("actor", free, "secret"), difyUser("actor", guided, "secret"));
+      await replyToConversation(guided, "actor", config, async (_, init) => {
+        const body = JSON.parse(String(init?.body));
+        assert.match(body.inputs.scenario, /쓰기 없이 듣고 말하는/);
+        assert.ok(body.inputs.scenario.length <= 300);
+        assert.match(body.query, /음성 인식 결과/);
+        assert.match(body.query, /새 질문·새 어휘/);
+        assert.equal(body.conversation_id, undefined);
+        return Response.json({ answer: "연습 표현을 다시 들어 보세요.", conversation_id: id });
+      });
+    }
+    for (const guidedStep of [-1, 2, 1.5, "0", null]) assert.throws(() => parseConversation({ ...free, guidedStep }), status(400));
+    assert.throws(() => parseConversation({ ...free, guidedStep: 0, conversationId: id }), status(400));
+    assert.throws(() => parseConversation({ ...free, guidedStep: 0, messages: [free.messages[0], { role: "assistant", content: "reply" }, free.messages[0]] }), status(400));
+  }
+});
+
+
+test("oral playback excludes coaching, mixed-script annotations and markup links", () => {
+  assert.equal(spokenReply("**こんにちは。**\n한글 발음: 곤니치와\n뜻: 안녕하세요", "ja"), "こんにちは。");
+  assert.equal(spokenReply("ลองพูดอีกครั้ง\n한국어 설명", "th"), "ลองพูดอีกครั้ง");
+  assert.equal(spokenReply("こんにちは (안녕하세요)", "ja"), undefined);
+  assert.equal(spokenReply("[こんにちは](https://invalid.example)", "ja"), undefined);
+  assert.equal(spokenReply("한글 설명만 있어요", "ja"), undefined);
 });

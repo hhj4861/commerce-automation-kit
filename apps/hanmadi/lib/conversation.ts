@@ -1,3 +1,4 @@
+import { guidedInstruction, speakingSteps } from "./guided-speaking";
 import { learningLevels, learningTask, type LearningLevel } from "./adaptive-learning";
 import { getLesson, isLanguage, languages, type Language } from "./courses";
 
@@ -7,6 +8,7 @@ export type ConversationInput = {
   lessonId: string;
   level: LearningLevel;
   learningRevision?: string;
+  guidedStep?: number;
   messages: ChatMessage[];
   studentSlug?: string;
   conversationId?: string;
@@ -76,7 +78,10 @@ export function parseConversation(value: unknown): ConversationInput {
     throw new ConversationError(400, "대화 저장 안내를 확인해 주세요.");
   if (b.learningRevision !== undefined && (typeof b.learningRevision !== "string" || b.learningRevision.length > 160))
     throw new ConversationError(400, "학습 정보를 확인해 주세요.");
+  if (b.guidedStep !== undefined && (typeof b.guidedStep !== "number" || !Number.isInteger(b.guidedStep) || !speakingSteps(b.language, b.lessonId)[b.guidedStep] || b.conversationId || messages.length !== 1))
+    throw new ConversationError(400, "말하기 연습 단계를 확인해 주세요.");
   return {
+    ...(b.guidedStep !== undefined ? { guidedStep: b.guidedStep as number } : {}),
     ...(typeof b.learningRevision === "string" ? { learningRevision: b.learningRevision } : {}),
     language: b.language,
     lessonId: b.lessonId,
@@ -129,6 +134,7 @@ export function getLiteLLMConfig(
 }
 export function tutorPrompt(input: ConversationInput): string {
   const lesson = getLesson(input.language, input.lessonId)!;
+  if (input.guidedStep !== undefined) return `${guidedInstruction(input.language, input.lessonId, input.guidedStep)} Stay in this learning role. No HTML, links or personal data. Keep under 400 characters.`;
   return `You are Hanmadi, a patient language conversation partner. Teach ${languages[input.language].name} (${input.language}).
 Lesson: ${lesson.title}. Goal: ${lesson.goal}. Level: ${input.level}.
 Difficulty guidance: ${learningLevels[input.level].guide} Practice: ${learningTask(input.level, input.lessonId)}

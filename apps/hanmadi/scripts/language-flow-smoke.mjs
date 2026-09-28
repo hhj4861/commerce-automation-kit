@@ -14,15 +14,17 @@ const temp = mkdtempSync(join(tmpdir(), 'hanmadi-language-'));
 const app = join(temp, 'app');
 const origin = 'http://127.0.0.1:3190';
 const requests = [];
+const speechRequests = [];
 const answers = { '일본어': 'こんにちは。\n한글 발음: 곤니치와\n뜻: 안녕하세요.', '태국어': 'สวัสดีค่ะ\n한글 발음: 싸왓디이 카\n뜻: 안녕하세요.', '한국어': '안녕하세요. 만나서 반가워요.' };
 const mock = createServer(async (req, res) => {
   assert.equal(req.headers.authorization, 'Bearer language-smoke-only');
   let raw = ''; for await (const chunk of req) raw += chunk;
   if (req.url === '/v1/audio/transcriptions') {
     res.setHeader('content-type', 'application/json');
-    return res.end(JSON.stringify({ text: 'สวัสดีค่ะ' }));
+    return res.end(JSON.stringify({ text: raw.includes('\r\n\r\nja\r\n') ? 'こんにちは' : 'สวัสดีค่ะ' }));
   }
   if (req.url === '/v1/audio/speech') {
+    speechRequests.push(JSON.parse(raw));
     const wav = Buffer.alloc(44 + 8820);
     wav.write('RIFF'); wav.writeUInt32LE(wav.length - 8, 4); wav.write('WAVEfmt ', 8);
     wav.writeUInt32LE(16, 16); wav.writeUInt16LE(1, 20); wav.writeUInt16LE(1, 22);
@@ -138,6 +140,7 @@ try {
     await page.reload(); // Saved assessment resumes instead of starting over.
     await page.getByRole('link', { name: '짧은 회화로 확인하기 →', exact: true }).click();
     await page.waitForURL('**/conversation?language=' + code);
+    if (code === 'th') await page.goto(page.url() + '&mode=free');
     assert.ok((await page.locator('body').innerText()).includes('맞춤 난이도 · ' + level));
     assert.equal(await page.getByRole('button', { name: '적당해요', exact: true }).isEnabled(), false);
     await page.getByLabel('대화가 회화 서버에 저장되는 것에 동의해요.').check();
@@ -205,6 +208,7 @@ try {
       await page.setViewportSize({ width: 1280, height: 900 }); await screenshot('plan-desktop');
       await page.setViewportSize({ width: 390, height: 844 });
     }
+    if (code === 'th') await page.getByText('표현 글자와 선택 문제 · 필요할 때만 보기', { exact: true }).click();
     if (pronunciation) assert.ok((await page.locator('body').innerText()).includes('한글 발음 · ' + pronunciation));
     if (code === 'ko') {
       const quizSaved = page.waitForResponse(r => r.url().endsWith('/api/learning-profile') && r.request().method() === 'POST');
@@ -227,9 +231,9 @@ try {
       await page.waitForURL('**/learn?language=th&lesson=cafe#lesson');
       await page.reload();
       assert.ok(await page.getByRole('navigation', { name: '수업 선택' }).getByRole('link').nth(1).getAttribute('aria-current'));
-      await page.getByRole('link', { name: '이 주제로 AI와 대화하기', exact: true }).click();
+      await page.getByRole('link', { name: '이 주제로 듣고 말하기 →', exact: true }).click();
       await page.waitForURL('**/conversation?language=th&lesson=cafe');
-      assert.equal(await page.getByRole('log').getByText('한마디 AI', { exact: true }).count(), 0, 'another topic has its own history');
+      await page.getByRole('heading', { name: '먼저 소리를 들어요', exact: true }).waitFor();
       await page.getByRole('link', { name: '연습하던 수업으로 돌아가기', exact: true }).click();
       await page.waitForURL('**/learn?language=th&lesson=cafe#lesson');
     }
@@ -341,6 +345,104 @@ try {
   assert.equal(await noStorage.locator('textarea').inputValue(), '저장 제한에서도 입력 유지');
   await noStorage.getByText(/이 브라우저에서는 임시 저장이 안 돼요/).waitFor();
   await noStorage.close();
+  // A complete beginner finishes both languages without typing or reading target script.
+  await login();
+  await page.emulateMedia({ colorScheme: 'light' });
+  await page.setViewportSize({ width: 390, height: 844 });
+  for (const [language, name] of [['ja', '일본어'], ['th', '태국어']]) {
+    await page.goto(origin + '/assessment?language=' + language);
+    if (language === 'ja') await page.getByRole('button', { name: '문제부터 다시 체크하기', exact: true }).click(); // Thai already has an unfinished retake draft.
+    await page.getByRole('button', { name: '처음이에요 · 듣고 말하기부터', exact: true }).click();
+    assert.equal(await page.locator('input[type=radio]').count(), 0);
+    await page.reload();
+    const startResponse = page.waitForResponse(r => r.url().endsWith('/api/learning-profile') && r.request().method() === 'POST');
+    await page.getByRole('button', { name: '듣고 말하기로 시작', exact: true }).click();
+    const start = await (await startResponse).json();
+    assert.equal(start.profile.source, 'first-speaking'); assert.equal(start.profile.level, 'beginner');
+    assert.equal(start.profile.confirmed, true); assert.equal(start.profile.chatTurns, 0);
+    await page.getByRole('link', { name: '듣고 말하기 시작 →', exact: true }).click();
+    assert.equal(await page.locator('textarea').count(), 0, 'no keyboard composer');
+    for (let step = 0; step < 2; step++) {
+      await page.getByRole('heading', { name: '먼저 소리를 들어요', exact: true }).waitFor();
+      const speech = page.waitForResponse(r => r.url().endsWith('/api/conversation/speech'));
+      await page.getByRole('button', { name: '표현 듣기', exact: true }).click();
+      assert.equal((await speech).status(), 200);
+      assert.ok(!/[가-힣]/.test(speechRequests.at(-1).input), 'model audio contains only target expression');
+      await page.waitForFunction(() => document.querySelector('audio')?.readyState >= 2);
+      assert.ok(await page.locator('audio').evaluate(async a => (await (await fetch(a.src)).arrayBuffer()).byteLength > 0));
+      await page.getByLabel('듣기 속도', { exact: true }).selectOption('0.75');
+      assert.equal(await page.locator('audio').evaluate(a => a.playbackRate), 0.75);
+      if (step === 0) await screenshot('speaking-' + language + '-listen');
+      await page.getByRole('button', { name: '따라 말해 볼게요 →', exact: true }).click();
+      if (step === 0) {
+        assert.equal(await page.getByRole('button', { name: '눌러서 말하기', exact: true }).isEnabled(), false, 'consent required for STT/AI');
+        await page.getByLabel(/음성에서 인식한 말과 AI 답변이/).check();
+        await page.getByLabel('AI 대답 자동 듣기').uncheck();
+      }
+      for (const phase of ['repeat', 'roleplay']) {
+        if (phase === 'roleplay') {
+          assert.equal(await page.getByText(name + ' 글자 보기 · 선택', { exact: true }).count(), 0);
+          await page.getByRole('button', { name: '막막해요 · 발음 힌트 보기', exact: true }).click();
+        }
+        if (step === 0) {
+          // Simulated microphone -> actual STT route -> actual conversation route; no textarea or send click.
+          await page.getByRole('button', { name: '눌러서 말하기', exact: true }).click();
+          await page.getByRole('button', { name: '말 다 했어요 · AI에게 보내기', exact: true }).waitFor();
+          await delay(300);
+          const conversation = page.waitForResponse(r => r.url().endsWith('/api/conversation') && r.request().method() === 'POST');
+          await page.getByRole('button', { name: '말 다 했어요 · AI에게 보내기', exact: true }).click();
+          assert.equal((await conversation).status(), 200);
+          assert.match(requests.at(-1).query, /음성 인식 결과/);
+          assert.equal(requests.at(-1).inputs.language, name);
+          assert.equal(requests.at(-1).conversation_id, undefined);
+          await page.getByText('AI와 주고받기', { exact: true }).waitFor();
+          if (phase === 'roleplay') {
+            const replay = page.waitForResponse(r => r.url().endsWith('/api/conversation/speech'));
+            await page.getByRole('button', { name: '방금 음성 다시 듣기', exact: true }).click();
+            assert.equal((await replay).status(), 200);
+            assert.equal(speechRequests.at(-1).input, answers[name].split('\n')[0]);
+            await screenshot('speaking-' + language + '-roleplay');
+          }
+        } else {
+          if (phase === 'repeat') {
+            await page.evaluate(() => { navigator.mediaDevices.getUserMedia = async () => { throw new DOMException('Synthetic denial', 'NotAllowedError'); }; });
+            await page.getByRole('button', { name: '눌러서 말하기', exact: true }).click();
+            await page.getByText(/마이크를 사용할 수 없어요/).waitFor();
+          }
+          await page.getByRole('button', { name: '마이크 없이 소리 내어 말했어요', exact: true }).click();
+        }
+        await page.getByRole('button', { name: phase === 'repeat' ? '상황에서 말해 보기 →' : step === 0 ? '다음 표현 듣기 →' : '오늘 연습 돌아보기 →', exact: true }).click();
+      }
+      if (step === 0) {
+        await page.reload();
+        await page.getByText(name + ' · 인사와 자기소개 · 표현 2 / 2', { exact: true }).waitFor();
+      }
+    }
+    // Recover microphone permission injection on navigation; a declined mic never blocks the plan.
+    const savedResponse = page.waitForResponse(r => r.url().endsWith('/api/learning-profile') && r.request().method() === 'POST');
+    await page.getByRole('button', { name: '힌트를 보고 말했어요', exact: true }).click();
+    const saved = await (await savedResponse).json();
+    assert.equal(saved.profile.chatTurns, 0, 'guided repetitions never inflate free-chat level evidence');
+    assert.equal(saved.profile.level, 'beginner'); assert.deepEqual(saved.profile.completed, []);
+    assert.deepEqual(saved.profile.review, []); assert.equal(saved.profile.speakingReview[0].confidence, "help");
+    const duplicate = await post({ action: 'speaking', language, lessonId: 'greetings', assessmentId: saved.profile.assessmentId, revision: saved.profile.revision, confidence: 'alone' });
+    assert.equal((await duplicate.json()).saved, false);
+    assert.equal((await post({ action: 'speaking', language, lessonId: 'greetings', assessmentId: saved.profile.assessmentId, revision: saved.profile.revision, confidence: 'perfect' })).status(), 400);
+    await page.getByRole('link', { name: '나의 말하기 계획 보기 →', exact: true }).click();
+    await page.getByRole('heading', { name: '오늘부터 1주 학습 계획' }).waitFor();
+    assert.equal(await page.getByRole('group', { name: '배운 표현 확인하기' }).isVisible(), false, 'reading quiz is optional and collapsed');
+    await page.getByRole('link', { name: '오늘 학습 더 연습하기 →', exact: true }).click();
+    await page.waitForURL(url => url.pathname === '/conversation');
+    for (const width of [320, 390, 768, 1280]) {
+      await page.setViewportSize({ width, height: 844 });
+      for (const colorScheme of ['light', 'dark']) {
+        await page.emulateMedia({ colorScheme });
+        assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `${language} ${width} ${colorScheme} guided overflow`);
+      }
+    }
+    await page.emulateMedia({ colorScheme: 'light' }); await page.setViewportSize({ width: 390, height: 844 });
+  }
+  console.log('PASS: Japanese + Thai voice-first beginner -> listen -> repeat -> situation -> self-report -> speaking plan, no typing; target-only audio, real browser recording with mocked providers, consent, microphone fallback, reload, no false proficiency promotion.');
   assert.deepEqual(errors, []);
   console.log('PASS: three-language assessment -> two real API turns -> feedback -> persistent plan; server-owned levels, retake isolation, stale revision rejection, first-attempt idempotency, actor/student isolation, mobile/desktop/light/dark, draft recovery, goal edits, lesson navigation, failed-save retry, fake-microphone denial/recovery, audio replay, long replies, auth and origin checks.');
   if (process.argv.includes('--serve')) { console.log('LANGUAGE_SMOKE_URL=' + origin + '/login (synthetic PIN 864209)'); await new Promise(() => {}); }

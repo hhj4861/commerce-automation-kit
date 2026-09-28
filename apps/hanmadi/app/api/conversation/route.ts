@@ -29,7 +29,7 @@ export async function POST(req: Request) {
     assertProviderInput(input, config);
     await reserveRequest(actor, "chat");
     const result = await replyToConversation(input, actor, config);
-    if (profile) await recordLearningChat(actor, input.language, profile.assessmentId, input.lessonId);
+    if (profile && input.guidedStep === undefined) await recordLearningChat(actor, input.language, profile.assessmentId, input.lessonId);
     return conversationJson(result);
   } catch (error) {
     return conversationFailure(error);

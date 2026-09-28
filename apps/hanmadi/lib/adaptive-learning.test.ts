@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { learningProfile, studyPlan, adjustLevel, localDay, learningTask, type LearningEvent } from "./adaptive-learning";
+import { learningProfile, studyPlan, adjustLevel, localDay, learningTask, type LearningEvent, type LearningProfile } from "./adaptive-learning";
 import { assessmentQuestions, scoreAssessment } from "./learning-assessment";
 import { difyUser, getConversationProvider, replyToConversation } from "./conversation-provider";
 import { parseConversation, tutorPrompt } from "./conversation";
@@ -83,4 +83,19 @@ test("changing the study budget preserves level, feedback, quiz history and conv
   assert.equal(studyPlan("ja", after, now).length, 3);
   const retaken = learningProfile([assessment, feedback, quiz, settings, { ...assessment, id: "new", at: now + 4 }], now + 100)!;
   assert.equal(retaken.minutes, 15); assert.equal(retaken.days, 5);
+});
+
+test("speaking self placement has no quiz requirement or automatic promotion; self-report drives review only", () => {
+  const start: LearningEvent = { ...assessment, source: "first-speaking", level: "beginner", score: 0 };
+  const first = learningProfile([start], now)!;
+  assert.equal(first.confirmed, true); assert.equal(first.source, "first-speaking");
+  for (const confidence of ["repeat", "help", "alone"] as const) {
+    const p: LearningProfile = learningProfile([start, { kind: "speaking", id: "s", at: now + 1, assessmentId: "a", lessonId: "cafe", confidence }], now + 100)!;
+    assert.equal(p.level, "beginner"); assert.equal(p.chatTurns, 0); assert.deepEqual(p.completed, []);
+    assert.deepEqual(p.review, []); assert.equal(p.speakingReview?.[0].confidence, confidence);
+    assert.equal(studyPlan("ja", p, now + 100)[0].done, true);
+    if (confidence !== "alone") assert.equal(studyPlan("ja", p, now + 86400000)[0].lessonId, "cafe");
+    const retake: LearningProfile = learningProfile([start, { kind: "speaking", id: "s", at: now + 1, assessmentId: "a", lessonId: "cafe", confidence }, { ...start, id: "new", at: now + 2 }])!;
+    assert.deepEqual(retake.review, []); assert.deepEqual(retake.speakingReview, []);
+  }
 });

@@ -25,16 +25,16 @@ export function LearningPlan({ language, profile, plan, studentSlug, onUpdate }:
     } catch (e) { setError(e instanceof Error ? e.message : "연결을 확인하고 다시 시도해 주세요."); }
     finally { lock.current = false; setBusy(false); }
   }
-  const href = (id: string) => `/learn?${new URLSearchParams({ language, lesson: id, ...(studentSlug ? { s: studentSlug } : {}) })}#lesson`;
+  const href = (id: string) => `/${profile.level === "beginner" && language !== "ko" ? "conversation" : "learn"}?${new URLSearchParams({ language, lesson: id, ...(studentSlug ? { s: studentSlug } : {}) })}#lesson`;
   const today = plan[0];
   return <section aria-label="맞춤 학습 계획" className="my-6 rounded-2xl border border-accent/30 bg-accent-wash p-5 sm:p-7">
     <p className="text-sm text-accent">나의 시작점 · {learningLevels[profile.level].label}</p>
     <h2 className="mt-2 font-display text-2xl">오늘부터 1주 학습 계획</h2>
     <p className="mt-2 text-sm text-ink-soft">하루 {profile.minutes}분 · 주 {profile.days}회 · {profile.timeZone} 기준</p>
     {today && <div className="mt-4 rounded-xl bg-card p-4">
-      <h3 className="font-medium">오늘 · {today.title}{today.done ? " · 확인 완료" : ""}</h3>
+      <h3 className="font-medium">오늘 · {today.title}{today.done ? " · 연습 기록 있음" : ""}</h3>
       <p className="mt-2 text-sm">{today.task}</p>
-      <p className="mt-2 text-sm text-ink-soft">표현 {today.expressionMinutes}분 + 회화 {today.minutes - today.expressionMinutes}분</p>
+      <p className="mt-2 text-sm text-ink-soft">듣고 따라 말하기 {today.expressionMinutes}분 + 상황 회화 {today.minutes - today.expressionMinutes}분</p>
       <Link href={href(today.lessonId)} className="mt-3 inline-flex min-h-11 items-center rounded-full bg-accent px-5 text-sm text-accent-ink">{today.done ? "오늘 학습 더 연습하기 →" : "오늘 학습 시작하기 →"}</Link>
     </div>}
     <details className="mt-3">
