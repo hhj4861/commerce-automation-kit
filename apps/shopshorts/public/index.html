@@ -541,13 +541,17 @@
     </section>
     </div>
     <div class="view production-dashboard" id="automaticView" hidden>
-    <nav class="production-nav" aria-label="제작 방식"><a href="/studio">제작 방식 선택</a><a href="/studio/automatic" aria-current="page">자동 제작</a><a href="/studio?mode=manual">수동 제작</a><a href="/contents">전체 콘텐츠</a></nav>
+    <header class="production-heading"><h1>영상 제작 관리</h1><p>제작 방식을 선택하고, 저장한 작업을 이어서 완성하세요.</p></header>
+    <div class="production-switchbar"><div class="production-toggle" role="group" aria-label="제작 방식"><button type="button" data-production-mode="auto" aria-pressed="true">자동 제작</button><button type="button" data-production-mode="manual" aria-pressed="false">수동 제작</button></div><a class="workspace-link" href="/contents">전체 콘텐츠</a></div>
+    <section id="manualProduction" aria-label="수동 제작 관리" hidden></section>
+    <section id="autoProduction" aria-label="자동 제작 관리">
+    <div id="autoDashboard"></div>
     <div id="automaticCreation"></div>
     <section id="legacyWorkspace" class="legacy-workspace" aria-label="기존 쇼핑쇼츠 작업" hidden>
     <h2>기존 쇼핑쇼츠 작업 · 대본 승인과 발행 검수</h2>
     <div id="automaticErrors" role="status"></div>
     <section aria-label="자동 제작 현황">
-    <section class="summary" id="summary" data-section="summary"></section>
+    <section class="summary" id="summary" data-section="summary" hidden></section>
 
     </section>
     <section class="topic-strip" id="topics" data-section="trends" hidden></section>
@@ -567,6 +571,7 @@
       <aside class="detail" id="detail">
         <div class="detail-empty">콘텐츠를 선택하면<br>상세 내용을 보여드려요.</div>
       </aside>
+    </section>
     </section>
     </section>
     </div>
@@ -738,7 +743,8 @@ async function api(path, opts) {
 }
 
 function updateLegacyVisibility() {
-  document.getElementById('legacyWorkspace').hidden = !state.jobs.length && !state.requests.length && !Object.keys(state.autoErrors).length;
+  const params=new URLSearchParams(location.search);
+  document.getElementById('legacyWorkspace').hidden = !params.has('job')&&!params.has('request');
 }
 function renderSummary() {
   updateLegacyVisibility();
@@ -1297,10 +1303,10 @@ function activateNav(name) {
   document.querySelectorAll('[data-nav]').forEach(b => b.classList.toggle('active', b.dataset.nav === name));
 }
 const ROUTES = {
-  dashboard:'/', automatic:'/studio/automatic', content:'/contents', trends:'/trends', performance:'/performance',
+  dashboard:'/', automatic:'/studio/dashboard', content:'/contents', trends:'/trends', performance:'/performance',
   blog:'/blog', links:'/affiliate-links', settings:'/settings', notifications:'/notifications'
 };
-const ROUTE_NAMES = {...Object.fromEntries(Object.entries(ROUTES).map(([key,value]) => [value,key])), '/automatic':'automatic'};
+const ROUTE_NAMES = {...Object.fromEntries(Object.entries(ROUTES).map(([key,value]) => [value,key])), '/automatic':'automatic', '/studio/automatic':'automatic'};
 function currentRoute() {
   const path=location.pathname.replace(/\/+$/, '') || '/';
   if(path==='/' && ['job','request'].some(key=>new URLSearchParams(location.search).has(key)))return 'automatic';
@@ -1308,22 +1314,23 @@ function currentRoute() {
 }
 function navigate(name, push=true) {
   window.notificationInbox?.unmount();
-  if (push && location.pathname !== ROUTES[name]) history.pushState({page:name}, '', ROUTES[name]);
+  if (push && (location.pathname !== ROUTES[name] || name==='automatic'&&new URLSearchParams(location.search).get('mode')==='manual')) history.pushState({page:name}, '', ROUTES[name]);
   activateNav(name);
   document.querySelectorAll('[data-studio-nav]').forEach(link=>{
     link.classList.toggle('active',name==='automatic');
     if(name==='automatic')link.setAttribute('aria-current','page');else link.removeAttribute('aria-current');
   });
-  document.querySelector('.breadcrumb strong').textContent = {dashboard:'홈',automatic:'영상 제작실 / 자동 제작',content:'콘텐츠',trends:'트렌드 탐색',blog:'블로그 POC',performance:'성과',links:'제휴 링크',settings:'설정',notifications:'알림함'}[name] || '홈';
+  document.querySelector('.breadcrumb strong').textContent = {dashboard:'홈',automatic:'영상 제작실',content:'콘텐츠',trends:'트렌드 탐색',blog:'블로그 POC',performance:'성과',links:'제휴 링크',settings:'설정',notifications:'알림함'}[name] || '홈';
   document.getElementById('dashboardView').hidden = name!=='dashboard';
   document.getElementById('automaticView').hidden = name!=='automatic';
   document.getElementById('pageView').hidden = ['dashboard','automatic'].includes(name);
   if(name==='automatic') {
+    window.syncProductionMode?.();
     const requestedJob=new URLSearchParams(location.search).get('job');if(requestedJob)state.selected=requestedJob;
     state.filter='all';state.search='';state.requestFocus=null;applyRequestedDraft();
     renderSummary();renderPipeline();renderJobs();renderDetail();
   } else if(name!=='dashboard')renderPage(name);
-  document.title=(name==='automatic'?'자동 제작 관리':name==='dashboard'?'홈':document.querySelector('.breadcrumb strong').textContent)+' · Shopshorts';
+  document.title=(name==='automatic'?'영상 제작 관리':name==='dashboard'?'홈':document.querySelector('.breadcrumb strong').textContent)+' · Shopshorts';
   window.scrollTo({top:0, behavior:'smooth'});
 }
 function renderPage(name) {
@@ -1949,7 +1956,7 @@ loadBlogPoc(false).then(() => {
 });
 setInterval(() => {
   if (localStorage.getItem('shopshorts:autoRefresh') !== 'off') {
-    load(true); loadHot(); window.workspaceContent?.refresh();
+    load(true); loadHot(); window.workspaceContent?.refresh(); window.refreshProductionDashboard?.();
     if (currentRoute() === 'blog') loadBlogPoc();
   }
 }, 12000);
@@ -1958,7 +1965,42 @@ setInterval(() => {
 import { createNotificationInbox } from '/notifications.js';
 import {createContentLibrary} from '/content-library.js';
 import {mountAutomaticCreation} from '/automatic-creation.js';
-window.automaticCreationController=mountAutomaticCreation(document.getElementById('automaticCreation'));
+import {createProductionDashboard} from '/manual-dashboard.js';
+const productionDashboards=new Map(),modeLocations=new Map();
+const productionMode=()=>new URLSearchParams(location.search).get('mode')==='manual'?'manual':'auto';
+function openAutomaticProject(href){
+  const params=new URL(href,location.origin).searchParams;params.set('mode','auto');
+  history.replaceState(null,'','/studio/dashboard?'+params);
+  updateLegacyVisibility();
+  if(params.has('project'))window.automaticCreationController?.selectProject(params.get('project'));
+  else{
+    window.automaticCreationController?.selectProject(null,{scroll:false});
+    state.selected=params.get('job');state.filter='all';state.search='';applyRequestedDraft();renderPipeline();renderJobs();renderDetail(true);
+    document.getElementById('legacyWorkspace').scrollIntoView({block:'start'});
+  }
+}
+window.syncProductionMode=()=>{
+  const mode=productionMode();
+  document.querySelectorAll('[data-production-mode]').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.productionMode===mode)));
+  document.getElementById('manualProduction').hidden=mode!=='manual';document.getElementById('autoProduction').hidden=mode!=='auto';
+  if(mode==='auto'){
+    if(!window.automaticCreationController)window.automaticCreationController=mountAutomaticCreation(document.getElementById('automaticCreation'),{selectedOnly:true});
+    else window.automaticCreationController.selectProject(new URLSearchParams(location.search).get('project'),{scroll:false});
+    updateLegacyVisibility();
+  }
+  if(!productionDashboards.has(mode)){
+    const dashboard=createProductionDashboard({mode,...(mode==='auto'?{onOpen:openAutomaticProject,onCreate:()=>window.automaticCreationController.openPlanner()}: {})});
+    productionDashboards.set(mode,dashboard);dashboard.mount(document.getElementById(mode==='manual'?'manualProduction':'autoDashboard'));
+  }else productionDashboards.get(mode).refresh();
+};
+window.refreshProductionDashboard=()=>{if(currentRoute()==='automatic'&&!document.hidden)productionDashboards.get(productionMode())?.refresh();};
+document.querySelectorAll('[data-production-mode]').forEach(button=>button.addEventListener('click',()=>{
+  const mode=button.dataset.productionMode;if(mode===productionMode())return;
+  modeLocations.set(productionMode(),location.pathname+location.search);
+  history.pushState(null,'',modeLocations.get(mode)||'/studio/dashboard?mode='+mode);
+  window.syncProductionMode();
+}));
+if(currentRoute()==='automatic')window.syncProductionMode();
 window.workspaceContent=createContentLibrary({
   onDelete:async id=>{
     try {

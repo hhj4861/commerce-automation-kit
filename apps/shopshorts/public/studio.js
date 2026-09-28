@@ -1,4 +1,3 @@
-import {createManualDashboard} from './manual-dashboard.js';
 import {executionStatus,renderExecutionStatus,resumeStep} from './studio-status.js';
 import {mediaProgress,mediaSceneStatus,renderMediaProgress,renderMediaPlaceholder} from './studio-media.js';
 import {createEditor} from './editor.js';
@@ -64,9 +63,9 @@ function heading(){
  const p=state.project;$('.heading h1').textContent=p?p.title:'내 이야기로 시작하기';
  $('#intro').textContent=p?`${p.brief.category} · ${p.brief.format==='short'?'숏폼 9:16':'롱폼 16:9'} · ${p.scenes.length?p.scenes.length+'장면 / '+total(p)+'초':p.brief.duration+'초 목표'}`:'주제와 영상 형식을 정하면 AI가 시나리오를 작성합니다.';
  $('#newProject').hidden=false;
- $('.heading .back').href='/studio?mode=manual';$('.heading .back').textContent='수동 제작 관리';
+ $('.heading .back').href='/studio/dashboard?mode='+(p?.automation?'auto':'manual');$('.heading .back').textContent='제작 관리로 돌아가기';
 }
-function start(){recommendationController?.abort('detached');editor?.destroy();editor=null;state.project=null;state.step=1;state.dirty=false;state.mediaRequestError='';state.requestingMedia=false;$('#modes').hidden=true;$('#workspace').hidden=false;$('#creationStart').hidden=true;$('#manualDashboard').hidden=true;history.replaceState(null,'','/studio?new=1');heading();progress();renderBrief();}
+function start(){recommendationController?.abort('detached');editor?.destroy();editor=null;state.project=null;state.step=1;state.dirty=false;state.mediaRequestError='';state.requestingMedia=false;$('#workspace').hidden=false;history.replaceState(null,'','/studio?new=1');heading();progress();renderBrief();}
 function renderBrief(){
  recommendationCleanup?.(); recommendationCleanup=null;
  const p=state.project, brief=p?.brief;
@@ -199,27 +198,16 @@ async function openProject(id){
  if(state.dirty)await saveCurrent();
  state.project=(await api('/'+id)).project;state.selected=null;state.dirty=false;state.mediaRequestError='';
  const p=state.project;state.step=resumeStep(p);
- $('#modes').hidden=true;$('#workspace').hidden=false;$('#creationStart').hidden=true;$('#manualDashboard').hidden=true;history.replaceState(null,'',`/studio?id=${p.id}`);render();
+ $('#workspace').hidden=false;history.replaceState(null,'',`/studio?id=${p.id}`);render();
 }
 $('#newProject').onclick=()=>{if(state.pending)return;if(state.dirty&&!confirm('저장하지 않은 변경이 있습니다. 새 영상을 만들까요?'))return;state.dirty=false;location.assign('/studio?new=1');};
 $('#stage').addEventListener('input',()=>{if(state.step!==4)state.dirty=true;});
 window.addEventListener('beforeunload',e=>{if(state.dirty){e.preventDefault();e.returnValue='';}});
 (async()=>{
  const params=new URLSearchParams(location.search),id=params.get('id'),recommendationId=params.get('recommendation');
- if(params.get('mode')==='auto'&&!id&&!recommendationId&&!params.has('new')){location.replace('/studio/automatic');return;}
+ if(!id&&!recommendationId&&!params.has('new')){location.replace('/studio/dashboard?mode='+(params.get('mode')==='manual'?'manual':'auto'));return;}
  fetch('/auth/status').then(r=>r.json()).then(auth=>{if(auth.user)$('#account').textContent=auth.user.name||auth.user.email;}).catch(()=>{});
  recommendationInbox.refresh();
- if(params.get('mode')==='manual'&&!id&&!recommendationId&&!params.has('new')){
-  $('#creationStart').hidden=true;$('#manualDashboard').hidden=false;
-  $('.heading h1').textContent='수동 제작 관리';$('#intro').textContent='제작 단계를 확인하고, 저장한 영상의 다음 작업을 이어가세요.';
-  $('.heading .back').href='/studio';$('.heading .back').textContent='제작 방식 선택';$('.heading .back').hidden=true;
-  document.title='수동 제작 관리 · Shopshorts';
-  const dashboard=createManualDashboard();await dashboard.mount($('#manualDashboard'));
-  window.addEventListener('pageshow',event=>{if(event.persisted)dashboard.refresh();});
-  setInterval(()=>{if(!document.hidden)dashboard.refresh();},12000);
-  return;
- }
- if(!id&&!recommendationId&&!params.has('new'))return;
  try{
   state.config=await api('/config');
   if(recommendationId){const saved=(await api('/llm/recommendation?id='+encodeURIComponent(recommendationId))).recommendation;if(saved.input?.intent==='keywords'){location.replace('/studio/automatic?recommendation='+encodeURIComponent(recommendationId));return;}start();state.category=saved.input.category;state.format=saved.input.format;renderBrief();$('#topic').value=saved.input.topic;$('#direction').value=saved.input.direction;$('#duration').value=saved.input.duration;history.replaceState(null,'','/studio?new=1&recommendation='+encodeURIComponent(recommendationId));restoreRecommendation(saved);}

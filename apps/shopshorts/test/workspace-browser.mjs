@@ -7,7 +7,8 @@ import {studioApi} from '../lib/studio-api.js';
 const port=5211,origin=`http://127.0.0.1:${port}`,root=resolve(import.meta.dirname,'../public');
 const manual={...createProject({category:'심리학',format:'short',topic:'잠깐 쉬어도 괜찮아요',duration:24}),updatedAt:'2026-09-27T09:00:00Z'};
 const done={...createProject({category:'건축학',format:'long',topic:'빛을 담은 작은 집',duration:120}),updatedAt:'2026-09-26T09:00:00Z',upload:{state:'done'}};
-const projects=[manual,done],requests=[{slug:'desk-light',topic:'책상 조명 고르기',status:'pending',requestedAt:'2026-09-27T08:00:00Z'}];
+const automatic={...createProject({category:'심리학',format:'short',topic:'자동으로 찾은 대화의 힘',duration:24}),automation:{keyword:'부모와 대화'},scenes:[{id:'scene-1',kind:'image',duration:4,narration:'천천히 말해보세요.',prompt:'Warm illustration'}],updatedAt:'2026-09-28T09:00:00Z'};
+const projects=[manual,done,automatic],requests=[{slug:'desk-light',topic:'책상 조명 고르기',status:'pending',requestedAt:'2026-09-27T08:00:00Z'}];
 const jobs=[{brief:{id:'auto-rack',productName:'접이식 건조대',keyword:'건조대',category:'리빙',affiliateUrl:''},script:{title:'작은 방의 빨래 공간',beats:[]},status:'draft',updatedAt:'2026-09-27T10:00:00Z'}];
 let connected=false,failedSource='';
 const store={execution:'local',capabilities:async()=>({}),list:async()=>projects,get:async id=>projects.find(p=>p.id===id),create:async p=>projects.unshift(p)};
@@ -22,6 +23,7 @@ const server=createServer(async(req,res)=>{
     else if(path==='/api/studio/llm/status')response=Response.json({connected,available:true,provider:connected?'codex':null,providers:['codex','claude']});
     else if(path==='/api/studio/llm/connect'){connected=true;response=Response.json({connected:true,available:true,provider:'codex'});}
     else if(path.startsWith('/api/studio/llm/')||path==='/api/notifications')response=Response.json({items:[],unreadCount:0});
+    else if(path.startsWith('/api/studio')&&req.method!=='GET')response=Response.json({error:'읽기 전용 검증 환경입니다.'},{status:403});
     else if(path.startsWith('/api/studio'))response=await studioApi(new Request(url,{method:req.method,headers:req.headers,...(body?{body}:{})}),{},store);
     else if(path==='/api/jobs')response=Response.json({jobs});
     else if(path==='/api/hot-keywords')response=Response.json({items:[],requests});
@@ -31,7 +33,7 @@ const server=createServer(async(req,res)=>{
       else{requests.unshift({slug,topic:input.topic,status:'pending',requestedAt:new Date().toISOString()});response=Response.json({ok:true,slug},{status:201});}
     } else if(path.startsWith('/api/'))response=Response.json({items:[],requests:[],dates:[]});
     else {
-      const routes=['/studio/automatic','/studio/automatic/', '/','/contents','/trends','/blog','/performance','/affiliate-links','/settings','/notifications'];
+      const routes=['/studio/dashboard', '/studio/dashboard/', '/studio/automatic','/studio/automatic/', '/','/contents','/trends','/blog','/performance','/affiliate-links','/settings','/notifications'];
       const file=resolve(root,routes.includes(path)?'index.html':path==='/studio'?'studio.html':path.slice(1));
       if(!file.startsWith(root+sep))throw Error('invalid path');
       response=new Response(await readFile(file),{headers:{'content-type':file.endsWith('.js')?'text/javascript':file.endsWith('.css')?'text/css':file.endsWith('.html')?'text/html':'application/octet-stream'}});

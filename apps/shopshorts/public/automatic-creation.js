@@ -23,7 +23,7 @@ export function automaticStatus(project) {
   if(project.scenes.length&&!project.approved)return '대본 승인';
   return project.scenes.length?'영상 제작 이어하기':'대본 생성 필요';
 }
-export function mountAutomaticCreation(host,{fetcher=fetch,connect=connectLlm}={}) {
+export function mountAutomaticCreation(host,{fetcher=fetch,connect=connectLlm,selectedOnly=false}={}) {
   let saved=null,selected=0,pending=false,polling=false,projects=new Map(),signature='',selectedProject=new URLSearchParams(location.search).get('project');
   let recommendationId=new URLSearchParams(location.search).get('recommendation'),started=Date.now();
   const q=selector=>host.querySelector(selector);
@@ -31,11 +31,15 @@ export function mountAutomaticCreation(host,{fetcher=fetch,connect=connectLlm}={
     const response=await fetcher('/api/studio'+path,{cache:'no-store',signal:AbortSignal.timeout(25000),...(body===undefined?{}:{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)})});
     const data=await response.json();if(!response.ok)throw Error(data.error||'요청을 확인하지 못했어요. 다시 시도해 주세요.');return data;
   };
-  host.innerHTML=`<section class="auto-planner" aria-labelledby="auto-title"><header><h1 id="auto-title">관심 분야에서, 다음 영상까지</h1><p>카테고리의 최근 흐름을 찾고 키워드로 영상을 만드세요.</p></header><ol class="auto-steps" aria-label="자동 제작 순서"><li aria-current="step">카테고리</li><li>트렌드 검색</li><li>키워드</li><li>영상 제작</li></ol><form data-search><fieldset disabled><legend>어떤 분야를 만들까요?</legend><div class="auto-categories" data-categories></div><div class="auto-options"><label>영상 형식<select name="format"><option value="short">숏폼 · 세로</option><option value="long">롱폼 · 가로</option></select></label><label>목표 길이<select name="duration"><option value="32">32초</option><option value="60" selected>60초</option><option value="120">120초</option></select></label><label class="auto-interest">관심사 · 제품 정보 <span>선택</span><input name="topic" maxlength="1000" placeholder="예: 부모와 아이의 대화, 빛이 들어오는 작은 집"></label></div><button class="auto-primary" type="submit">트렌드 검색 · 키워드 찾기</button></fieldset></form><div data-search-status role="status" aria-live="polite"></div><div data-keywords></div></section><section class="auto-management" aria-labelledby="auto-management-title"><header><h2 id="auto-management-title">자동 제작 작업 관리</h2><p>대본 승인과 발행 검수</p></header><p data-management-message role="status"></p><div data-projects><p>제작 작업을 불러오고 있어요.</p></div></section>`;
+  host.innerHTML=`<details class="production-create" data-auto-planner ${!selectedOnly||recommendationId?'open':''}><summary>새 자동 영상 만들기</summary><section class="auto-planner" aria-labelledby="auto-title"><header><h2 id="auto-title">관심 분야에서, 다음 영상까지</h2><p>카테고리의 최근 흐름을 찾고 키워드로 영상을 만드세요.</p></header><ol class="auto-steps" aria-label="자동 제작 순서"><li aria-current="step">카테고리</li><li>트렌드 검색</li><li>키워드</li><li>영상 제작</li></ol><form data-search><fieldset disabled><legend>어떤 분야를 만들까요?</legend><div class="auto-categories" data-categories></div><div class="auto-options"><label>영상 형식<select name="format"><option value="short">숏폼 · 세로</option><option value="long">롱폼 · 가로</option></select></label><label>목표 길이<select name="duration"><option value="32">32초</option><option value="60" selected>60초</option><option value="120">120초</option></select></label><label class="auto-interest">관심사 · 제품 정보 <span>선택</span><input name="topic" maxlength="1000" placeholder="예: 부모와 아이의 대화, 빛이 들어오는 작은 집"></label></div><button class="auto-primary" type="submit">트렌드 검색 · 키워드 찾기</button></fieldset></form><div data-search-status role="status" aria-live="polite"></div><div data-keywords></div></section></details><section class="auto-management" aria-labelledby="auto-management-title"><header><h2 id="auto-management-title">대본 승인과 발행 검수</h2><p>작업을 선택하면 검수 내용을 펼쳐볼 수 있어요.</p></header><p data-management-message role="status"></p><div data-projects><p>제작 작업을 불러오고 있어요.</p></div></section>`;
   const form=q('[data-search]'),status=q('[data-search-status]'),feedback=q('[data-management-message]');
   const step=n=>q('.auto-steps').querySelectorAll('li').forEach((li,i)=>{li.toggleAttribute('data-done',i<n);if(i===n)li.setAttribute('aria-current','step');else li.removeAttribute('aria-current');});
   function progress(text){status.innerHTML=`<div class="auto-progress"><progress aria-label="트렌드 검색 진행"></progress><div><strong>${esc(text)}</strong><p>최근 자료 확인 후 키워드 3개와 영상 기획을 보여드려요. 창을 닫아도 계속 진행됩니다.</p></div></div>`;}
-  function setRecommendation(id){recommendationId=id;history.replaceState(null,'','/studio/automatic?recommendation='+encodeURIComponent(id));}
+  function updateLocation(query=''){
+    if(new URLSearchParams(location.search).get('mode')==='manual')return;
+    history.replaceState(null,'','/studio/dashboard?mode=auto'+(query?'&'+query:''));
+  }
+  function setRecommendation(id){recommendationId=id;updateLocation('recommendation='+encodeURIComponent(id));}
   function result(item){
     saved=item;pending=false;form.querySelector('fieldset').disabled=false;step(2);status.textContent='검색 완료 · 영상으로 만들 키워드를 선택하세요.';
     const data=item.result;
@@ -46,7 +50,7 @@ export function mountAutomaticCreation(host,{fetcher=fetch,connect=connectLlm}={
       const button=e.currentTarget;button.disabled=true;button.textContent='대본 생성 요청 중…';
       try {
         const data=await api('/automatic',{recommendationId:item.id,index:selected});selectedProject=data.project.id;step(3);
-        history.replaceState(null,'','/studio/automatic?project='+encodeURIComponent(selectedProject));
+        updateLocation('project='+encodeURIComponent(selectedProject));
         feedback.textContent=data.error||'제작을 시작했어요. 대본이 준비되면 이곳에서 승인해 주세요.';
         signature='';await refreshProjects();q('.auto-management').scrollIntoView({behavior:'smooth',block:'start'});button.textContent='작업에서 이어하기';
       } catch(error){status.textContent=error.message;button.textContent='다시 영상 만들기';}
@@ -64,7 +68,7 @@ export function mountAutomaticCreation(host,{fetcher=fetch,connect=connectLlm}={
   form.onchange=e=>{
     if(e.target.name==='format')form.elements.duration.innerHTML=(e.target.value==='short'?[[32,'32초'],[60,'60초'],[120,'120초']]:[[120,'2분'],[300,'5분'],[600,'10분']]).map(([v,t])=>`<option value="${v}">${t}</option>`).join('');
     if(!pending)step(0);
-    if(saved){saved=null;recommendationId=null;q('[data-keywords]').innerHTML='';status.textContent='선택한 조건으로 다시 검색해 주세요.';step(0);history.replaceState(null,'','/studio/automatic');}
+    if(saved){saved=null;recommendationId=null;q('[data-keywords]').innerHTML='';status.textContent='선택한 조건으로 다시 검색해 주세요.';step(0);updateLocation();}
   };
   form.onsubmit=async e=>{
     e.preventDefault();if(pending)return;pending=true;saved=null;q('[data-keywords]').innerHTML='';form.querySelector('fieldset').disabled=true;progress('AI 계정 확인 중');
@@ -89,8 +93,9 @@ export function mountAutomaticCreation(host,{fetcher=fetch,connect=connectLlm}={
   }
   async function refreshProjects(){
     const {projects:items}=await api('');const automatic=items.filter(p=>p.automation);
+    if(selectedOnly&&selectedProject&&!automatic.some(p=>p.id===selectedProject))feedback.textContent='선택한 작업을 찾을 수 없어요. 목록에서 다른 작업을 선택해 주세요.';
     automatic.sort((a,b)=>{const attention=p=>!busy(p)&&!p.upload;return Number(attention(b))-Number(attention(a))||b.updatedAt.localeCompare(a.updatedAt);});
-    projects=new Map(automatic.map(p=>[p.id,p]));const next=JSON.stringify(automatic.map(p=>[p.id,p.revision]));if(next===signature)return;
+    projects=new Map(automatic.map(p=>[p.id,p]));const next=JSON.stringify([selectedProject,automatic.map(p=>[p.id,p.revision])]);if(next===signature)return;
     const activeCard=document.activeElement?.closest('[data-project]');
     if(activeCard&&activeCard.dataset.revision===String(projects.get(activeCard.dataset.project)?.revision))return;
     signature=next;
@@ -98,7 +103,7 @@ export function mountAutomaticCreation(host,{fetcher=fetch,connect=connectLlm}={
     if(!automatic.length){list.innerHTML='<p class="auto-empty">키워드로 영상을 시작하면 이곳에서 대본과 완성 영상을 확인할 수 있어요.</p>';return;}
     const cards=new Map([...list.querySelectorAll('[data-project]')].map(el=>[el.dataset.project,el]));
     // Keep untouched forms and video players mounted while another job advances.
-    for(const p of automatic){
+    for(const p of automatic.filter(p=>!selectedOnly||p.id===selectedProject)){
       let card=cards.get(p.id);
       if(!card || card.dataset.revision!==String(p.revision)){
         const template=document.createElement('template');template.innerHTML=projectMarkup(p);const nextCard=template.content.firstElementChild;
@@ -110,6 +115,7 @@ export function mountAutomaticCreation(host,{fetcher=fetch,connect=connectLlm}={
     }
     for(const card of cards.values())card.remove();
     for(const child of [...list.children])if(!child.matches('[data-project]'))child.remove();
+    if(selectedOnly&&!selectedProject)list.innerHTML='<p class="auto-empty">위 목록에서 작업을 선택해 대본을 승인하거나 발행을 검수하세요.</p>';
   }
   async function act(card,action,body={}){
     const p=projects.get(card.dataset.project),buttons=[...card.querySelectorAll('button')].map(button=>({button,disabled:button.disabled}));buttons.forEach(({button})=>button.disabled=true);feedback.textContent='';
@@ -135,5 +141,8 @@ export function mountAutomaticCreation(host,{fetcher=fetch,connect=connectLlm}={
     }catch(error){status.textContent=error.message;pending=false;form.querySelector('fieldset').disabled=false;}
   })();
   const timer=setInterval(()=>{if(host.isConnected&&!host.closest('[hidden]')&&!document.hidden)void poll();},4000);
-  return {ready,refresh:poll,destroy:()=>clearInterval(timer)};
+  return {ready,refresh:poll,
+    openPlanner(){q('[data-auto-planner]').open=true;q('[data-auto-planner]').scrollIntoView({block:'start'});form.querySelector('input')?.focus();},
+    async selectProject(id,{scroll=true}={}){if(selectedProject!==id){selectedProject=id;signature='';}await poll();if(scroll)q('.auto-management').scrollIntoView({block:'start'});},
+    destroy:()=>clearInterval(timer)};
 }
