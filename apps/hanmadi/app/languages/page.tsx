@@ -9,7 +9,7 @@ export default async function LanguagesPage({ searchParams }: { searchParams: Pr
     <div className="mx-auto max-w-4xl px-5 py-16 sm:py-24">
       <p className="text-sm font-medium tracking-widest text-accent">한마디씩, 새로운 언어로</p>
       <h1 className="mt-4 font-display text-4xl sm:text-5xl">어떤 언어를 배울까요?</h1>
-      <p className="mt-5 text-ink-soft">설명은 한국어로, 표현과 AI 회화는 선택한 언어로 연습해요. 언제든 언어를 바꿀 수 있어요.</p>
+      <p className="mt-5 text-ink-soft">언어를 고르고 짧은 레벨 체크를 하면, 나에게 맞는 회화와 학습 계획이 시작돼요. 이미 체크한 언어는 이어서 배워요.</p>
       <form action="/api/learning-language" method="post" className="mt-10 grid gap-4 sm:grid-cols-3">
         <input type="hidden" name="from" value={learningDestination(from)} />
         {(Object.keys(languages) as Language[]).map((code) => (

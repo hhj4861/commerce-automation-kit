@@ -6,8 +6,10 @@ import { ConversationRoom } from "@/components/conversation-room";
 import { courses, getLesson } from "@/lib/courses";
 import { getConversationProvider } from "@/lib/conversation-provider";
 import { audioConfig } from "@/lib/conversation-audio";
-import { getConversationTutor } from "@/lib/conversation-access";
-import { getStoredStudent } from "@/lib/store";
+import { conversationActor } from "@/lib/conversation-http";
+import { readLearningProfile } from "@/lib/learning-profile";
+import { assessmentHref } from "@/lib/adaptive-learning";
+import { ConversationError } from "@/lib/conversation";
 export const metadata = { title: "AI 회화", referrer: "no-referrer" };
 export default async function ConversationPage({
   searchParams,
@@ -19,12 +21,12 @@ export default async function ConversationPage({
   if (!language) redirect(languageSelectionHref(`/conversation?${new URLSearchParams(params)}`));
   const lesson =
     getLesson(language, params.lesson ?? "") ?? courses[language][0];
-  const tutor = await getConversationTutor();
-  const student =
-    !tutor && params.s && /^[a-zA-Z0-9가-힣_-]{1,100}$/.test(params.s)
-      ? await getStoredStudent(params.s)
-      : null;
   let notice = "";
+  let actor: string | null = null;
+  try { actor = await conversationActor(params.s); }
+  catch (e) { notice = e instanceof ConversationError ? e.message : "학습 정보를 불러오지 못했어요. 잠시 후 다시 열어 주세요."; }
+  const profile = actor ? await readLearningProfile(actor, language) : null;
+  if (actor && !profile) redirect(assessmentHref(language, params.s, `/conversation?${new URLSearchParams(params)}`));
   let canRecord = false;
   let canSpeak = false;
   let storesConversation = false;
@@ -40,10 +42,7 @@ export default async function ConversationPage({
   } catch {
     /* Text remains available. */
   }
-  if (!tutor && !student)
-    notice =
-      "튜터로 로그인하거나 튜터에게 받은 학생 포털에서 AI 회화를 열어 주세요.";
-  else {
+  if (actor) {
     try {
       storesConversation = getConversationProvider().provider === "dify";
     } catch {
@@ -65,7 +64,7 @@ export default async function ConversationPage({
       {notice ? (
         <div className="mt-8 rounded-xl border border-ink-faint bg-card p-6">
           <p role="status">{notice}</p>
-          {!tutor && !student && (
+          {!actor && (
             <Link
               href={`/login?from=${encodeURIComponent(`/conversation?language=${language}&lesson=${lesson.id}`)}`}
               className="mt-4 inline-block text-accent underline"
@@ -76,10 +75,11 @@ export default async function ConversationPage({
         </div>
       ) : (
         <ConversationRoom
-          key={`${language}:${lesson.id}:${student?.slug ?? "tutor"}`}
+          key={`${language}:${lesson.id}:${params.s ?? actor}:${profile?.revision ?? "legacy"}`}
           language={language}
           lesson={lesson}
-          studentSlug={student?.slug}
+          studentSlug={params.s}
+          learningProfile={profile}
           canRecord={canRecord}
           canSpeak={canSpeak}
           storesConversation={storesConversation}
