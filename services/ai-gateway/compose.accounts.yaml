@@ -1,0 +1,21 @@
+services:
+  accounts:
+    image: ghcr.io/berriai/litellm@sha256:87f34979b9f8cb274fac90ca8a4fdda07d8480de22755562a26adeb95ce20d02
+    entrypoint: ["python", "/accounts/account_service.py"]
+    env_file: .env.accounts
+    environment:
+      ACCOUNT_DATA_DIR: /account-data
+      LITELLM_TELEMETRY: "False"
+    ports: ["127.0.0.1:4190:4190"]
+    volumes:
+      - ./account_service.py:/accounts/account_service.py:ro
+      - ./account_worker.py:/accounts/account_worker.py:ro
+      - ./subscription_runtime.py:/accounts/subscription_runtime.py:ro
+      - accounts-data:/account-data
+    restart: unless-stopped
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+volumes:
+  accounts-data:

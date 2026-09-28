@@ -1,0 +1,32 @@
+name: Hanmadi personal model connections
+on:
+  pull_request:
+    paths: ["apps/hanmadi/**", "services/ai-gateway/**", ".github/workflows/hanmadi-model-connections.yml"]
+  push:
+    branches: [main]
+    paths: ["apps/hanmadi/**", "services/ai-gateway/**", ".github/workflows/hanmadi-model-connections.yml"]
+permissions:
+  contents: read
+jobs:
+  connections:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: pip install 'litellm[proxy]==1.102.1'
+      - run: python -m unittest discover -s tests -p test_accounts.py -v
+        working-directory: services/ai-gateway
+      - run: npm ci --workspaces=false
+        working-directory: apps/hanmadi
+      - run: node --import tsx --test lib/model-connections.test.ts
+        working-directory: apps/hanmadi
+      - run: npx playwright install --with-deps chromium
+        working-directory: apps/hanmadi
+      - run: node scripts/model-connections-smoke.mjs
+        working-directory: apps/hanmadi

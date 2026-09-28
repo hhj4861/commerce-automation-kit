@@ -20,6 +20,7 @@ function validDraft(value: unknown): value is ConversationDraft {
 
 export function ConversationRoom({
   language,
+  modelSelection,
   lesson,
   studentSlug,
   canRecord,
@@ -27,6 +28,7 @@ export function ConversationRoom({
   storesConversation,
   learningProfile, cacheKey,
 }: {
+  modelSelection?: string;
   cacheKey: string;
   language: Language;
   lesson: Lesson;
@@ -90,6 +92,7 @@ export function ConversationRoom({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           language,
+          modelSelection,
           lessonId: lesson.id,
           level,
           learningRevision: learningProfile?.revision,

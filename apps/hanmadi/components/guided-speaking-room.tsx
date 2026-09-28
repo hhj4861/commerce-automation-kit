@@ -13,7 +13,8 @@ const initial: Draft = { step: 0, phase: "listen", consent: false };
 const valid = (v: unknown): v is Draft => !!v && typeof v === "object" &&
   [0, 1].includes((v as Draft).step) && ["listen", "repeat", "roleplay", "done"].includes((v as Draft).phase) && typeof (v as Draft).consent === "boolean";
 
-export function GuidedSpeakingRoom({ language, lesson, studentSlug, canRecord, canSpeak, storesConversation, learningProfile: profile, cacheKey }: {
+export function GuidedSpeakingRoom({ language, modelSelection, lesson, studentSlug, canRecord, canSpeak, storesConversation, learningProfile: profile, cacheKey }: {
+  modelSelection?: string;
   language: Language; lesson: Lesson; studentSlug?: string; canRecord: boolean; canSpeak: boolean;
   storesConversation: boolean; learningProfile?: LearningProfile | null; cacheKey: string;
 }) {
@@ -52,7 +53,7 @@ export function GuidedSpeakingRoom({ language, lesson, studentSlug, canRecord, c
     try {
       // Each bounded attempt is independent. Free-chat conversation IDs/history are never reused.
       const res = await fetch("/api/conversation", { method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ language, lessonId: lesson.id, level: "beginner", learningRevision: profile?.revision,
+        body: JSON.stringify({ language, modelSelection, lessonId: lesson.id, level: "beginner", learningRevision: profile?.revision,
           studentSlug, storageConsent: draft.consent, guidedStep: draft.step, messages: [{ role: "user", content: text }] }), signal: controller.signal });
       const data = await res.json();
       if (res.status === 409) setStale(true);

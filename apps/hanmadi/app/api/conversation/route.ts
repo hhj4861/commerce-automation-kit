@@ -1,3 +1,4 @@
+import { modelProvider } from "@/lib/model-connections";
 import { readLearningProfile, recordLearningChat } from "@/lib/learning-profile";
 import { ConversationError } from "@/lib/conversation";
 import {
@@ -25,10 +26,11 @@ export async function POST(req: Request) {
         throw new ConversationError(409, "레벨 설정이 바뀌었어요. 새로고침한 뒤 새 대화를 시작해 주세요.");
       input.level = profile.level;
     }
-    const config = getConversationProvider();
+    const selected = input.modelSelection ? await modelProvider(input.modelSelection) : { config: getConversationProvider(), fetcher: undefined };
+    const { config, fetcher } = selected;
     assertProviderInput(input, config);
     await reserveRequest(actor, "chat");
-    const result = await replyToConversation(input, actor, config);
+    const result = await replyToConversation(input, actor, config, fetcher);
     if (profile && input.guidedStep === undefined) await recordLearningChat(actor, input.language, profile.assessmentId, input.lessonId);
     return conversationJson(result);
   } catch (error) {

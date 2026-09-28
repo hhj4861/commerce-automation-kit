@@ -317,6 +317,7 @@ try {
     await page.setViewportSize({ width, height: 844 });
     for (const colorScheme of ['light', 'dark']) {
       await page.emulateMedia({ colorScheme, reducedMotion: 'reduce' });
+      await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
       assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `${width} ${colorScheme} overflow`);
       await page.locator('textarea').fill('대비 확인');
       const contrast = await page.getByRole('button', { name: '보내기', exact: true }).evaluate(el => {
@@ -327,7 +328,7 @@ try {
         const style = getComputedStyle(el), a = luminance(style.color), b = luminance(style.backgroundColor);
         return (Math.max(a, b) + .05) / (Math.min(a, b) + .05);
       });
-      assert.ok(contrast >= 4.5, `button contrast ${contrast}`);
+      assert.ok(contrast >= 4.5, `button contrast ${contrast} at ${width} ${colorScheme}: ${await page.getByRole('button', { name: '보내기', exact: true }).evaluate(el => { const s = getComputedStyle(el); return JSON.stringify({ color: s.color, background: s.backgroundColor }); })}`);
     }
   }
   await page.getByRole('button', { name: '새 대화', exact: true }).click();
