@@ -24,3 +24,5 @@ The assessment E2E initially clicked during navigation/hydration. Waiting for th
 - Persistent account storage is single-host SQLite. Multi-host replication and encryption-key rotation migration are not implemented; documented backup/reconnect procedures apply.
 
 Setup and recovery: `services/ai-gateway/ACCOUNTS.md`. Regression commands: the new workflow `.github/workflows/hanmadi-model-connections.yml` and existing `.github/workflows/hanmadi-dify.yml`.
+
+CI discovery initially imported the new account tests into existing standard-library-only gateway jobs. The dependency-bearing suite now lives under `services/ai-gateway/tests/test_accounts.py` and its dedicated pinned-LiteLLM CI runs it explicitly. Existing gateway/subscription suites remain discovered and executed unchanged.

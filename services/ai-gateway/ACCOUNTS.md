@@ -34,7 +34,7 @@ The service records provider/subject/state, not conversation transcripts. Hanmad
 
 ## Verification
 
-- `python -m unittest test_accounts -v` with `litellm[proxy]==1.102.1`.
+- `python -m unittest discover -s tests -p test_accounts.py -v` with `litellm[proxy]==1.102.1`.
 - `node --import tsx --test lib/model-connections.test.ts` in `apps/hanmadi`.
 - `ACCOUNT_TEST_PYTHON=<python> node scripts/model-connections-smoke.mjs`: isolated real Next/FastAPI/SQLite, mocked OAuth/inference only.
 - Existing `scripts/language-flow-smoke.mjs`: Japanese/Thai voice-first and default Dify regression.

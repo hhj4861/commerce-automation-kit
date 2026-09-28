@@ -20,7 +20,7 @@ jobs:
         with:
           node-version: '22'
       - run: pip install 'litellm[proxy]==1.102.1'
-      - run: python -m unittest test_accounts -v
+      - run: python -m unittest discover -s tests -p test_accounts.py -v
         working-directory: services/ai-gateway
       - run: npm ci --workspaces=false
         working-directory: apps/hanmadi
