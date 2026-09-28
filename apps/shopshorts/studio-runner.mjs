@@ -1,4 +1,7 @@
 import {sceneMediaPrompt} from './lib/scene-media-prompt.js';
+import {cinematic, cameraFilter} from './public/cinematic-motion.js';
+import {cinematicEdit} from './lib/cinematic-production.js';
+import {validateEdit} from './lib/studio.js';
 import {captionStyle,captionExtras} from './public/caption-style.js';
 import {musicClips, musicFilter} from './public/music-timeline.js';
 import { spawn } from 'node:child_process';
@@ -51,19 +54,23 @@ async function lintProject(job, work, env, publication = false) {
     if (result.ok !== true) throw new Error('대본 검증에 실패했습니다. 과장·효능·가짜 경험 표현을 수정하세요.');
   }
 }
-export function sceneFfmpegArgs(source, target, scene, edit, aspect, narration, actualDuration, sponsored, clip = null, captions = []) {
+export function sceneFfmpegArgs(source, target, scene, edit, aspect, narration, actualDuration, sponsored, clip = null, captions = [], cinema = false) {
   const duration = clip ? (clip.outFrame-clip.inFrame)/FPS : edit.durations[scene.id];
   const [w, h] = aspect === '9:16' ? [1080, 1920] : [1920, 1080];
-  const args = ['-y', '-hide_banner', '-loglevel', 'error', ...(scene.kind === 'image' ? ['-loop', '1'] : ['-stream_loop', '-1']), '-i', source];
+  const args = ['-y', '-hide_banner', '-loglevel', 'error', ...(scene.kind === 'image' ? ['-loop', '1'] : cinema ? [] : ['-stream_loop', '-1']), '-i', source];
   if (narration) args.push('-i', narration);
   else args.push('-f', 'lavfi', '-i', 'anullsrc=r=44100:cl=stereo');
   // Legacy scenes require full speech; timeline clips deliberately trim speech with video.
   if (!clip && narration && actualDuration > duration + .1) throw new Error(`장면 ${scene.id}: 목소리가 ${actualDuration.toFixed(1)}초입니다. 장면 길이를 늘려주세요.`);
   let vf = `scale=${w}:${h}:force_original_aspect_ratio=decrease,pad=${w}:${h}:(ow-iw)/2:(oh-ih)/2,setsar=1,fps=30`;
+  if(cinema) {
+    const frames=Math.max(Math.round((scene.duration||duration)*FPS),clip?.outFrame||0);
+    vf=scene.kind==='image'?cameraFilter(scene.camera||'locked',frames,w,h):`scale=${w}:${h}:force_original_aspect_ratio=increase:flags=lanczos,crop=${w}:${h},setsar=1,fps=30,tpad=stop_mode=clone:stop_duration=${frames/FPS}`;
+  }
   if (clip) vf += `,trim=start_frame=${clip.inFrame}:end_frame=${clip.outFrame},setpts=PTS-STARTPTS`;
   if (captions.length) vf += ',' + captions.join(',');
   if (sponsored) vf += ",drawtext=text='(광고)':fontsize=36:fontcolor=white:box=1:boxcolor=black@0.7:x=40:y=60";
-  args.push('-map', '0:v:0', '-map', '1:a:0', '-vf', vf, '-af', clip ? `atrim=start=${clip.inFrame/FPS}:end=${clip.outFrame/FPS},asetpts=PTS-STARTPTS,apad` : 'apad', '-t', String(duration), '-c:v', 'libx264', '-preset', 'veryfast', ...(clip ? ['-bf','0'] : []), '-pix_fmt', 'yuv420p', '-c:a', clip ? 'pcm_s16le' : 'aac', '-ar', '44100', '-ac', '2', '-movflags', '+faststart', target);
+  args.push('-map', '0:v:0', '-map', '1:a:0', '-vf', vf, '-af', clip ? `atrim=start=${clip.inFrame/FPS}:end=${clip.outFrame/FPS},asetpts=PTS-STARTPTS,apad` : 'apad', '-t', String(duration), '-c:v', 'libx264', '-preset', cinema?'medium':'veryfast', ...(cinema?['-crf','18']:[]), ...(clip ? ['-bf','0'] : []), '-pix_fmt', 'yuv420p', '-c:a', clip ? 'pcm_s16le' : 'aac', '-ar', '44100', '-ac', '2', '-movflags', '+faststart', target);
   return args;
 }
 // Text is stored in a file with expansion disabled, never interpolated into filter code.
@@ -106,7 +113,7 @@ async function renderProject(job, work, env, io) {
     }
     // PCM intermediates avoid AAC padding changing frame boundaries during concatenation.
     const target = join(work, `${"segment-"+segments.length}.${job.edit.version===2?'mov':'mp4'}`);
-    await command('ffmpeg', sceneFfmpegArgs(source, target, scene, job.edit, job.brief.aspect, vo, voDuration, job.brief.category === '상품광고', job.edit.version===2?clip:null,captionFilters), env);
+    await command('ffmpeg', sceneFfmpegArgs(source, target, scene, job.edit, job.brief.aspect, vo, voDuration, job.brief.category === '상품광고', job.edit.version===2?clip:null,captionFilters,cinematic(job.brief)), env);
     segments.push(target);
   }
   await gap(frameCount(timeline)-cursor);
@@ -170,6 +177,17 @@ export async function executeStudioTask(job, env, io, checkpoint, { fetcher = fe
       await io.writeAsset(key, data, type);
       assets[scene.id] = { key, kind: scene.kind, type, source: 'ai', name: scene.id, ...providerInfo };
       await checkpoint({ assets });
+    }
+    // Measure/cache speech before the automatic timeline is built. Resume uses
+    // persisted voice+text assets and never pays for already-completed speech.
+    if(job.automation && cinematic(job.brief) && !job.edit) {
+      const prepared={...job,assets,edit:normalizeEdit(job)};
+      const result=prepared.edit.voice!=='none'?await generateNarration(prepared,work,env,io,checkpoint,{runCli,command}):{assets};
+      // Fail in the executing worker, where the exact corrective message is
+      // persisted, rather than turning a completion-CAS error into an HTTP code.
+      const measured={...job,assets:result.assets};
+      validateEdit(cinematicEdit(measured),measured);
+      return result;
     }
     return { assets };
   }

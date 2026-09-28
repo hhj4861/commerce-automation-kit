@@ -1,4 +1,5 @@
 import {captionExtras} from '../public/caption-style.js';
+import {CAMERAS, SHOTS} from '../public/cinematic-motion.js';
 import {validateMusic} from '../public/music-timeline.js';
 import { FPS, FONTS, frameCount, assertClipPositions } from '../public/editor-model.js';
 export const CATEGORIES = ['심리학', '건축학', '상품광고', '막장드라마', '역사', '과학', '직접 입력'];
@@ -18,7 +19,8 @@ export function validateBrief(input) {
   if (!['short', 'long'].includes(input.format)) fail('숏폼 또는 롱폼을 선택하세요.');
   const duration = Number(input.duration);
   if (!Number.isInteger(duration) || duration < 16 || duration > (input.format === 'short' ? 180 : 600)) fail('영상 길이는 숏폼 16~180초, 롱폼 16~600초입니다.');
-  return { category: input.category, topic: input.topic.trim(), format: input.format, duration, direction: String(input.direction || '').slice(0, 2000), aspect: input.format === 'short' ? '9:16' : '16:9' };
+  if(input.productionStyle!==undefined && input.productionStyle!=='cinematic')fail('지원하지 않는 영상 연출입니다.');
+  return { category: input.category, topic: input.topic.trim(), format: input.format, duration, direction: String(input.direction || '').slice(0, 2000), aspect: input.format === 'short' ? '9:16' : '16:9', ...(input.productionStyle?{productionStyle:input.productionStyle}:{}) };
 }
 export function validateScenes(scenes) {
   if (!Array.isArray(scenes) || !scenes.length || scenes.length > 100) fail('장면은 1~100개 필요합니다.');
@@ -30,7 +32,9 @@ export function validateScenes(scenes) {
     if (!text(scene.narration, 1200) || !text(scene.prompt, 2000)) fail(`장면 ${i + 1}의 대사와 장면 설명을 입력하세요.`);
     if (!Number.isFinite(scene.duration) || scene.duration < 1 || scene.duration > 30) fail('장면 길이는 1~30초입니다.');
     if (!['image', 'video'].includes(scene.kind)) fail('이미지 또는 영상을 선택하세요.');
-    return { id, narration: scene.narration.trim(), prompt: scene.prompt.trim(), duration: scene.duration, kind: scene.kind };
+    if(scene.camera!==undefined&&!CAMERAS.includes(scene.camera))fail('지원하지 않는 카메라 움직임입니다.');
+    if(scene.shot!==undefined&&!SHOTS.includes(scene.shot))fail('지원하지 않는 장면 구도입니다.');
+    return { id, narration: scene.narration.trim(), prompt: scene.prompt.trim(), duration: scene.duration, kind: scene.kind, ...(scene.camera?{camera:scene.camera}:{}), ...(scene.shot?{shot:scene.shot}:{}) };
   });
 }
 export function validateEdit(input, job) {
@@ -96,7 +100,7 @@ export function changeProject(original, action, body) {
     const scenes = validateScenes(body.scenes);
     if (scenes.reduce((sum, s) => sum + s.duration, 0) > (job.brief.format === 'short' ? 180 : 600)) fail('장면의 전체 길이가 형식의 최대 길이를 넘었습니다.');
     const old = Object.fromEntries(job.scenes.map(s => [s.id, s]));
-    for (const s of scenes) if (old[s.id]?.prompt !== s.prompt || old[s.id]?.kind !== s.kind || (old[s.id]?.narration !== s.narration && job.assets[s.id]?.source === 'ai')) delete job.assets[s.id];
+    for (const s of scenes) if (old[s.id]?.prompt !== s.prompt || old[s.id]?.kind !== s.kind || old[s.id]?.camera !== s.camera || old[s.id]?.shot !== s.shot || (old[s.id]?.narration !== s.narration && job.assets[s.id]?.source === 'ai')) delete job.assets[s.id];
     for (const id of Object.keys(old)) if (!scenes.some(s => s.id === id)) delete job.assets[id];
     if(job.edit?.voice!==undefined)job.voicePreference=job.edit.voice;
     job.scenes = scenes; job.title = String(body.title || job.title).slice(0, 100); job.edit = null; invalidate();
