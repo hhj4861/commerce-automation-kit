@@ -36,11 +36,13 @@ class GatewayTest(unittest.TestCase):
     def test_model_credentials_stay_out_of_rendered_config(self):
         self.settings(HANMADI_CHAT_MODEL="openai/example", HANMADI_CHAT_API_KEY="private-provider-value",
                       REPLAY_CHAT_MODEL="ollama_chat/example", REPLAY_CHAT_API_BASE="http://ollama:11434",
+                      FESTA_CHAT_MODEL="gemini/example", FESTA_CHAT_API_KEY="private-festa-value",
                       ELEVENLABS_API_KEY="private-eleven-value")
         self.assertEqual(set(render(self.root)), set(sum(APPS.values(), [])))
         content = (self.root / ".runtime/litellm.json").read_text()
         self.assertNotIn("private-provider-value", content)
         self.assertNotIn("private-eleven-value", content)
+        self.assertNotIn("private-festa-value", content)
         self.assertFalse(json.loads(content)["general_settings"]["store_prompts_in_spend_logs"])
 
     def test_management_rejects_remote_http_and_credentials(self):
@@ -78,6 +80,42 @@ class GatewayTest(unittest.TestCase):
                 self.assertEqual(payload["max_budget"], 5)
         self.assertEqual(read_env(target)["LITELLM_API_KEY"], "sk-test-app")
         self.assertEqual(target.stat().st_mode & 0o777, 0o600)
+
+    def test_festa_requires_its_own_provider_and_preserves_existing_routes(self):
+        self.settings(HANMADI_CHAT_MODEL="openai/example", HANMADI_CHAT_API_KEY="hanmadi-only",
+                      REPLAY_CHAT_MODEL="openai/example", REPLAY_CHAT_API_KEY="replay-only")
+        self.assertEqual(render(self.root), ["hanmadi-chat", "replay-video-planner"])
+        self.settings(FESTA_CHAT_MODEL="gemini/example")
+        with self.assertRaisesRegex(ValueError, "FESTA_CHAT_API_KEY"):
+            render(self.root)
+
+    def test_festa_key_is_scoped_and_existing_key_is_preserved(self):
+        calls = []
+        team = {"team_id": "cak-festa", "models": ["festa-travel"], "max_budget": 1,
+                "budget_duration": "30d", "rpm_limit": 30}
+        def call(path, body=None):
+            calls.append((path, body))
+            if path == "/v1/models":
+                return {"data": [{"id": m} for m in sum(APPS.values(), [])]}
+            if path.startswith("/team/info"):
+                return {"team_info": team}
+            if path.startswith("/key/info"):
+                return {"info": team}
+            if path == "/key/generate":
+                self.assertEqual(body["models"], ["festa-travel"])
+                self.assertEqual(body["team_id"], "cak-festa")
+                self.assertEqual(body["max_budget"], 1)
+                self.assertEqual(body["rpm_limit"], 30)
+                return {"key": "sk-festa-fixture"}
+            raise AssertionError("Unexpected management operation")
+        api = Mock(call=call)
+        target = provision("festa", 1, "http://localhost:4100", self.root, api)
+        self.assertEqual(read_env(target)["LITELLM_MODEL"], "festa-travel")
+        self.assertEqual(target.stat().st_mode & 0o777, 0o600)
+        before = target.read_bytes()
+        self.assertEqual(provision("festa", 1, "http://localhost:4100", self.root, api), target)
+        self.assertEqual(target.read_bytes(), before)
+        self.assertEqual(sum(path == "/key/generate" for path, _ in calls), 1)
 
     def test_ambiguous_key_creation_cannot_silently_issue_another(self):
         api = Mock()

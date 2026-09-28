@@ -30,6 +30,9 @@ jobs:
           REPLAY_CHAT_MODEL=openai/gpt-4o-mini
           REPLAY_CHAT_API_KEY=ci-not-a-provider-key
           REPLAY_CHAT_API_BASE=http://mock:8000/v1
+          FESTA_CHAT_MODEL=openai/gpt-4o-mini
+          FESTA_CHAT_API_KEY=ci-not-a-provider-key
+          FESTA_CHAT_API_BASE=http://mock:8000/v1
           ENV
           python gateway.py render
           python tests/subscriptions_integration.py prepare
