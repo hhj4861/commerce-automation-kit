@@ -1,0 +1,15 @@
+{
+  "source_commit": "5bb8c87e0cfa9259132e84e8537bb18c19d8de74",
+  "project": "replay-live-508202",
+  "account": "guswhd1085@gmail.com",
+  "zone": "us-central1-a",
+  "instance": "shared-ai",
+  "api_url": "https://shared-ai-d5cy7m6i7q-uc.a.run.app",
+  "previous_hanmadi_deployment": "dpl_5Humr4Kq3GBe47nTWboLqHFwpYu1",
+  "status": "live_verified",
+  "health_fix_merge": "db1a804e9b71ac6f7870b43ebbd6837710dbcab2",
+  "hanmadi_deployment": "dpl_9nxPoa1TmXiBFSADzQYDYSLuvnZt",
+  "hanmadi_url": "https://hanmadi-lake.vercel.app",
+  "backup": "/opt/shared-ai/backups/20260927-post-apps",
+  "verification_report": "docs/qa/20260927-shared-ai-cloud-deployment.md"
+}

@@ -67,7 +67,7 @@ Vercel `dean-10/hanmadi`의 production 환경에 `CONVERSATION_PROVIDER`, `DIFY_
 - 설정 아카이브는 관리자·앱 비밀, LiteLLM/Dify 설정 및 Dify storage/plugin 디렉터리를 포함한다. 개발 PC로 내려받지 않았다.
 - 네트워크 없는 임시 PostgreSQL 컨테이너와 tmpfs에 실제 복원: LiteLLM public 테이블 86개, Dify 144개 및 앱 2개 확인. 검사 컨테이너 제거 완료. 운영 DB는 덮어쓰지 않았다.
 - 별도로 매일 VM 디스크 스냅샷/7일 보존 설정이 있다. 전체 VM 재해 복구·오프사이트 복원 시험을 했다는 뜻은 아니다. 이번 논리 백업은 수동 시점 백업이다.
-- Terraform state와 배포 메타데이터는 현재 프로젝트 Git 제외 `data/shared-ai/`에 0600으로 보관한다.
+- Terraform state는 현재 프로젝트 Git 제외 `data/shared-ai/`에 0600으로 보관한다. 비밀 값이 없는 최초 배포 결과 `data/shared-ai/deployment.json`은 2026-09-28 완료 검증에서 별도 확인 후 Git에 등록했다. 이 JSON은 이 보고서 시점의 초기 배포 기록이며, 이후 Hanmadi 배포의 현재 상태는 후속 검증 보고서를 따른다.
 
 ## 완료 범위와 후속 한계
 
