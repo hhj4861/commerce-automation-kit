@@ -10,6 +10,24 @@ import {
   studyQueue,
 } from "./v2";
 import { expressionId } from "./v2-store";
+import authoredPlans from "./v2-scene-plans.json";
+import translatedRows from "./v2-scene-phrases.json";
+test("translated rows preserve every authored cue and Korean meaning in order", () => {
+  const rows: Record<string, string[][]> = translatedRows;
+  assert.equal(Object.keys(rows).length, 28);
+  for (const [scene, plans] of Object.entries(authoredPlans)) {
+    assert.equal(plans.length, 4);
+    for (const [i, plan] of plans.entries()) {
+      assert.equal(plan.steps.length, 10);
+      assert(plan.steps.every((step) => step.cue && step.meaning));
+      assert.deepEqual(
+        rows[`${scene}:${i + 1}`].map((row) => row[0]),
+        plan.steps.map((step) => step.meaning),
+      );
+      assert(rows[`${scene}:${i + 1}`].every((row) => row.length === 9));
+    }
+  }
+});
 for (const language of ["en", "ja", "th", "es"] as const) {
   test(`${language}: four levels and eight distinct situations with pronunciation aids`, () => {
     const units = starterUnits(language);
@@ -114,17 +132,90 @@ test("help-needed lessons become next-day priority before unseen lessons", () =>
 });
 
 test("each language, scene and level has ten distinct lesson phrases", async () => {
-  const { lessonPhrases } = await import("./v2-lesson");
+  const { lessonPhrases, lessonPlan } = await import("./v2-lesson");
+  const normalize = (s: string) =>
+    s
+      .normalize("NFKC")
+      .replace(/[\s\p{P}]/gu, "")
+      .toLowerCase();
   for (const language of ["ja", "th", "en", "es"] as const) {
+    const seen = new Map<string, string>();
     for (const unit of starterUnits(language)) {
       const phrases = lessonPhrases(unit);
+      const plan = lessonPlan(unit)!;
+      assert.equal(plan.title, unit.title);
+      assert.ok(plan.goal && plan.context);
+      assert.equal(plan.cues.length, 10);
       assert.equal(phrases.length, 10, unit.id);
       assert.deepEqual(phrases[0], unit.phrase);
       assert.equal(new Set(phrases.map((p) => p.text)).size, 10);
-      for (const phrase of phrases)
-        assert.ok(phrase.text && phrase.reading && phrase.meaning);
+      for (const phrase of phrases) {
+        const scripts = {
+          ja: /^[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Latin}\p{N}\p{P}\sー]+$/u,
+          th: /^[\p{Script=Thai}\p{N}\p{P}\s]+$/u,
+          en: /^[\p{Script=Latin}\p{N}\p{P}\s]+$/u,
+          es: /^[\p{Script=Latin}\p{N}\p{P}\s]+$/u,
+        };
+        assert.match(
+          phrase.text,
+          scripts[language],
+          `${unit.id}: wrong original script`,
+        );
+        assert(
+          safePractice(phrase),
+          `${unit.id}: invalid phrase ${phrase.text}`,
+        );
+        assert.match(phrase.reading, /^[가-힣\s.,!?·…~’':;()\-]+$/u, unit.id);
+        const key = normalize(phrase.text);
+        assert(
+          !seen.has(key),
+          `${unit.id}: repeats ${seen.get(key)}: ${phrase.text}`,
+        );
+        seen.set(key, unit.id);
+      }
     }
+    assert.equal(seen.size, 320, `${language}: full curriculum`);
   }
+});
+
+test("every scene has four independent goals and increasingly demanding speaking tasks", async () => {
+  const { lessonPhrases, lessonPlan } = await import("./v2-lesson");
+  const units = starterUnits("en");
+  for (const scene of new Set(units.map((u) => u.scene))) {
+    const levels = units.filter((u) => u.scene === scene);
+    assert.equal(new Set(levels.map((u) => lessonPlan(u)!.goal)).size, 4);
+    assert.equal(
+      new Set(levels.flatMap((u) => lessonPhrases(u).map((p) => p.meaning)))
+        .size,
+      40,
+    );
+    const words = levels.map((u) =>
+      lessonPhrases(u).reduce((n, p) => n + p.text.split(/\s+/).length, 0),
+    );
+    assert(
+      words[2] > words[0],
+      `${scene}: reasons need more than the initial requests`,
+    );
+    assert(
+      words[3] > words[1],
+      `${scene}: negotiation needs more than simple Q&A`,
+    );
+  }
+});
+
+test("published admin expressions are not padded with unrelated starter sentences", async () => {
+  const { lessonPhrases, lessonPlan } = await import("./v2-lesson");
+  const unit = {
+    ...starterUnits("ja")[0],
+    source: "admin" as const,
+    phrase: {
+      text: "また会いましょう。",
+      reading: "마타 아이마쇼오",
+      meaning: "다시 만나요.",
+    },
+  };
+  assert.deepEqual(lessonPhrases(unit), [unit.phrase]);
+  assert.equal(lessonPlan(unit), undefined);
 });
 
 test("lesson completion schedules review without claiming speaking proficiency", () => {

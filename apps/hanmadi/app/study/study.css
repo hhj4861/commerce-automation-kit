@@ -2061,18 +2061,50 @@
   justify-content: center;
 }
 .hm-lesson progress {
+  appearance: none;
   width: 100%;
   height: 6px;
+  border: 0;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #e8edf7;
   accent-color: var(--hm-blue, #3157d5);
+}
+.hm-lesson progress::-webkit-progress-bar {
+  background: #e8edf7;
+}
+.hm-lesson progress::-webkit-progress-value {
+  background: #3157d5;
+  border-radius: 8px;
+}
+.hm-lesson progress::-moz-progress-bar {
+  background: #3157d5;
+  border-radius: 8px;
 }
 .hm-lesson-count {
   font-weight: 700;
 }
+.hm-dialog .hm-lesson-context,
+.hm-dialog .hm-lesson-goal {
+  font-size: 13px;
+  line-height: 1.5;
+  margin: 8px 0;
+}
+.hm-dialog .hm-lesson .hm-expression {
+  margin: 12px 0;
+  padding: 12px 0;
+}
 .hm-lesson-navigation {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 12px;
   margin-top: 20px;
+  padding: 12px 0;
+  background: white;
+  box-shadow: 0 -8px 12px white;
 }
 .hm-lesson-navigation button {
   min-width: 0;

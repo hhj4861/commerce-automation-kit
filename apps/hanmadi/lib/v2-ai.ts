@@ -1,4 +1,4 @@
-import { clubLevels } from "./v2-club-lessons";
+import { sceneLessonPlans } from "./v2-scene-lessons";
 import { createLiteLLMClient } from "@cak/litellm-client";
 import { ConversationError, getLiteLLMConfig } from "./conversation";
 import { modelProvider } from "./model-connections";
@@ -272,7 +272,7 @@ export function roleplayPrompt(
 ) {
   const scene = curriculum.scenes.find((s) => s.id === sceneId)!;
   return `You are Hanmadi, a friendly ${languageNames[language]} (${studyLanguages[language].name}, ${language}) speaking coach for a Korean learner. Role: ${scene.role}. Situation: ${scene.prompt}. Practice level ${level}/4: ${curriculum.levels[level - 1].help}.
-${sceneId === "club" ? `Level-specific club/bar mission: ${clubLevels[level - 1].instruction}` : ""}
+${sceneId === "club" ? "Level-specific club/bar mission" : "Level-specific speaking mission"}: ${sceneLessonPlans[sceneId][level - 1].instruction}
 Conversation continuity takes priority over covering learning objectives:
 - Read the previous turns before replying. In assistant JSON history, text is the spoken dialogue; reading and meaning (including hints) are teaching aids, not events or words the learner said.
 - First respond to the learner's latest intent, answer or question. Korean and Hangul-transcribed replies participate in the roleplay too; do not treat them as requests for a new lesson unless the learner asks for help.
