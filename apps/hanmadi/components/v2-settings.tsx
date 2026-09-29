@@ -27,7 +27,14 @@ type Props = {
 export function V2Settings(p: Props) {
   return (
     <section className="hm-settings" aria-label="학습 설정">
-      <p className="hm-account-name">{p.name}님의 학습 공간</p>
+      <section className="hm-account-summary" aria-label="현재 로그인 계정">
+        <span className="hm-login-status">로그인됨</span>
+        <strong>{p.name}</strong>
+        <p>
+          {p.owner ? "관리자 계정" : "학습 계정"} · 학습 기록이 이 계정에
+          저장돼요.
+        </p>
+      </section>
       <fieldset className="hm-setting-group">
         <legend>학습 언어</legend>
         <div className="hm-settings-options hm-settings-languages">
