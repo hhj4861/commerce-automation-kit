@@ -24,7 +24,7 @@ export async function startAutomatic(request, env, store, input, call) {
   const brief = recommendationInput(saved.input);
   const result = parseRecommendations(saved.result, true, 'keywords');
   const selected = result.suggestions[input.index];
-  const project = {...createProject({...brief, topic: selected.topic, direction: selected.direction, productionStyle:'cinematic'}), id,
+  const project = {...createProject({...brief, topic: selected.topic, direction: selected.direction, productionStyle:brief.productionStyle||'cinematic'}), id,
     automation: {version: 1, recommendationId: input.recommendationId, keyword: selected.keyword, sources: result.sources, checkedAt: saved.result.checkedAt}};
   try { await store.create(project); }
   catch (error) { const concurrent = await store.get(id); if (concurrent) return {project: concurrent}; throw error; }
@@ -39,7 +39,7 @@ export function continueAutomatic(project) {
   if (!project.automation || project.task?.action !== 'media' || project.task.state !== 'done') return project;
   if (!project.approved || project.scenes.some(scene => !project.assets[scene.id])) fail('완료되지 않은 장면이 있어 영상을 조립할 수 없습니다.', 409);
   const next = structuredClone(project);
-  if(!next.edit && next.brief.productionStyle==='cinematic')next.edit=validateEdit(cinematicEdit(next),next);
+  if(!next.edit && ['cinematic','animation'].includes(next.brief.productionStyle))next.edit=validateEdit(cinematicEdit(next),next);
   if (!next.edit) {
     const edit = normalizeEdit(next);
     for (const clip of edit.clips) {

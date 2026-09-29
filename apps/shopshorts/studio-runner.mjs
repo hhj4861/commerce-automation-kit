@@ -1,3 +1,5 @@
+import {animated} from './lib/animation-plan.js';
+import {renderAnimationScene} from './studio-animation.mjs';
 import {sceneMediaPrompt} from './lib/scene-media-prompt.js';
 import {cinematic, cameraFilter} from './public/cinematic-motion.js';
 import {cinematicEdit} from './lib/cinematic-production.js';
@@ -15,7 +17,7 @@ import { FPS, FONTS, normalizeEdit, frameCount, clipSpans } from './public/edito
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const GOOGLE = 'https://generativelanguage.googleapis.com/v1beta';
-export const capabilities = env => ({ workerAt: new Date().toISOString(), scenario: false, image: env.SHOPSHORTS_MEDIA_PROVIDER === 'higgsfield' || !!env.GEMINI_API_KEY, video: env.SHOPSHORTS_MEDIA_PROVIDER === 'higgsfield' || !!env.GEMINI_API_KEY, mediaProvider: env.SHOPSHORTS_MEDIA_PROVIDER === 'higgsfield' ? 'higgsfield' : 'google', voice: !!env.ELEVENLABS_API_KEY, shortsUpload: !!(env.UPLOAD_POST_API_KEY && env.UPLOAD_POST_USER), longUpload: !!env.YOUTUBE_CLIENT_SECRET });
+export const capabilities = env => ({ workerAt: new Date().toISOString(), scenario: false, animation: true, image: env.SHOPSHORTS_MEDIA_PROVIDER === 'higgsfield' || !!env.GEMINI_API_KEY, video: env.SHOPSHORTS_MEDIA_PROVIDER === 'higgsfield' || !!env.GEMINI_API_KEY, mediaProvider: env.SHOPSHORTS_MEDIA_PROVIDER === 'higgsfield' ? 'higgsfield' : 'google', voice: !!env.ELEVENLABS_API_KEY, shortsUpload: !!(env.UPLOAD_POST_API_KEY && env.UPLOAD_POST_USER), longUpload: !!env.YOUTUBE_CLIENT_SECRET });
 export function command(bin, args, env, timeout = 600000) {
   return new Promise((resolveP, reject) => {
     const child = spawn(bin, args, { cwd: ROOT, env: { ...process.env, ...env }, stdio: ['ignore', 'pipe', 'pipe'] });
@@ -54,10 +56,10 @@ async function lintProject(job, work, env, publication = false) {
     if (result.ok !== true) throw new Error('대본 검증에 실패했습니다. 과장·효능·가짜 경험 표현을 수정하세요.');
   }
 }
-export function sceneFfmpegArgs(source, target, scene, edit, aspect, narration, actualDuration, sponsored, clip = null, captions = [], cinema = false) {
+export function sceneFfmpegArgs(source, target, scene, edit, aspect, narration, actualDuration, sponsored, clip = null, captions = [], cinema = false, animation = false) {
   const duration = clip ? (clip.outFrame-clip.inFrame)/FPS : edit.durations[scene.id];
   const [w, h] = aspect === '9:16' ? [1080, 1920] : [1920, 1080];
-  const args = ['-y', '-hide_banner', '-loglevel', 'error', ...(scene.kind === 'image' ? ['-loop', '1'] : cinema ? [] : ['-stream_loop', '-1']), '-i', source];
+  const args = ['-y', '-hide_banner', '-loglevel', 'error', ...(scene.kind === 'image' ? ['-loop', '1'] : cinema || animation ? [] : ['-stream_loop', '-1']), '-i', source];
   if (narration) args.push('-i', narration);
   else args.push('-f', 'lavfi', '-i', 'anullsrc=r=44100:cl=stereo');
   // Legacy scenes require full speech; timeline clips deliberately trim speech with video.
@@ -67,6 +69,7 @@ export function sceneFfmpegArgs(source, target, scene, edit, aspect, narration, 
     const frames=Math.max(Math.round((scene.duration||duration)*FPS),clip?.outFrame||0);
     vf=scene.kind==='image'?cameraFilter(scene.camera||'locked',frames,w,h):`scale=${w}:${h}:force_original_aspect_ratio=increase:flags=lanczos,crop=${w}:${h},setsar=1,fps=30,tpad=stop_mode=clone:stop_duration=${frames/FPS}`;
   }
+  if(animation)vf+=`,tpad=stop_mode=clone:stop_duration=${duration+(clip?.inFrame||0)/FPS}`;
   if (clip) vf += `,trim=start_frame=${clip.inFrame}:end_frame=${clip.outFrame},setpts=PTS-STARTPTS`;
   if (captions.length) vf += ',' + captions.join(',');
   if (sponsored) vf += ",drawtext=text='(광고)':fontsize=36:fontcolor=white:box=1:boxcolor=black@0.7:x=40:y=60";
@@ -113,7 +116,7 @@ async function renderProject(job, work, env, io) {
     }
     // PCM intermediates avoid AAC padding changing frame boundaries during concatenation.
     const target = join(work, `${"segment-"+segments.length}.${job.edit.version===2?'mov':'mp4'}`);
-    await command('ffmpeg', sceneFfmpegArgs(source, target, scene, job.edit, job.brief.aspect, vo, voDuration, job.brief.category === '상품광고', job.edit.version===2?clip:null,captionFilters,cinematic(job.brief)), env);
+    await command('ffmpeg', sceneFfmpegArgs(source, target, scene, job.edit, job.brief.aspect, vo, voDuration, job.brief.category === '상품광고', job.edit.version===2?clip:null,captionFilters,cinematic(job.brief),animated(job.brief)), env);
     segments.push(target);
   }
   await gap(frameCount(timeline)-cursor);
@@ -148,7 +151,11 @@ export async function executeStudioTask(job, env, io, checkpoint, { fetcher = fe
       if (assets[scene.id] || (job.task.sceneIds && !job.task.sceneIds.includes(scene.id))) continue;
       const mediaPrompt=sceneMediaPrompt(job,scene);
       let data, type, providerInfo = {};
-      if (env.SHOPSHORTS_MEDIA_PROVIDER === 'higgsfield') {
+      if (animated(job.brief)) {
+        if(scene.kind!=='video')throw Error('애니메이션 장면은 영상으로 생성해 주세요.');
+        const result=await renderAnimationScene(job,scene,work,env);
+        ({data,type}=result);providerInfo={provider:result.provider};
+      } else if (env.SHOPSHORTS_MEDIA_PROVIDER === 'higgsfield') {
         const result = await generateHiggsfieldScene(job, scene, env, work, checkpoint, { run: runHiggsfield, fetcher });
         ({ data, type } = result); providerInfo = { provider: result.provider, providerJobId: result.providerJobId };
       } else if (scene.kind === 'image') {
@@ -180,7 +187,7 @@ export async function executeStudioTask(job, env, io, checkpoint, { fetcher = fe
     }
     // Measure/cache speech before the automatic timeline is built. Resume uses
     // persisted voice+text assets and never pays for already-completed speech.
-    if(job.automation && cinematic(job.brief) && !job.edit) {
+    if(job.automation && (cinematic(job.brief)||animated(job.brief)) && !job.edit) {
       const prepared={...job,assets,edit:normalizeEdit(job)};
       const result=prepared.edit.voice!=='none'?await generateNarration(prepared,work,env,io,checkpoint,{runCli,command}):{assets};
       // Fail in the executing worker, where the exact corrective message is

@@ -1,3 +1,4 @@
+import {productionStyle, animationPlan, animated} from './animation-plan.js';
 import {captionExtras} from '../public/caption-style.js';
 import {CAMERAS, SHOTS} from '../public/cinematic-motion.js';
 import {validateMusic} from '../public/music-timeline.js';
@@ -19,7 +20,7 @@ export function validateBrief(input) {
   if (!['short', 'long'].includes(input.format)) fail('숏폼 또는 롱폼을 선택하세요.');
   const duration = Number(input.duration);
   if (!Number.isInteger(duration) || duration < 16 || duration > (input.format === 'short' ? 180 : 600)) fail('영상 길이는 숏폼 16~180초, 롱폼 16~600초입니다.');
-  if(input.productionStyle!==undefined && input.productionStyle!=='cinematic')fail('지원하지 않는 영상 연출입니다.');
+  productionStyle(input.productionStyle);
   return { category: input.category, topic: input.topic.trim(), format: input.format, duration, direction: String(input.direction || '').slice(0, 2000), aspect: input.format === 'short' ? '9:16' : '16:9', ...(input.productionStyle?{productionStyle:input.productionStyle}:{}) };
 }
 export function validateScenes(scenes) {
@@ -34,7 +35,7 @@ export function validateScenes(scenes) {
     if (!['image', 'video'].includes(scene.kind)) fail('이미지 또는 영상을 선택하세요.');
     if(scene.camera!==undefined&&!CAMERAS.includes(scene.camera))fail('지원하지 않는 카메라 움직임입니다.');
     if(scene.shot!==undefined&&!SHOTS.includes(scene.shot))fail('지원하지 않는 장면 구도입니다.');
-    return { id, narration: scene.narration.trim(), prompt: scene.prompt.trim(), duration: scene.duration, kind: scene.kind, ...(scene.camera?{camera:scene.camera}:{}), ...(scene.shot?{shot:scene.shot}:{}) };
+    return { id, narration: scene.narration.trim(), prompt: scene.prompt.trim(), duration: scene.duration, kind: scene.kind, ...(scene.camera?{camera:scene.camera}:{}), ...(scene.shot?{shot:scene.shot}:{}), ...(scene.animation!==undefined?{animation:animationPlan(scene.animation)}:{}) };
   });
 }
 export function validateEdit(input, job) {
@@ -99,8 +100,9 @@ export function changeProject(original, action, body) {
   if (action === 'scenes') {
     const scenes = validateScenes(body.scenes);
     if (scenes.reduce((sum, s) => sum + s.duration, 0) > (job.brief.format === 'short' ? 180 : 600)) fail('장면의 전체 길이가 형식의 최대 길이를 넘었습니다.');
+    if(animated(job.brief) && scenes.some(s=>s.kind!=='video'||!s.animation))fail('애니메이션 장면은 영상과 장면별 동작 구성이 필요합니다.');
     const old = Object.fromEntries(job.scenes.map(s => [s.id, s]));
-    for (const s of scenes) if (old[s.id]?.prompt !== s.prompt || old[s.id]?.kind !== s.kind || old[s.id]?.camera !== s.camera || old[s.id]?.shot !== s.shot || (old[s.id]?.narration !== s.narration && job.assets[s.id]?.source === 'ai')) delete job.assets[s.id];
+    for (const s of scenes) if (old[s.id]?.prompt !== s.prompt || old[s.id]?.kind !== s.kind || old[s.id]?.camera !== s.camera || old[s.id]?.shot !== s.shot || JSON.stringify(old[s.id]?.animation)!==JSON.stringify(s.animation) || (animated(job.brief)&&old[s.id]?.duration!==s.duration) || (old[s.id]?.narration !== s.narration && job.assets[s.id]?.source === 'ai')) delete job.assets[s.id];
     for (const id of Object.keys(old)) if (!scenes.some(s => s.id === id)) delete job.assets[id];
     if(job.edit?.voice!==undefined)job.voicePreference=job.edit.voice;
     job.scenes = scenes; job.title = String(body.title || job.title).slice(0, 100); job.edit = null; invalidate();

@@ -20,7 +20,7 @@ export function mediaProgress({project, config, connectionUnknown = false, reque
     kind=task.state;
     title=kind==='queued'?'생성 순서를 기다리고 있어요':ready===scenes.length?'생성 결과를 확인하고 있어요':'장면을 만들고 있어요';
     detail=kind==='queued'?'아직 생성 전입니다. 창을 닫아도 요청은 유지됩니다.':'완성된 장면부터 여기에 표시됩니다. 창을 닫아도 계속 진행됩니다.';
-    if(kind==='running' && ready===scenes.length && project.automation && project.brief?.productionStyle==='cinematic') {
+    if(kind==='running' && ready===scenes.length && project.automation && ['cinematic','animation'].includes(project.brief?.productionStyle)) {
       title='장면 완성 · 목소리와 자막을 맞추고 있어요';
       detail='음성 길이를 확인한 뒤 장면 전환과 자막 시간을 맞춰 영상을 조립합니다.';
     }
