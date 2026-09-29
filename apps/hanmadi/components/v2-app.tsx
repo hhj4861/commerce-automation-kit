@@ -1,6 +1,7 @@
 "use client";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import Link from "next/link";
+import { V2Icon as Icon } from "./v2-icon";
 import {
   curriculum,
   studyLanguages,
@@ -114,7 +115,7 @@ function Speaker({
   return (
     <span className="hm-audio">
       <button className="hm-soft" disabled={busy} onClick={() => void play()}>
-        ▷ {busy ? "음성 준비 중…" : label}
+        <Icon name="sound" /> {busy ? "음성 준비 중…" : label}
       </button>
       {error && <small role="alert">{error}</small>}
     </span>
@@ -676,6 +677,8 @@ export function V2App() {
     [section, setSection] = useState("today"),
     [levelFilter, setLevelFilter] = useState(1),
     [scene, setScene] = useState("smalltalk"),
+    [category, setCategory] = useState("전체"),
+    [sceneDetail, setSceneDetail] = useState(false),
     [selection, setSelection] = useState("default");
   const [modal, setModal] = useState<"login" | "ai" | "settings" | null>(null),
     [activeUnit, setActiveUnit] = useState<Unit | null>(null),
@@ -698,6 +701,7 @@ export function V2App() {
     >([]),
     [chatInput, setChatInput] = useState("");
   const operation = useRef(false);
+  const mainRef = useRef<HTMLElement>(null);
   const apply = useCallback(
     (next: StudyState) =>
       setState((old) => (next.revision >= old.revision ? next : old)),
@@ -855,178 +859,293 @@ export function V2App() {
   const due = language
     ? state.expressions.filter((e) => e.language === language)
     : [];
+  // Each destination starts at its heading, even after a long form or lesson.
+  useEffect(() => {
+    mainRef.current?.scrollTo({ top: 0, behavior: "instant" });
+  }, [tab, section, language, sceneDetail, profile?.assessedAt]);
   return (
-    <div className="hm">
-      <header className="hm-header">
-        <Link className="hm-brand" href="/study">
-          한마디<span>small words, real moments</span>
+    <div className="hm hm-app" data-view={tab}>
+      <aside className="hm-brand-panel" aria-label="한마디 소개">
+        <Link className="hm-wordmark" href="/study">
+          <span className="hm-brand-mark">ㅎ</span> 한마디 <small>2.0</small>
         </Link>
-        <div className="hm-row">
-          {language && (
-            <label className="hm-language">
-              <span className="sr-only">학습 언어</span>
-              <select
-                aria-label="학습 언어"
-                disabled={busy}
-                value={language}
-                onChange={(e) =>
-                  void chooseLanguage(e.target.value as StudyLanguage)
-                }
-              >
-                {Object.entries(studyLanguages).map(([id, l]) => (
-                  <option key={id} value={id}>
-                    {l.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-          )}
-          <button
-            disabled={busy}
-            onClick={() => setModal(identity ? "ai" : "login")}
-          >
-            내 AI
-          </button>
-          <button
-            aria-label={identity ? "설정" : "로그인"}
-            disabled={busy}
-            onClick={() => setModal(identity ? "settings" : "login")}
-          >
-            {identity ? "설정" : "로그인"}
-          </button>
+        <div>
+          <p className="hm-design-tag">말하기와 여행을 잇는 앱</p>
+          <h2>
+            여행에서 쓴 말이
+            <br />
+            내일의 실력이 되도록.
+          </h2>
+          <p>
+            번역으로 한 번,
+            <br />
+            AI와 다시 한 번.
+            <br />
+            내가 필요했던 말부터 익혀요.
+          </p>
         </div>
-      </header>
-      <main className="hm-main">
-        {error && (
-          <div className="hm-alert" role="alert">
-            {error}
-            <button onClick={() => setError("")} aria-label="오류 닫기">
-              ×
+      </aside>
+      <div className="hm-device">
+        <header className="hm-header">
+          {!language && (
+            <Link className="hm-wordmark" href="/study">
+              <span className="hm-brand-mark">ㅎ</span> 한마디
+            </Link>
+          )}
+          <div className="hm-header-actions">
+            {language && (
+              <label className="hm-language">
+                <span className={`hm-lang-dot ${language}`} aria-hidden="true">
+                  {language === "en" || language === "es"
+                    ? language.toUpperCase()
+                    : ""}
+                </span>
+                <span className="sr-only">학습 언어</span>
+                <select
+                  aria-label="학습 언어"
+                  disabled={busy}
+                  value={language}
+                  onChange={(e) =>
+                    void chooseLanguage(e.target.value as StudyLanguage)
+                  }
+                >
+                  {Object.entries(studyLanguages).map(([id, l]) => (
+                    <option key={id} value={id}>
+                      {l.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+            <button
+              disabled={busy}
+              onClick={() => setModal(identity ? "ai" : "login")}
+            >
+              내 AI
+            </button>
+            <button
+              aria-label={identity ? "설정" : "로그인"}
+              disabled={busy}
+              onClick={() => setModal(identity ? "settings" : "login")}
+            >
+              {identity ? <Icon name="settings" /> : "로그인"}
             </button>
           </div>
-        )}
-        {notice && (
-          <p className="hm-notice" role="status">
-            {notice}
-          </p>
-        )}
-        {loading ? (
-          <section className="hm-panel" role="status">
-            내 학습을 준비하고 있어요…
-          </section>
-        ) : !language ? (
-          <>
-            <span className="hm-eyebrow">YOUR NEXT CONVERSATION</span>
-            <h1>
-              어디서든, 말문이 트이는
-              <br />
-              나만의 한마디.
-            </h1>
-            <p>
-              여행에서 나눈 대화를 내 실력으로. 먼저 연습할 언어를 골라 주세요.
-            </p>
-            <div className="hm-language-grid">
-              {Object.entries(studyLanguages).map(([id, l]) => (
-                <button
-                  key={id}
-                  onClick={() => void chooseLanguage(id as StudyLanguage)}
-                >
-                  <span className="hm-lang-mark">{l.mark}</span>
-                  <strong>{l.name}</strong>
-                  <small>{l.native}</small>
-                  <span>시작하기 ↗</span>
-                </button>
-              ))}
+        </header>
+        <main ref={mainRef} className="hm-main">
+          {error && (
+            <div className="hm-alert" role="alert">
+              {error}
+              <button onClick={() => setError("")} aria-label="오류 닫기">
+                ×
+              </button>
             </div>
-          </>
-        ) : identity && !profile ? (
-          <Assessment
-            key={language}
-            language={language}
-            busy={busy}
-            onFinish={(answers, confidence, minutes) =>
-              void run({ action: "assess", answers, confidence, minutes })
-            }
-          />
-        ) : (
-          <>
-            {tab === "study" && (
-              <>
-                <div className="hm-page-heading">
-                  <span className="hm-eyebrow">A LITTLE EVERY DAY</span>
-                  <h1>
-                    {identity
-                      ? "오늘도, 한마디."
-                      : "말하기가 처음이어도 괜찮아요."}
-                  </h1>
-                  <p>
-                    {studyLanguages[language].name} ·{" "}
-                    {curriculum.levels[(profile?.level ?? 1) - 1].title} · 하루{" "}
-                    {profile?.minutes ?? 10}분
-                  </p>
-                </div>
-                <div className="hm-segments" aria-label="학습 보기">
-                  {[
-                    ["today", "오늘 학습"],
-                    ["levels", "레벨별"],
-                    ["scenes", "상황별"],
-                  ].map(([id, label]) => (
-                    <button
-                      aria-pressed={section === id}
-                      key={id}
-                      onClick={() => setSection(id)}
-                    >
-                      {label}
-                    </button>
-                  ))}
-                </div>
-                {!identity && (
-                  <div className="hm-notice">
-                    표현은 먼저 둘러볼 수 있어요.{" "}
-                    <button onClick={() => setModal("login")}>
-                      로그인하고 레벨 체크하기 →
-                    </button>
-                  </div>
-                )}
-                {section === "today" && (
-                  <>
-                    <section className="hm-hero">
-                      <div>
-                        <span className="hm-eyebrow">TODAY’S LITTLE WIN</span>
-                        <h2>
-                          오늘 배운 한마디가
+          )}
+          {notice && (
+            <p className="hm-notice" role="status">
+              {notice}
+            </p>
+          )}
+          {loading ? (
+            <section className="hm-panel" role="status">
+              내 학습을 준비하고 있어요…
+            </section>
+          ) : !language ? (
+            <>
+              <span
+                className="hm-brand-mark hm-onboarding-mark"
+                aria-hidden="true"
+              >
+                ㅎ
+              </span>
+              <h1>
+                읽을 줄 몰라도,
+                <br />
+                말할 수 있게.
+              </h1>
+              <p>배우고 싶은 언어를 골라 주세요.</p>
+              <div className="hm-language-grid">
+                {Object.entries(studyLanguages).map(([id, l]) => (
+                  <button
+                    key={id}
+                    onClick={() => void chooseLanguage(id as StudyLanguage)}
+                  >
+                    <span className="hm-lang-mark">{l.mark}</span>
+                    <strong>{l.name}</strong>
+                    <small>{l.native}</small>
+                    <span>시작하기 ↗</span>
+                  </button>
+                ))}
+              </div>
+            </>
+          ) : identity && !profile ? (
+            <Assessment
+              key={language}
+              language={language}
+              busy={busy}
+              onFinish={(answers, confidence, minutes) =>
+                void run({ action: "assess", answers, confidence, minutes })
+              }
+            />
+          ) : (
+            <>
+              {tab === "study" && (
+                <>
+                  <nav className="hm-segments" aria-label="학습 보기">
+                    {[
+                      ["today", "오늘 추천"],
+                      ["levels", "레벨별"],
+                      ["scenes", "상황별"],
+                    ].map(([id, label]) => (
+                      <button
+                        key={id}
+                        aria-current={section === id ? "page" : undefined}
+                        aria-pressed={section === id}
+                        onClick={() => {
+                          setSection(id);
+                          setSceneDetail(false);
+                        }}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </nav>
+                  {!identity && (
+                    <div className="hm-guest">
+                      <button onClick={() => setModal("login")}>
+                        로그인하고 레벨 체크하기 →
+                      </button>
+                    </div>
+                  )}
+                  {section === "today" && (
+                    <>
+                      <div className="hm-study-intro">
+                        <p>오늘도, 내 말이 하나씩 늘도록</p>
+                        <h1>
+                          나에게 맞는
                           <br />
-                          내일의 대화가 돼요.
+                          다음 한마디.
+                        </h1>
+                      </div>
+                      <section className="hm-course-hero">
+                        <div className="hm-hero-top">
+                          <span>
+                            Lv.{profile?.level ?? 1} ·{" "}
+                            {curriculum.levels[(profile?.level ?? 1) - 1].title}
+                          </span>
+                          <small>
+                            {
+                              units.filter(
+                                (u) =>
+                                  u.level === (profile?.level ?? 1) &&
+                                  profile?.practiced[u.id],
+                              ).length
+                            }
+                            /
+                            {
+                              units.filter(
+                                (u) => u.level === (profile?.level ?? 1),
+                              ).length
+                            }{" "}
+                            연습 완료
+                          </small>
+                        </div>
+                        <h2>
+                          {
+                            curriculum.scenes.find(
+                              (s) =>
+                                s.id === (queue?.lessons[0] ?? units[0])?.scene,
+                            )?.title
+                          }
+                          에서
+                          <br />
+                          {
+                            [
+                              "한마디 건네기",
+                              "질문 주고받기",
+                              "대화 이어가기",
+                              "자연스럽게 말하기",
+                            ][(profile?.level ?? 1) - 1]
+                          }
                         </h2>
-                        <p>
-                          {queue?.due.length
-                            ? `번역에서 만난 표현 ${queue.due.length}개를 다시 말해 볼까요?`
-                            : "듣고, 따라 말하고, 나만의 말로 바꿔요."}
-                        </p>
+                        <p>{(queue?.lessons[0] ?? units[0])?.phrase.meaning}</p>
                         <button
-                          className="hm-primary"
                           onClick={() =>
                             setActiveUnit(queue?.lessons[0] ?? units[0])
                           }
                         >
-                          오늘 연습 시작하기 ↗
+                          오늘 연습 시작 <Icon name="arrow" />
+                        </button>
+                      </section>
+                      <div className="hm-section-heading">
+                        <h2>오늘, 어떤 상황인가요?</h2>
+                        <button
+                          onClick={() => {
+                            setSection("scenes");
+                            setSceneDetail(false);
+                          }}
+                        >
+                          모두 보기
                         </button>
                       </div>
-                      <div className="hm-hero-art" aria-hidden="true">
-                        <span>hello!</span>
-                        <span>こんにちは</span>
-                        <span>สวัสดี</span>
-                        <span>¡hola!</span>
+                      <div className="hm-scene-grid">
+                        {curriculum.scenes
+                          .filter((s) => ["smalltalk", "club"].includes(s.id))
+                          .map((s) => (
+                            <button
+                              className={`hm-scene-tile ${s.color}`}
+                              key={s.id}
+                              onClick={() => {
+                                setScene(s.id);
+                                setSection("scenes");
+                                setSceneDetail(true);
+                              }}
+                            >
+                              <span className="hm-scene-icon">
+                                <Icon name={s.icon} />
+                              </span>
+                              <strong>{s.title}</strong>
+                              <small>{s.subtitle}</small>
+                              <span className="hm-scene-meta">
+                                4단계 연습 <Icon name="arrow" />
+                              </span>
+                            </button>
+                          ))}
                       </div>
-                    </section>
-                    {!!queue?.due.length && (
-                      <section>
-                        <div className="hm-row hm-between">
-                          <h2>내 대화에서 다시 만난 표현</h2>
-                          <button onClick={() => setTab("phrases")}>
-                            모두 보기 →
-                          </button>
+                      <div className="hm-section-heading">
+                        <h2>내 대화가 수업이 돼요</h2>
+                        <span>{due.length ? `${due.length}개 표현` : ""}</span>
+                      </div>
+                      {due.length ? (
+                        <button
+                          className="hm-personal-lesson"
+                          onClick={() => setTab("phrases")}
+                        >
+                          <span className="hm-scene-icon">
+                            <Icon name="spark" />
+                          </span>
+                          <span>
+                            <b>내 대화로 연습하기</b>
+                            <small>번역 · AI 대화에서 가져왔어요</small>
+                          </span>
+                          <Icon name="arrow" />
+                        </button>
+                      ) : (
+                        <div className="hm-journey">
+                          <Icon name="chat" />
+                          <div>
+                            <b>필요했던 말부터 배워요</b>
+                            <p>
+                              번역과 AI 대화에서 만난 표현을 모아
+                              <br />내 레벨에 맞춰 다시 연습해요.
+                            </p>
+                            <button onClick={() => setTab("translate")}>
+                              번역 열기 <Icon name="arrow" />
+                            </button>
+                          </div>
                         </div>
+                      )}
+                      {!!queue?.due.length && (
                         <div className="hm-grid">
                           {queue.due.map((e) => (
                             <PhraseCard
@@ -1068,532 +1187,683 @@ export function V2App() {
                             </PhraseCard>
                           ))}
                         </div>
-                      </section>
-                    )}
-                    <h2>오늘의 연습 순서</h2>
-                    <div className="hm-grid">
-                      {queue?.lessons.map((u, i) => (
-                        <button
-                          className="hm-course-card"
-                          key={u.id}
-                          onClick={() => setActiveUnit(u)}
-                        >
-                          <span className="hm-eyebrow">
-                            0{i + 1} ·{" "}
-                            {u.source === "admin" ? "추가 수업" : "기본 수업"}
-                          </span>
-                          <strong>{u.title}</strong>
-                          {profile?.practiced[u.id] && (
-                            <span className="hm-badge">연습한 표현</span>
-                          )}
-                          <p>{u.phrase.meaning}</p>
-                          <span>듣고 말하기 →</span>
-                        </button>
-                      ))}
-                    </div>
-                    <div className="hm-callout">
-                      <div>
-                        <h3>여행 중이라면?</h3>
-                        <p>지금 필요한 말을 번역하고 다음 연습으로 이어가요.</p>
-                      </div>
-                      <button onClick={() => setTab("translate")}>
-                        번역 열기 ↗
-                      </button>
-                    </div>
-                  </>
-                )}
-                {section === "levels" && (
-                  <>
-                    <div className="hm-levels">
-                      {curriculum.levels.map((l) => (
-                        <button
-                          key={l.id}
-                          aria-pressed={levelFilter === l.id}
-                          onClick={() => setLevelFilter(l.id)}
-                        >
-                          <span>LEVEL {l.id}</span>
-                          <strong>{l.title}</strong>
-                          <small>{l.goal}</small>
-                        </button>
-                      ))}
-                    </div>
-                    <h2>{curriculum.levels[levelFilter - 1].title}</h2>
-                    <div className="hm-grid">
-                      {units
-                        .filter((u) => u.level === levelFilter)
-                        .map((u) => (
+                      )}
+                    </>
+                  )}
+                  {section === "levels" && (
+                    <>
+                      <h1>
+                        한마디부터,
+                        <br />
+                        대화가 될 때까지.
+                      </h1>
+                      <div className="hm-levels">
+                        {curriculum.levels.map((l) => (
                           <button
-                            className="hm-course-card"
-                            key={u.id}
-                            onClick={() => setActiveUnit(u)}
+                            key={l.id}
+                            aria-pressed={levelFilter === l.id}
+                            onClick={() => setLevelFilter(l.id)}
                           >
-                            <span>
-                              {
-                                curriculum.scenes.find((s) => s.id === u.scene)
-                                  ?.title
-                              }
-                            </span>
-                            <strong>{u.title}</strong>
-                            {profile?.practiced[u.id] && (
-                              <span className="hm-badge">연습한 표현</span>
-                            )}
-                            <p>{u.phrase.meaning}</p>
-                            <span>연습하기 →</span>
+                            <strong>Lv.{l.id}</strong>
+                            <small>{l.title}</small>
                           </button>
                         ))}
-                    </div>
-                  </>
-                )}
-                {section === "scenes" && (
-                  <>
-                    <div className="hm-scene-grid">
-                      {curriculum.scenes.map((s) => (
-                        <button
-                          aria-pressed={scene === s.id}
-                          key={s.id}
-                          onClick={() => setScene(s.id)}
-                        >
-                          <strong>{s.title}</strong>
-                          <small>{s.subtitle}</small>
-                        </button>
-                      ))}
-                    </div>
-                    <h2>
-                      {curriculum.scenes.find((s) => s.id === scene)?.title}에서
-                      한마디
-                    </h2>
-                    <div className="hm-grid">
-                      {units
-                        .filter((u) => u.scene === scene)
-                        .map((u) => (
-                          <button
-                            className="hm-course-card"
-                            key={u.id}
-                            onClick={() => setActiveUnit(u)}
-                          >
-                            <span>
-                              LEVEL {u.level} ·{" "}
-                              {u.source === "admin" ? "추가 수업" : "기본 수업"}
-                            </span>
-                            <strong>{u.title}</strong>
-                            {profile?.practiced[u.id] && (
-                              <span className="hm-badge">연습한 표현</span>
-                            )}
-                            <p>{u.phrase.meaning}</p>
-                            <span>연습하기 →</span>
-                          </button>
-                        ))}
-                    </div>
-                  </>
-                )}
-                <p className="hm-muted">
-                  한글 발음은 소리를 따라 하기 위한 도움이에요. 특히 태국어
-                  성조는 음성과 함께 익혀 주세요.
-                </p>
-              </>
-            )}
-            {tab === "translate" && (
-              <>
-                <div className="hm-page-heading">
-                  <span className="hm-eyebrow">WORDS FOR RIGHT NOW</span>
-                  <h1>지금, 서로에게 한마디.</h1>
-                  <p>
-                    한국어 ↔ {studyLanguages[language].name} · 같은 마이크로
-                    번갈아 말해요.
-                  </p>
-                </div>
-                <section className="hm-panel">
-                  <div className="hm-row hm-between">
-                    <label>
-                      입력 언어
-                      <select
-                        value={from}
-                        disabled={busy}
-                        onChange={(e) => {
-                          setFrom(e.target.value);
-                          setConfirm(false);
-                        }}
-                      >
-                        <option value="auto">자동 감지</option>
-                        <option value="ko">한국어</option>
-                        <option value={language}>
-                          {studyLanguages[language].name}
-                        </option>
-                      </select>
-                    </label>
-                    <span className="hm-badge">기본 번역 AI</span>
-                  </div>
-                  {translation && (
-                    <div className="hm-translation" aria-live="polite">
-                      <div>
-                        <span className="hm-eyebrow">
-                          {translation.from === "ko"
-                            ? "한국어"
-                            : studyLanguages[language].name}
-                        </span>
-                        <p>{translation.original}</p>
-                        {translation.from !== "ko" && (
-                          <p className="hm-reading">{translation.reading}</p>
-                        )}
                       </div>
-                      <div>
-                        <span className="hm-eyebrow">
-                          {translation.from === "ko"
-                            ? studyLanguages[language].name
-                            : "한국어"}
-                        </span>
-                        <p className="hm-native">{translation.translated}</p>
-                        {translation.from === "ko" && (
-                          <p className="hm-reading">{translation.reading}</p>
-                        )}
-                        <Speaker
-                          key={translation.translated}
-                          text={translation.translated}
-                          label={
-                            translation.from === "ko"
-                              ? "상대에게 들려주기"
-                              : "한국어로 듣기"
+                      <section className="hm-level-summary">
+                        <span className="hm-badge">Lv.{levelFilter}</span>
+                        <h2>{curriculum.levels[levelFilter - 1].title}</h2>
+                        <p>{curriculum.levels[levelFilter - 1].goal}</p>
+                        <progress
+                          aria-label="현재 레벨 연습 완료"
+                          value={
+                            units.filter(
+                              (u) =>
+                                u.level === levelFilter &&
+                                profile?.practiced[u.id],
+                            ).length
+                          }
+                          max={
+                            units.filter((u) => u.level === levelFilter).length
                           }
                         />
+                        <small>
+                          {
+                            units.filter(
+                              (u) =>
+                                u.level === levelFilter &&
+                                profile?.practiced[u.id],
+                            ).length
+                          }{" "}
+                          /{" "}
+                          {units.filter((u) => u.level === levelFilter).length}
+                          개 연습 완료 · 숙달 판정과는 달라요
+                        </small>
+                      </section>
+                      <div className="hm-section-heading">
+                        <h2>차례로 말해 봐요</h2>
+                        <span>순서는 바꿔도 괜찮아요</span>
                       </div>
-                      <small>
-                        {translation.saved
-                          ? "내 표현에 반영했어요. 오늘 학습에서 다시 말해 보세요."
-                          : state.autoSave
-                            ? "학습에 저장할 일반 표현이 없거나 저장 설정이 바뀌었어요."
-                            : "번역은 완료했어요. 자동 학습 반영은 꺼져 있어요."}
-                      </small>
+                      <div className="hm-course-path">
+                        {units
+                          .filter((u) => u.level === levelFilter)
+                          .map((u, i) => (
+                            <button
+                              className="hm-course-card"
+                              key={u.id}
+                              onClick={() => setActiveUnit(u)}
+                            >
+                              <span
+                                className={`hm-unit-marker ${profile?.practiced[u.id] ? "done" : ""}`}
+                              >
+                                {profile?.practiced[u.id] ? (
+                                  <Icon name="check" />
+                                ) : (
+                                  i + 1
+                                )}
+                              </span>
+                              <span>
+                                <strong>
+                                  {
+                                    curriculum.scenes.find(
+                                      (s) => s.id === u.scene,
+                                    )?.title
+                                  }{" "}
+                                  · {u.title}
+                                </strong>
+                                <small>{u.phrase.meaning}</small>
+                                <em>
+                                  {profile?.practiced[u.id]
+                                    ? "연습한 표현 · 다시 해보기"
+                                    : `${profile?.minutes ?? 10}분 · ${curriculum.levels[levelFilter - 1].challenge}`}
+                                </em>
+                              </span>
+                              <Icon name="arrow" />
+                            </button>
+                          ))}
+                      </div>
+                    </>
+                  )}
+                  {section === "scenes" && (
+                    <>
+                      {!sceneDetail ? (
+                        <>
+                          <h1>
+                            내가 가는 곳이
+                            <br />
+                            오늘의 교실.
+                          </h1>
+                          <p className="hm-muted">
+                            처음 만난 사람과의 대화도, 여행의 작은 부탁도.
+                          </p>
+                          <div className="hm-categories" aria-label="상황 분류">
+                            {curriculum.categories.map((c) => (
+                              <button
+                                key={c}
+                                aria-pressed={category === c}
+                                onClick={() => setCategory(c)}
+                              >
+                                {c}
+                              </button>
+                            ))}
+                          </div>
+                          <p className="hm-muted">
+                            {
+                              curriculum.scenes.filter(
+                                (s) =>
+                                  category === "전체" ||
+                                  s.category === category,
+                              ).length
+                            }
+                            개 상황 · 모두 Lv.1부터 시작할 수 있어요
+                          </p>
+                          <div className="hm-scene-grid">
+                            {curriculum.scenes
+                              .filter(
+                                (s) =>
+                                  category === "전체" ||
+                                  s.category === category,
+                              )
+                              .map((s) => (
+                                <button
+                                  className={`hm-scene-tile ${s.color}`}
+                                  key={s.id}
+                                  onClick={() => {
+                                    setScene(s.id);
+                                    setSceneDetail(true);
+                                  }}
+                                >
+                                  <span className="hm-scene-icon">
+                                    <Icon name={s.icon} />
+                                  </span>
+                                  <strong>{s.title}</strong>
+                                  <small>{s.subtitle}</small>
+                                  <span className="hm-scene-meta">
+                                    4단계 연습 <Icon name="arrow" />
+                                  </span>
+                                </button>
+                              ))}
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <button
+                            className="hm-back"
+                            onClick={() => setSceneDetail(false)}
+                          >
+                            <Icon name="back" /> 모든 상황
+                          </button>
+                          {curriculum.scenes
+                            .filter((s) => s.id === scene)
+                            .map((s) => (
+                              <section
+                                key={s.id}
+                                className={`hm-scene-heading ${s.color}`}
+                              >
+                                <span className="hm-scene-icon">
+                                  <Icon name={s.icon} />
+                                </span>
+                                <h1>{s.title}</h1>
+                                <p>{s.subtitle}</p>
+                                <div className="hm-topic-tags">
+                                  {s.topics.map((t) => (
+                                    <span key={t}>{t}</span>
+                                  ))}
+                                </div>
+                              </section>
+                            ))}
+                          <div className="hm-section-heading">
+                            <h2>같은 상황, 나에게 맞는 단계</h2>
+                          </div>
+                          <div className="hm-course-path">
+                            {units
+                              .filter((u) => u.scene === scene)
+                              .map((u) => (
+                                <button
+                                  className="hm-course-card"
+                                  key={u.id}
+                                  onClick={() => setActiveUnit(u)}
+                                >
+                                  <span className="hm-unit-marker">
+                                    {u.level}
+                                  </span>
+                                  <span>
+                                    <strong>
+                                      Lv.{u.level} · {u.title}
+                                    </strong>
+                                    <small>{u.phrase.meaning}</small>
+                                    <em>
+                                      {profile?.practiced[u.id]
+                                        ? "연습한 표현 · 다시 해보기"
+                                        : "듣고 말하기"}
+                                    </em>
+                                  </span>
+                                  <Icon name="arrow" />
+                                </button>
+                              ))}
+                          </div>
+                          <button
+                            className="hm-primary hm-full"
+                            onClick={() => {
+                              setTab("chat");
+                              setChat([]);
+                            }}
+                          >
+                            AI와 이 상황 대화하기 <Icon name="arrow" />
+                          </button>
+                        </>
+                      )}
+                    </>
+                  )}
+                  <p className="hm-footnote">
+                    한글 발음은 소리를 따라 하기 위한 도움이에요.
+                    <br />
+                    태국어 성조는 음성과 함께 익혀 주세요.
+                  </p>
+                </>
+              )}
+              {tab === "translate" && (
+                <>
+                  <div className="hm-page-heading">
+                    <h1 className="hm-screen-title">여행 번역</h1>
+                    <div className="hm-language-pair">
+                      <span>한국어</span>
+                      <Icon name="swap" />
+                      <span>{studyLanguages[language].name}</span>
                     </div>
-                  )}
-                  <Microphone
-                    key={`${language}:${from}:translate`}
-                    language={from}
-                    disabled={busy || !identity}
-                    onText={(t) => {
-                      setText(t);
-                      void doTranslate(t);
-                    }}
-                  />
-                  <details>
-                    <summary>직접 입력하거나 인식한 말 수정하기</summary>
-                    <label>
-                      번역할 말
-                      <textarea
-                        maxLength={1000}
-                        value={text}
-                        onChange={(e) => setText(e.target.value)}
-                        placeholder="편하게 한국어로 말해도 돼요."
-                      />
-                    </label>
-                    <button
-                      className="hm-primary"
-                      disabled={busy || !text.trim()}
-                      onClick={() => void doTranslate()}
-                    >
-                      {busy ? "번역 중…" : "번역하기"}
-                    </button>
-                  </details>
-                  {!identity && (
-                    <button onClick={() => setModal("login")}>
-                      로그인하고 번역하기
-                    </button>
-                  )}
-                  {confirm && (
-                    <div className="hm-notice" role="status">
+                  </div>
+                  <section className="hm-panel">
+                    {!translation && (
+                      <div className="hm-translation hm-translation-empty">
+                        <div>
+                          <small>
+                            {studyLanguages[language].name} → 한국어
+                          </small>
+                          <h2>
+                            어느 쪽이 먼저 말해도
+                            <br />
+                            괜찮아요.
+                          </h2>
+                        </div>
+                        <div>
+                          <small>
+                            한국어 → {studyLanguages[language].name}
+                          </small>
+                          <h2>
+                            한 사람씩 말하면
+                            <br />
+                            서로의 언어로 옮겨요.
+                          </h2>
+                        </div>
+                      </div>
+                    )}
+                    {translation && (
+                      <div className="hm-translation" aria-live="polite">
+                        <div>
+                          <span className="hm-eyebrow">
+                            {translation.from === "ko"
+                              ? "한국어"
+                              : studyLanguages[language].name}
+                          </span>
+                          <p>{translation.original}</p>
+                          {translation.from !== "ko" && (
+                            <p className="hm-reading">{translation.reading}</p>
+                          )}
+                        </div>
+                        <div>
+                          <span className="hm-eyebrow">
+                            {translation.from === "ko"
+                              ? studyLanguages[language].name
+                              : "한국어"}
+                          </span>
+                          <p className="hm-native">{translation.translated}</p>
+                          {translation.from === "ko" && (
+                            <p className="hm-reading">{translation.reading}</p>
+                          )}
+                          <Speaker
+                            key={translation.translated}
+                            text={translation.translated}
+                            label={
+                              translation.from === "ko"
+                                ? "상대에게 들려주기"
+                                : "한국어로 듣기"
+                            }
+                          />
+                        </div>
+                        <small>
+                          {translation.saved
+                            ? "내 표현에 반영했어요. 오늘 학습에서 다시 말해 보세요."
+                            : state.autoSave
+                              ? "학습에 저장할 일반 표현이 없거나 저장 설정이 바뀌었어요."
+                              : "번역은 완료했어요. 자동 학습 반영은 꺼져 있어요."}
+                        </small>
+                      </div>
+                    )}
+                    <div className="hm-row hm-between">
+                      <label>
+                        입력 언어
+                        <select
+                          value={from}
+                          disabled={busy}
+                          onChange={(e) => {
+                            setFrom(e.target.value);
+                            setConfirm(false);
+                          }}
+                        >
+                          <option value="auto">자동 감지</option>
+                          <option value="ko">한국어</option>
+                          <option value={language}>
+                            {studyLanguages[language].name}
+                          </option>
+                        </select>
+                      </label>
+                      <span className="hm-badge">기본 번역 AI</span>
+                    </div>
+                    <Microphone
+                      key={`${language}:${from}:translate`}
+                      language={from}
+                      disabled={busy || !identity}
+                      onText={(t) => {
+                        setText(t);
+                        void doTranslate(t);
+                      }}
+                    />
+                    <details>
+                      <summary>직접 입력하거나 인식한 말 수정하기</summary>
+                      <label>
+                        번역할 말
+                        <textarea
+                          maxLength={1000}
+                          value={text}
+                          onChange={(e) => setText(e.target.value)}
+                          placeholder="편하게 한국어로 말해도 돼요."
+                        />
+                      </label>
+                      <button
+                        className="hm-primary"
+                        disabled={busy || !text.trim()}
+                        onClick={() => void doTranslate()}
+                      >
+                        {busy ? "번역 중…" : "번역하기"}
+                      </button>
+                    </details>
+                    {!identity && (
+                      <button onClick={() => setModal("login")}>
+                        로그인하고 번역하기
+                      </button>
+                    )}
+                    {confirm && (
+                      <div className="hm-notice" role="status">
+                        <p>
+                          짧거나 섞인 말이라 언어를 확인해야 해요. 아직
+                          번역·저장하지 않았어요.
+                        </p>
+                        <button
+                          disabled={busy}
+                          onClick={() => void doTranslate(text, "ko")}
+                        >
+                          한국어로 말했어요
+                        </button>
+                        <button
+                          disabled={busy}
+                          onClick={() => void doTranslate(text, language)}
+                        >
+                          {studyLanguages[language].name}로 말했어요
+                        </button>
+                      </div>
+                    )}
+                  </section>
+                  <div className="hm-callout">
+                    <div>
+                      <h3>번역을 내 실력으로</h3>
                       <p>
-                        짧거나 섞인 말이라 언어를 확인해야 해요. 아직
-                        번역·저장하지 않았어요.
+                        켜면 번역에서 짧은 일반 표현을 골라 내 학습에 반영해요.
+                        원음·전체 대화는 한마디 학습 기록에 저장하지 않아요.
                       </p>
-                      <button
-                        disabled={busy}
-                        onClick={() => void doTranslate(text, "ko")}
-                      >
-                        한국어로 말했어요
-                      </button>
-                      <button
-                        disabled={busy}
-                        onClick={() => void doTranslate(text, language)}
-                      >
-                        {studyLanguages[language].name}로 말했어요
-                      </button>
                     </div>
-                  )}
-                </section>
-                <div className="hm-callout">
-                  <div>
-                    <h3>번역을 내 실력으로</h3>
+                    <label className="hm-check">
+                      <input
+                        type="checkbox"
+                        checked={state.autoSave}
+                        disabled={busy}
+                        onChange={(e) => void toggleAutoSave(e.target.checked)}
+                      />
+                      자동 반영
+                    </label>
+                  </div>
+                  <p className="hm-muted">
+                    상대에게 번역 중임을 알려 주세요. 음성·문장은 처리를 위해 AI
+                    공급자로 전송돼요. 중요한 정보는 번역 결과를 확인해 주세요.
+                  </p>
+                </>
+              )}
+              {tab === "chat" && (
+                <>
+                  <div className="hm-page-heading">
+                    <h1>
+                      틀려도 괜찮은
+                      <br />
+                      나만의 대화 상대.
+                    </h1>
                     <p>
-                      켜면 번역에서 짧은 일반 표현을 골라 내 학습에 반영해요.
-                      원음·전체 대화는 한마디 학습 기록에 저장하지 않아요.
+                      아무 말이 떠오르지 않으면 한국어로 말해 주세요. 한마디씩
+                      같이 해 볼게요.
                     </p>
                   </div>
-                  <label className="hm-check">
-                    <input
-                      type="checkbox"
-                      checked={state.autoSave}
-                      disabled={busy}
-                      onChange={(e) => void toggleAutoSave(e.target.checked)}
-                    />
-                    자동 반영
-                  </label>
-                </div>
-                <p className="hm-muted">
-                  상대에게 번역 중임을 알려 주세요. 음성·문장은 처리를 위해 AI
-                  공급자로 전송돼요. 중요한 정보는 번역 결과를 확인해 주세요.
-                </p>
-              </>
-            )}
-            {tab === "chat" && (
-              <>
-                <div className="hm-page-heading">
-                  <span className="hm-eyebrow">
-                    YOUR PATIENT PRACTICE PARTNER
-                  </span>
-                  <h1>틀려도 괜찮은 대화 상대.</h1>
-                  <p>
-                    아무 말이 떠오르지 않으면 한국어로 말해 주세요. 한마디씩
-                    같이 해 볼게요.
-                  </p>
-                </div>
-                <section className="hm-panel">
-                  <div className="hm-row hm-between">
-                    <label>
-                      대화 상황
-                      <select
+                  <section className="hm-panel">
+                    <div className="hm-row hm-between">
+                      <label>
+                        대화 상황
+                        <select
+                          disabled={busy}
+                          value={scene}
+                          onChange={(e) => {
+                            setScene(e.target.value);
+                            setChat([]);
+                          }}
+                        >
+                          {curriculum.scenes.map((s) => (
+                            <option key={s.id} value={s.id}>
+                              {s.title}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <button
+                        onClick={() => setModal(identity ? "ai" : "login")}
                         disabled={busy}
-                        value={scene}
-                        onChange={(e) => {
-                          setScene(e.target.value);
-                          setChat([]);
-                        }}
                       >
-                        {curriculum.scenes.map((s) => (
-                          <option key={s.id} value={s.id}>
-                            {s.title}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                    <button
-                      onClick={() => setModal(identity ? "ai" : "login")}
-                      disabled={busy}
+                        {selection === "default" ? "기본 Gemini" : "내 AI 모델"}{" "}
+                        ▾
+                      </button>
+                      <button
+                        disabled={busy || !chat.length}
+                        onClick={() => setChat([])}
+                      >
+                        새 대화
+                      </button>
+                    </div>
+                    {!chat.length && (
+                      <div className="hm-chat-empty">
+                        <span className="hm-coach">
+                          <Icon
+                            name={
+                              curriculum.scenes.find((s) => s.id === scene)
+                                ?.icon ?? "chat"
+                            }
+                          />
+                        </span>
+                        <h2>먼저 말을 걸어 드릴게요.</h2>
+                        <p>
+                          {
+                            curriculum.scenes.find((s) => s.id === scene)
+                              ?.prompt
+                          }
+                        </p>
+                        <button
+                          className="hm-primary"
+                          disabled={busy}
+                          onClick={() =>
+                            void sendChat(
+                              "아직 이 언어를 몰라요. 짧은 인사와 따라 말할 예시부터 알려 주세요.",
+                            )
+                          }
+                        >
+                          AI가 먼저 말하기 →
+                        </button>
+                      </div>
+                    )}
+                    <div className="hm-chat-log" aria-live="polite">
+                      {chat.map((m, i) =>
+                        m.phrase ? (
+                          <div key={i} className="hm-chat-assistant">
+                            <span className="hm-eyebrow">한마디 AI</span>
+                            <PhraseCard phrase={m.phrase} language={language}>
+                              <button
+                                disabled={busy}
+                                onClick={async () => {
+                                  const data = await run({
+                                    action: "save-chat",
+                                    phrase: m.phrase,
+                                  });
+                                  if (data)
+                                    setNotice(
+                                      data.saved
+                                        ? "내 표현에 추가했어요."
+                                        : "표현을 저장하지 못했어요.",
+                                    );
+                                }}
+                              >
+                                이 표현 연습에 추가
+                              </button>
+                            </PhraseCard>
+                          </div>
+                        ) : (
+                          <p key={i} className="hm-chat-user">
+                            {m.content}
+                          </p>
+                        ),
+                      )}
+                    </div>
+                    {busy && <p role="status">한마디를 준비하고 있어요…</p>}
+                    <Microphone
+                      key={`${language}:${selection}:${scene}:chat`}
+                      language="auto"
+                      disabled={busy || chat.length >= 20 || !identity}
+                      onText={(t) => {
+                        setChatInput(t);
+                        void sendChat(t);
+                      }}
+                    />
+                    <form
+                      onSubmit={(e) => {
+                        e.preventDefault();
+                        void sendChat();
+                      }}
                     >
-                      {selection === "default" ? "기본 Gemini" : "내 AI 모델"} ▾
-                    </button>
-                    <button
-                      disabled={busy || !chat.length}
-                      onClick={() => setChat([])}
-                    >
-                      새 대화
-                    </button>
+                      <label>
+                        말이 막히면 한국어로 도움 요청
+                        <input
+                          value={chatInput}
+                          onChange={(e) => setChatInput(e.target.value)}
+                          maxLength={1000}
+                          placeholder="예: 덜 달게 해 달라고 말하고 싶어"
+                        />
+                      </label>
+                      <button
+                        className="hm-primary"
+                        disabled={
+                          busy || !chatInput.trim() || chat.length >= 20
+                        }
+                      >
+                        보내기
+                      </button>
+                    </form>
+                    {chat.length >= 20 && (
+                      <p>충분히 연습했어요! 새 대화를 열면 계속할 수 있어요.</p>
+                    )}
+                    <p className="hm-muted">
+                      대화는 이 화면을 떠나면 사라져요. 다시 연습할 표현만 직접
+                      추가하세요. AI는 틀릴 수 있으며 음성 전사로 발음 점수를
+                      매기지 않아요.
+                    </p>
+                  </section>
+                </>
+              )}
+              {tab === "phrases" && (
+                <>
+                  <div className="hm-page-heading">
+                    <h1>
+                      내가 써 본 말,
+                      <br />내 표현.
+                    </h1>
+                    <p>
+                      {studyLanguages[language].name} 표현 {due.length}개 · 말해
+                      본 뒤 다음 복습일을 정해요.
+                    </p>
                   </div>
-                  {!chat.length && (
-                    <div className="hm-chat-empty">
-                      <span className="hm-coach">h.</span>
-                      <h2>먼저 말을 걸어 드릴게요.</h2>
+                  {!due.length ? (
+                    <section className="hm-panel">
+                      <h2>아직 모은 표현이 없어요.</h2>
                       <p>
-                        {curriculum.scenes.find((s) => s.id === scene)?.prompt}
+                        번역 자동 반영을 켜거나 AI 대화에서 마음에 드는 표현을
+                        추가해 보세요.
                       </p>
                       <button
                         className="hm-primary"
-                        disabled={busy}
-                        onClick={() =>
-                          void sendChat(
-                            "아직 이 언어를 몰라요. 짧은 인사와 따라 말할 예시부터 알려 주세요.",
-                          )
-                        }
+                        onClick={() => setTab("translate")}
                       >
-                        AI가 먼저 말하기 →
+                        번역해 보기 →
                       </button>
-                    </div>
-                  )}
-                  <div className="hm-chat-log" aria-live="polite">
-                    {chat.map((m, i) =>
-                      m.phrase ? (
-                        <div key={i} className="hm-chat-assistant">
-                          <span className="hm-eyebrow">한마디 AI</span>
-                          <PhraseCard phrase={m.phrase} language={language}>
+                    </section>
+                  ) : (
+                    <div className="hm-grid">
+                      {due.map((e) => (
+                        <PhraseCard key={e.id} language={language} phrase={e}>
+                          <div className="hm-row hm-between">
+                            <span className="hm-badge">
+                              {e.source === "translation"
+                                ? "번역에서"
+                                : "AI 대화에서"}
+                            </span>
                             <button
                               disabled={busy}
-                              onClick={async () => {
-                                const data = await run({
-                                  action: "save-chat",
-                                  phrase: m.phrase,
-                                });
-                                if (data)
-                                  setNotice(
-                                    data.saved
-                                      ? "내 표현에 추가했어요."
-                                      : "표현을 저장하지 못했어요.",
-                                  );
-                              }}
+                              onClick={() =>
+                                void run({ action: "delete", id: e.id })
+                              }
+                              aria-label={`${e.meaning} 삭제`}
                             >
-                              이 표현 연습에 추가
+                              삭제
                             </button>
-                          </PhraseCard>
-                        </div>
-                      ) : (
-                        <p key={i} className="hm-chat-user">
-                          {m.content}
-                        </p>
-                      ),
-                    )}
-                  </div>
-                  {busy && <p role="status">한마디를 준비하고 있어요…</p>}
-                  <Microphone
-                    key={`${language}:${selection}:${scene}:chat`}
-                    language="auto"
-                    disabled={busy || chat.length >= 20 || !identity}
-                    onText={(t) => {
-                      setChatInput(t);
-                      void sendChat(t);
-                    }}
-                  />
-                  <form
-                    onSubmit={(e) => {
-                      e.preventDefault();
-                      void sendChat();
-                    }}
-                  >
-                    <label>
-                      말이 막히면 한국어로 도움 요청
-                      <input
-                        value={chatInput}
-                        onChange={(e) => setChatInput(e.target.value)}
-                        maxLength={1000}
-                        placeholder="예: 덜 달게 해 달라고 말하고 싶어"
-                      />
-                    </label>
-                    <button
-                      className="hm-primary"
-                      disabled={busy || !chatInput.trim() || chat.length >= 20}
-                    >
-                      보내기
-                    </button>
-                  </form>
-                  {chat.length >= 20 && (
-                    <p>충분히 연습했어요! 새 대화를 열면 계속할 수 있어요.</p>
+                          </div>
+                          <small>
+                            {e.practicedAt
+                              ? `다음 복습 ${new Date(e.dueAt).toLocaleDateString("ko-KR")}`
+                              : "아직 연습 전이에요"}
+                          </small>
+                          <div className="hm-row">
+                            <button
+                              disabled={busy}
+                              onClick={() =>
+                                void run({
+                                  action: "practice",
+                                  id: e.id,
+                                  confidence: "help",
+                                })
+                              }
+                            >
+                              도움 받고 말했어요
+                            </button>
+                            <button
+                              disabled={busy}
+                              onClick={() =>
+                                void run({
+                                  action: "practice",
+                                  id: e.id,
+                                  confidence: "alone",
+                                })
+                              }
+                            >
+                              혼자 말했어요
+                            </button>
+                          </div>
+                        </PhraseCard>
+                      ))}
+                    </div>
                   )}
-                  <p className="hm-muted">
-                    대화는 이 화면을 떠나면 사라져요. 다시 연습할 표현만 직접
-                    추가하세요. AI는 틀릴 수 있으며 음성 전사로 발음 점수를
-                    매기지 않아요.
-                  </p>
-                </section>
-              </>
-            )}
-            {tab === "phrases" && (
-              <>
-                <div className="hm-page-heading">
-                  <span className="hm-eyebrow">WORDS THAT ARE YOURS</span>
-                  <h1>내가 써 본 말, 내 표현.</h1>
-                  <p>
-                    {studyLanguages[language].name} 표현 {due.length}개 · 말해
-                    본 뒤 다음 복습일을 정해요.
-                  </p>
-                </div>
-                {!due.length ? (
-                  <section className="hm-panel">
-                    <h2>아직 모은 표현이 없어요.</h2>
-                    <p>
-                      번역 자동 반영을 켜거나 AI 대화에서 마음에 드는 표현을
-                      추가해 보세요.
-                    </p>
-                    <button
-                      className="hm-primary"
-                      onClick={() => setTab("translate")}
-                    >
-                      번역해 보기 →
-                    </button>
-                  </section>
-                ) : (
-                  <div className="hm-grid">
-                    {due.map((e) => (
-                      <PhraseCard key={e.id} language={language} phrase={e}>
-                        <div className="hm-row hm-between">
-                          <span className="hm-badge">
-                            {e.source === "translation"
-                              ? "번역에서"
-                              : "AI 대화에서"}
-                          </span>
-                          <button
-                            disabled={busy}
-                            onClick={() =>
-                              void run({ action: "delete", id: e.id })
-                            }
-                            aria-label={`${e.meaning} 삭제`}
-                          >
-                            삭제
-                          </button>
-                        </div>
-                        <small>
-                          {e.practicedAt
-                            ? `다음 복습 ${new Date(e.dueAt).toLocaleDateString("ko-KR")}`
-                            : "아직 연습 전이에요"}
-                        </small>
-                        <div className="hm-row">
-                          <button
-                            disabled={busy}
-                            onClick={() =>
-                              void run({
-                                action: "practice",
-                                id: e.id,
-                                confidence: "help",
-                              })
-                            }
-                          >
-                            도움 받고 말했어요
-                          </button>
-                          <button
-                            disabled={busy}
-                            onClick={() =>
-                              void run({
-                                action: "practice",
-                                id: e.id,
-                                confidence: "alone",
-                              })
-                            }
-                          >
-                            혼자 말했어요
-                          </button>
-                        </div>
-                      </PhraseCard>
-                    ))}
-                  </div>
-                )}
-              </>
-            )}
-          </>
-        )}
-      </main>
-      <nav className="hm-bottom" aria-label="주요 메뉴">
-        {(
-          [
-            ["study", "◫", "스터디"],
-            ["chat", "◌", "AI 대화"],
-            ["translate", "↔", "번역"],
-            ["phrases", "▤", "내 표현"],
-          ] as const
-        ).map(([id, icon, label]) => (
-          <button
-            key={id}
-            disabled={busy || !language}
-            aria-current={tab === id ? "page" : undefined}
-            onClick={() => {
-              setTab(id);
-              setError("");
-              setNotice("");
-              if (id !== "chat") {
-                setChat([]);
-                setChatInput("");
-              }
-            }}
-          >
-            <span aria-hidden="true">{icon}</span>
-            {label}
-          </button>
-        ))}
-      </nav>
+                </>
+              )}
+            </>
+          )}
+        </main>
+        <nav className="hm-bottom" aria-label="주요 메뉴">
+          {(
+            [
+              ["study", "book", "스터디"],
+              ["chat", "chat", "AI 대화"],
+              ["translate", "translate", "번역"],
+              ["phrases", "heart", "내 표현"],
+            ] as const
+          ).map(([id, icon, label]) => (
+            <button
+              key={id}
+              disabled={busy || !language}
+              aria-current={tab === id ? "page" : undefined}
+              onClick={() => {
+                setTab(id);
+                setError("");
+                setNotice("");
+                if (id !== "chat") {
+                  setChat([]);
+                  setChatInput("");
+                }
+              }}
+            >
+              <Icon name={icon} />
+              {label}
+            </button>
+          ))}
+        </nav>
+      </div>
       {modal && (
         <Dialog
           title={
