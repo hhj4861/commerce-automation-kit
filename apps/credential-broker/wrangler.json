@@ -19,7 +19,8 @@
     "STORE_ID": "de2c8d7c3e9c4067acc22212522c0fc4",
     "BROKER_URL": "https://cak-credential-broker.guswhd1085.workers.dev",
     "RUNNER_PUBLIC_JWK": "{\"crv\":\"Ed25519\",\"x\":\"Gdu3rj0RqgHpDNNPdXpPNE7PUxrEiz5YKSltS3tVKDE\",\"kty\":\"OKP\"}",
-    "GITHUB_ALLOWED_REFS": "refs/heads/main,refs/heads/feat/common-video-generator"
+    "GITHUB_ALLOWED_REFS": "refs/heads/main,refs/heads/feat/common-video-generator",
+    "GITHUB_DEPLOY_ALLOWED_REFS": ""
   },
   "secrets_store_secrets": [
     {

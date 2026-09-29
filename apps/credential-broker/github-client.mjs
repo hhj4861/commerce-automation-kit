@@ -1,6 +1,6 @@
 import { appendFileSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
-import { AUDIENCE, GITHUB_KEYS } from './policy.mjs';
+import { AUDIENCE, GITHUB_KEYS, DEPLOYMENT_KEYS } from './policy.mjs';
 
 function endpoint(value) {
   const url = new URL(value);
@@ -37,7 +37,7 @@ export async function run(env = process.env, fetcher = fetch) {
   if (!body.values || !Object.keys(body.values).length) throw new Error('Empty credentials');
   const entries = Object.entries(body.values);
   for (const [name, value] of entries) {
-    if (!GITHUB_KEYS.includes(name) || typeof value !== 'string' || !value) throw new Error('Invalid credential response');
+    if (![...GITHUB_KEYS, ...DEPLOYMENT_KEYS].includes(name) || typeof value !== 'string' || !value) throw new Error('Invalid credential response');
     mask(value);
   }
   if (action === 'load') {

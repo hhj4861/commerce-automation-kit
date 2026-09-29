@@ -1,0 +1,26 @@
+name: Platform GitOps checks
+on:
+  pull_request:
+  push:
+    branches: [main, feat/platform-gitops]
+    paths: [ops/deploy/**, apps/credential-broker/**, apps/hanmadi/vercel.json, .github/workflows/platform-*.yml]
+permissions:
+  contents: read
+jobs:
+  verify:
+    name: Platform GitOps verification
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci -w @cak/credential-broker --ignore-scripts --no-audit --no-fund
+      - run: node --test ops/deploy/test.mjs apps/credential-broker/test/*.test.mjs
+      - run: python3 -m unittest discover -s ops/deploy -p 'test_*.py'
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.5.7
+      - run: terraform fmt -check && terraform init -backend=false -input=false -lockfile=readonly && terraform validate
+        working-directory: ops/deploy/gcp-identity

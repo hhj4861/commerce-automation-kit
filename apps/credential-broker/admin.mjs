@@ -3,7 +3,7 @@ import { readFile, writeFile, mkdir, stat } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { dirname, resolve } from 'node:path';
 import { generateKeyPairSync, randomBytes } from 'node:crypto';
-import { STATIC_KEYS } from './policy.mjs';
+import { STATIC_KEYS, DEPLOYMENT_KEYS } from './policy.mjs';
 import { runnerRequest } from './runner-client.mjs';
 
 const ACCOUNT = '8707f7095965c1c134cd93e0b68248ca';
@@ -38,7 +38,7 @@ async function upsert(config, values) {
   const store = config.vars.STORE_ID;
   const existing = await cf(`secrets_store/stores/${store}/secrets?per_page=100`);
   for (const [name, value] of Object.entries(values)) {
-    if (![...STATIC_KEYS, 'VAULT_KEY'].includes(name) || typeof value !== 'string' || !value || Buffer.byteLength(value) > 1024) throw new Error(`Invalid value for ${name}`);
+    if (![...STATIC_KEYS, ...DEPLOYMENT_KEYS, 'VAULT_KEY'].includes(name) || typeof value !== 'string' || !value || Buffer.byteLength(value) > 1024) throw new Error(`Invalid value for ${name}`);
     const secretName = `CAK_${name}`;
     const old = existing.find(item => item.name === secretName);
     if (old) await cf(`secrets_store/stores/${store}/secrets/${old.id}`, 'PATCH', { value, scopes: ['workers'] });
@@ -82,6 +82,14 @@ async function main() {
     catch (error) { if (error.code !== 'ENOENT') throw error; }
     await saveConfig(config);
     await upsert(config, { VAULT_KEY: randomBytes(32).toString('base64') });
+  } else if (action === 'register-deploy') {
+    if (!process.argv[3]) throw new Error('Private deployment credential JSON file required');
+    const path = resolve(process.argv[3]);
+    if (((await stat(path)).mode & 0o077) !== 0) throw new Error('Deployment credential file must be private (0600)');
+    const values = JSON.parse(await readFile(path, 'utf8'));
+    if (!Object.keys(values).length || Object.keys(values).some(k => !DEPLOYMENT_KEYS.includes(k))) throw new Error('Only deployment credential names are allowed');
+    await upsert(await getConfig(), values);
+    console.log('Deployment secrets registered; enable reviewed branch policy and redeploy broker separately.');
   } else if (action === 'register-local') {
     const config = await getConfig();
     const env = { ...parseEnv(await readFile(resolve(ROOT, 'packages/keyword-intel/.env'), 'utf8')), ...parseEnv(await readFile(resolve(ROOT, '.env'), 'utf8')) };

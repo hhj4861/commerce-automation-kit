@@ -1,5 +1,5 @@
 import { createRemoteJWKSet, importJWK, jwtVerify } from 'jose';
-import { AUDIENCE, ISSUER, STATIC_KEYS, PAGE_KEYS, GITHUB_KEYS, authorizeGithub, authorizeMigration } from './policy.mjs';
+import { AUDIENCE, ISSUER, STATIC_KEYS, PAGE_KEYS, GITHUB_KEYS, DEPLOYMENT_KEYS, authorizeGithub, authorizeMigration } from './policy.mjs';
 import { readVault, writeVault } from './vault.mjs';
 import { lease } from './leases.mjs';
 import { accountAction, accountRunner } from './llm-accounts.mjs';
@@ -10,7 +10,7 @@ const response = (value, status = 200) => Response.json(value, { status, headers
 export async function readSecrets(env, keys, required = true) {
   const values = {};
   for (const name of keys) {
-    if (!STATIC_KEYS.includes(name)) throw new Error('unknown key');
+    if (![...STATIC_KEYS, ...DEPLOYMENT_KEYS].includes(name)) throw new Error('unknown key');
     const binding = env[`SS_${name}`];
     if (!binding) {
       if (required) throw new Error('missing binding');
