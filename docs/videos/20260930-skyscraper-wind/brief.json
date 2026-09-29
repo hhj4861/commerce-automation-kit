@@ -1,0 +1,181 @@
+{
+  "id": "skyscraper-wind-20260930",
+  "title": "초고층 빌딩 꼭대기에 구멍을 뚫는 이유",
+  "category": "건축학",
+  "duration": 70,
+  "aspect": "9:16",
+  "voice": "n2fbxG88jqAoaVPUy3IG",
+  "voiceName": "Yooni - Natural & Clear",
+  "narrationSpeed": 1.15,
+  "reference": "/Users/admin/Downloads/KakaoTalk_Video_2026-09-28-14-16-50.mp4",
+  "referenceUse": "Original AI cinematic recreation inspired by reference pacing, low-key lighting, close/wide shot contrast; no source video/audio reused.",
+  "sources": [
+    {
+      "url": "https://www.swfc-shanghai.com/about_intro.php?l=en",
+      "title": "SWFC official overview",
+      "facts": [
+        "492 m",
+        "101 floors",
+        "KPF design"
+      ]
+    },
+    {
+      "url": "https://www.otis.com/en/us/our-company/global-projects/project-showcase/shanghai-world-financial-center",
+      "title": "Otis — SWFC project participant",
+      "facts": [
+        "Trapezoid aperture helps relieve wind pressure",
+        "Nickname bottle opener"
+      ]
+    },
+    {
+      "url": "https://swfc-shanghai.com/up_pdf/1321340644_23490.pdf",
+      "title": "SWFC opening press release 2008",
+      "facts": [
+        "Rooftop opening reduces wind-induced roof pressure"
+      ],
+      "retrieval": "Official search-index excerpt; direct PDF retrieval timed out"
+    },
+    {
+      "url": "https://rwdi.com/services/wind-engineering/",
+      "title": "RWDI wind engineering",
+      "facts": [
+        "Wind studies and wind tunnel testing support building design"
+      ],
+      "scope": "General engineering workflow, not a claim that the generated laboratory is actual SWFC footage"
+    }
+  ],
+  "scenes": [
+    {
+      "id": "s1",
+      "title": "꼭대기에 구멍이 있다",
+      "subtitle": "빈 공간에도 설계의 이유가 있습니다",
+      "visual": "hero",
+      "narration": "초고층 빌딩 꼭대기에, 거대한 구멍이 뚫려 있습니다. 비싼 공간을 왜 비워 놨을까요? 눈에 띄려고만 만든 장식은 아닙니다. 바람을 다루는 설계입니다.",
+      "kind": "video",
+      "shot": "detail",
+      "camera": "push-in",
+      "prompt": "A close architectural cinematic view of the upper crown of Shanghai World Financial Center, accurately recognizable broad tapering blue-gray glass wedge with ONE large open inverted-trapezoid portal near its flat roof. Sky clearly visible through the opening. No spire, no pagoda, no circular opening. Slow camera rise revealing the aperture, straight stable geometry, overcast dawn, no text.",
+      "editorialTransform": "Generated camera move reversed so the aperture is visible from the first frame. No real-world dynamic engineering event is reversed."
+    },
+    {
+      "id": "s2",
+      "title": "492미터의 거대한 병따개",
+      "subtitle": "상하이 세계금융센터",
+      "visual": "city",
+      "narration": "이 건물은 높이 사백구십이 미터의 상하이 세계금융센터입니다. 꼭대기 모양 때문에 병따개라는 별명도 있죠. 하지만 핵심은 모양보다, 바람의 힘입니다.",
+      "kind": "video",
+      "shot": "wide",
+      "camera": "push-in",
+      "prompt": "Wide architectural portrait of Shanghai World Financial Center in Pudong, Shanghai. Main subject is the distinctive flat-topped tall glass wedge with a SINGLE trapezoidal sky portal near the top, straight tapering sides. Not Shanghai Tower, not Taipei 101. Muted green-gray skyline and warm dawn window reflections, gentle lateral camera drift, physically stable tower."
+    },
+    {
+      "id": "s3",
+      "title": "바람은 보이지 않는 하중",
+      "subtitle": "외벽에 힘이 작용합니다",
+      "visual": "pressure",
+      "narration": "바람이 건물에 부딪히면, 외벽에는 압력이 작용합니다. 바람은 앞에서 밀기만 하는 게 아니라, 주변을 돌아가며 복잡하게 흐르죠. 건물은 그 힘을 견뎌야 합니다.",
+      "kind": "video",
+      "shot": "detail",
+      "camera": "locked",
+      "prompt": "Original conceptual airflow and facade-pressure diagram."
+    },
+    {
+      "id": "s4",
+      "title": "막는 대신, 통과시키기",
+      "subtitle": "상단의 개구부가 하는 일",
+      "visual": "opening",
+      "narration": "이 건물의 상단 개구부는 바람이 지나갈 길을 만들어, 바람에 의한 압력을 줄이도록 설계됐습니다. 무조건 꽉 막는 대신, 일부를 비워 힘을 덜 받게 하는 겁니다.",
+      "kind": "video",
+      "shot": "detail",
+      "camera": "locked",
+      "prompt": "Original top-crown aperture and passing airflow diagram."
+    },
+    {
+      "id": "s5",
+      "title": "구멍 하나면 해결될까?",
+      "subtitle": "크기·위치·전체 형태를 함께 설계",
+      "visual": "limits",
+      "narration": "그렇다고 아무 건물에나 구멍을 뚫으면 안전해지는 건 아닙니다. 구멍의 크기와 위치, 건물 전체의 형태, 주변 건물까지 함께 살펴야 하죠. 바람이 부는 방향도 달라집니다.",
+      "kind": "video",
+      "shot": "detail",
+      "camera": "locked",
+      "prompt": "Original diagram showing opening location, surrounding massing and changing wind directions."
+    },
+    {
+      "id": "s6",
+      "title": "눈에 보이지 않는 흐름을 확인",
+      "subtitle": "바람의 영향은 검증해야 합니다",
+      "visual": "model",
+      "narration": "그래서 초고층 설계에서는 축소 모형을 이용한 풍동 실험 등으로 바람의 영향을 확인합니다. 보기 좋은 모양과, 바람에 잘 대응하는 모양이 항상 같은 것은 아니니까요.",
+      "kind": "video",
+      "shot": "detail",
+      "camera": "push-in",
+      "prompt": "Photorealistic architectural engineering wind tunnel laboratory. Single small rigid scale model of a generic tapering skyscraper with a rectangular opening at its crown, among simple low city blocks on a testing table. Thin white smoke threads gently flow horizontally around and through the model. Dark green-gray laboratory, warm precise lighting, shallow depth of field, slow slide, no people, no lettering. This is an illustrative laboratory, not a claim of actual SWFC testing footage."
+    },
+    {
+      "id": "s7",
+      "title": "비운 공간에도 역할이 있다",
+      "subtitle": "장식과 성능이 만나는 지점",
+      "visual": "reveal",
+      "narration": "상하이의 이 구멍은 독특한 실루엣을 만들면서, 바람에 대응하는 역할도 합니다. 건축의 빈 공간은 낭비처럼 보여도, 보이지 않는 일을 하고 있을 수 있습니다.",
+      "kind": "video",
+      "shot": "detail",
+      "camera": "locked",
+      "prompt": "Original diagram gradually revealing a luminous aperture in a tower silhouette."
+    },
+    {
+      "id": "s8",
+      "title": "강한 건축은 무조건 막을까?",
+      "subtitle": "때로는, 바람이 지나갈 길을 만듭니다",
+      "visual": "ending",
+      "narration": "강한 건축은 모든 것을 막아내는 건축일까요? 때로는 바람이 지나갈 길을 만들어 줍니다. 다음에 빌딩의 빈틈을 보면, 그 공간이 무슨 일을 하는지 떠올려 보세요.",
+      "kind": "video",
+      "shot": "wide",
+      "camera": "push-in",
+      "prompt": "Closing cinematic portrait of the upper crown of Shanghai World Financial Center, broad flat-topped tapered glass tower with one accurately shaped large inverted-trapezoid opening. A shaft of golden dawn light shines THROUGH the empty aperture, soft clouds behind, subtle slow pullback. Rigid realistic geometry, no spire, no circle, no abstract sphere, quiet monumental composition."
+    }
+  ],
+  "visualStyle": "Cinematic architectural essay, photorealistic high-end documentary recreation, deep charcoal and muted forest-green palette, antique gold highlights, warm sculptural side lighting, volumetric atmosphere kept subtle, controlled contrast, fine natural film grain, slow deliberate camera motion, restrained monumental scale. Vertical composition 9:16 with the important subject in the upper and lower thirds, clean visual space near center for Korean captions. No lettering, watermark, logos, subtitles, HUD, borders or letterboxing. This is an original illustrative recreation, not archival footage.",
+  "backgroundMusic": "Original synthesized low-volume harmonic ambient bed, ducked under narration; no reference audio reused.",
+  "autoDuration": true,
+  "direction": "상하이 세계금융센터의 상단 개구부와 바람 설계의 원리. 개념도는 수치 시뮬레이션이 아니다.",
+  "narrationProvenance": {
+    "runId": 36639351825,
+    "sourceBeatIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7
+    ]
+  },
+  "mediaProvenance": {
+    "generationCredits": 324,
+    "generated": {
+      "s1": {
+        "id": "820e7121-acd2-4741-8b63-7bd6c54b93d6",
+        "model": "seedance_2_0",
+        "credits": 81
+      },
+      "s2": {
+        "id": "5d96fedd-2eb7-49d5-a9d0-d50bf0a12c12",
+        "model": "seedance_2_0",
+        "credits": 81
+      },
+      "s6": {
+        "id": "314dcfa2-50b8-4e3b-a39f-bc958c1d29e6",
+        "model": "seedance_2_0",
+        "credits": 81
+      },
+      "s8": {
+        "id": "87b07c87-2011-47a1-9388-a0c4ddf31d68",
+        "model": "seedance_2_0",
+        "credits": 81
+      }
+    },
+    "allFourDownloaded": true
+  }
+}
