@@ -98,7 +98,11 @@ const mock = createServer(async (req, res) => {
     return res.end(Buffer.from([73, 68, 51, 4, 0, 0, 0, 0, 0, 0]));
   }
   calls++;
-  modelCalls.push({ model: b.model, subject: req.headers["x-ai-subject"] });
+  modelCalls.push({
+    model: b.model,
+    subject: req.headers["x-ai-subject"],
+    system: b.messages?.[0]?.content ?? "",
+  });
   const system = b.messages?.[0]?.content ?? "",
     input = b.messages?.at(-1)?.content ?? "";
   if (input.includes("SLOW")) {
@@ -209,7 +213,9 @@ let logs = "";
 app.stdout.on("data", (b) => (logs = (logs + b).slice(-10000)));
 app.stderr.on("data", (b) => (logs = (logs + b).slice(-10000)));
 let browser;
-const screenshots = resolve("../../docs/hanmadi-v2-e2e");
+const screenshots = resolve(
+  process.env.HANMADI_E2E_SCREENSHOTS || "../../docs/hanmadi-v2-e2e",
+);
 await mkdir(screenshots, { recursive: true });
 try {
   for (let n = 0; n < 90; n++) {
@@ -916,6 +922,210 @@ try {
   console.log(
     "PASS account isolation, CSRF, owner-only admin, draft/review/publish/unpublish, revision conflict",
   );
+  // New shared knowledge flow uses actual Next handlers and persistent local CAS.
+  const adminSnapshot = async () =>
+    (await admin.request.get(base + "/api/study/admin")).json();
+  assert.equal((await adminSnapshot()).contributions.length, 0);
+  await post({
+    action: "translate",
+    language: "ja",
+    from: "ko",
+    text: "한국에서 왔어요.",
+  });
+  assert.equal(
+    (await adminSnapshot()).contributions.length,
+    0,
+    "personal practice consent is not shared consent",
+  );
+  await post({ action: "settings", language: "ja" });
+  const contributorPage = await context.newPage();
+  await contributorPage.goto(base + "/study");
+  await contributorPage
+    .getByRole("button", { name: "번역", exact: true })
+    .click();
+  await contributorPage
+    .getByText("공용 학습 자료 제공 (선택)", { exact: true })
+    .click();
+  const consent = contributorPage.getByLabel(
+    "이번 번역의 일반 표현을 공용 학습 자료로 제공하는 데 동의해요.",
+    { exact: true },
+  );
+  assert.equal(await consent.isChecked(), false);
+  await consent.check();
+  await contributorPage.getByText("직접 입력하거나 인식한 말 수정하기").click();
+  await contributorPage.getByLabel("번역할 말").fill("한국에서 왔어요.");
+  await contributorPage
+    .getByRole("button", { name: "번역하기", exact: true })
+    .click();
+  await contributorPage
+    .getByRole("status")
+    .filter({ hasText: "관리자 검수 후보" })
+    .waitFor();
+  assert.equal(
+    await consent.isChecked(),
+    false,
+    "consent applies to one translation only",
+  );
+  await contributorPage.getByText("공용 학습 자료 제공 (선택)", { exact: true }).click();
+  const candidate = (await adminSnapshot()).contributions[0];
+  assert.equal(
+    candidate.actor,
+    undefined,
+    "admin does not receive contributor identity",
+  );
+  assert.equal(
+    (
+      await post({
+        action: "translate",
+        language: "ja",
+        from: "ko",
+        text: "한국에서 왔어요.",
+        shareForLearning: true,
+      })
+    ).data.contribution,
+    "duplicate",
+  );
+  await adminPage.reload();
+  await adminPage
+    .getByRole("button", { name: "번역 후보 (1)", exact: true })
+    .click();
+  await adminPage
+    .getByRole("button", { name: "교재 초안으로 가져오기", exact: true })
+    .click();
+  await adminPage
+    .getByLabel(
+      "이 원문을 AI로 처리하고 학습 표현으로 재사용할 권한을 확인했어요.",
+      { exact: true },
+    )
+    .check();
+  await adminPage
+    .getByRole("button", { name: "AI로 학습 초안 만들기", exact: true })
+    .click();
+  await adminPage
+    .getByRole("status")
+    .filter({ hasText: "초안을 저장했어요." })
+    .waitFor();
+  const shared = (await adminSnapshot()).drafts.find(
+    (d) => d.contributionId === candidate.id,
+  );
+  assert(shared && shared.status === "draft");
+  const previewQuery = {
+    action: "preview",
+    mode: "chat",
+    language: "ja",
+    level: 1,
+    scene: "smalltalk",
+    query: "한국에서 왔어요.",
+  };
+  assert.equal(
+    (await post(previewQuery, admin, "/api/study/admin")).data.matches.length,
+    0,
+  );
+  await adminPage
+    .getByLabel("목표 언어·발음 도움·난이도·개인정보·사용권을 검수했어요.", {
+      exact: true,
+    })
+    .check();
+  await adminPage
+    .getByRole("button", { name: "검수 완료 · 학습에 게시", exact: true })
+    .click();
+  await adminPage
+    .getByRole("status")
+    .filter({ hasText: "게시했어요." })
+    .waitFor();
+  assert((await state()).units.some((u) => u.id.includes(shared.id)));
+  assert.equal(
+    (await post(previewQuery, admin, "/api/study/admin")).data.matches[0].id,
+    shared.id,
+  );
+  await post({ action: "level", language: "ja", level: 1, minutes: 10 });
+  assert.equal(
+    (
+      await post({
+        action: "chat",
+        language: "ja",
+        scene: "smalltalk",
+        messages: [{ role: "user", content: "한국에서 왔어요." }],
+      })
+    ).status,
+    200,
+  );
+  assert.match(modelCalls.at(-1).system, /Reference examples/);
+  assert.match(modelCalls.at(-1).system, /추가 수업 표현/);
+  await adminPage
+    .getByRole("button", { name: "앱 반영 확인", exact: true })
+    .click();
+  await adminPage
+    .getByRole("button", { name: "적용 자료 확인", exact: true })
+    .click();
+  await adminPage.getByRole("status").filter({ hasText: "1개 표현" }).waitFor();
+  for (const width of [390, 1440]) {
+    await adminPage.setViewportSize({ width, height: 1000 });
+    assert(
+      await adminPage.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+      `admin preview overflow ${width}`,
+    );
+  }
+  await post({ action: "withdraw-contributions" }, other);
+  assert.equal(
+    (await post(previewQuery, admin, "/api/study/admin")).data.matches.length,
+    1,
+    "other learner cannot withdraw owner's examples",
+  );
+  await contributorPage
+    .getByRole("button", { name: "내가 제공한 공용 자료 회수", exact: true })
+    .click();
+  await contributorPage
+    .getByRole("button", { name: "공용 자료 전체 회수", exact: true })
+    .click();
+  await contributorPage
+    .getByRole("status")
+    .filter({ hasText: "공용 후보 1개를 회수" })
+    .waitFor();
+  await contributorPage.close();
+  assert(!(await state()).units.some((u) => u.id.includes(shared.id)));
+  assert.equal(
+    (await post(previewQuery, admin, "/api/study/admin")).data.matches.length,
+    0,
+  );
+  assert.equal(
+    (
+      await post(
+        { action: "save", ...shared, reviewed: true, status: "published" },
+        admin,
+        "/api/study/admin",
+      )
+    ).status,
+    409,
+  );
+  await post({
+    action: "chat",
+    language: "ja",
+    scene: "smalltalk",
+    messages: [{ role: "user", content: "한국에서 왔어요." }],
+  });
+  assert(!modelCalls.at(-1).system.includes("Reference examples"));
+  assert.equal((await adminSnapshot()).contributions.length, 0);
+  const collectionStarted = new Promise((resolve) => {
+    slowStarted = resolve;
+  });
+  const lateCollection = post({
+    action: "translate",
+    language: "ja",
+    from: "ko",
+    text: "SLOW",
+    shareForLearning: true,
+  });
+  await collectionStarted;
+  await post({ action: "withdraw-contributions" });
+  assert.equal((await lateCollection).data.contribution, "withdrawn");
+  slowStarted = undefined;
+  assert.equal((await adminSnapshot()).contributions.length, 0);
+  console.log(
+    "PASS shared consent → candidate → admin browser review/publish → learner lesson + actual model context → owner-scoped withdrawal",
+  );
   await adminPage.goto(base + "/study/admin");
   await adminPage
     .getByRole("heading", { name: "좋은 대화를, 좋은 수업으로." })
@@ -965,6 +1175,19 @@ try {
   console.log(
     "PASS admin browser form → draft → human review → learner curriculum",
   );
+  for (const width of [390, 1440]) {
+    await adminPage.setViewportSize({ width, height: 1000 });
+    assert(
+      await adminPage.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+      `admin editor overflow ${width}`,
+    );
+    await adminPage.screenshot({
+      path: resolve(screenshots, `knowledge-admin-${width}.png`),
+      fullPage: true,
+    });
+  }
   await adminPage.screenshot({
     path: resolve(screenshots, "admin.png"),
     fullPage: true,

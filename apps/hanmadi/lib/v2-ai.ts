@@ -2,6 +2,7 @@ import { clubLevels } from "./v2-club-lessons";
 import { createLiteLLMClient } from "@cak/litellm-client";
 import { ConversationError, getLiteLLMConfig } from "./conversation";
 import { modelProvider } from "./model-connections";
+import { knowledgeContext, type KnowledgeMatch } from "./knowledge";
 import {
   studyLanguages,
   curriculum,
@@ -138,8 +139,10 @@ export async function translate(
   language: StudyLanguage,
   from: string,
   complete = studyCompletion,
+  references: KnowledgeMatch[] = [],
 ) {
-  const prompt = translationPrompt(language, from);
+  const prompt =
+    translationPrompt(language, from) + knowledgeContext(references);
   for (let attempt = 0; attempt < 2; attempt++) {
     // Only invalid generated content is regenerated; transport/auth errors propagate.
     const raw = await complete(
@@ -314,8 +317,10 @@ export async function roleplayReply(
   messages: { role: "user" | "assistant"; content: string }[],
   selection = "default",
   complete = studyCompletion,
+  references: KnowledgeMatch[] = [],
 ): Promise<Phrase> {
-  const prompt = roleplayPrompt(language, level, sceneId);
+  const prompt =
+    roleplayPrompt(language, level, sceneId) + knowledgeContext(references);
   for (let attempt = 0; attempt < 2; attempt++) {
     // Transport/authentication failures propagate immediately; never switch models.
     const raw = await complete(

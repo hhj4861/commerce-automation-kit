@@ -2,6 +2,7 @@ import { getConversationTutor } from "@/lib/conversation-access";
 import { V2Admin } from "@/components/v2-admin";
 import Link from "next/link";
 import "../study.css";
+import "./admin.css";
 export default async function ContentAdmin() {
   if ((await getConversationTutor())?.r !== "owner")
     return (

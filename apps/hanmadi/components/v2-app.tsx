@@ -1012,6 +1012,8 @@ export function V2App() {
     [error, setError] = useState(""),
     [notice, setNotice] = useState("");
   const [text, setText] = useState(""),
+    [shareForLearning, setShareForLearning] = useState(false),
+    [withdrawConfirm, setWithdrawConfirm] = useState(false),
     [from, setFrom] = useState("auto"),
     [confirm, setConfirm] = useState(false),
     [translation, setTranslation] = useState<{
@@ -1160,6 +1162,7 @@ export function V2App() {
       action: "translate",
       text: value,
       from: direction,
+      shareForLearning,
     });
     if (!data) return;
     if (data.needsConfirmation) {
@@ -1168,7 +1171,20 @@ export function V2App() {
       return;
     }
     setConfirm(false);
+    setShareForLearning(false);
     setTranslation({ ...data, original: value });
+    const contributionMessages: Record<string, string> = {
+      received:
+        "일반 표현을 관리자 검수 후보로 제공했어요. 검수 전에는 공용 학습에 쓰지 않아요.",
+      duplicate: "이미 제공한 표현이에요. 중복으로 저장하지 않았어요.",
+      "no-safe-expression":
+        "공용으로 제공할 일반 표현을 찾지 못해 수집하지 않았어요.",
+      withdrawn: "제공을 철회한 요청이라 수집하지 않았어요.",
+      full: "공용 자료함 한도에 도달해 수집하지 못했어요. 번역은 완료됐어요.",
+      unavailable: "번역은 완료됐지만 공용 자료 제공은 저장하지 못했어요.",
+    };
+    if (contributionMessages[data.contribution])
+      setNotice(contributionMessages[data.contribution]);
   }
   async function sendChat(value = chatInput) {
     if (!value.trim() || !profile) return;
@@ -2060,6 +2076,71 @@ export function V2App() {
                     상대에게 번역 중임을 알려 주세요. 음성·문장은 처리를 위해 AI
                     공급자로 전송돼요. 중요한 정보는 번역 결과를 확인해 주세요.
                   </p>
+                  <details
+                    className="hm-callout"
+                    open={shareForLearning || withdrawConfirm || undefined}
+                  >
+                    <summary>공용 학습 자료 제공 (선택)</summary>
+                    <p>
+                      동의하면 이번 번역의 짧은 일반 표현을 관리자에게 제공해요.
+                      개인정보를 검수한 뒤 전체 사용자의 수업·AI 답변에
+                      참고하며, 모델 자체의 가중치 학습에는 사용하지 않아요.
+                      전체 번역문과 원음은 학습 자료로 저장하지 않아요.
+                    </p>
+                    <label className="hm-check">
+                      <input
+                        type="checkbox"
+                        checked={shareForLearning}
+                        disabled={busy}
+                        onChange={(e) => setShareForLearning(e.target.checked)}
+                      />
+                      이번 번역의 일반 표현을 공용 학습 자료로 제공하는 데
+                      동의해요.
+                    </label>
+                    <p className="hm-muted">
+                      내 복습 자동 저장과 별개예요. 제공한 자료는 철회 전까지
+                      보관하며, 철회하면 연결된 공용 교재도 회수돼요. 이미
+                      전달된 AI 답변과 공급자 로그는 소급 삭제되지 않아요.
+                    </p>
+                    {!withdrawConfirm ? (
+                      <button
+                        disabled={busy}
+                        onClick={() => setWithdrawConfirm(true)}
+                      >
+                        내가 제공한 공용 자료 회수
+                      </button>
+                    ) : (
+                      <div>
+                        <p>
+                          지금까지 제공한 모든 후보와 연결된 공용 교재를
+                          회수할까요? 내 개인 복습 기록은 유지돼요.
+                        </p>
+                        <button
+                          disabled={busy}
+                          onClick={async () => {
+                            const result = await run({
+                              action: "withdraw-contributions",
+                            });
+                            if (result) {
+                              setShareForLearning(false);
+                              setWithdrawConfirm(false);
+                              setNotice(
+                                `공용 후보 ${result.removed}개를 회수했어요. 연결된 게시 교재 ${result.unpublished}개도 내렸어요.`,
+                              );
+                            }
+                          }}
+                        >
+                          공용 자료 전체 회수
+                        </button>
+                        <button
+                          disabled={busy}
+                          onClick={() => setWithdrawConfirm(false)}
+                        >
+                          취소
+                        </button>
+                      </div>
+                    )}
+                  </details>
                 </>
               )}
               {tab === "chat" && (

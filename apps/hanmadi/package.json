@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "node --import tsx --test lib/conversation.test.ts lib/conversation-provider.test.ts scripts/litellm.test.mjs lib/learning-language.test.ts lib/adaptive-learning.test.ts lib/v2.test.ts lib/v2-ai.test.ts lib/model-connections.test.ts",
+    "test": "node --import tsx --test lib/conversation.test.ts lib/conversation-provider.test.ts scripts/litellm.test.mjs lib/learning-language.test.ts lib/adaptive-learning.test.ts lib/v2.test.ts lib/v2-ai.test.ts lib/model-connections.test.ts lib/knowledge.test.ts",
     "test:dify": "node scripts/dify-smoke.mjs",
     "test:conversation": "node scripts/conversation-smoke.mjs",
     "ai:setup": "node scripts/litellm.mjs setup",
