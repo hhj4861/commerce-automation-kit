@@ -18,8 +18,13 @@ try {
   await page.goto(url);
   assert.deepEqual(errors,[], 'Initial page should render without script errors');
   const action = a => page.locator(`[data-action="${a}"]`).first().click();
+  const translateSpeech=async (language='auto')=>{
+    await page.locator('#input-language').selectOption(language);
+    await action('record-translate');
+    if(await page.locator('[data-action="stop-translate"]').count())await action('stop-translate');
+  };
   await action('go:translate');
-  await action('speak-mine');
+  await translateSpeech('ko');
   assert.match(await page.locator('#app').innerText(),/덜 달게 해 주세요/);
   await action('large'); assert.equal(await page.locator('dialog').isVisible(),true);
   await page.keyboard.press('Escape');
@@ -47,7 +52,7 @@ try {
   assert.equal(await page.locator('.phrase-card').count(),1);
   await action('go:settings');await action('choose-lang:th');await action('go:expressions');
   assert.equal(await page.locator('.phrase-card').count(),0);
-  await action('go:translate');await action('speak-mine');assert.match(await page.locator('#app').innerText(),/ขอหวานน้อย/);
+  await action('go:translate');await translateSpeech('ko');assert.match(await page.locator('#app').innerText(),/ขอหวานน้อย/);
   await action('demo-menu');await action('offline');assert.match(await page.locator('#app').innerText(),/인터넷에 연결되지/);
   await action('repeat');assert.equal(await page.locator('dialog').isVisible(),true);await page.keyboard.press('Escape');
   await action('retry');assert.equal(await page.locator('.inline-alert').count(),0);
@@ -99,7 +104,7 @@ try {
     await page.goto(url+'#courses');
     assert.match(await page.locator('.level-summary').innerText(),/한마디 시작/);
     assert.equal(await page.locator('.course-meter').getAttribute('aria-valuenow'),'0');
-    await page.goto(url+'#translate');await action('listen');await action('speak-mine');
+    await page.goto(url+'#translate');await translateSpeech('target');await translateSpeech('ko');
     assert.match(await page.locator('.translate-panel.mine').innerText(),new RegExp(order));
     await action('end-translate');assert.equal(await page.locator('.capture-choice').count(),0);
     await page.goto(url+'#scenarios');await action('category:전체');await action('scene:club');await action('scene-chat');
@@ -126,19 +131,19 @@ try {
   checks.push('영어·스페인어: 언어 선택 3곳 / 번역·상황 AI → 각각 저장·수업 / 단계·진행·표현 독립 유지');
   await page.goto(url+'#translate');await page.reload();
   await action('end-translate');await action('go:expressions');assert.equal(await page.locator('.phrase-card').count(),0);
-  await action('go:translate');await action('listen');await action('listen');
+  await action('go:translate');await translateSpeech('target');await translateSpeech('target');
   await action('go:expressions');assert.equal(await page.locator('.phrase-card').count(),1);
   assert.match(await page.locator('.phrase-card').innerText(),/번역에서 자동 추가/);
-  await action('go:translate');await action('speak-mine');await action('speak-mine');await action('end-translate');
+  await action('go:translate');await translateSpeech('ko');await translateSpeech('ko');await action('end-translate');
   await action('go:expressions');assert.equal(await page.locator('.phrase-card').count(),2);
   await action('go:settings');await action('choose-lang:en');await action('toggle-auto-study');
   assert.equal(await page.getByRole('switch',{name:'번역 자동 학습'}).getAttribute('aria-checked'),'false');
-  await action('go:translate');await action('listen');await action('speak-mine');await action('end-translate');
+  await action('go:translate');await translateSpeech('target');await translateSpeech('ko');await action('end-translate');
   await action('go:expressions');assert.equal(await page.locator('.phrase-card').count(),0);
   await action('go:settings');await action('toggle-auto-study');await action('go:translate');
-  await action('demo-menu');await action('offline');await action('listen');await action('speak-mine');
+  await action('demo-menu');await action('offline');await translateSpeech('target');await translateSpeech('ko');
   await action('go:expressions');assert.equal(await page.locator('.phrase-card').count(),0);
-  await action('go:translate');await action('retry');await action('speak-mine');await action('go:expressions');
+  await action('go:translate');await action('retry');await translateSpeech('ko');await action('go:expressions');
   assert.equal(await page.locator('.phrase-card').count(),1);
   await page.locator('[data-action^="delete:"]').click();await page.locator('[data-action^="confirm-delete:"]').click();
   await action('go:translate');await action('end-translate');await action('go:expressions');
@@ -146,9 +151,41 @@ try {
   await action('go:settings');await action('choose-lang:ja');await action('go:expressions');
   assert.equal(await page.locator('.phrase-card').count(),2);
   checks.push('번역 양방향 자동 추가 / 종료 전 탭 이동에도 유지 / 중복 없음 / 끄기 / 빈·실패 제외 / 삭제 후 종료로 복원 안 됨 / 언어 격리');
+  await page.goto(url+'#translate');await page.reload();
+  assert.equal(await page.locator('.translate-voice .mic-button').count(),1);
+  assert.equal(await page.locator('[data-action="listen"],[data-action="speak-mine"]').count(),0);
+  await translateSpeech();assert.match(await page.locator('.translate-panel').first().innerText(),/매장에서/);
+  await translateSpeech();assert.match(await page.locator('.translate-panel.mine').innerText(),/덜 달게/);
+  await action('go:expressions');assert.equal(await page.locator('.phrase-card').count(),2);
+  await page.reload();await action('go:translate');await action('demo-menu');await action('unclear-language');
+  assert.equal(await page.locator('[data-action="record-translate"]').isDisabled(),true);
+  await action('resolve-language:ko');assert.match(await page.locator('.translate-panel.mine').innerText(),/덜 달게/);
+  await action('go:expressions');assert.equal(await page.locator('.phrase-card').count(),1);
+  await page.reload();await action('go:translate');await action('record-translate');
+  await action('go:study');await action('go:translate');
+  assert.equal(await page.locator('[data-action="stop-translate"]').count(),0);
+  await action('go:expressions');assert.equal(await page.locator('.phrase-card').count(),0);
+  checks.push('단일 마이크 자동 감지 예시 양방향 / 불확실 언어 확인 후 반영 / 입력 언어 지정 / 이동 시 녹음 체험 취소');
+  await action('go:models');
+  assert.equal(await page.locator('[data-action="select-model:codex"]').isDisabled(),true);
+  assert.equal(await page.locator('[data-action="select-model:claude"]').isDisabled(),true);
+  for(const provider of ['codex','claude']){
+    await action('connect:'+provider);await action('close-modal');
+    assert.equal(await page.locator('[data-action="select-model:'+provider+'"]').isDisabled(),true);
+    await action('connect:'+provider);await action('complete-connect:'+provider);
+    assert.match(await page.locator('.model-active').innerText(),/기본 Gemini/);
+    await action('select-model:'+provider);await action('go:ai');
+    assert.match(await page.locator('.model-link').innerText(),new RegExp(provider==='codex'?'Codex':'Claude'));
+    await action('start-chat');assert.match(await page.locator('.pill').first().innerText(),new RegExp(provider==='codex'?'Codex':'Claude'));
+    await page.goto(url+'#models');await action('disconnect:'+provider);await action('close-modal');
+    assert.equal(await page.locator('[data-action="select-model:'+provider+'"]').getAttribute('aria-pressed'),'true');
+    await action('disconnect:'+provider);await action('confirm-disconnect:'+provider);
+    assert.match(await page.locator('.model-active').innerText(),/기본 Gemini/);
+  }
+  checks.push('내 AI 상단 진입 / 미연결 모델 비활성 / 예시 연결·취소 / 선택 모델 대화 표시 / 해제 확인·기본 Gemini 복귀');
   for(const width of [360,390,768,1440]) {
     await page.setViewportSize({width,height:width>760?1000:844});
-    for(const route of ['study','courses','scenarios','scenario','onboarding','ai','chat','translate','capture','expressions','lesson','complete','settings']){
+    for(const route of ['study','courses','scenarios','scenario','onboarding','ai','chat','translate','capture','expressions','lesson','complete','settings','models']){
       await page.goto(url+'#'+route);
       assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,`${width}/${route} body overflow`);
       assert.equal(await page.locator('#app').evaluate(el=>el.scrollWidth<=el.clientWidth),true,`${width}/${route} app overflow`);
@@ -173,10 +210,10 @@ try {
     }
   }
   checks.push('4개 언어 × 8개 상황 × 4단계 (128개) 상세 화면·발음 도움·360px 넘침 확인');
-  checks.push('360·390·768·1440px × 13화면 / 가로 넘침 없음 / 버튼 접근 이름');
+  checks.push('360·390·768·1440px × 14화면 / 가로 넘침 없음 / 버튼 접근 이름');
   await page.setViewportSize({width:1440,height:1000});await page.goto(url+'#study');await page.reload();
   await page.screenshot({path:path.join(dir,'preview-desktop.png'),fullPage:true});
-  await page.setViewportSize({width:390,height:844});await page.goto(url+'#translate');await action('listen');await action('speak-mine');
+  await page.setViewportSize({width:390,height:844});await page.goto(url+'#translate');await translateSpeech();await translateSpeech();
   await page.waitForTimeout(3100);
   await page.screenshot({path:path.join(dir,'preview-translation.png'),fullPage:true});
   await page.goto(url+'#courses');
@@ -188,7 +225,9 @@ try {
   await action('choose-lang:es');await page.goto(url+'#scenarios');await action('scene:club');
   await page.waitForTimeout(3100); // Let language-change feedback clear before the review image.
   await page.screenshot({path:path.join(dir,'preview-spanish.png'),fullPage:true});
+  await page.goto(url+'#models');
+  await page.screenshot({path:path.join(dir,'preview-ai-connection.png'),fullPage:true});
   assert.deepEqual(errors,[]);assert.deepEqual(external,[]);
-  checks.push('브라우저 실행 오류 0 / 외부 네트워크 요청 0 / PNG 시안 6개');
+  checks.push('브라우저 실행 오류 0 / 외부 네트워크 요청 0 / PNG 시안 7개');
   console.log(JSON.stringify({status:'passed',browser:browser.version(),checks},null,2));
 }finally{await browser.close();}
