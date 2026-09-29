@@ -1,12 +1,19 @@
+import { clubLevels } from "./v2-club-lessons";
 import type { Phrase, Unit } from "./v2";
 import { lessonRows } from "./v2-lesson-data";
 
-/** Level-specific core expression followed by supporting scene dialogue. */
+export function lessonPlan(unit: Unit) {
+  return unit.source === "starter" && unit.scene === "club"
+    ? clubLevels[unit.level - 1]
+    : undefined;
+}
+/** Use a complete level-specific sequence when available. */
 export function lessonPhrases(unit: Unit): Phrase[] {
-  const rows = lessonRows[unit.scene];
+  const plan = lessonPlan(unit);
+  const rows = plan?.rows ?? lessonRows[unit.scene];
   if (!rows) throw new Error("지원하지 않는 학습 상황이에요.");
   const index = { ja: 1, th: 3, en: 5, es: 7 }[unit.language];
-  const supporting = `${rows}\n${lessonRows.common}`
+  const supporting = `${rows}\n${plan ? "" : lessonRows.common}`
     .trim()
     .split("\n")
     .map((row) => {

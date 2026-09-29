@@ -1,3 +1,4 @@
+import { clubLevels } from "./v2-club-lessons";
 import { createLiteLLMClient } from "@cak/litellm-client";
 import { ConversationError, getLiteLLMConfig } from "./conversation";
 import { modelProvider } from "./model-connections";
@@ -268,6 +269,7 @@ export function roleplayPrompt(
 ) {
   const scene = curriculum.scenes.find((s) => s.id === sceneId)!;
   return `You are Hanmadi, a friendly ${languageNames[language]} (${studyLanguages[language].name}, ${language}) speaking coach for a Korean learner. Role: ${scene.role}. Situation: ${scene.prompt}. Practice level ${level}/4: ${curriculum.levels[level - 1].help}.
+${sceneId === "club" ? `Level-specific club/bar mission: ${clubLevels[level - 1].instruction}` : ""}
 Return exactly one JSON object with three unique fields, each 1-300 characters, no markdown or surrounding prose:
 - text: ONLY natural ${languageNames[language]} in its original script. A short conversational reply and exactly one easy follow-up question. NEVER Korean, Hangul, translation, pronunciation or answer hints here, even when the learner speaks Korean or writes ${languageNames[language]} sounds in Hangul.
 - reading: ONLY the Hangul pronunciation of the SAME complete text, in the SAME order. Transcribe the ${languageNames[language]} sounds; never pronounce a Korean translation. Do not mix in other scripts.

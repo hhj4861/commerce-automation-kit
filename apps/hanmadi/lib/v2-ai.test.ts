@@ -255,3 +255,19 @@ test("translation practice must quote the translated expression, not invent a di
   );
   assert.deepEqual(reverse.practice, practice);
 });
+
+test("club AI missions progress from a short utterance to answers, reasons and negotiating a change", () => {
+  const prompts = [1, 2, 3, 4].map((level) =>
+    roleplayPrompt("ja", level, "club"),
+  );
+  assert.match(prompts[0], /one short utterance/);
+  assert.match(prompts[1], /question-and-answer pairs/);
+  assert.match(prompts[2], /preference plus a reason/);
+  assert.match(prompts[3], /unexpected change or misunderstanding/);
+  assert.match(prompts[3], /Respect a refusal immediately/);
+  assert(
+    !roleplayPrompt("ja", 4, "smalltalk").includes(
+      "Level-specific club/bar mission",
+    ),
+  );
+});

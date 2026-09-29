@@ -484,6 +484,58 @@ try {
     fullPage: true,
   });
   console.log("PASS four levels × eight scenarios");
+  await page.getByRole("button", { name: "상황별", exact: true }).click();
+  await page.getByRole("button", { name: /클럽·바 음악을 매개로/ }).click();
+  const clubTitles = [
+    "첫 인사와 간단한 요청",
+    "취향 묻고 답 주고받기",
+    "취향과 이유로 대화 이어가기",
+    "정중한 거절과 상황 조율",
+  ];
+  const clubSeen = new Set();
+  for (let level = 1; level <= 4; level++) {
+    await page
+      .getByRole("button", {
+        name: new RegExp(`Lv.${level} · ${clubTitles[level - 1]}`),
+      })
+      .click();
+    const clubDialog = page.getByRole("dialog");
+    await clubDialog
+      .getByRole("heading", { name: clubTitles[level - 1], exact: true })
+      .waitFor();
+    assert(
+      await clubDialog.evaluate((el) => el.scrollWidth <= el.clientWidth),
+      "club lesson fits mobile width",
+    );
+    for (let i = 1; i <= 10; i++) {
+      await clubDialog.getByText(`문장 ${i} / 10`, { exact: true }).waitFor();
+      const phrase = await clubDialog.locator(".hm-native").innerText();
+      assert(
+        !clubSeen.has(phrase),
+        `repeated club expression at level ${level}`,
+      );
+      clubSeen.add(phrase);
+      if (i === 1 && (level === 1 || level === 4))
+        await page.screenshot({
+          path: resolve(screenshots, `club-level-${level}.png`),
+          fullPage: true,
+        });
+      if (i < 10)
+        await clubDialog
+          .getByRole("button", { name: "다음", exact: true })
+          .click();
+    }
+    await clubDialog.getByRole("button", { name: "닫기", exact: true }).click();
+  }
+  assert.equal(clubSeen.size, 40);
+  assert.deepEqual(
+    (await state()).state.profiles.ja.completedLessons,
+    completedProfile.completedLessons,
+  );
+  console.log(
+    "PASS club four levels: 40 distinct displayed sentences, mobile fit, close without changing progress",
+  );
+
   for (const language of ["en", "th", "es"]) {
     await page.getByLabel("학습 언어", { exact: true }).selectOption(language);
     await page
