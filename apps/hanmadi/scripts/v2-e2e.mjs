@@ -221,6 +221,25 @@ try {
   });
   assert.equal(guest.status, 401);
   await page.goto(base);
+  await page.getByRole("button", { name: /일본어 日本語/ }).waitFor();
+  for (const width of [360, 390, 768, 1440]) {
+    await page.setViewportSize({ width, height: 844 });
+    const brand = page.locator(".hm-header > .hm-wordmark");
+    await brand.waitFor();
+    const box = await brand.boundingBox();
+    assert(
+      box.height <= 44,
+      `onboarding brand must stay on one line at ${width}`,
+    );
+    assert(
+      await page
+        .locator(".hm-header")
+        .evaluate((el) => el.scrollWidth <= el.clientWidth),
+      `onboarding header overflow ${width}`,
+    );
+  }
+  await page.setViewportSize({ width: 390, height: 844 });
+  console.log("PASS onboarding brand and header 360/390/768/1440");
   await page.getByRole("button", { name: /일본어 日本語/ }).click();
   await page.getByRole("button", { name: "로그인", exact: true }).click();
   await page.getByRole("button", { name: "처음이에요 · 계정 만들기" }).click();
