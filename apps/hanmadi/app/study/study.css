@@ -829,10 +829,12 @@
   flex-shrink: 0;
 }
 .hm-header-actions {
+  flex: 1;
+  min-width: 0;
   display: flex;
   align-items: center;
   gap: 8px;
-  width: 100%;
+  width: auto;
 }
 .hm-header-actions > button {
   background: none;
@@ -1674,4 +1676,9 @@
 }
 .hm-app[data-view="translate"] .hm-mic-wrap {
   margin: 18px 0 24px;
+}
+
+.hm-app .hm-header > .hm-wordmark {
+  flex-shrink: 0;
+  white-space: nowrap;
 }
