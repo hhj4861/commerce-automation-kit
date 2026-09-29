@@ -2129,3 +2129,31 @@
   border-top: 1px solid #e2e7f0;
   border-radius: 0;
 }
+
+.hm-provider-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.hm-auth-challenge {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+.hm-auth-challenge form {
+  display: grid;
+  gap: 12px;
+}
+.hm-auth-challenge input {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+.hm-auth-challenge small {
+  color: var(--muted);
+}
+
+.hm-auth-challenge p,
+.hm-auth-challenge label {
+  margin: 0;
+}

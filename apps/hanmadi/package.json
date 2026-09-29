@@ -17,7 +17,7 @@
     "test:v2": "node scripts/v2-e2e.mjs"
   },
   "dependencies": {
-    "@cak/litellm-client": "file:vendor/cak-litellm-client-0.2.0.tgz",
+    "@cak/litellm-client": "file:vendor/cak-litellm-client-0.3.0.tgz",
     "next": "16.3.6",
     "react": "19.2.4",
     "react-dom": "19.2.4"
