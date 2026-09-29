@@ -12,6 +12,9 @@ const out=dirname(fileURLToPath(import.meta.url));
 const brief=JSON.parse(await readFile(join(out,'brief.json'),'utf8'));
 const root=resolve(process.env.CAK_ENGINE_ROOT||join(out,'../../..'));
 const cache=process.env.BOREDOM_VIDEO_CACHE||'/private/tmp/cak-scrolling-boredom-20260929';
+const targetSeconds=brief.duration;
+const targetFrames=Math.round(targetSeconds*30);
+if(!Number.isFinite(targetSeconds)||targetSeconds<=0||targetSeconds>180)throw Error('Invalid Shorts duration');
 const app=join(root,'apps/shopshorts');
 const require=createRequire(join(app,'package.json'));
 const {Resvg}=require('@resvg/resvg-js');
@@ -22,15 +25,15 @@ const {cinematicEdit}=await imp('lib/cinematic-production.js');
 const exists=p=>access(p).then(()=>true,()=>false);
 const save=async(p,d)=>{await mkdir(dirname(p),{recursive:true});await writeFile(p,d);};
 if(process.argv[2]==='dispatch'){
- const script={briefId:brief.id,title:brief.title,beats:brief.scenes.map((s,index)=>({index,role:index?'body':'hook',durationSec:60/brief.scenes.length,narration:s.narration,caption:s.narration,visualPrompt:s.visual}))};
+ const script={briefId:brief.id,title:brief.title,beats:brief.scenes.map((s,index)=>({index,role:index?'body':'hook',durationSec:targetSeconds/brief.scenes.length,narration:s.narration,caption:s.narration,visualPrompt:s.visual}))};
  const data={ref:'main',inputs:{script_b64:Buffer.from(JSON.stringify(script)).toString('base64'),voice_id:brief.voice,verify_secrets_only:'false'}};
  const p=spawn('gh',['api','repos/hhj4861/commerce-automation-kit/actions/workflows/tts-remote.yml/dispatches','--input','-'],{stdio:['pipe','inherit','inherit']});p.stdin.end(JSON.stringify(data));
  const [code]=await once(p,'close');process.exit(code||0);
 }
 await mkdir(cache,{recursive:true});
-const job=createProject({category:'심리학',topic:brief.title,format:'short',duration:60,direction:'디지털 전환과 지루함의 실험 결과를 비유와 구분해 설명',productionStyle:'animation'});
+const job=createProject({category:'심리학',topic:brief.title,format:'short',duration:targetSeconds,direction:'디지털 전환과 지루함의 실험 결과를 비유와 구분해 설명',productionStyle:'animation'});
 job.id=brief.id;job.approved=true;job.voicePreference=brief.voice;
-job.scenes=brief.scenes.map(s=>({...s,kind:'video',duration:60/brief.scenes.length,prompt:'Original hand-drawn animated explanation: '+s.visual,animation:{title:s.title,layout:'contrast',elements:[{icon:'cloud',label:'영상 전환',motion:'float'},{icon:'home',label:'지루함',motion:'enter'}]}}));
+job.scenes=brief.scenes.map(s=>({...s,kind:'video',duration:targetSeconds/brief.scenes.length,prompt:'Original hand-drawn animated explanation: '+s.visual,animation:{title:s.title,layout:'contrast',elements:[{icon:'cloud',label:'영상 전환',motion:'float'},{icon:'home',label:'지루함',motion:'enter'}]}}));
 const io={workDir:join(cache,'work'),readAsset:k=>readFile(join(cache,k)),writeAsset:(k,d)=>save(join(cache,k),d)};
 const speech=[],originalSpeech=[];
 const speed=brief.narrationSpeed??1;
@@ -49,10 +52,10 @@ for(const [i,s] of job.scenes.entries()){
  await io.writeAsset(key,await readFile(processed));
  job.assets[`narration-${s.id}`]={key,kind:'audio',type:'audio/mpeg',purpose:'narration',source:'ai',voice:brief.voice,text:s.narration,duration,name:s.id};
 }
-const min=speech.map(d=>Math.ceil((d+.15)*30)),extra=1800-min.reduce((a,b)=>a+b,0);
+const min=speech.map(d=>Math.ceil((d+.15)*30)),extra=targetFrames-min.reduce((a,b)=>a+b,0);
 console.log(JSON.stringify({speechSeconds:speech,totalSpeech:speech.reduce((a,b)=>a+b,0),extraFrames:extra}));
-if(extra>240)throw Error('Narration is too short for a dense 60-second edit; expand the script before rendering');
-if(extra<0)throw Error('Speech exceeds 60 seconds; shorten script, do not truncate narration');
+if(extra>240)throw Error('Narration is too short for a dense edit at the requested length; expand the script before rendering');
+if(extra<0)throw Error('Speech exceeds the requested duration; shorten script, do not truncate narration');
 const frames=min.map((f,i)=>f+Math.floor(extra/brief.scenes.length)+(i<extra%brief.scenes.length?1:0));
 job.scenes.forEach((s,i)=>s.duration=frames[i]/30);
 if(process.argv[2]==='measure'){console.log(JSON.stringify({originalSpeech,speech,frames}));process.exit(0);}
@@ -132,11 +135,11 @@ function phone(x,y,t,{scale=1,swipe=false,variant=0,happy=true}={}){
  const phase=(t*.95)%1,offset=swipe?ease(Math.max(0,phase-.4)/.45)*190:0,k=swipe?Math.floor(t*.95):variant;
  return `<g transform="translate(${x} ${y}) scale(${scale})"><rect x="-89" y="-151" width="178" height="302" rx="22" fill="#faf7eb" stroke="${C.ink}" stroke-width="3"/>${line(-22,-135,22,-135)}<svg x="-76" y="-119" width="152" height="221" viewBox="-76 -110 152 221"><rect x="-76" y="-110" width="152" height="221" fill="${C.mint}" opacity=".23"/><g transform="translate(0 ${-offset})">${doodle(0,-12,k,t,.72)}${line(-45,57,45,57)}${line(-45,71,19,71)}${swipe?doodle(0,178,k+1,t,.72):''}</g></svg>${circle(0,126,8,C.paper)}${swipe?path(`M111 53L111 ${12-phase*100}M103 ${24-phase*100}L111 ${12-phase*100}L119 ${24-phase*100}`,'none',C.red,4):''}</g>`;
 }
-function pill(s,x,y,w=280,dark=false){return `<rect x="${x-w/2}" y="${y-32}" width="${w}" height="51" rx="25" fill="${dark?'#304569':'#fbf8ec'}" stroke="${dark?'#99acc4':'#b5aa8d'}"/>${text(s,x,y,23,dark?C.chalk:C.ink)}`;}
+function pill(s,x,y,w=280,dark=false){dark=false;return `<rect x="${x-w/2}" y="${y-32}" width="${w}" height="51" rx="25" fill="${dark?'#304569':'#fbf8ec'}" stroke="${dark?'#99acc4':'#b5aa8d'}"/>${text(s,x,y,23,dark?C.chalk:C.ink)}`;}
 function arrow(x1,y1,x2,y2,ink=C.ink){return path(`M${x1} ${y1}Q${(x1+x2)/2+8} ${(y1+y2)/2-8} ${x2} ${y2}`,'none',ink,3)+path(`M${x2-10} ${y2-9}L${x2} ${y2}L${x2-10} ${y2+9}`,'none',ink,3);}
 function book(x,y,t,open=true,scale=1){return `<g transform="translate(${x} ${y}) scale(${scale})">${path('M0-50Q-64-89-115-50V82Q-54 47 0 80Q60 43 115 82V-50Q54-85 0-50Z',C.paper)}${line(0,-50,0,79)}${[-29,-4,21,46].map(yy=>line(-94,yy,-21,yy-8)+line(21,yy-8,94,yy)).join('')}${open?doodle(0,-118,0,t,.55):''}</g>`;}
 function svg(scene,t,index){
- const dark=['experiment','result','limits'].includes(scene.visual),ink=dark?C.chalk:C.ink;
+ const dark=false,ink=C.ink;
  let body='',note='';
  if(scene.visual==='hook'){
   body=phone(458,422,t,{swipe:true,scale:.9})+person(212,416,t,'worried',1.12);
@@ -149,7 +152,7 @@ function svg(scene,t,index){
  }else if(scene.visual==='experiment'){
   body=phone(192,448,t,{scale:.76})+phone(529,448,t,{scale:.76,swipe:true});
   body+=text('하나를 이어 보기',192,306,27,ink)+text('여러 개를 바꿔 보기',529,306,25,ink);
-  body+=pill('같은 10분',360,783,255,true)+show(text('A',192,920,70,C.mint,'middle','Do Hyeon')+text('B',529,920,70,C.gold,'middle','Do Hyeon'),t,.2)+show(text('어느 쪽이 덜 지루했을까?',360,1040,28,ink),t,1);
+  body+=pill('같은 10분',360,783,255,true)+show(text('A',192,920,70,C.ink,'middle','Do Hyeon')+text('B',529,920,70,C.ink,'middle','Do Hyeon'),t,.2)+show(text('어느 쪽이 덜 지루했을까?',360,1040,28,ink),t,1);
   note='Tam & Inzlicht (2024) · 실험 조건을 단순화한 도해';
  }else if(scene.visual==='result'){
   body=show(text('이어 본 조건에서',360,340,36,ink,'middle','Jua')+pill('지루함 ↓',360,458,325,true),t,.1);
@@ -171,7 +174,7 @@ function svg(scene,t,index){
   body+=path('M600 446Q698 506 584 546L151 546Q72 516 122 448','none',C.red,3);
   note='전환과 몰입의 관계를 표현한 개념도';
  }else if(scene.visual==='limits'){
-  body=show(text('실험에서 관찰한 경향',360,371,34,ink)+text('≠',360,489,79,C.gold,'middle','Do Hyeon'),t,.1);
+  body=show(text('실험에서 관찰한 경향',360,371,34,ink)+text('≠',360,489,79,C.red,'middle','Do Hyeon'),t,.1);
   body+=show(pill('모든 사람의 결과',360,779,433,true)+pill('뇌 손상·중독 진단',360,907,433,true),t,.3);
   body+=show(text('표본 · 콘텐츠 · 상황을 함께 봐야',360,1047,27,ink),t,.8);
   note='7개 실험, 총 1,223명 · 일부 조건에서는 결과 불명확';
@@ -187,7 +190,7 @@ function svg(scene,t,index){
  const titleChars=Array.from(scene.title),titleLines=[];while(titleChars.length)titleLines.push(titleChars.splice(0,18).join(''));
  const head=titleLines.map((l,i)=>text(l,48,173+i*51,40,ink,'start','Jua')).join('');
  const subtitleY=titleLines.length>1?284:237;
- const progress=(job.scenes.slice(0,index).reduce((a,s)=>a+s.duration,0)+t)/60;
+ const progress=(job.scenes.slice(0,index).reduce((a,s)=>a+s.duration,0)+t)/targetSeconds;
  const speckles=Array.from({length:90},(_,i)=>`<circle cx="${(i*163+29)%720}" cy="${(i*109+47)%1280}" r="${i%3*.3+.3}" fill="${ink}" opacity=".09"/>`).join('');
  return `<svg xmlns="http://www.w3.org/2000/svg" width="720" height="1280" viewBox="0 0 720 1280"><rect width="720" height="1280" fill="${dark?C.navy:C.paper}"/>${speckles}${text('마음을 읽는 작은 이야기',48,72,19,ink,'start')}${line(48,82,263,82,C.gold,4)}${text(String(index+1).padStart(2,'0')+' / '+String(job.scenes.length).padStart(2,'0'),670,72,18,ink,'end')}${head}${text(scene.subtitle,48,subtitleY,22,ink,'start')}${body}${text(note,360,1184,17,dark?'#c5cfdf':'#696758')}${text('AI 애니메이션 · Tam & Inzlicht, 2024',48,1250,15,ink,'start')}<rect x="48" y="1267" width="${624*progress}" height="3" fill="${C.red}"/></svg>`;
 }
@@ -211,6 +214,6 @@ for(const [i,scene] of job.scenes.entries()){
 }
 job.task={id:'render',action:'render'};
 const result=await executeStudioTask(job,{},io,async()=>{});
-await command('ffmpeg',['-y','-v','error','-i',join(cache,result.render.key),'-c:v','copy','-af','loudnorm=I=-16:TP=-1.5:LRA=8','-c:a','aac','-ar','44100','-b:a','192k','-t','60','-movflags','+faststart',join(out,'scrolling-boredom-60s.mp4')],{});
-await save(join(out,'project.json'),JSON.stringify({...brief,voiceName:brief.voiceName,narrationSpeed:speed,artifact:'scrolling-boredom-60s.mp4',appPublished:false,scenes:job.scenes.map((s,i)=>({...s,frames:frames[i],originalSpeechSeconds:originalSpeech[i],measuredSpeechSeconds:speech[i]})),captions:job.edit.captions},null,2)+'\n');
-console.log('COMPLETE: '+join(out,'scrolling-boredom-60s.mp4'));
+await command('ffmpeg',['-y','-v','error','-i',join(cache,result.render.key),'-c:v','copy','-af','loudnorm=I=-16:TP=-1.5:LRA=8','-c:a','aac','-ar','44100','-b:a','192k','-t',String(targetSeconds),'-movflags','+faststart',join(out,'scrolling-boredom-115x.mp4')],{});
+await save(join(out,'project.json'),JSON.stringify({...brief,voiceName:brief.voiceName,narrationSpeed:speed,artifact:'scrolling-boredom-115x.mp4',appPublished:false,scenes:job.scenes.map((s,i)=>({...s,frames:frames[i],originalSpeechSeconds:originalSpeech[i],measuredSpeechSeconds:speech[i]})),captions:job.edit.captions},null,2)+'\n');
+console.log('COMPLETE: '+join(out,'scrolling-boredom-115x.mp4'));

@@ -2,13 +2,13 @@
   "id": "scrolling-boredom-20260929",
   "title": "쇼츠를 계속 보는데 왜 더 심심할까?",
   "category": "심리학",
-  "duration": 60,
+  "duration": 65,
   "aspect": "9:16",
   "voice": "n2fbxG88jqAoaVPUy3IG",
   "voiceName": "Yooni - Natural & Clear",
-  "narrationSpeed": 1.25,
+  "narrationSpeed": 1.15,
   "reference": "/Users/admin/Downloads/KakaoTalk_Video_2026-09-29-16-42-54.mp4",
-  "referenceUse": "Original hand-drawn animation inspired by the cream/navy palette and expressive objects in the user reference; no footage or audio reused.",
+  "referenceUse": "Original hand-drawn animation inspired by the expressive objects in the user reference; cream background throughout per latest request; no footage or audio reused.",
   "scenes": [
     {
       "id": "s1",
@@ -17,7 +17,7 @@
       "visual": "hook",
       "narration": "쇼츠를 한참 봤는데, 오히려 더 심심했던 적 있나요? 영상은 끝없이 나오는데, 이상하게 만족스럽지는 않습니다.",
       "kind": "video",
-      "duration": 6.066666666666666,
+      "duration": 6.566666666666666,
       "prompt": "Original hand-drawn animated explanation: hook",
       "animation": {
         "title": "왜 더 심심할까?",
@@ -35,9 +35,9 @@
           }
         ]
       },
-      "frames": 182,
+      "frames": 197,
       "originalSpeechSeconds": 7.105306,
-      "measuredSpeechSeconds": 5.69712
+      "measuredSpeechSeconds": 6.188889
     },
     {
       "id": "s2",
@@ -46,7 +46,7 @@
       "visual": "swipe",
       "narration": "그래서 손가락은 다시 위로 올라갑니다. 다음 건 재밌겠지. 그런데 지루함을 피하려고 하는 이 행동이, 지루함을 더 키울 수도 있습니다.",
       "kind": "video",
-      "duration": 6.6,
+      "duration": 7.166666666666667,
       "prompt": "Original hand-drawn animated explanation: swipe",
       "animation": {
         "title": "다음 건 재밌겠지",
@@ -64,9 +64,9 @@
           }
         ]
       },
-      "frames": 198,
+      "frames": 215,
       "originalSpeechSeconds": 7.801905,
-      "measuredSpeechSeconds": 6.248367
+      "measuredSpeechSeconds": 6.803129
     },
     {
       "id": "s3",
@@ -75,7 +75,7 @@
       "visual": "experiment",
       "narration": "연구진은 같은 십 분 동안, 영상 하나를 이어서 볼 때와 여러 영상을 자유롭게 바꿔 볼 때를 비교했습니다. 어느 쪽이 덜 지루했을까요?",
       "kind": "video",
-      "duration": 6.8,
+      "duration": 7.333333333333333,
       "prompt": "Original hand-drawn animated explanation: experiment",
       "animation": {
         "title": "직접 비교해 봤더니",
@@ -93,9 +93,9 @@
           }
         ]
       },
-      "frames": 204,
+      "frames": 220,
       "originalSpeechSeconds": 8.034104,
-      "measuredSpeechSeconds": 6.437619
+      "measuredSpeechSeconds": 7.000771
     },
     {
       "id": "s4",
@@ -104,7 +104,7 @@
       "visual": "result",
       "narration": "결과는 예상과 달랐습니다. 하나를 이어 본 조건에서 지루함은 더 낮고, 만족감과 몰입감은 더 높았습니다. 선택지가 많다고 더 즐겁지는 않았죠.",
       "kind": "video",
-      "duration": 7.733333333333333,
+      "duration": 8.4,
       "prompt": "Original hand-drawn animated explanation: result",
       "animation": {
         "title": "예상과 반대였다",
@@ -122,9 +122,9 @@
           }
         ]
       },
-      "frames": 232,
+      "frames": 252,
       "originalSpeechSeconds": 9.241542,
-      "measuredSpeechSeconds": 7.394739
+      "measuredSpeechSeconds": 8.055669
     },
     {
       "id": "s6",
@@ -133,7 +133,7 @@
       "visual": "book",
       "narration": "책으로 비유해 볼까요? 첫 장을 읽다가 다른 책으로, 또 다른 책으로 바꿉니다. 읽은 책은 많아져도, 이야기 속에 머물 시간은 짧아집니다.",
       "kind": "video",
-      "duration": 7.1,
+      "duration": 7.7,
       "prompt": "Original hand-drawn animated explanation: book",
       "animation": {
         "title": "이야기에 들어가기 전에",
@@ -151,9 +151,9 @@
           }
         ]
       },
-      "frames": 213,
+      "frames": 231,
       "originalSpeechSeconds": 8.452063,
-      "measuredSpeechSeconds": 6.774014
+      "measuredSpeechSeconds": 7.357642
     },
     {
       "id": "s7",
@@ -162,7 +162,7 @@
       "visual": "loop",
       "narration": "영상도 계속 바꾸면 내용에 주의를 붙잡아 두기 어려워질 수 있습니다. 재미를 찾느라, 정작 재미에 들어갈 시간을 놓치는 셈이죠.",
       "kind": "video",
-      "duration": 6.133333333333334,
+      "duration": 6.633333333333334,
       "prompt": "Original hand-drawn animated explanation: loop",
       "animation": {
         "title": "재미를 찾는 동안",
@@ -180,9 +180,9 @@
           }
         ]
       },
-      "frames": 184,
+      "frames": 199,
       "originalSpeechSeconds": 7.244626,
-      "measuredSpeechSeconds": 5.800431
+      "measuredSpeechSeconds": 6.309546
     },
     {
       "id": "s8",
@@ -191,7 +191,7 @@
       "visual": "limits",
       "narration": "물론 누구에게나 똑같다는 뜻은 아닙니다. 표본과 콘텐츠에 따라 결과는 달랐고, 이 연구로 뇌 손상이나 중독을 진단할 수는 없습니다.",
       "kind": "video",
-      "duration": 6.7,
+      "duration": 7.266666666666667,
       "prompt": "Original hand-drawn animated explanation: limits",
       "animation": {
         "title": "모든 사람에게 같을까?",
@@ -209,9 +209,9 @@
           }
         ]
       },
-      "frames": 201,
+      "frames": 218,
       "originalSpeechSeconds": 7.941224,
-      "measuredSpeechSeconds": 6.359433
+      "measuredSpeechSeconds": 6.918866
     },
     {
       "id": "s9",
@@ -220,7 +220,7 @@
       "visual": "try",
       "narration": "다음에 심심해지면, 관심 있는 영상 하나를 직접 골라 보세요. 중간에 넘기지 않고 본 뒤, 계속 넘겼을 때보다 어땠는지 비교해 보는 겁니다.",
       "kind": "video",
-      "duration": 7,
+      "duration": 7.566666666666666,
       "prompt": "Original hand-drawn animated explanation: try",
       "animation": {
         "title": "오늘은 딱 하나만",
@@ -238,9 +238,9 @@
           }
         ]
       },
-      "frames": 210,
+      "frames": 227,
       "originalSpeechSeconds": 8.312744,
-      "measuredSpeechSeconds": 6.658209
+      "measuredSpeechSeconds": 7.241542
     },
     {
       "id": "s10",
@@ -249,7 +249,7 @@
       "visual": "ending",
       "narration": "핵심은 억지로 오래 버티는 게 아닙니다. 더 많은 영상을 찾기 전에, 지금 보는 이야기에 들어갈 시간을 한 번 줘 보는 겁니다.",
       "kind": "video",
-      "duration": 5.866666666666666,
+      "duration": 6.366666666666666,
       "prompt": "Original hand-drawn animated explanation: ending",
       "animation": {
         "title": "다음 영상보다, 지금",
@@ -267,9 +267,9 @@
           }
         ]
       },
-      "frames": 176,
+      "frames": 191,
       "originalSpeechSeconds": 6.919546,
-      "measuredSpeechSeconds": 5.548027
+      "measuredSpeechSeconds": 6.035896
     }
   ],
   "narrationProvenance": {
@@ -287,7 +287,7 @@
     ],
     "note": "A redundant personal-choice example was removed after measuring the first narration pass."
   },
-  "artifact": "scrolling-boredom-60s.mp4",
+  "artifact": "scrolling-boredom-115x.mp4",
   "appPublished": false,
   "captions": [
     {
@@ -296,7 +296,7 @@
       "source": "script",
       "text": "쇼츠를 한참 봤는데, 오히려\n더 심심했던 적 있나요?",
       "startFrame": 0,
-      "endFrame": 78,
+      "endFrame": 85,
       "font": "gothic",
       "size": 48,
       "x": 50,
@@ -314,8 +314,8 @@
       "clipId": "clip-1",
       "source": "script",
       "text": "영상은 끝없이 나오는데,\n이상하게 만족스럽지는 않습니다.",
-      "startFrame": 78,
-      "endFrame": 171,
+      "startFrame": 85,
+      "endFrame": 186,
       "font": "gothic",
       "size": 48,
       "x": 50,
@@ -334,7 +334,7 @@
       "source": "script",
       "text": "그래서 손가락은 다시\n위로 올라갑니다.",
       "startFrame": 0,
-      "endFrame": 56,
+      "endFrame": 61,
       "font": "gothic",
       "size": 48,
       "x": 50,
@@ -352,8 +352,8 @@
       "clipId": "clip-2",
       "source": "script",
       "text": "다음 건 재밌겠지.",
-      "startFrame": 56,
-      "endFrame": 82,
+      "startFrame": 61,
+      "endFrame": 90,
       "font": "gothic",
       "size": 48,
       "x": 50,
@@ -371,8 +371,8 @@
       "clipId": "clip-2",
       "source": "script",
       "text": "그런데 지루함을 피하려고 하는 이",
-      "startFrame": 82,
-      "endFrame": 129,
+      "startFrame": 90,
+      "endFrame": 140,
       "font": "gothic",
       "size": 48,
       "x": 50,
@@ -390,8 +390,8 @@
       "clipId": "clip-2",
       "source": "script",
       "text": "행동이, 지루함을 더\n키울 수도 있습니다.",
-      "startFrame": 129,
-      "endFrame": 188,
+      "startFrame": 140,
+      "endFrame": 205,
       "font": "gothic",
       "size": 48,
       "x": 50,
@@ -410,7 +410,7 @@
       "source": "script",
       "text": "연구진은 같은 십 분 동안,\n영상 하나를 이어서 볼",
       "startFrame": 0,
-      "endFrame": 71,
+      "endFrame": 77,
       "font": "gothic",
       "size": 48,
       "x": 50,
@@ -428,8 +428,8 @@
       "clipId": "clip-3",
       "source": "script",
       "text": "때와 여러 영상을 자유롭게\n바꿔 볼 때를 비교했습니다.",
-      "startFrame": 71,
-      "endFrame": 152,
+      "startFrame": 77,
+      "endFrame": 165,
       "font": "gothic",
       "size": 48,
       "x": 50,
@@ -447,8 +447,8 @@
       "clipId": "clip-3",
       "source": "script",
       "text": "어느 쪽이 덜 지루했을까요?",
-      "startFrame": 152,
-      "endFrame": 194,
+      "startFrame": 165,
+      "endFrame": 211,
       "font": "gothic",
       "size": 48,
       "x": 50,
@@ -467,7 +467,7 @@
       "source": "script",
       "text": "결과는 예상과 달랐습니다.",
       "startFrame": 0,
-      "endFrame": 44,
+      "endFrame": 48,
       "font": "gothic",
       "size": 48,
       "x": 50,
@@ -485,8 +485,8 @@
       "clipId": "clip-4",
       "source": "script",
       "text": "하나를 이어 본\n조건에서 지루함은 더",
-      "startFrame": 44,
-      "endFrame": 98,
+      "startFrame": 48,
+      "endFrame": 107,
       "font": "gothic",
       "size": 48,
       "x": 50,
@@ -504,8 +504,8 @@
       "clipId": "clip-4",
       "source": "script",
       "text": "낮고, 만족감과\n몰입감은 더 높았습니다.",
-      "startFrame": 98,
-      "endFrame": 164,
+      "startFrame": 107,
+      "endFrame": 179,
       "font": "gothic",
       "size": 48,
       "x": 50,
@@ -523,8 +523,8 @@
       "clipId": "clip-4",
       "source": "script",
       "text": "선택지가 많다고 더\n즐겁지는 않았죠.",
-      "startFrame": 164,
-      "endFrame": 222,
+      "startFrame": 179,
+      "endFrame": 242,
       "font": "gothic",
       "size": 48,
       "x": 50,
@@ -543,7 +543,7 @@
       "source": "script",
       "text": "책으로 비유해 볼까요?",
       "startFrame": 0,
-      "endFrame": 35,
+      "endFrame": 38,
       "font": "gothic",
       "size": 48,
       "x": 50,
@@ -561,8 +561,8 @@
       "clipId": "clip-5",
       "source": "script",
       "text": "첫 장을 읽다가 다른 책으로,\n또 다른 책으로 바꿉니다.",
-      "startFrame": 35,
-      "endFrame": 116,
+      "startFrame": 38,
+      "endFrame": 126,
       "font": "gothic",
       "size": 48,
       "x": 50,
@@ -580,8 +580,8 @@
       "clipId": "clip-5",
       "source": "script",
       "text": "읽은 책은 많아져도, 이야기\n속에 머물 시간은 짧아집니다.",
-      "startFrame": 116,
-      "endFrame": 204,
+      "startFrame": 126,
+      "endFrame": 221,
       "font": "gothic",
       "size": 48,
       "x": 50,
@@ -600,7 +600,7 @@
       "source": "script",
       "text": "영상도 계속 바꾸면 내용에 주의를",
       "startFrame": 0,
-      "endFrame": 45,
+      "endFrame": 49,
       "font": "gothic",
       "size": 48,
       "x": 50,
@@ -618,8 +618,8 @@
       "clipId": "clip-6",
       "source": "script",
       "text": "붙잡아 두기 어려워질\n수 있습니다.",
-      "startFrame": 45,
-      "endFrame": 94,
+      "startFrame": 49,
+      "endFrame": 102,
       "font": "gothic",
       "size": 48,
       "x": 50,
@@ -637,8 +637,8 @@
       "clipId": "clip-6",
       "source": "script",
       "text": "재미를 찾느라, 정작 재미에\n들어갈 시간을 놓치는 셈이죠.",
-      "startFrame": 94,
-      "endFrame": 175,
+      "startFrame": 102,
+      "endFrame": 190,
       "font": "gothic",
       "size": 48,
       "x": 50,
@@ -657,7 +657,7 @@
       "source": "script",
       "text": "물론 누구에게나\n똑같다는 뜻은 아닙니다.",
       "startFrame": 0,
-      "endFrame": 61,
+      "endFrame": 67,
       "font": "gothic",
       "size": 48,
       "x": 50,
@@ -675,8 +675,8 @@
       "clipId": "clip-7",
       "source": "script",
       "text": "표본과 콘텐츠에 따라\n결과는 달랐고, 이 연구로",
-      "startFrame": 61,
-      "endFrame": 130,
+      "startFrame": 67,
+      "endFrame": 141,
       "font": "gothic",
       "size": 48,
       "x": 50,
@@ -694,8 +694,8 @@
       "clipId": "clip-7",
       "source": "script",
       "text": "뇌 손상이나 중독을\n진단할 수는 없습니다.",
-      "startFrame": 130,
-      "endFrame": 191,
+      "startFrame": 141,
+      "endFrame": 208,
       "font": "gothic",
       "size": 48,
       "x": 50,
@@ -714,7 +714,7 @@
       "source": "script",
       "text": "다음에 심심해지면, 관심 있는\n영상 하나를 직접 골라 보세요.",
       "startFrame": 0,
-      "endFrame": 90,
+      "endFrame": 98,
       "font": "gothic",
       "size": 48,
       "x": 50,
@@ -732,8 +732,8 @@
       "clipId": "clip-8",
       "source": "script",
       "text": "중간에 넘기지 않고\n본 뒤, 계속 넘겼을",
-      "startFrame": 90,
-      "endFrame": 145,
+      "startFrame": 98,
+      "endFrame": 158,
       "font": "gothic",
       "size": 48,
       "x": 50,
@@ -751,8 +751,8 @@
       "clipId": "clip-8",
       "source": "script",
       "text": "때보다 어땠는지\n비교해 보는 겁니다.",
-      "startFrame": 145,
-      "endFrame": 200,
+      "startFrame": 158,
+      "endFrame": 218,
       "font": "gothic",
       "size": 48,
       "x": 50,
@@ -771,7 +771,7 @@
       "source": "script",
       "text": "핵심은 억지로 오래\n버티는 게 아닙니다.",
       "startFrame": 0,
-      "endFrame": 56,
+      "endFrame": 61,
       "font": "gothic",
       "size": 48,
       "x": 50,
@@ -789,8 +789,8 @@
       "clipId": "clip-9",
       "source": "script",
       "text": "더 많은 영상을 찾기\n전에, 지금 보는",
-      "startFrame": 56,
-      "endFrame": 105,
+      "startFrame": 61,
+      "endFrame": 114,
       "font": "gothic",
       "size": 48,
       "x": 50,
@@ -808,8 +808,8 @@
       "clipId": "clip-9",
       "source": "script",
       "text": "이야기에 들어갈 시간을\n한 번 줘 보는 겁니다.",
-      "startFrame": 105,
-      "endFrame": 167,
+      "startFrame": 114,
+      "endFrame": 182,
       "font": "gothic",
       "size": 48,
       "x": 50,

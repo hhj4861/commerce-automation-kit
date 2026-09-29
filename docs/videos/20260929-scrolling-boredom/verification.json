@@ -1,33 +1,33 @@
 {
-  "video": "scrolling-boredom-60s.mp4",
-  "sha256": "c99fd9242a6fd5ea60e5f79a92c264429f70ee802d7d8eef86a5185104113ed6",
-  "durationSeconds": 60,
+  "video": "scrolling-boredom-115x.mp4",
+  "sha256": "83dfae7715a03719aa8323ff99f8b3316e6084cb15c40a5fcbf05600cfaa25bc",
+  "durationSeconds": 65,
   "width": 1080,
   "height": 1920,
-  "frames": 1800,
+  "frames": 1950,
   "fps": 30,
   "videoCodec": "h264",
   "audioCodec": "aac",
   "audioChannels": 2,
   "meanVolumeDb": -18.5,
-  "peakVolumeDb": -8.3,
+  "peakVolumeDb": -8.4,
   "fullDecode": "passed",
   "allNarrationFits": true,
-  "narrationSpeed": 1.25,
+  "narrationSpeed": 1.15,
   "voiceName": "Yooni - Natural & Clear",
   "voiceId": "n2fbxG88jqAoaVPUy3IG",
   "originalSpeechSeconds": 71.05306,
-  "totalSpeechSeconds": 56.917959,
+  "totalSpeechSeconds": 61.911950000000004,
   "addedPauseSeconds": [
-    0.36954666666666647,
-    0.35163299999999964,
-    0.36238100000000006,
-    0.338594333333333,
-    0.32598599999999944,
-    0.3329023333333341,
-    0.34056700000000006,
-    0.34179099999999973,
-    0.318639666666666
+    0.3777776666666668,
+    0.36353766666666676,
+    0.33256233333333274,
+    0.3443310000000004,
+    0.34235799999999994,
+    0.32378733333333365,
+    0.3478006666666662,
+    0.3251246666666665,
+    0.3307706666666661
   ],
   "silenceDetection": {
     "thresholdDb": -40,
@@ -47,16 +47,21 @@
   "published": false,
   "allNarrationTextPreservedInCaptions": true,
   "captionTimingContinuousWithinScene": true,
+  "background": "cream throughout",
+  "shortsEligibility": {
+    "basis": "vertical video, duration under 180 seconds",
+    "source": "https://support.google.com/youtube/answer/15424877?hl=en",
+    "uploadTested": false
+  },
   "browserPlayback": {
-    "browser": "Chrome via Playwright",
-    "timeAfterPlay": 1.584429,
+    "currentTime": 1.572409,
+    "duration": 65,
     "decodedFrames": 52,
-    "audioDecodedBytes": 45906,
-    "duration": 60,
+    "audioDecodedBytes": 45515,
     "width": 1080,
     "height": 1920,
-    "mediaError": null,
-    "endedAfterSeek": true
+    "error": null,
+    "reachedEnd": true
   },
-  "visualReview": "Final nine-scene contact sheet inspected. Center captions readable; book illustrations clear of upper labels; all spoken narration preserved in captions. Audio levels, silence detection and browser decoding verified. No human listening or speech-transcription review claimed."
+  "visualReview": "All nine scene thumbnails inspected: cream background and legible center captions."
 }

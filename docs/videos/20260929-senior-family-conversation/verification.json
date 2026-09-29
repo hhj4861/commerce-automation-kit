@@ -1,0 +1,266 @@
+{
+  "video": "senior-family-conversation.mp4",
+  "sha256": "b2187ca36b443825f30d9c9a61ed2d9fae193d222965270402bebcbced5e1905",
+  "durationSeconds": 672.6,
+  "width": 1280,
+  "height": 720,
+  "fps": 24,
+  "animationFps": 12,
+  "frames": 16142,
+  "videoCodec": "h264",
+  "audioCodec": "aac",
+  "audioChannels": 2,
+  "meanVolumeDb": -18.4,
+  "peakVolumeDb": -8.4,
+  "fullDecode": "passed",
+  "sceneCount": 30,
+  "captionCount": 258,
+  "allNarrationTextPreservedInCaptions": true,
+  "captionTimingContinuousWithinScene": true,
+  "captionPosition": {
+    "x": 50,
+    "y": 50
+  },
+  "maxCaptionLineCharacters": 24,
+  "maxCaptionLines": 2,
+  "narrationSpeed": 1.15,
+  "voiceName": "Yooni - Natural & Clear",
+  "voiceId": "n2fbxG88jqAoaVPUy3IG",
+  "totalSpeechSeconds": 656.4943049999999,
+  "addedPauseSeconds": [
+    0.5397283333333327,
+    0.5182763333333327,
+    0.5618589999999983,
+    0.5507706666666685,
+    0.5775286666666695,
+    0.5321999999999996,
+    0.5388213333333312,
+    0.537505666666668,
+    0.537029666666669,
+    0.5024266666666684,
+    0.5671433333333304,
+    0.5041270000000004,
+    0.5144213333333312,
+    0.5291613333333309,
+    0.5122223333333338,
+    0.5602723333333337,
+    0.5079819999999984,
+    0.5672560000000004,
+    0.506734999999999,
+    0.5110659999999996,
+    0.5312703333333317,
+    0.5420866666666662,
+    0.5683896666666683,
+    0.5226073333333332,
+    0.5584126666666691,
+    0.5175736666666673,
+    0.5235376666666696,
+    0.5721319999999999,
+    0.5480270000000012,
+    0.528458333333333
+  ],
+  "silenceDetection": {
+    "thresholdDb": -40,
+    "minimumDurationSeconds": 1.2,
+    "durationsSeconds": []
+  },
+  "background": "cream throughout",
+  "backgroundPixels": [
+    [
+      240,
+      236,
+      215
+    ],
+    [
+      240,
+      236,
+      215
+    ],
+    [
+      240,
+      236,
+      215
+    ],
+    [
+      240,
+      236,
+      215
+    ],
+    [
+      240,
+      236,
+      215
+    ],
+    [
+      240,
+      236,
+      215
+    ],
+    [
+      240,
+      236,
+      215
+    ],
+    [
+      240,
+      236,
+      215
+    ],
+    [
+      240,
+      236,
+      215
+    ],
+    [
+      240,
+      236,
+      215
+    ],
+    [
+      240,
+      236,
+      215
+    ],
+    [
+      240,
+      236,
+      215
+    ],
+    [
+      240,
+      236,
+      215
+    ],
+    [
+      240,
+      236,
+      215
+    ],
+    [
+      240,
+      236,
+      215
+    ],
+    [
+      240,
+      236,
+      215
+    ],
+    [
+      240,
+      236,
+      215
+    ],
+    [
+      240,
+      236,
+      215
+    ],
+    [
+      240,
+      236,
+      215
+    ],
+    [
+      240,
+      236,
+      215
+    ],
+    [
+      240,
+      236,
+      215
+    ],
+    [
+      240,
+      236,
+      215
+    ],
+    [
+      240,
+      236,
+      215
+    ],
+    [
+      240,
+      236,
+      215
+    ],
+    [
+      240,
+      236,
+      215
+    ],
+    [
+      240,
+      236,
+      215
+    ],
+    [
+      240,
+      236,
+      215
+    ],
+    [
+      240,
+      236,
+      215
+    ],
+    [
+      240,
+      236,
+      215
+    ],
+    [
+      240,
+      236,
+      215
+    ]
+  ],
+  "motionSpotChecks": [
+    {
+      "scene": 1,
+      "characterRegionMeanPixelDelta": 3.3216450216450215
+    },
+    {
+      "scene": 5,
+      "characterRegionMeanPixelDelta": 2.61324354657688
+    },
+    {
+      "scene": 7,
+      "characterRegionMeanPixelDelta": 3.2850649350649355
+    },
+    {
+      "scene": 15,
+      "characterRegionMeanPixelDelta": 2.964285714285714
+    },
+    {
+      "scene": 21,
+      "characterRegionMeanPixelDelta": 3.318831168831169
+    },
+    {
+      "scene": 25,
+      "characterRegionMeanPixelDelta": 2.5906846240179573
+    },
+    {
+      "scene": 28,
+      "characterRegionMeanPixelDelta": 3.3362914862914863
+    }
+  ],
+  "ttsRuns": [
+    36571681242
+  ],
+  "referenceFootageReused": false,
+  "published": false,
+  "listeningOrTranscriptionVerified": false,
+  "browserPlayback": {
+    "currentTime": 1.484334,
+    "duration": 672.6,
+    "decodedFrames": 40,
+    "audioDecodedBytes": 43418,
+    "error": null,
+    "middleTime": 331.446909,
+    "reachedEnd": true
+  },
+  "visualReview": "All 30 scene thumbnails inspected: cream background, legible center captions, character/card overlap corrected in scenes 5 and 25."
+}
