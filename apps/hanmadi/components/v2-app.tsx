@@ -20,13 +20,18 @@ import {
 import type { ModelConnection } from "@/lib/model-connections";
 type Identity = { name: string; owner: boolean };
 type Tab = "study" | "chat" | "translate" | "phrases";
-async function request(path: string, body?: unknown, method = "POST") {
+async function request(
+  path: string,
+  body?: unknown,
+  method = "POST",
+  timeoutMs = 45000,
+) {
   const res = await fetch(path, {
     method: body === undefined ? "GET" : method,
     headers: body === undefined ? {} : { "Content-Type": "application/json" },
     body: body === undefined ? undefined : JSON.stringify(body),
     cache: "no-store",
-    signal: AbortSignal.timeout(45000),
+    signal: AbortSignal.timeout(timeoutMs),
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data.error || "잠시 후 다시 시도해 주세요.");
@@ -1081,7 +1086,12 @@ export function V2App() {
     setError("");
     setNotice("");
     try {
-      const data = await request("/api/study", { ...body, language });
+      const data = await request(
+        "/api/study",
+        { ...body, language },
+        "POST",
+        body.action === "chat" ? 90000 : 45000,
+      );
       if (data.state) apply(data.state);
       return data;
     } catch (e) {
@@ -1173,7 +1183,7 @@ export function V2App() {
       { role: "user", content: value },
       {
         role: "assistant",
-        content: `${data.reply.text}\n${data.reply.reading}\n${data.reply.meaning}`,
+        content: JSON.stringify(data.reply),
         phrase: data.reply,
       },
     ]);

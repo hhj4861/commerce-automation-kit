@@ -117,7 +117,19 @@ const mock = createServer(async (req, res) => {
         : system.includes("영어") || system.includes("learner of en")
           ? "en"
           : "ja";
+  if (system.includes("speaking coach")) {
+    assert.equal(b.response_format?.type, "json_schema");
+    assert.equal(b.response_format.json_schema.strict, true);
+    for (const message of b.messages.filter((m) => m.role === "assistant"))
+      assert.equal(
+        typeof JSON.parse(message.content).text,
+        "string",
+        "assistant history preserves JSON",
+      );
+  }
   let result = phrases[language];
+  if (input === "곤니치와, 현종데스요" && !system.includes("REPAIR:"))
+    result = { ...result, text: "안녕하세요! 저는 하나예요." };
   if (system.includes("travel translator"))
     result = {
       translated: system.includes("Source language is ko")
@@ -636,10 +648,20 @@ try {
   await page.getByRole("button", { name: "이 표현 연습에 추가" }).waitFor();
   await page
     .getByLabel("말이 막히면 한국어로 도움 요청")
-    .fill("한 번 더 알려줘");
+    .fill("곤니치와, 현종데스요");
   await page.getByRole("button", { name: "보내기", exact: true }).click();
   await page.locator(".hm-chat-assistant").nth(1).waitFor();
   assert.equal(await page.locator(".hm-chat-assistant").count(), 2);
+  assert(
+    !(await page.locator(".hm-chat-assistant").nth(1).innerText()).includes(
+      "저는 하나예요",
+    ),
+  );
+  assert(
+    (await page.locator(".hm-chat-assistant").nth(1).innerText()).includes(
+      "韓国から来ました",
+    ),
+  );
   await page
     .locator(".hm-chat-assistant")
     .first()
