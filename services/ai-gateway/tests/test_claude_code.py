@@ -3,7 +3,6 @@ from concurrent.futures import ThreadPoolExecutor
 import json
 import os
 from pathlib import Path
-import sys
 import tempfile
 import time
 import unittest
@@ -66,27 +65,7 @@ class NativeStorage(unittest.TestCase):
 
     def test_native_subprocess_login_and_structured_generation(self):
         # Exercise real stdin/stdout and CLI-managed profile, no provider requests.
-        binary = self.root / 'fixture-cli'
-        binary.write_text('#!' + sys.executable + '\n' + '''import sys,os,json,pathlib
-p=pathlib.Path(os.environ['CLAUDE_CONFIG_DIR'])
-assert 'ANTHROPIC_API_KEY' not in os.environ
-assert 'CLAUDE_CODE_OAUTH_TOKEN' not in os.environ
-assert 'ACCOUNT_ENCRYPTION_KEY' not in os.environ
-if sys.argv[1:3] == ['auth','login']:
- print('Opening browser to sign in...\\n''' + URL + '''', flush=True)
- code=sys.stdin.readline().strip()
- assert code == ''' + repr(CODE) + '''
- (p/'fixture-authenticated').write_text('native-owned')
-elif sys.argv[1:3] == ['auth','status']:
- print(json.dumps({'loggedIn':(p/'fixture-authenticated').exists(),'authMethod':'claude.ai'}))
-else:
- assert '--safe-mode' in sys.argv and '--no-session-persistence' in sys.argv
- assert sys.argv[sys.argv.index('--tools')+1] == ''
- assert '--strict-mcp-config' in sys.argv
- assert 'hello' in sys.stdin.read()
- print(json.dumps({'subtype':'success','is_error':False,'structured_output':{'reason':'ok'}}))
-''')
-        binary.chmod(0o700)
+        binary = Path(__file__).with_name('claude_cli_fixture.py')
         self.store.update(self.id, challenge={})
         with ThreadPoolExecutor(1) as pool, patch.dict(os.environ, {'ANTHROPIC_API_KEY': 'must-not-inherit', 'CLAUDE_CODE_OAUTH_TOKEN': 'must-not-inherit'}):
             future = pool.submit(connect, self.store, self.id, str(binary), self.store.claude_root)
@@ -106,10 +85,8 @@ else:
 class NativeAPI(unittest.IsolatedAsyncioTestCase):
     async def test_disconnect_kills_native_worker_tree_before_erasing_profile(self):
         with tempfile.TemporaryDirectory() as root:
-            binary = Path(root) / 'pending-cli'
-            binary.write_text('#!' + sys.executable + '\n' + 'import os,pathlib,time\np=pathlib.Path(os.environ["CLAUDE_CONFIG_DIR"])\n(p/"pid").write_text(str(os.getpid()))\nprint(' + repr(URL) + ',flush=True)\ntime.sleep(60)\n')
-            binary.chmod(0o700)
-            env = {'ACCOUNT_DATA_DIR': root + '/db', 'ACCOUNT_CLAUDE_CONFIG_ROOT': root + '/profiles',
+            binary = Path(__file__).with_name('claude_cli_fixture.py')
+            env = {'ACCOUNT_DATA_DIR': root + '/db', 'ACCOUNT_CLAUDE_CONFIG_ROOT': root + '/pending-profiles',
                    'ACCOUNT_CLAUDE_BINARY': str(binary), 'PATH': os.environ['PATH'],
                    'ACCOUNT_ENCRYPTION_KEY': Fernet.generate_key().decode(), 'ACCOUNT_PLATFORM_KEYS': json.dumps({'festa': 'f' * 40}),
                    'ACCOUNT_MODELS': json.dumps({'codex': ['gpt-test'], 'claude': ['claude-test']})}
