@@ -112,3 +112,35 @@ test("help-needed lessons become next-day priority before unseen lessons", () =>
   };
   assert.equal(studyQueue(state, "ja", units, now).lessons[0].id, units[4].id);
 });
+
+test("each language, scene and level has ten distinct lesson phrases", async () => {
+  const { lessonPhrases } = await import("./v2-lesson");
+  for (const language of ["ja", "th", "en", "es"] as const) {
+    for (const unit of starterUnits(language)) {
+      const phrases = lessonPhrases(unit);
+      assert.equal(phrases.length, 10, unit.id);
+      assert.deepEqual(phrases[0], unit.phrase);
+      assert.equal(new Set(phrases.map((p) => p.text)).size, 10);
+      for (const phrase of phrases)
+        assert.ok(phrase.text && phrase.reading && phrase.meaning);
+    }
+  }
+});
+
+test("lesson completion schedules review without claiming speaking proficiency", () => {
+  const state = emptyStudy(),
+    units = starterUnits("ja"),
+    now = 10 * 86400000;
+  state.profiles.ja = {
+    level: 1,
+    minutes: 5,
+    assessedAt: 0,
+    practiced: {},
+    completedLessons: { [units[0].id]: { at: now, phrases: 10 } },
+  };
+  assert.notEqual(
+    studyQueue(state, "ja", units, now).lessons[0].id,
+    units[0].id,
+  );
+  assert.deepEqual(state.profiles.ja.practiced, {});
+});

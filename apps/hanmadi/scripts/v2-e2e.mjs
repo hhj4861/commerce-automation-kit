@@ -221,6 +221,26 @@ try {
   });
   assert.equal(guest.status, 401);
   await page.goto(base);
+  await page.getByRole("heading", { name: "한마디 시작하기" }).waitFor();
+  assert.equal(await page.locator(".hm-bottom").count(), 0);
+  await page.screenshot({
+    path: resolve(screenshots, "login-entry.png"),
+    fullPage: true,
+  });
+  assert.equal(
+    await page
+      .getByRole("combobox", { name: "학습 언어", exact: true })
+      .count(),
+    0,
+  );
+  await page.getByRole("button", { name: "처음이에요 · 계정 만들기" }).click();
+  const name = `e2e_${Date.now()}`;
+  await page.getByLabel("학습자 아이디").fill(name);
+  await page.getByLabel("비밀번호", { exact: true }).fill("test-password-1234");
+  await page
+    .getByRole("button", { name: "학습 계정 만들기", exact: true })
+    .click();
+
   await page.getByRole("button", { name: /일본어 日本語/ }).waitFor();
   for (const width of [360, 390, 768, 1440]) {
     await page.setViewportSize({ width, height: 844 });
@@ -293,14 +313,6 @@ try {
   console.log(
     "PASS all language labels fit and header actions align 320–1440px",
   );
-  await page.getByRole("button", { name: "로그인", exact: true }).click();
-  await page.getByRole("button", { name: "처음이에요 · 계정 만들기" }).click();
-  const name = `e2e_${Date.now()}`;
-  await page.getByLabel("학습자 아이디").fill(name);
-  await page.getByLabel("비밀번호", { exact: true }).fill("test-password-1234");
-  await page
-    .getByRole("button", { name: "학습 계정 만들기", exact: true })
-    .click();
   await page.getByRole("heading", { name: "쓸 줄 몰라도 괜찮아요." }).waitFor();
   await page.getByRole("button", { name: "설정", exact: true }).click();
   await page.getByRole("heading", { name: "학습 설정", exact: true }).waitFor();
@@ -328,6 +340,75 @@ try {
   await page.getByRole("button", { name: "오늘 연습 시작" }).waitFor();
   assert.equal((await state()).state.profiles.ja.level, 1);
   console.log("PASS learner signup → language → oral-first assessment → study");
+  await page
+    .getByRole("button", { name: "오늘 연습 시작", exact: true })
+    .click();
+  const lesson = page.getByRole("dialog");
+  await lesson.getByText("문장 1 / 10", { exact: true }).waitFor();
+  assert.equal(
+    await lesson
+      .getByRole("button", { name: "이전", exact: true })
+      .isDisabled(),
+    true,
+  );
+  assert.equal(await lesson.getByText("③ 지금은 얼마나 편했나요?").count(), 0);
+  const seenPhrases = new Set();
+  const beforeLesson = (await state()).state.profiles.ja;
+  for (let index = 1; index <= 10; index++) {
+    await lesson.getByText(`문장 ${index} / 10`, { exact: true }).waitFor();
+    seenPhrases.add(await lesson.locator(".hm-native").innerText());
+    if (index === 1)
+      await page.screenshot({
+        path: resolve(screenshots, "ten-phrase-lesson.png"),
+        fullPage: true,
+      });
+    if (index < 10)
+      await lesson.getByRole("button", { name: "다음", exact: true }).click();
+  }
+  assert.equal(seenPhrases.size, 10);
+  assert.deepEqual(
+    (await state()).state.profiles.ja.completedLessons,
+    beforeLesson.completedLessons,
+  );
+  await lesson.getByRole("button", { name: "이전", exact: true }).click();
+  await lesson.getByText("문장 9 / 10", { exact: true }).waitFor();
+  await lesson.getByRole("button", { name: "다음", exact: true }).click();
+  await lesson
+    .getByRole("button", { name: "학습 마치기", exact: true })
+    .click();
+  await lesson.waitFor({ state: "hidden" });
+  const completedProfile = (await state()).state.profiles.ja;
+  assert.equal(Object.values(completedProfile.completedLessons).length, 1);
+  assert.equal(Object.values(completedProfile.completedLessons)[0].phrases, 10);
+  assert.deepEqual(completedProfile.practiced, beforeLesson.practiced);
+  await page
+    .getByRole("button", { name: "오늘 연습 시작", exact: true })
+    .click();
+  await lesson.getByRole("button", { name: "다음", exact: true }).click();
+  await lesson.getByRole("button", { name: "닫기", exact: true }).click();
+  assert.deepEqual(
+    (await state()).state.profiles.ja.completedLessons,
+    completedProfile.completedLessons,
+  );
+  assert.equal(
+    (
+      await post({
+        action: "completeLesson",
+        language: "ja",
+        id: "starter:es:smalltalk:1",
+      })
+    ).status,
+    404,
+  );
+  assert.equal(
+    (await post({ action: "completeLesson", language: "ja", id: "unknown" }))
+      .status,
+    404,
+  );
+  console.log(
+    "PASS ten distinct phrases, previous/next, completion persistence, early close, language isolation",
+  );
+
   await page.locator(".hm-main").evaluate((el) => (el.scrollTop = 0));
   await page.screenshot({
     path: resolve(screenshots, "mobile.png"),
@@ -502,6 +583,29 @@ try {
     "PASS translate, bidirectional, dedupe, ambiguity, failed/invalid AI, private text, delete/disable in-flight barrier",
   );
   await page.getByRole("button", { name: "AI 대화", exact: true }).click();
+  for (const width of [320, 360, 390, 768, 1440]) {
+    await page.setViewportSize({ width, height: 844 });
+    const controls = page.locator(".hm-chat-controls");
+    const modelBox = await controls
+      .getByRole("button", { name: /기본 Gemini/ })
+      .boundingBox();
+    const newBox = await controls
+      .getByRole("button", { name: "새 대화", exact: true })
+      .boundingBox();
+    assert(
+      Math.abs(modelBox.y - newBox.y) < 1,
+      `chat buttons baseline ${width}`,
+    );
+    assert(
+      modelBox.x + modelBox.width <= newBox.x,
+      `chat buttons overlap ${width}`,
+    );
+    assert(
+      await controls.evaluate((el) => el.scrollWidth <= el.clientWidth),
+      `chat toolbar overflow ${width}`,
+    );
+  }
+  await page.setViewportSize({ width: 390, height: 844 });
   await page.getByRole("button", { name: "AI가 먼저 말하기 →" }).click();
   await page.getByRole("button", { name: "이 표현 연습에 추가" }).waitFor();
   await page
@@ -826,6 +930,7 @@ try {
   await page
     .getByRole("button", { name: "연결·모델 선택", exact: true })
     .click();
+  await page.locator('.hm-provider-row button:enabled').filter({ hasText: 'Claude 연결' }).waitFor();
   assert(
     await page
       .getByRole("button", { name: "Claude 연결", exact: true })

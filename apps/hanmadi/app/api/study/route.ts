@@ -1,3 +1,4 @@
+import { lessonPhrases } from "@/lib/v2-lesson";
 import { studyIdentity } from "@/lib/learner-auth";
 import {
   assertConversationOrigin,
@@ -99,6 +100,7 @@ export async function POST(req: Request) {
             minutes: Number(b.minutes),
             assessedAt: Date.now(),
             practiced: s.profiles[language]?.practiced ?? {},
+            completedLessons: s.profiles[language]?.completedLessons ?? {},
           };
         }),
       });
@@ -113,6 +115,25 @@ export async function POST(req: Request) {
             throw new ConversationError(409, "먼저 레벨 체크를 해 주세요.");
           p.level = Number(b.level);
           p.minutes = Number(b.minutes);
+        }),
+      });
+    }
+    if (b.action === "completeLesson") {
+      const units = [...starterUnits(language), ...(await publishedUnits())];
+      const unit = units.find((u) => u.id === b.id && u.language === language);
+      if (!unit)
+        throw new ConversationError(404, "학습할 수업을 다시 선택해 주세요.");
+      const phrases = lessonPhrases(unit).length;
+      return conversationJson({
+        state: await changeStudy(actor, (s) => {
+          const profile = s.profiles[language];
+          if (!profile)
+            throw new ConversationError(409, "먼저 레벨 체크를 해 주세요.");
+          const completed = profile.completedLessons ?? {};
+          if (!completed[unit.id] && Object.keys(completed).length >= 2000)
+            throw new ConversationError(409, "학습 기록 한도에 도달했어요.");
+          completed[unit.id] = { at: Date.now(), phrases };
+          profile.completedLessons = completed;
         }),
       });
     }

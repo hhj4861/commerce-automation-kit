@@ -34,6 +34,7 @@ export type Profile = {
   minutes: number;
   assessedAt: number;
   practiced: Record<string, { at: number; confidence: "help" | "alone" }>;
+  completedLessons?: Record<string, { at: number; phrases: number }>;
 };
 export type StudyState = {
   revision: number;
@@ -77,6 +78,9 @@ export function studyQueue(
     .sort((a, b) => a.dueAt - b.dueAt);
   function priority(unit: Unit) {
     const previous = profile?.practiced[unit.id];
+    const completed = profile?.completedLessons?.[unit.id];
+    if (completed && (!previous || completed.at > previous.at))
+      return completed.at + 86400000 <= now ? 2 : 3;
     if (!previous) return 1;
     const dueAt =
       previous.at + (previous.confidence === "help" ? 1 : 3) * 86400000;
@@ -131,3 +135,7 @@ export function safePractice(phrase: Phrase) {
   );
 }
 export { curriculum };
+
+export function hasLessonProgress(profile: Profile | undefined, id: string) {
+  return Boolean(profile?.practiced[id] || profile?.completedLessons?.[id]);
+}
