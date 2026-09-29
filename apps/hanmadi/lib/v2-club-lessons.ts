@@ -6,7 +6,7 @@ export const clubLevels = [
     title: "첫 인사와 간단한 요청",
     goal: "짧은 한 문장으로 인사하고, 주문하고, 필요한 것을 요청해요.",
     instruction:
-      "Use one short utterance at a time: greetings, water orders, a seat, or a break. Offer a ready-to-say answer. Do not require reasons or multi-clause negotiation.",
+      "Use one short utterance at a time in the ongoing exchange with a fellow guest. Practice a greeting, simple reaction or request when it fits what the learner says; do not cycle through unrelated requests. Offer a ready-to-say answer only when a response is needed. Do not require reasons or multi-clause negotiation.",
     cues: [
       "음악에 반응하기",
       "처음 왔다고 말하기",
