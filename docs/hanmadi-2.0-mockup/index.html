@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#3157D5">
+  <title>한마디 2.0 — 디자인 목업</title>
+  <link rel="stylesheet" href="mockup.css">
+  <script src="mockup.js" defer></script>
+</head>
+<body>
+  <div class="review-shell">
+    <aside class="intro-panel" aria-label="디자인 시안 소개">
+      <a class="wordmark" href="#study"><span class="brand-mark">ㅎ</span> 한마디<span class="edition">2.0</span></a>
+      <div class="intro-copy"><p class="design-tag">말하기와 여행을 잇는 앱</p><h1>여행에서 쓴 말이<br>내일의 실력이 되도록.</h1><p>번역으로 한 번,<br>AI와 다시 한 번.<br>내가 필요했던 말부터 익혀요.</p></div>
+      <div class="design-meta"><span class="mini-line"></span><b>디자인 시안 01</b><p>화면을 눌러 흐름을 확인해 보세요.<br>UI/UX 승인 후 실제 앱을 구현합니다.</p><div class="swatches" aria-label="파랑, 살구, 민트 디자인 색상"><i></i><i></i><i></i></div></div>
+    </aside>
+    <div class="device-wrap">
+      <div class="prototype-label"><button data-action="demo-menu" aria-label="목업 화면 체험 메뉴">디자인 목업 · 화면 체험</button><span>실제 녹음·AI 호출 없음</span></div>
+      <div class="device" id="device">
+        <div class="device-status" aria-hidden="true"><b>9:41</b><span>▮▮▮ &nbsp; ◔ &nbsp; ▰</span></div>
+        <main id="app" tabindex="-1"></main>
+        <nav id="bottom-nav" class="bottom-nav" aria-label="앱 주요 메뉴"></nav>
+        <div class="toast" id="toast" role="status" aria-live="polite"></div>
+      </div>
+    </div>
+    <aside class="review-panel" aria-label="목업 검토 메뉴">
+      <div class="review-heading"><span class="live-dot"></span> 직접 둘러보기</div>
+      <p>마이크와 AI 응답은 예시로 동작해요. 저장한 표현은 새로고침하면 사라져요.</p>
+      <div id="review-links" class="review-links"></div>
+      <div class="review-note"><b id="review-title">오늘 필요한 한마디</b><p id="review-description"></p></div>
+      <button class="review-reset" id="reset-demo">체험 처음부터</button>
+      <a class="spec-link" href="README.md">검토 안내 문서</a>
+    </aside>
+  </div>
+  <dialog id="modal" aria-labelledby="modal-title"><div id="modal-content"></div></dialog>
+</body>
+</html>
