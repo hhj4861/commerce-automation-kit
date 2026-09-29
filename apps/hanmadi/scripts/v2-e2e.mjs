@@ -930,11 +930,89 @@ try {
   await page
     .getByRole("button", { name: "연결·모델 선택", exact: true })
     .click();
-  await page.locator('.hm-provider-row button:enabled').filter({ hasText: 'Claude 연결' }).waitFor();
+  await page
+    .locator(".hm-provider-row button:enabled")
+    .filter({ hasText: "Claude 연결" })
+    .waitFor();
   assert(
     await page
       .getByRole("button", { name: "Claude 연결", exact: true })
       .isEnabled(),
+  );
+  assert.equal(await page.locator(".hm-provider-card").count(), 2);
+  assert.equal(
+    await page.getByRole("heading", { name: "Codex", exact: true }).count(),
+    1,
+  );
+  assert.equal(
+    await page.getByRole("heading", { name: "Claude", exact: true }).count(),
+    1,
+  );
+  await post({ provider: "codex" }, context, "/api/model-connections");
+  for (const list of connections.values())
+    for (const connection of list) {
+      if (connection.provider === "codex") {
+        connection.state = "error";
+        connection.models = [];
+      }
+    }
+  // Reopen so the connection GET reflects the failed fixture immediately.
+  await page
+    .getByRole("button", { name: "이전 화면으로", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "연결·모델 선택", exact: true })
+    .click();
+  const codexCard = page.getByRole("region", {
+    name: "Codex 연결 관리",
+    exact: true,
+  });
+  await codexCard.getByText("연결 확인 필요", { exact: true }).waitFor();
+  assert.equal(
+    await page.getByRole("heading", { name: "Codex", exact: true }).count(),
+    1,
+  );
+  assert.equal(
+    await page
+      .getByRole("button", { name: "Codex 계정 연결", exact: true })
+      .count(),
+    0,
+  );
+  assert.equal(
+    await codexCard
+      .getByRole("button", { name: "연결 해제", exact: true })
+      .count(),
+    1,
+  );
+  await page.setViewportSize({ width: 390, height: 844 });
+  await codexCard.scrollIntoViewIfNeeded();
+  await page.screenshot({
+    path: resolve(screenshots, "provider-error.png"),
+    fullPage: true,
+  });
+  for (const width of [320, 390, 768, 1440]) {
+    await page.setViewportSize({ width, height: 844 });
+    assert(
+      await codexCard.evaluate((el) => el.scrollWidth <= el.clientWidth),
+      `provider card overflow ${width}`,
+    );
+  }
+  await codexCard
+    .getByRole("button", { name: "연결 해제", exact: true })
+    .click();
+  await codexCard
+    .getByRole("button", { name: "Codex 계정 연결", exact: true })
+    .waitFor();
+  assert.equal(
+    await codexCard.getByText("연결 확인 필요", { exact: true }).count(),
+    0,
+  );
+  assert.equal(
+    await page.getByRole("heading", { name: "Codex", exact: true }).count(),
+    1,
+  );
+  console.log(
+    "PASS one card per provider; failed Codex → disconnect → connect action without duplicate entry",
   );
   assert.equal(
     await page.getByLabel("Claude API 키", { exact: true }).count(),
