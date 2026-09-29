@@ -1,14 +1,20 @@
 services:
   accounts:
-    image: ghcr.io/berriai/litellm@sha256:87f34979b9f8cb274fac90ca8a4fdda07d8480de22755562a26adeb95ce20d02
+    build:
+      context: .
+      dockerfile: Dockerfile.accounts
+    image: cak-accounts:claude-2.1.284
     entrypoint: ["python", "/accounts/account_service.py"]
     env_file: .env.accounts
     environment:
       ACCOUNT_DATA_DIR: /account-data
+      ACCOUNT_CLAUDE_CONFIG_ROOT: ${ACCOUNT_CLAUDE_CONFIG_ROOT:-}
+      ACCOUNT_CLAUDE_BINARY: /usr/local/bin/claude
       LITELLM_TELEMETRY: "False"
     ports: ["127.0.0.1:4190:4190"]
     volumes:
       - ./account_service.py:/accounts/account_service.py:ro
+      - ./claude_code.py:/accounts/claude_code.py:ro
       - ./account_worker.py:/accounts/account_worker.py:ro
       - ./subscription_runtime.py:/accounts/subscription_runtime.py:ro
       - accounts-data:/account-data

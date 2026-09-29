@@ -18,9 +18,21 @@ export function publicAccountConnections(value) {
       models: record.state === 'connected' ? [...new Set(record.models)] : [] };
     if (record.challenge) {
       const c = record.challenge;
+      const native = record.provider === 'claude' && c.kind === 'code-entry';
+      if (native) {
+        let url;
+        try { url = new URL(c.url); } catch { fail('invalid_challenge'); }
+        if (url.origin !== 'https://claude.com' || url.pathname !== '/cai/oauth/authorize' || url.hash || url.username || url.password ||
+            url.searchParams.get('redirect_uri') !== 'https://platform.claude.com/oauth/code/callback' ||
+            url.searchParams.get('response_type') !== 'code' || url.searchParams.get('code_challenge_method') !== 'S256' ||
+            !/^[A-Za-z0-9_-]{20,200}$/.test(url.searchParams.get('state') ?? '') ||
+            record.state !== 'authorizing' || c.code !== '' || !Number.isFinite(c.expiresAt)) fail('invalid_challenge');
+        if (c.expiresAt > Date.now() / 1000) result.challenge = { url: c.url, code: '', expiresAt: c.expiresAt, kind: 'code-entry', submitted: c.submitted === true };
+      } else {
       if (record.provider !== 'codex' || record.state !== 'authorizing' || c.url !== 'https://auth.openai.com/codex/device' ||
           typeof c.code !== 'string' || !/^[A-Za-z0-9-]{4,32}$/.test(c.code) || !Number.isFinite(c.expiresAt)) fail('invalid_challenge');
       if (c.expiresAt > Date.now() / 1000) result.challenge = { url: c.url, code: c.code, expiresAt: c.expiresAt };
+      }
     }
     return result;
   });
@@ -56,12 +68,20 @@ export function createAccountClient(options) {
   const list = async () => publicAccountConnections(await request('/connections'));
   return Object.freeze({
     list,
-    async connect(provider, { apiKey, ttlSeconds } = {}) {
+    async connect(provider, { apiKey, ttlSeconds, authMethod } = {}) {
       if (!['codex', 'claude'].includes(provider)) fail('unsupported_provider', 400);
-      if (provider === 'claude' && (typeof apiKey !== 'string' || !/^sk-ant-api[A-Za-z0-9_-]{20,500}$/.test(apiKey))) fail('claude_api_key_required', 400);
+      const native = provider === 'claude' && authMethod === 'claude-code';
+      if (authMethod !== undefined && !['api-key', 'claude-code'].includes(authMethod)) fail('invalid_auth_method', 400);
+      if ((native && apiKey !== undefined) || (provider === 'codex' && authMethod !== undefined)) fail('invalid_auth_method', 400);
+      if (provider === 'claude' && !native && (typeof apiKey !== 'string' || !/^sk-ant-api[A-Za-z0-9_-]{20,500}$/.test(apiKey))) fail('claude_api_key_required', 400);
       if (provider === 'codex' && apiKey !== undefined) fail('use_device_login', 400);
       if (ttlSeconds !== undefined && (!Number.isInteger(ttlSeconds) || ttlSeconds < 60 || ttlSeconds > 2592000)) fail('invalid_expiry', 400);
-      return publicAccountConnections({ connections: [await request('/connections', 'POST', { provider, ...(apiKey ? { apiKey } : {}), ...(ttlSeconds === undefined ? {} : { ttlSeconds }) })] })[0];
+      return publicAccountConnections({ connections: [await request('/connections', 'POST', { provider, ...(authMethod ? { authMethod } : {}), ...(apiKey ? { apiKey } : {}), ...(ttlSeconds === undefined ? {} : { ttlSeconds }) })] })[0];
+    },
+    async authorize(id, code) {
+      if (typeof id !== 'string' || !/^[a-f0-9]{32}$/.test(id) || typeof code !== 'string' ||
+          !/^[A-Za-z0-9_-]{10,1000}#[A-Za-z0-9_-]{20,200}$/.test(code)) fail('invalid_authorization_code', 400);
+      await request('/connections/' + id + '/authorize', 'POST', { code });
     },
     async disconnect(id) {
       if (typeof id !== 'string' || !/^[a-f0-9]{32}$/.test(id)) fail('invalid_connection', 400);
