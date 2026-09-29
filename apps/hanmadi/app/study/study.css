@@ -1682,3 +1682,306 @@
   flex-shrink: 0;
   white-space: nowrap;
 }
+
+/* Settings and personal AI are app screens, following the approved prototype. */
+.hm-subheader {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) 44px;
+  align-items: center;
+  gap: 8px;
+  padding: 18px 16px 0;
+  flex-shrink: 0;
+}
+.hm-app .hm-subheader h1 {
+  font-size: 16px;
+  font-weight: 700;
+  text-align: center;
+  margin: 0;
+  letter-spacing: -0.4px;
+}
+.hm-app .hm-subheader button {
+  display: grid;
+  place-items: center;
+  border: 0;
+  background: none;
+  padding: 8px;
+}
+.hm-app[data-view="settings"] .hm-main,
+.hm-app[data-view="ai"] .hm-main {
+  padding-top: 8px;
+}
+.hm-main:focus {
+  outline: none;
+}
+.hm-settings,
+.hm-ai-settings {
+  min-width: 0;
+}
+.hm-account-name {
+  font-size: 12px;
+  color: #5a6980;
+  overflow-wrap: anywhere;
+}
+.hm-setting-group,
+.hm-model-choices {
+  border: 0;
+  padding: 0;
+  margin: 25px 0;
+  min-width: 0;
+}
+.hm-setting-group legend,
+.hm-model-choices legend {
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 12px;
+  padding: 0;
+}
+.hm-settings-options {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+.hm-settings-languages {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.hm-app .hm-settings-options button {
+  padding: 10px 6px;
+  min-height: 47px;
+  font-size: 14px;
+  border-radius: 11px;
+}
+.hm-app .hm-settings-options [aria-pressed="true"],
+.hm-app .hm-settings-options [aria-pressed="true"]:hover:not(:disabled),
+.hm-app .hm-settings-levels [aria-pressed="true"],
+.hm-app .hm-settings-levels [aria-pressed="true"]:hover:not(:disabled),
+.hm-app .hm-model-choices [aria-pressed="true"],
+.hm-app .hm-model-choices [aria-pressed="true"]:hover:not(:disabled) {
+  background: #edf1fc;
+  color: #3157d5;
+  border-color: #3157d5;
+}
+.hm-settings-levels {
+  display: grid;
+  gap: 10px;
+}
+.hm-app .hm-settings-levels button,
+.hm-app .hm-model-choices button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+  padding: 17px 14px;
+  border-radius: 17px;
+  min-width: 0;
+}
+.hm-settings-levels button > span,
+.hm-model-choices button > span {
+  min-width: 0;
+}
+.hm-settings-levels b,
+.hm-model-choices b {
+  display: block;
+  font-size: 15px;
+  overflow-wrap: anywhere;
+}
+.hm-settings-levels small,
+.hm-model-choices small {
+  font-size: 12px;
+  color: #5a6980;
+  margin-top: 5px;
+  line-height: 1.6;
+}
+.hm-app .hm-settings-note {
+  font-size: 12px;
+  line-height: 1.7;
+  color: #5a6980;
+  margin: 12px 0 20px;
+}
+.hm-setting-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 14px 0;
+  min-height: 70px;
+  border-bottom: 1px solid #e2e7f0;
+  font-size: 14px;
+}
+.hm-setting-row > b {
+  flex-shrink: 0;
+}
+.hm-setting-row > span {
+  color: #5a6980;
+  font-size: 13px;
+  text-align: right;
+}
+.hm-app .hm-setting-row button,
+.hm-setting-row a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 5px;
+  border: 0;
+  padding: 8px 0;
+  color: #3157d5;
+  background: none;
+  font-size: 13px;
+  text-align: right;
+  min-height: 44px;
+  text-decoration: none;
+}
+.hm-setting-row svg {
+  width: 16px;
+  height: 16px;
+}
+.hm-app .hm-setting-row .hm-toggle {
+  gap: 8px;
+  color: #5a6980;
+}
+.hm-toggle-track {
+  display: flex;
+  align-items: center;
+  width: 38px;
+  height: 23px;
+  padding: 3px;
+  border-radius: 20px;
+  background: #b8c2d2;
+}
+.hm-toggle-track i {
+  display: block;
+  width: 17px;
+  height: 17px;
+  border-radius: 50%;
+  background: white;
+  box-shadow: 0 1px 3px #182b4925;
+}
+.hm-toggle[aria-checked="true"] .hm-toggle-track {
+  background: #3157d5;
+  justify-content: flex-end;
+}
+.hm-settings-guidance {
+  background: #edf1fc;
+  border-radius: 15px;
+  padding: 17px;
+  margin: 18px 0;
+}
+.hm-settings-guidance p {
+  font-size: 13px;
+  color: #5a6980;
+  margin: 8px 0 14px;
+}
+.hm-settings-data {
+  font-size: 13px;
+}
+.hm-settings-data p {
+  color: #5a6980;
+}
+.hm-app .hm-logout {
+  width: 100%;
+  margin: 26px 0 10px;
+  color: #5a6980;
+  background: transparent;
+}
+.hm-app .hm-panel-heading {
+  font-size: 28px;
+  line-height: 1.4;
+  margin: 22px 0 12px;
+}
+.hm-model-active {
+  padding: 20px;
+  background: #edf1fc;
+  border-radius: 18px;
+  margin-top: 22px;
+}
+.hm-model-active h3 {
+  font-size: 23px;
+  margin: 12px 0;
+  overflow-wrap: anywhere;
+}
+.hm-app .hm-model-active p {
+  font-size: 13px;
+  line-height: 1.7;
+  color: #5a6980;
+  margin: 0;
+}
+.hm-provider-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 0;
+  border-bottom: 1px solid #e2e7f0;
+}
+.hm-provider-row > div {
+  min-width: 0;
+}
+.hm-provider-row small {
+  display: block;
+  margin-top: 6px;
+  color: #5a6980;
+  font-size: 12px;
+}
+.hm-app .hm-provider-row button {
+  font-size: 13px;
+  padding: 8px 10px;
+  flex-shrink: 0;
+}
+.hm-app .hm-connection-state {
+  padding: 16px;
+  border: 1px solid #e2e7f0;
+  border-radius: 14px;
+  margin: 14px 0;
+  overflow-wrap: anywhere;
+}
+.hm-model-choices {
+  display: grid;
+  gap: 10px;
+}
+.hm-model-choices legend {
+  margin-bottom: 15px;
+}
+.hm-app .hm-full {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+}
+.hm-app .hm-main > .hm-alert,
+.hm-app .hm-main > .hm-notice {
+  font-size: 13px;
+  padding: 12px;
+}
+.hm-dialog > .hm-row {
+  flex-wrap: nowrap;
+  align-items: flex-start;
+}
+.hm-dialog > .hm-row h2 {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: 22px;
+}
+.hm-dialog > .hm-row > button {
+  flex-shrink: 0;
+}
+.hm-dialog input,
+.hm-dialog select,
+.hm-app input,
+.hm-app select {
+  min-width: 0;
+}
+@media (max-width: 370px) {
+  .hm-setting-row {
+    gap: 8px;
+    font-size: 13px;
+  }
+  .hm-setting-row > span,
+  .hm-app .hm-setting-row button,
+  .hm-setting-row a {
+    font-size: 12px;
+  }
+  .hm-app .hm-provider-row button {
+    font-size: 12px;
+  }
+}

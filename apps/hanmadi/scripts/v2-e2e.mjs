@@ -250,6 +250,22 @@ try {
     .getByRole("button", { name: "학습 계정 만들기", exact: true })
     .click();
   await page.getByRole("heading", { name: "쓸 줄 몰라도 괜찮아요." }).waitFor();
+  await page.getByRole("button", { name: "설정", exact: true }).click();
+  await page.getByRole("heading", { name: "학습 설정", exact: true }).waitFor();
+  assert.equal(await page.locator(".hm-settings-languages button").count(), 4);
+  assert.equal(
+    await page.getByRole("button", { name: "5분", exact: true }).isDisabled(),
+    true,
+  );
+  await page.getByRole("button", { name: "번역", exact: true }).click();
+  await page
+    .getByRole("button", { name: "말하기 시작", exact: true })
+    .waitFor();
+  await page.getByRole("button", { name: "스터디", exact: true }).click();
+  await page.getByRole("heading", { name: "쓸 줄 몰라도 괜찮아요." }).waitFor();
+  console.log(
+    "PASS settings controls and translation accessible before assessment",
+  );
   for (const choice of [
     "한국에서 왔어요.",
     "어떤 음료를 추천하세요?",
@@ -504,6 +520,22 @@ try {
     "/api/model-connections",
   );
   assert.equal(connected.status, 202);
+  await page.getByRole("button", { name: "내 AI", exact: true }).click();
+  await page.getByRole("button", { name: /codex · test-model/ }).click();
+  await page.getByRole("button", { name: /이 AI로 대화하기/ }).click();
+  await page.getByRole("button", { name: "AI가 먼저 말하기 →" }).click();
+  await page.getByRole("button", { name: "이 표현 연습에 추가" }).waitFor();
+  assert.equal(modelCalls.at(-1).model, "a".repeat(32) + ":test-model");
+  await page.getByRole("button", { name: "내 AI", exact: true }).click();
+  await page
+    .getByRole("button", { name: /기본 Gemini 별도 연결 없이 사용/ })
+    .click();
+  await page
+    .getByRole("button", { name: "이전 화면으로", exact: true })
+    .click();
+  console.log(
+    "PASS model cards → selected personal model → conversation → default model",
+  );
   const otherConnections = await other.request.get(
     base + "/api/model-connections",
   );
@@ -730,8 +762,151 @@ try {
   }
   await page.getByRole("button", { name: "내 AI", exact: true }).click();
   await page.getByRole("heading", { name: "내 AI 연결" }).waitFor();
-  await page.getByRole("button", { name: "닫기", exact: true }).click();
+  await page
+    .getByRole("button", { name: "이전 화면으로", exact: true })
+    .click();
   await page.getByRole("button", { name: "설정", exact: true }).click();
+  assert.equal(await page.getByRole("dialog").count(), 0);
+  await page.getByRole("button", { name: "15분", exact: true }).click();
+  await page.getByText("학습 설정을 저장했어요.", { exact: true }).waitFor();
+  assert.equal((await state()).state.profiles.ja.minutes, 15);
+  await page.locator(".hm-settings-levels button").nth(1).click();
+  await page.waitForFunction(
+    () =>
+      document
+        .querySelectorAll(".hm-settings-levels button")[1]
+        .getAttribute("aria-pressed") === "true",
+  );
+  assert.equal((await state()).state.profiles.ja.level, 2);
+  await page.getByRole("switch", { name: "번역 자동 학습" }).click();
+  await page.waitForFunction(
+    () =>
+      document.querySelector('[role="switch"]').getAttribute("aria-checked") ===
+      "true",
+  );
+  assert.equal((await state()).state.autoSave, true);
+  await page.reload();
+  await page.getByRole("button", { name: "설정", exact: true }).click();
+  assert.equal(
+    await page
+      .getByRole("button", { name: "15분", exact: true })
+      .getAttribute("aria-pressed"),
+    "true",
+  );
+  assert.equal(
+    await page
+      .locator(".hm-settings-levels button")
+      .nth(1)
+      .getAttribute("aria-pressed"),
+    "true",
+  );
+  await page.route("**/api/study", async (route) => {
+    if (
+      route.request().method() === "POST" &&
+      route.request().postDataJSON()?.action === "settings" &&
+      route.request().postDataJSON()?.language
+    ) {
+      await route.fulfill({
+        status: 503,
+        contentType: "application/json",
+        body: JSON.stringify({ error: "언어 저장 실패 테스트" }),
+      });
+    } else await route.continue();
+  });
+  await page.getByRole("button", { name: "태국어", exact: true }).click();
+  await page
+    .getByRole("alert")
+    .filter({ hasText: "언어 저장 실패 테스트" })
+    .waitFor();
+  assert.equal(
+    await page
+      .getByRole("button", { name: "일본어", exact: true })
+      .getAttribute("aria-pressed"),
+    "true",
+  );
+  assert.equal(
+    await page.evaluate(() => localStorage.getItem("hanmadi:v2:language")),
+    "ja",
+  );
+  await page.unroute("**/api/study");
+  await page.getByRole("button", { name: "태국어", exact: true }).click();
+  await page.waitForFunction(
+    () =>
+      [...document.querySelectorAll(".hm-settings-languages button")]
+        .find((el) => el.textContent === "태국어")
+        .getAttribute("aria-pressed") === "true",
+  );
+  await page.getByRole("button", { name: "일본어", exact: true }).click();
+  await page.waitForFunction(
+    () =>
+      [...document.querySelectorAll(".hm-settings-languages button")]
+        .find((el) => el.textContent === "일본어")
+        .getAttribute("aria-pressed") === "true",
+  );
+  for (const [width, height] of [
+    [320, 640],
+    [360, 800],
+    [390, 844],
+    [768, 500],
+    [1440, 900],
+  ]) {
+    await page.setViewportSize({ width, height });
+    await page.locator(".hm-main").evaluate((el) => (el.scrollTop = 0));
+    assert(
+      await page
+        .locator(".hm-main")
+        .evaluate((el) => el.scrollWidth <= el.clientWidth),
+      `settings overflow ${width}`,
+    );
+    const header = await page.locator(".hm-subheader").boundingBox();
+    const main = await page.locator(".hm-main").boundingBox();
+    const nav = await page.locator(".hm-bottom").boundingBox();
+    assert(
+      header.y + header.height <= main.y + 1 &&
+        main.y + main.height <= nav.y + 1 &&
+        nav.y + nav.height <= height + 1,
+      `settings layout ${width}x${height}`,
+    );
+    if (width === 390) {
+      await page.screenshot({
+        path: resolve(screenshots, "settings.png"),
+        fullPage: true,
+      });
+      await page
+        .getByRole("button", { name: "로그아웃", exact: true })
+        .scrollIntoViewIfNeeded();
+      await page.screenshot({
+        path: resolve(screenshots, "settings-bottom.png"),
+        fullPage: true,
+      });
+    }
+    await page.getByRole("button", { name: "연결·모델 선택" }).click();
+    await page
+      .getByRole("heading", { name: "내 AI 연결", exact: true })
+      .waitFor();
+    assert(
+      await page
+        .locator(".hm-main")
+        .evaluate((el) => el.scrollWidth <= el.clientWidth),
+      `AI settings overflow ${width}`,
+    );
+    if (width === 390)
+      await page.screenshot({
+        path: resolve(screenshots, "ai-settings.png"),
+        fullPage: true,
+      });
+    await page
+      .getByRole("button", { name: "이전 화면으로", exact: true })
+      .click();
+    await page
+      .getByRole("heading", { name: "학습 설정", exact: true })
+      .waitFor();
+  }
+  await page.keyboard.press("Escape");
+  await page.getByRole("button", { name: "설정", exact: true }).click();
+  console.log(
+    "PASS settings persistence, language rollback, AI return navigation, 320–1440px and short viewport layouts",
+  );
   await page.getByRole("button", { name: "로그아웃", exact: true }).click();
   await page.getByRole("button", { name: "로그인", exact: true }).waitFor();
   assert.equal((await context.request.get(base + "/api/study")).status(), 401);
