@@ -834,7 +834,8 @@ export function V2App() {
     const data = await run({ action: "chat", scene, messages, selection });
     if (!data) return;
     setChat([
-      ...messages,
+      ...chat,
+      { role: "user", content: value },
       {
         role: "assistant",
         content: `${data.reply.text}\n${data.reply.reading}\n${data.reply.meaning}`,

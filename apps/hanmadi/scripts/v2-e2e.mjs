@@ -390,7 +390,13 @@ try {
   await page.getByRole("button", { name: "AI 대화", exact: true }).click();
   await page.getByRole("button", { name: "AI가 먼저 말하기 →" }).click();
   await page.getByRole("button", { name: "이 표현 연습에 추가" }).waitFor();
-  await page.getByRole("button", { name: "이 표현 연습에 추가" }).click();
+  await page.getByLabel("말이 막히면 한국어로 도움 요청").fill("한 번 더 알려줘");
+  await page.getByRole("button", { name: "보내기", exact: true }).click();
+  await page.locator(".hm-chat-assistant").nth(1).waitFor();
+  assert.equal(await page.locator(".hm-chat-assistant").count(), 2);
+  await page.locator(".hm-chat-assistant").first()
+    .getByRole("button", { name: /들어보기/ }).waitFor();
+  await page.getByRole("button", { name: "이 표현 연습에 추가" }).first().click();
   await page
     .getByRole("status")
     .filter({ hasText: "내 표현에 추가했어요." })
@@ -411,7 +417,7 @@ try {
     .waitFor();
   assert((await state()).state.expressions[0].dueAt > Date.now());
   console.log(
-    "PASS AI starter conversation → explicit phrase save → spoken practice → next review",
+    "PASS multi-turn AI conversation preserves previous phrase controls → explicit save → spoken practice → next review",
   );
   const other = await browser.newContext();
   await other.request.post(base + "/api/auth", { data: { pin: "839271" } });
