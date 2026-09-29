@@ -1090,7 +1090,7 @@ export function V2App() {
         "/api/study",
         { ...body, language },
         "POST",
-        body.action === "chat" ? 90000 : 45000,
+        body.action === "chat" || body.action === "translate" ? 90000 : 45000,
       );
       if (data.state) apply(data.state);
       return data;

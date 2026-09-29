@@ -95,3 +95,163 @@ test("transport/auth failures do not regenerate or fall back", async () => {
   );
   assert.equal(calls, 1);
 });
+
+// Travel translation must follow the same original/reading separation as chat.
+import {
+  translate,
+  translationResponseFormat,
+  translationPrompt,
+} from "./v2-ai";
+const translated = {
+  translated: "A cup of hot coffee, please.",
+  reading: "어 컵 오브 핫 커피 플리즈",
+  practice: null,
+};
+test("translation repairs IPA and romanization without changing the original input or model", async () => {
+  for (const reading of [
+    "pliːz ɡɪv miː ə kʌp",
+    "kho ka fae",
+    "플리즈 coffee",
+  ]) {
+    let calls = 0;
+    const result = await translate(
+      "따뜻한 커피 한 잔 주세요.",
+      "en",
+      "ko",
+      async (prompt, messages, selection, format) => {
+        calls++;
+        assert.equal(selection, "default");
+        assert.deepEqual(format, translationResponseFormat("en", "ko"));
+        assert.equal(messages[0].content, "따뜻한 커피 한 잔 주세요.");
+        if (calls === 2) assert.match(prompt, /REPAIR:/);
+        return JSON.stringify(
+          calls === 1 ? { ...translated, reading } : translated,
+        );
+      },
+    );
+    assert.equal(calls, 2);
+    assert.deepEqual(result, translated);
+  }
+});
+test("Thai translation rejects mixed Hangul original and recovers", async () => {
+  let calls = 0;
+  const correct = {
+    translated: "ขอกาแฟร้อนหนึ่งแก้ว",
+    reading: "커 까패 론 능 깨우",
+    practice: null,
+  };
+  const result = await translate(
+    "따뜻한 커피 한 잔 주세요.",
+    "th",
+    "ko",
+    async () => {
+      calls++;
+      return JSON.stringify(
+        calls === 1
+          ? { ...correct, translated: "ขอแฟ소ร้อนหนึ่งแก้วครับ" }
+          : correct,
+      );
+    },
+  );
+  assert.equal(calls, 2);
+  assert.deepEqual(result, correct);
+});
+test("both translation directions specify pronunciation of the non-Korean sentence", async () => {
+  assert.match(translationPrompt("ja", "ko"), /the translated field/);
+  assert.match(translationPrompt("ja", "ja"), /the original user input/);
+  let calls = 0;
+  const result = await translate(
+    "コーヒーをください。",
+    "ja",
+    "ja",
+    async () => {
+      calls++;
+      return JSON.stringify({
+        translated: calls === 1 ? "Coffee please" : "커피 주세요.",
+        reading: "코히오 쿠다사이",
+        practice: null,
+      });
+    },
+  );
+  assert.equal(calls, 2);
+  assert.equal(result.translated, "커피 주세요.");
+});
+test("invalid practice is omitted; valid translation still succeeds and privacy filtering remains", async () => {
+  for (const practice of [
+    { text: "안녕하세요", reading: "안녕하세요", meaning: "안녕하세요" },
+    { ...good, reading: "konnichiwa" },
+  ]) {
+    const result = await translate("안녕하세요", "en", "ko", async () =>
+      JSON.stringify({ ...translated, practice }),
+    );
+    assert.equal(result.practice, null);
+  }
+  const result = await translate("email@example.com", "ja", "ko", async () =>
+    JSON.stringify({
+      translated: good.text,
+      reading: good.reading,
+      practice: good,
+    }),
+  );
+  assert.equal(result.practice, null);
+});
+test("translation retries malformed JSON once, stops persistent bad output and never retries transport failures", async () => {
+  let calls = 0;
+  await assert.rejects(
+    translate("커피 주세요", "en", "ko", async () => {
+      calls++;
+      return "bad";
+    }),
+    /번역과 한글 발음/,
+  );
+  assert.equal(calls, 2);
+  calls = 0;
+  await assert.rejects(
+    translate("커피 주세요", "en", "ko", async () => {
+      calls++;
+      throw new Error("upstream failed");
+    }),
+    /upstream failed/,
+  );
+  assert.equal(calls, 1);
+});
+
+test("translation practice must quote the translated expression, not invent a different order", async () => {
+  for (const phrase of ["One iced coffee, please.", "One hot tea, please."]) {
+    const result = await translate(
+      "따뜻한 커피 한 잔 주세요.",
+      "en",
+      "ko",
+      async () =>
+        JSON.stringify({
+          ...translated,
+          practice: {
+            text: phrase,
+            reading: "원 핫 티 플리즈",
+            meaning: "차 주세요",
+          },
+        }),
+    );
+    assert.equal(result.practice, null);
+  }
+  const practice = {
+    text: "hot coffee",
+    reading: "핫 커피",
+    meaning: "따뜻한 커피",
+  };
+  const result = await translate(
+    "따뜻한 커피 한 잔 주세요.",
+    "en",
+    "ko",
+    async () => JSON.stringify({ ...translated, practice }),
+  );
+  assert.deepEqual(result.practice, practice);
+  const reverse = await translate("Hot coffee, please.", "en", "en", async () =>
+    JSON.stringify({
+      translated: "따뜻한 커피 주세요.",
+      reading: "핫 커피 플리즈",
+      practice,
+    }),
+  );
+  assert.deepEqual(reverse.practice, practice);
+});

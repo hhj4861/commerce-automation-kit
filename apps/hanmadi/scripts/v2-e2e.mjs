@@ -130,7 +130,8 @@ const mock = createServer(async (req, res) => {
   let result = phrases[language];
   if (input === "곤니치와, 현종데스요" && !system.includes("REPAIR:"))
     result = { ...result, text: "안녕하세요! 저는 하나예요." };
-  if (system.includes("travel translator"))
+  if (system.includes("travel translator")) {
+    assert.equal(b.response_format?.json_schema?.name, "hanmadi_translation");
     result = {
       translated: system.includes("Source language is ko")
         ? result.text
@@ -138,6 +139,9 @@ const mock = createServer(async (req, res) => {
       reading: result.reading,
       practice: result,
     };
+    if (input === "따뜻한 커피 한 잔 주세요." && !system.includes("REPAIR:"))
+      result.reading = "kho ka fae";
+  }
   if (system.includes("Create 3 to 8"))
     result = {
       units: [
@@ -547,6 +551,17 @@ try {
     text: "INVALID",
   });
   assert.equal(invalid.status, 502);
+  const callsBeforeRepair = calls;
+  const recoveredTranslation = await post({
+    action: "translate",
+    language: "ja",
+    from: "ko",
+    text: "따뜻한 커피 한 잔 주세요.",
+  });
+  assert.equal(recoveredTranslation.status, 200);
+  assert.equal(recoveredTranslation.data.reading, phrases.ja.reading);
+  assert.equal(calls, callsBeforeRepair + 2);
+  assert.equal((await state()).state.expressions.length, 1);
   const pii = await post({
     action: "translate",
     language: "ja",
