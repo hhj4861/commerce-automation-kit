@@ -27,7 +27,8 @@ function LoginForm() {
 
   // 로그인 후 복귀 경로 — 내부 경로만 허용
   const rawFrom = searchParams.get("from") ?? "/";
-  const from = rawFrom.startsWith("/") && !rawFrom.startsWith("//") ? rawFrom : "/";
+  const from =
+    rawFrom.startsWith("/") && !rawFrom.startsWith("//") ? rawFrom : "/";
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -42,7 +43,11 @@ function LoginForm() {
         signal: AbortSignal.timeout(15000),
       });
       if (res.ok) {
-        router.replace(languageSelectionHref(from));
+        router.replace(
+          from === "/study" || from === "/study/admin"
+            ? from
+            : languageSelectionHref(from),
+        );
         router.refresh();
         return;
       }
@@ -60,13 +65,17 @@ function LoginForm() {
 
   return (
     <div className="flex min-h-dvh items-center justify-center px-5">
-      <form onSubmit={submit} className="soft-card w-full max-w-xs p-8 text-center">
+      <form
+        onSubmit={submit}
+        className="soft-card w-full max-w-xs p-8 text-center"
+      >
         <div className="flex justify-center">
           <Logo size={36} />
         </div>
         <h1 className="mt-4 font-display text-xl">Hanmadi 시작하기</h1>
         <p className="mt-1.5 text-sm text-ink-soft">
-          발급받은 PIN으로 로그인해 주세요. 학생 개인 링크를 받았다면 그 링크에서 바로 학습할 수 있어요.
+          발급받은 PIN으로 로그인해 주세요. 학생 개인 링크를 받았다면 그
+          링크에서 바로 학습할 수 있어요.
         </p>
         <input
           aria-label="PIN"
@@ -86,7 +95,11 @@ function LoginForm() {
             error ? "border-accent" : "border-ink-faint"
           }`}
         />
-        {error && <p id="login-error" role="alert" className="mt-2 text-sm text-accent">{error}</p>}
+        {error && (
+          <p id="login-error" role="alert" className="mt-2 text-sm text-accent">
+            {error}
+          </p>
+        )}
         <button
           type="submit"
           disabled={busy || !pin.trim()}

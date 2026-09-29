@@ -1,0 +1,33 @@
+name: Hanmadi 2.0 user journeys
+on:
+  pull_request:
+    paths: ['apps/hanmadi/**', '.github/workflows/hanmadi-v2.yml']
+  push:
+    branches: [main]
+    paths: ['apps/hanmadi/**', '.github/workflows/hanmadi-v2.yml']
+permissions:
+  contents: read
+jobs:
+  study:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: apps/hanmadi
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci --workspaces=false
+      - run: npm test
+      - run: npm run lint
+      - run: npm run build
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:v2
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: hanmadi-v2-screens
+          path: docs/hanmadi-v2-e2e/*.png
+          retention-days: 7

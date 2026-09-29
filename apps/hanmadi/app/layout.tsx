@@ -1,8 +1,12 @@
 import { cookies } from "next/headers";
-import { LEARNING_LANGUAGE_COOKIE, resolveLearningLanguage } from "@/lib/learning-language";
+import {
+  LEARNING_LANGUAGE_COOKIE,
+  resolveLearningLanguage,
+} from "@/lib/learning-language";
 import type { Metadata } from "next";
 import { Gowun_Dodum, IBM_Plex_Sans_KR, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
+import { SiteChrome } from "@/components/site-chrome";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { getTutorSession } from "@/lib/students";
@@ -27,11 +31,11 @@ const plexMono = IBM_Plex_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "Hanmadi — 한국어 · 태국어 · 일본어",
+    default: "한마디 — 영어 · 일본어 · 태국어 · 스페인어",
     template: "%s | Hanmadi",
   },
   description:
-    "한마디씩, 확실하게. 한국어·태국어·일본어 학습과 AI 회화, 수업 노트와 복습을 한곳에서.",
+    "한마디씩, 확실하게. 영어·일본어·태국어·스페인어 말하기와 여행 번역, AI 회화, 수업 노트와 복습을 한곳에서.",
   // 개인 수업 도구 + 학생 포털 — 검색엔진 노출 차단
   robots: { index: false, follow: false },
 };
@@ -47,7 +51,10 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const session = await getTutorSession();
-  const language = resolveLearningLanguage(undefined, (await cookies()).get(LEARNING_LANGUAGE_COOKIE)?.value);
+  const language = resolveLearningLanguage(
+    undefined,
+    (await cookies()).get(LEARNING_LANGUAGE_COOKIE)?.value,
+  );
 
   return (
     <html
@@ -56,9 +63,17 @@ export default async function RootLayout({
       className={`${gowun.variable} ${plexKr.variable} ${plexMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        <Header isTutor={session !== null} savedLanguage={language} />
-        <main className="flex-1">{children}</main>
-        <Footer />
+        <SiteChrome
+          chrome={
+            <>
+              <Header isTutor={session !== null} savedLanguage={language} />
+              <main className="flex-1">{children}</main>
+              <Footer />
+            </>
+          }
+        >
+          {children}
+        </SiteChrome>
       </body>
     </html>
   );
