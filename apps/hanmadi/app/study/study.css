@@ -726,3 +726,952 @@
     scroll-behavior: auto !important;
   }
 }
+
+/* Approved mockup: a pocket conversation notebook, not a wide dashboard.
+   The desktop review controls and fake device status are intentionally omitted. */
+.hm-app,
+.hm-dialog {
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR",
+    "Malgun Gothic", sans-serif;
+  letter-spacing: -0.25px;
+}
+.hm-app {
+  background: #edf1f7;
+  padding: 40px 24px;
+  min-height: 100dvh;
+}
+.hm-app .hm-device {
+  width: 410px;
+  max-width: 100%;
+  margin: auto;
+  height: calc(100dvh - 80px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: #fbfcfe;
+  border: 8px solid white;
+  border-radius: 42px;
+  position: relative;
+  padding-bottom: 0;
+  box-shadow: 0 24px 70px #182b4909;
+}
+.hm-brand-panel {
+  position: fixed;
+  top: 62px;
+  left: max(30px, calc(50% - 640px));
+  width: 320px;
+}
+.hm-brand-panel > div {
+  margin-top: 122px;
+}
+.hm-app .hm-brand-panel h2 {
+  font-size: 29px;
+  line-height: 1.55;
+  letter-spacing: -1.2px;
+  margin: 18px 0 34px;
+}
+.hm-app .hm-brand-panel p {
+  color: #5a6980;
+  line-height: 1.8;
+  font-size: 15px;
+}
+.hm-app .hm-brand-panel .hm-design-tag {
+  color: #3157d5;
+  font-weight: 700;
+  font-size: 14px;
+}
+.hm-wordmark {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 26px;
+  font-weight: 800;
+  color: #182b49 !important;
+  text-decoration: none;
+}
+.hm-wordmark small {
+  color: #3157d5;
+  font-size: 12px;
+  align-self: flex-start;
+  margin-top: 2px;
+}
+.hm-brand-mark {
+  display: inline-grid;
+  place-items: center;
+  width: 35px;
+  height: 35px;
+  border-radius: 11px 11px 11px 3px;
+  background: #3157d5;
+  color: white;
+  font-size: 23px;
+  font-weight: 800;
+}
+.hm-icon {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  display: inline-block;
+  vertical-align: middle;
+}
+.hm-app button,
+.hm-dialog button {
+  font-family: inherit;
+  font-size: 14px;
+  box-shadow: none;
+}
+.hm-app .hm-header {
+  padding: 28px 22px 0;
+  border: 0;
+  display: flex;
+  margin: 0;
+  min-height: 74px;
+  flex-shrink: 0;
+}
+.hm-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+.hm-header-actions > button {
+  background: none;
+  border: 0;
+  padding: 8px;
+  color: #5a6980;
+  font-size: 13px;
+  white-space: nowrap;
+}
+.hm-header-actions > button:first-of-type {
+  margin-left: auto;
+}
+.hm-app .hm-language {
+  position: relative;
+  margin-right: auto;
+}
+.hm-app .hm-language select {
+  border-radius: 24px;
+  padding: 10px 22px 10px 36px;
+  width: 112px;
+  font-size: 14px;
+  margin: 0;
+  color: #182b49;
+  font-weight: 600;
+}
+.hm-lang-dot {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 1px solid #d9e0eb;
+  background: white;
+  pointer-events: none;
+  display: grid;
+  place-items: center;
+  font-size: 8px;
+  color: #3157d5;
+}
+.hm-lang-dot.ja:after {
+  content: "";
+  width: 8px;
+  height: 8px;
+  background: #e95464;
+  border-radius: 50%;
+}
+.hm-lang-dot.th {
+  background: linear-gradient(
+    #ce4d56 0 20%,
+    white 20% 33%,
+    #375893 33% 67%,
+    white 67% 80%,
+    #ce4d56 80%
+  );
+}
+.hm-app .hm-main {
+  padding: 26px 22px 24px;
+  margin: 0;
+  width: 100%;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-anchor: none;
+  scrollbar-width: thin;
+}
+.hm-app h1 {
+  font-size: 28px;
+  line-height: 1.4;
+  letter-spacing: -1px;
+  margin: 0 0 20px;
+}
+.hm-app h2 {
+  font-size: 23px;
+  line-height: 1.45;
+  letter-spacing: -0.7px;
+}
+.hm-app h3 {
+  font-size: 17px;
+}
+.hm-app .hm-segments {
+  background: none;
+  border-radius: 0;
+  border-bottom: 1px solid #e2e7f0;
+  width: 100%;
+  padding: 0;
+  gap: 22px;
+  margin: -8px 0 25px;
+}
+.hm-app .hm-segments button {
+  padding: 10px 1px;
+  min-width: 0;
+  min-height: 46px;
+  flex: none;
+  border: 0;
+  border-bottom: 3px solid transparent;
+  border-radius: 0;
+  color: #5a6980;
+  background: none;
+  font-size: 14px;
+}
+.hm-app .hm-segments button[aria-pressed="true"] {
+  border-color: #3157d5;
+  color: #3157d5;
+  font-weight: 700;
+  box-shadow: none;
+}
+.hm-study-intro p {
+  color: #5a6980;
+  font-size: 14px;
+  margin: 0 0 7px;
+}
+.hm-app .hm-study-intro h1 {
+  font-size: 27px;
+  margin: 0;
+}
+.hm-course-hero {
+  background: #3157d5;
+  color: white;
+  border-radius: 22px 22px 22px 6px;
+  padding: 20px;
+  margin-top: 26px;
+}
+.hm-hero-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.hm-hero-top > span {
+  background: #ffffff25;
+  padding: 5px 9px;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 11px;
+}
+.hm-hero-top small {
+  color: #e2e9ff;
+  font-size: 11px;
+}
+.hm-app .hm-course-hero h2 {
+  color: white;
+  font-size: 25px;
+  line-height: 1.45;
+  margin: 15px 0 0;
+}
+.hm-app .hm-course-hero p {
+  color: #e6ebff;
+  font-size: 14px;
+  margin: 9px 0 0;
+}
+.hm-app .hm-course-hero button {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 18px;
+  min-height: 49px;
+  border: 0;
+  color: #3157d5;
+  background: white;
+  font-size: 16px;
+  font-weight: 700;
+  border-radius: 14px;
+}
+.hm-section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 28px 0 15px;
+}
+.hm-app .hm-section-heading h2 {
+  font-size: 17px;
+  margin: 0;
+  letter-spacing: -0.5px;
+}
+.hm-section-heading > span {
+  font-size: 11px;
+  color: #5a6980;
+}
+.hm-app .hm-section-heading button {
+  background: none;
+  color: #3157d5;
+  border: 0;
+  padding: 8px 0;
+  font-size: 12px;
+  margin: -8px 0;
+}
+.hm-app .hm-scene-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0;
+}
+.hm-app .hm-scene-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+  padding: 17px 14px;
+  border: 0;
+  border-radius: 18px;
+  gap: 0;
+  min-width: 0;
+  background: #edf1fc;
+}
+.hm-app .mint {
+  background: #ddf3e8;
+}
+.hm-app .peach {
+  background: #fff0e4;
+}
+.hm-app .blue {
+  background: #edf1fc;
+}
+.hm-scene-icon {
+  display: grid;
+  place-items: center;
+  width: 39px;
+  height: 39px;
+  border-radius: 12px;
+  background: #ffffffaa;
+  color: #182b49;
+  margin-bottom: 14px;
+  flex-shrink: 0;
+}
+.hm-scene-tile strong {
+  font-size: 17px;
+  letter-spacing: -0.4px;
+}
+.hm-scene-tile small {
+  font-size: 12px;
+  color: #536178;
+  line-height: 1.5;
+  margin-top: 4px;
+}
+.hm-scene-meta {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  align-items: center;
+  color: #536178;
+  margin-top: 17px;
+  font-size: 11px;
+}
+.hm-scene-meta svg {
+  width: 15px;
+  height: 15px;
+}
+.hm-app .hm-journey {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  background: #edf1fc;
+  border-radius: 16px;
+  padding: 19px;
+}
+.hm-journey > svg {
+  margin-top: 4px;
+  color: #3157d5;
+}
+.hm-journey b {
+  font-size: 15px;
+}
+.hm-app .hm-journey p {
+  color: #5a6980;
+  font-size: 13px;
+  margin: 6px 0 0;
+}
+.hm-app .hm-journey button {
+  color: #3157d5;
+  background: none;
+  border: 0;
+  padding: 10px 0 0;
+  font-size: 13px;
+}
+.hm-app .hm-personal-lesson {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border: 0;
+  border-bottom: 1px solid #e2e7f0;
+  border-radius: 0;
+  width: 100%;
+  text-align: left;
+  padding: 17px 0;
+  background: none;
+}
+.hm-personal-lesson .hm-scene-icon {
+  background: #fff0e4;
+  margin: 0;
+}
+.hm-personal-lesson > svg {
+  margin-left: auto;
+}
+.hm-personal-lesson small {
+  font-size: 12px;
+  color: #5a6980;
+  margin-top: 5px;
+}
+.hm-app .hm-grid {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0;
+  margin: 16px 0;
+}
+.hm-app .hm-course-path {
+  display: flex;
+  flex-direction: column;
+}
+.hm-app .hm-course-card {
+  position: relative;
+  width: 100%;
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 13px;
+  text-align: left;
+  background: none;
+  border: 0;
+  padding: 18px 0 !important;
+  border-radius: 0 !important;
+  min-height: 0;
+}
+.hm-course-card:not(:last-child):before {
+  content: "";
+  position: absolute;
+  left: 18px;
+  top: 52px;
+  bottom: -19px;
+  width: 2px;
+  background: #e2e7f0;
+}
+.hm-app .hm-unit-marker {
+  position: relative;
+  flex-shrink: 0;
+  width: 37px;
+  height: 37px;
+  border: 4px solid #fbfcfe;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: #edf1fc;
+  color: #3157d5;
+  font-weight: 700;
+}
+.hm-app .hm-unit-marker.done {
+  background: #ddf3e8;
+  color: #276447;
+}
+.hm-unit-marker svg {
+  width: 18px;
+  height: 18px;
+}
+.hm-course-card > span:nth-child(2) {
+  flex: 1;
+  min-width: 0;
+}
+.hm-app .hm-course-card strong {
+  display: block;
+  font-size: 15px;
+  margin: 0;
+}
+.hm-course-card small {
+  font-size: 13px;
+  margin-top: 6px;
+  line-height: 1.6;
+}
+.hm-course-card em {
+  display: block;
+  font-size: 11px;
+  font-style: normal;
+  color: #3157d5;
+  margin-top: 8px;
+}
+.hm-course-card > svg {
+  width: 16px;
+  height: 16px;
+  margin-top: 9px;
+  color: #5a6980;
+}
+.hm-app .hm-levels {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+  margin: 16px 0 21px;
+}
+.hm-app .hm-levels button {
+  display: block;
+  padding: 12px 4px;
+  text-align: center;
+  min-height: 75px;
+  border-radius: 12px;
+}
+.hm-levels strong {
+  font-size: 16px;
+}
+.hm-levels small {
+  font-size: 10px;
+  margin-top: 4px;
+  word-break: keep-all;
+}
+.hm-app .hm-levels [aria-pressed="true"],
+.hm-app .hm-levels [aria-pressed="true"]:hover:not(:disabled) {
+  background: #3157d5;
+  color: white;
+}
+.hm-levels [aria-pressed="true"] small {
+  color: white;
+}
+.hm-level-summary {
+  padding: 20px;
+  border: 1px solid #e2e7f0;
+  border-radius: 19px;
+  background: white;
+}
+.hm-app .hm-level-summary h2 {
+  margin: 13px 0 0;
+}
+.hm-app .hm-level-summary p {
+  font-size: 14px;
+  color: #5a6980;
+  margin: 8px 0 0;
+}
+.hm-level-summary progress {
+  display: block;
+  width: 100%;
+  height: 6px;
+  margin: 21px 0 8px;
+  border: 0;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #edf1fc;
+}
+.hm-level-summary progress::-webkit-progress-bar {
+  background: #edf1fc;
+}
+.hm-level-summary progress::-webkit-progress-value {
+  background: #3157d5;
+}
+.hm-level-summary progress::-moz-progress-bar {
+  background: #3157d5;
+}
+.hm-level-summary small {
+  font-size: 11px;
+}
+.hm-categories {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin: 20px 0 14px;
+}
+.hm-app .hm-categories button {
+  border-radius: 20px;
+  padding: 9px 12px;
+  font-size: 12px;
+  min-height: 42px;
+}
+.hm-app .hm-categories [aria-pressed="true"] {
+  background: #182b49;
+  color: white;
+  border-color: #182b49;
+}
+.hm-app .hm-back {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+  padding: 8px 0;
+  border: 0;
+  background: none;
+  margin-bottom: 14px;
+}
+.hm-scene-heading {
+  padding: 22px;
+  border-radius: 20px;
+}
+.hm-app .hm-scene-heading h1 {
+  margin-bottom: 8px;
+}
+.hm-app .hm-scene-heading p {
+  font-size: 14px;
+  color: #5a6980;
+  margin: 0;
+}
+.hm-topic-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 19px;
+}
+.hm-topic-tags span {
+  background: #ffffffb5;
+  border-radius: 6px;
+  padding: 5px 8px;
+  font-size: 11px;
+  color: #46546a;
+}
+.hm-app .hm-bottom {
+  position: static;
+  transform: none;
+  flex-shrink: 0;
+  width: 100%;
+  max-width: none;
+  border: 0;
+  border-top: 1px solid #e2e7f0;
+  border-radius: 0 0 34px 34px;
+  padding: 10px 7px 15px;
+  gap: 0;
+  box-shadow: none;
+  backdrop-filter: none;
+  background: white;
+}
+.hm-app .hm-bottom button {
+  font-size: 11px;
+  color: #5a6980;
+  gap: 4px;
+  min-height: 48px;
+  padding: 0;
+  border-radius: 0;
+}
+.hm-app .hm-bottom button[aria-current="page"] {
+  color: #3157d5;
+  background: none;
+  font-weight: 700;
+}
+.hm-bottom button[aria-current="page"] svg {
+  stroke-width: 2.5;
+}
+.hm-app .hm-panel {
+  border: 0;
+  padding: 0;
+  background: none;
+  border-radius: 0;
+}
+.hm-app .hm-page-heading {
+  margin-bottom: 22px;
+}
+.hm-app .hm-page-heading p {
+  font-size: 14px;
+  color: #5a6980;
+}
+.hm-app .hm-screen-title {
+  font-size: 18px;
+  text-align: center;
+  margin-bottom: 24px;
+}
+.hm-language-pair {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 20px;
+  font-size: 15px;
+  font-weight: 700;
+}
+.hm-language-pair svg {
+  width: 18px;
+  color: #5a6980;
+}
+.hm-app .hm-translation {
+  grid-template-columns: 1fr;
+  gap: 12px;
+  margin: 16px 0 20px;
+}
+.hm-app .hm-translation > div {
+  padding: 19px;
+  border-radius: 18px;
+  background: #edf1fc;
+  min-height: 163px;
+}
+.hm-app .hm-translation > div:nth-child(2) {
+  background: #fff0e4;
+}
+.hm-app .hm-translation h2 {
+  font-size: 20px;
+  font-weight: 500;
+  color: #657594;
+  line-height: 1.55;
+  margin: 12px 0 0;
+}
+.hm-app .hm-translation > div:nth-child(2) h2 {
+  color: #846950;
+}
+.hm-app .hm-translation .hm-native {
+  font-size: 22px !important;
+}
+.hm-app .hm-mic {
+  width: 76px;
+  height: 76px;
+  border: 0 !important;
+  box-shadow: 0 0 0 8px #edf1fc;
+  padding: 0;
+}
+.hm-app .hm-mic svg {
+  width: 28px;
+  height: 28px;
+}
+.hm-app .hm-mic.recording {
+  box-shadow: 0 0 0 8px #fbe6e3;
+}
+.hm-app .hm-mic-wrap {
+  margin: 28px 0;
+}
+.hm-app .hm-mic-wrap strong {
+  font-size: 14px;
+  margin-top: 4px;
+}
+.hm-app .hm-mic-wrap small {
+  font-size: 11px;
+}
+.hm-app .hm-chat-empty {
+  background: #fff0e4;
+  padding: 20px;
+  border-radius: 20px;
+  text-align: left;
+  margin: 18px 0;
+}
+.hm-app .hm-chat-empty h2 {
+  font-size: 20px;
+}
+.hm-app .hm-chat-empty p {
+  font-size: 13px;
+  color: #765332;
+}
+.hm-app .hm-coach {
+  width: 54px;
+  height: 54px;
+  border-radius: 14px;
+  color: #805227;
+  margin-bottom: 14px;
+}
+.hm-app .hm-expression {
+  background: none;
+  border: 0;
+  border-bottom: 1px solid #e2e7f0;
+  border-radius: 0;
+  padding: 20px 0;
+}
+.hm-app .hm-chat-assistant {
+  max-width: 100%;
+}
+.hm-app .hm-chat-assistant .hm-expression {
+  border: 0;
+  border-radius: 4px 20px 20px;
+  padding: 19px;
+  background: #edf1fc;
+}
+.hm-app .hm-chat-user {
+  background: #3157d5;
+  color: white;
+  border-radius: 18px 4px 18px 18px;
+  max-width: 90%;
+  font-size: 16px;
+  padding: 15px;
+}
+.hm-app .hm-native {
+  font-size: 21px !important;
+}
+.hm-app .hm-reading {
+  font-size: 15px;
+}
+.hm-app .hm-audio button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  border: 0;
+}
+.hm-app .hm-audio svg {
+  width: 17px;
+  height: 17px;
+}
+.hm-app .hm-callout {
+  padding: 17px;
+  border-radius: 14px;
+  gap: 10px;
+  flex-direction: column;
+  align-items: flex-start;
+}
+.hm-app .hm-callout h3 {
+  font-size: 15px;
+}
+.hm-app .hm-footnote {
+  text-align: center;
+  font-size: 11px;
+  color: #5a6980;
+  line-height: 1.6;
+  margin: 28px 0 0;
+}
+.hm-app .hm-language-grid {
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 25px;
+}
+.hm-app .hm-language-grid button {
+  min-height: 112px;
+  padding: 18px 14px;
+  border-radius: 17px;
+  gap: 5px;
+}
+.hm-app .hm-language-grid strong {
+  font-size: 17px;
+}
+.hm-app .hm-language-grid small {
+  font-size: 13px;
+}
+.hm-app .hm-lang-mark {
+  display: none;
+}
+.hm-app .hm-language-grid button > span:last-child {
+  font-size: 11px;
+  margin-top: 5px;
+}
+.hm-onboarding-mark {
+  margin: 10px 0 32px;
+}
+.hm-app .hm-guest {
+  margin-bottom: 18px;
+}
+.hm-app .hm-guest button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #3157d5;
+  font-size: 12px;
+}
+.hm-full {
+  width: 100%;
+}
+.hm-dialog {
+  width: min(394px, calc(100% - 32px));
+  padding: 25px;
+  border: 0;
+}
+.hm-dialog .hm-primary {
+  width: 100%;
+}
+.hm-dialog .hm-native {
+  font-size: 22px !important;
+}
+.hm-dialog .hm-icon {
+  width: 18px;
+  height: 18px;
+}
+@media (max-width: 1200px) {
+  .hm-brand-panel {
+    display: none;
+  }
+}
+@media (max-width: 760px) {
+  .hm-app {
+    padding: 0;
+    background: #fbfcfe;
+  }
+  .hm-app .hm-device {
+    width: 100%;
+    max-width: 480px;
+    height: 100dvh;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    padding-bottom: 0;
+  }
+  .hm-app .hm-header {
+    padding: 18px 22px 0;
+    min-height: 62px;
+  }
+  .hm-app .hm-main {
+    padding: 26px 22px 24px;
+  }
+  .hm-app .hm-bottom {
+    width: 100%;
+    max-width: 480px;
+    bottom: 0;
+    border-radius: 0;
+    padding-bottom: max(10px, env(safe-area-inset-bottom));
+  }
+}
+@media (max-width: 370px) {
+  .hm-app .hm-header {
+    padding-left: 17px;
+    padding-right: 17px;
+  }
+  .hm-app .hm-main {
+    padding-left: 17px;
+    padding-right: 17px;
+  }
+  .hm-app h1 {
+    font-size: 26px;
+  }
+  .hm-app .hm-scene-grid {
+    gap: 10px;
+  }
+  .hm-app .hm-scene-tile {
+    padding: 15px 12px;
+  }
+  .hm-app .hm-segments {
+    gap: 20px;
+  }
+}
+
+/* Match the mockup's stable tile colors and keep the voice control in reach. */
+.hm-app button {
+  transition: none;
+}
+.hm-app .hm-scene-tile.mint:hover:not(:disabled) {
+  background: #d1eddf;
+}
+.hm-app .hm-scene-tile.peach:hover:not(:disabled) {
+  background: #ffe7d5;
+}
+.hm-app .hm-levels button[aria-pressed="true"]:hover:not(:disabled) {
+  background: #3157d5;
+}
+.hm-app[data-view="translate"] .hm-header {
+  display: none;
+}
+.hm-app[data-view="translate"] .hm-page-heading {
+  margin-bottom: 16px;
+}
+.hm-app[data-view="translate"] .hm-translation p {
+  margin: 8px 0;
+}
+.hm-app[data-view="translate"] .hm-translation .hm-audio {
+  margin: 12px 0 0;
+}
+.hm-app[data-view="translate"] .hm-panel > .hm-row {
+  justify-content: center;
+}
+.hm-app[data-view="translate"] .hm-panel > .hm-row > label {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0;
+  white-space: nowrap;
+}
+.hm-app[data-view="translate"] .hm-panel > .hm-row > .hm-badge {
+  display: none !important;
+}
+.hm-app[data-view="translate"] .hm-mic-wrap {
+  margin: 18px 0 24px;
+}

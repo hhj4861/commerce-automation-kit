@@ -190,6 +190,15 @@ try {
       viewport: { width: 390, height: 844 },
     }),
     page = await context.newPage();
+  await context.addInitScript(() => {
+    const style = document.createElement("style");
+    style.textContent = "nextjs-portal { display:none !important; }";
+    document.addEventListener(
+      "DOMContentLoaded",
+      () => document.head.append(style),
+      { once: true },
+    );
+  });
   const errors = [];
   page.on("pageerror", (e) => errors.push(e.message));
   async function post(body, ctx = context, path = "/api/study") {
@@ -212,7 +221,7 @@ try {
   });
   assert.equal(guest.status, 401);
   await page.goto(base);
-  await page.getByRole("button", { name: /JA 일본어/ }).click();
+  await page.getByRole("button", { name: /일본어 日本語/ }).click();
   await page.getByRole("button", { name: "로그인", exact: true }).click();
   await page.getByRole("button", { name: "처음이에요 · 계정 만들기" }).click();
   const name = `e2e_${Date.now()}`;
@@ -229,9 +238,10 @@ try {
   ])
     await page.getByRole("button", { name: choice, exact: true }).click();
   await page.getByRole("button", { name: "내 연습 시작하기 →" }).click();
-  await page.getByRole("button", { name: "오늘 연습 시작하기 ↗" }).waitFor();
+  await page.getByRole("button", { name: "오늘 연습 시작" }).waitFor();
   assert.equal((await state()).state.profiles.ja.level, 1);
   console.log("PASS learner signup → language → oral-first assessment → study");
+  await page.locator(".hm-main").evaluate((el) => (el.scrollTop = 0));
   await page.screenshot({
     path: resolve(screenshots, "mobile.png"),
     fullPage: true,
@@ -239,6 +249,11 @@ try {
   await page.getByRole("button", { name: "상황별", exact: true }).click();
   await page.getByRole("button", { name: /스몰토크 처음 만난/ }).click();
   assert.equal(await page.locator(".hm-course-card").count(), 4);
+  await page.locator(".hm-main").evaluate((el) => (el.scrollTop = 0));
+  await page.screenshot({
+    path: resolve(screenshots, "scenarios.png"),
+    fullPage: true,
+  });
   await page.getByRole("button", { name: /레벨별/, exact: true }).click();
   for (let level = 1; level <= 4; level++) {
     await page
@@ -246,7 +261,18 @@ try {
       .nth(level - 1)
       .click();
     assert.equal(await page.locator(".hm-course-card").count(), 8);
+    assert.equal(
+      await page
+        .locator('.hm-levels [aria-pressed="true"]')
+        .evaluate((el) => getComputedStyle(el).backgroundColor),
+      "rgb(49, 87, 213)",
+    );
   }
+  await page.locator(".hm-main").evaluate((el) => (el.scrollTop = 0));
+  await page.screenshot({
+    path: resolve(screenshots, "levels.png"),
+    fullPage: true,
+  });
   console.log("PASS four levels × eight scenarios");
   for (const language of ["en", "th", "es"]) {
     await page.getByLabel("학습 언어", { exact: true }).selectOption(language);
@@ -262,7 +288,7 @@ try {
     });
     assert.equal(assessed.status, 200);
     await page.reload();
-    await page.getByRole("button", { name: "오늘 연습 시작하기 ↗" }).waitFor();
+    await page.getByRole("button", { name: "오늘 연습 시작" }).waitFor();
   }
   await page.getByLabel("학습 언어", { exact: true }).selectOption("ja");
   await page.getByRole("button", { name: "번역", exact: true }).click();
@@ -279,6 +305,7 @@ try {
     1,
   );
   assert.equal(snapshot.state.expressions[0].practicedAt, undefined);
+  await page.locator(".hm-main").evaluate((el) => (el.scrollTop = 0));
   await page.screenshot({
     path: resolve(screenshots, "translation.png"),
     fullPage: true,
@@ -390,17 +417,30 @@ try {
   await page.getByRole("button", { name: "AI 대화", exact: true }).click();
   await page.getByRole("button", { name: "AI가 먼저 말하기 →" }).click();
   await page.getByRole("button", { name: "이 표현 연습에 추가" }).waitFor();
-  await page.getByLabel("말이 막히면 한국어로 도움 요청").fill("한 번 더 알려줘");
+  await page
+    .getByLabel("말이 막히면 한국어로 도움 요청")
+    .fill("한 번 더 알려줘");
   await page.getByRole("button", { name: "보내기", exact: true }).click();
   await page.locator(".hm-chat-assistant").nth(1).waitFor();
   assert.equal(await page.locator(".hm-chat-assistant").count(), 2);
-  await page.locator(".hm-chat-assistant").first()
-    .getByRole("button", { name: /들어보기/ }).waitFor();
-  await page.getByRole("button", { name: "이 표현 연습에 추가" }).first().click();
+  await page
+    .locator(".hm-chat-assistant")
+    .first()
+    .getByRole("button", { name: /들어보기/ })
+    .waitFor();
+  await page
+    .getByRole("button", { name: "이 표현 연습에 추가" })
+    .first()
+    .click();
   await page
     .getByRole("status")
     .filter({ hasText: "내 표현에 추가했어요." })
     .waitFor();
+  await page.locator(".hm-main").evaluate((el) => (el.scrollTop = 0));
+  await page.screenshot({
+    path: resolve(screenshots, "chat.png"),
+    fullPage: true,
+  });
   await page.getByRole("button", { name: "내 표현", exact: true }).click();
   const practicedResponse = page.waitForResponse(
     (r) =>
@@ -617,18 +657,57 @@ try {
   for (const width of [360, 390, 768, 1440]) {
     await page.setViewportSize({ width, height: 900 });
     await page.reload();
-    await page.getByRole("button", { name: "오늘 연습 시작하기 ↗" }).waitFor();
+    await page.getByRole("button", { name: "오늘 연습 시작" }).waitFor();
     assert(
       await page.evaluate(
         () => document.documentElement.scrollWidth <= innerWidth,
       ),
       `overflow ${width}`,
     );
-    if (width === 1440)
+    assert.equal(await page.locator(".hm-bottom svg").count(), 4);
+    assert.equal(
+      await page
+        .locator(".hm-course-hero")
+        .evaluate((el) => getComputedStyle(el).backgroundColor),
+      "rgb(49, 87, 213)",
+    );
+    assert.equal(
+      await page
+        .locator(".hm-main")
+        .evaluate((el) =>
+          getComputedStyle(el).fontFamily.includes("Apple SD Gothic Neo"),
+        ),
+      true,
+    );
+    assert(
+      await page
+        .locator(".hm-device")
+        .evaluate((el) => el.getBoundingClientRect().width <= 480),
+    );
+    for (const label of ["레벨별", "상황별", "오늘 추천"]) {
+      await page.getByRole("button", { name: label, exact: true }).click();
+      assert(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth <= innerWidth,
+        ),
+        `${label} overflow ${width}`,
+      );
+    }
+    assert(
+      await page
+        .locator(".hm-main")
+        .evaluate((el) => el.scrollWidth <= el.clientWidth),
+      `app horizontal overflow ${width}`,
+    );
+    const nav = await page.locator(".hm-bottom").boundingBox();
+    assert(nav.y + nav.height <= 901, `navigation visible ${width}`);
+    if (width === 1440) {
+      await page.locator(".hm-main").evaluate((el) => (el.scrollTop = 0));
       await page.screenshot({
         path: resolve(screenshots, "desktop.png"),
         fullPage: true,
       });
+    }
   }
   await page.getByRole("button", { name: "내 AI", exact: true }).click();
   await page.getByRole("heading", { name: "내 AI 연결" }).waitFor();
