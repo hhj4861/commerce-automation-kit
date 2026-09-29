@@ -24,7 +24,7 @@ for(const [i,s] of brief.scenes.entries()){
  const raw=join(cache,'remote-narration',`beat-${String(i).padStart(2,'0')}.mp3`),meta=JSON.parse(await readFile(raw+'.json','utf8'));
  if(meta.text!==s.narration||meta.voiceId!==brief.voice)throw Error('Narration mismatch '+s.id);
  const voice=join(cache,`${s.id}-${brief.narrationSpeed}.wav`);
- await run('ffmpeg',['-y','-v','error','-i',raw,'-af',`atempo=${brief.narrationSpeed}`,'-c:a','pcm_s16le','-ar','44100','-ac','2',voice]);
+ await run('ffmpeg',['-y','-v','error','-i',raw,...(brief.narrationSpeed===1?[]:['-af',`atempo=${brief.narrationSpeed}`]),'-c:a','pcm_s16le','-ar','44100','-ac','2',voice]);
  const speech=await duration(voice),rawDuration=await duration(raw),sourceFrames=Math.ceil((speech+.5)*12),seconds=sourceFrames/12;
  scenes.push({...s,voice,rawDuration,speechSeconds:speech,sourceFrames,frames:sourceFrames*2,duration:seconds,start:total});total+=seconds;
 }
