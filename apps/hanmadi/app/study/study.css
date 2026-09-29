@@ -2048,3 +2048,60 @@
   height: 15px;
   display: block;
 }
+
+/* Ten-phrase lesson and predictable account entry. */
+.hm-login-screen {
+  padding: 20px 0;
+}
+.hm-login-screen form {
+  margin-top: 28px;
+}
+.hm-login-screen form > button {
+  width: 100%;
+  justify-content: center;
+}
+.hm-lesson progress {
+  width: 100%;
+  height: 6px;
+  accent-color: var(--hm-blue, #3157d5);
+}
+.hm-lesson-count {
+  font-weight: 700;
+}
+.hm-lesson-navigation {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 20px;
+}
+.hm-lesson-navigation button {
+  min-width: 0;
+  justify-content: center;
+}
+.hm-chat-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: end;
+}
+.hm-chat-controls > label {
+  grid-column: 1 / -1;
+  min-width: 0;
+}
+.hm-chat-controls select {
+  width: 100%;
+  min-width: 0;
+}
+.hm-chat-controls > button {
+  min-width: 0;
+  min-height: 46px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.hm-chat-controls > button svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
