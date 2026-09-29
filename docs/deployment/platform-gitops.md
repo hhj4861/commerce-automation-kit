@@ -9,7 +9,8 @@
 | Hanmadi 웹 | commerce-automation-kit | `deploy/hanmadi` | Vercel `hanmadi` |
 | FIRSTFRAME | commerce-automation-kit | `deploy/firstframe` | Cloudflare Pages `firstframe-showcase` |
 | LiteLLM | commerce-automation-kit | `deploy/litellm` | 개인 GCP `replay-live-508202`의 `shared-ai` |
-| Festa 웹 | **venture-studio** | 현재 `feature/agent-test` | Cloudflare Pages `festacheck`; 별도 저장소에서 연결 필요 |
+| Replay 웹·API | **replay-live** | 목표 `deploy/replay` | Vercel `replay-live-poc` + `replay-live-api`; 별도 저장소에서 연결 필요 |
+| Festa 웹 | **venture-studio** | 목표 `deploy/festa` (현재 `feature/agent-test`) | Cloudflare Pages `festacheck`; 별도 저장소에서 연결 필요 |
 
 `targets.json`이 대상 정보 원본이다. `paths`는 해당 서비스 소스 범위 참고용이며 배포 필터가 아니다.
 개발 브랜치와 `main` push는 운영 배포를 실행하지 않는다. 배포 브랜치 최초 생성/삭제도 배포하지 않는다.
@@ -121,13 +122,30 @@ DB·Dify·별도 accounts 서비스·edge는 재시작하지 않는다. DB/네�
 - 현재 수동 배포이며 자동 배포 연결 필요
 
 해당 저장소에서 앱의 실제 빌드/검사 명령을 확인하고 전용 배포 워크플로를 작성한다.
-브랜치를 유지할지 `deploy/festa`를 사용할지 그 저장소 담당자가 정하고 Cloudflare production branch를 일치시킨다.
+목표 배포 브랜치는 `deploy/festa`로 통일한다. 현재 `feature/agent-test`의 검토된 소스를 승격하고
+Cloudflare production branch를 일치시킨다. 최초 브랜치 생성이 운영 배포를 자동 실행하지 않게 한다.
 commerce-automation-kit의 Festa 설정은 **공용 AI 서버의 소비자 설정**이며 Festa 웹 소스가 아니다.
 현재 broker는 venture-studio OIDC 요청을 거부한다. Festa용 별도 repo ID·workflow·branch 신뢰 정책과 키 범위를 검토해야 한다.
 그 전에 이 저장소의 배포 키/저장소 신뢰 범위를 임의로 공유하지 않는다.
 
-현재 세션에는 다른 기존 세션으로 전송하는 도구가 없어 **직접 전달/수신 확인은 하지 못했다.**
-이 절을 Festa 담당 세션에 전달하면 된다. venture-studio 파일은 이번 작업에서 변경하지 않았다.
+담당 세션별 사용자 요청과 완료 기준은 [Codex GitOps 인계](codex-gitops-handoff.md)에 있다.
+직접 전달/수신 여부는 해당 문서에 구분한다. venture-studio 파일은 이번 작업에서 변경하지 않았다.
+
+## Replay 담당 세션 인계
+
+로컬 `/Users/admin/workSpace/replay-live-poc`의 origin은 `hhj4861/replay-live`다.
+로컬 운영 문서 기준 배포 대상은 Vercel 웹 `replay-live-poc`와 API `replay-live-api` 두 프로젝트다.
+웹 소스는 `web/`, API는 저장소 루트이며 공용 LiteLLM VM 배포와 별개다.
+현재 클라우드 실제 배포 설정은 Replay 담당자가 재조회해야 한다.
+
+기존 `docs/branch-workflow.md`의 `feat/* → develop → main` 통합 규칙을 유지하고,
+검증한 `main → deploy/replay` PR 머지를 운영 배포 트리거로 추가한다.
+두 프로젝트와 worker snapshot의 호환성, 마이그레이션·복구·기존 방송 영향을 확인한 뒤 승격한다.
+기존 CI는 검증 파이프라인이므로 배포 성공 증거로 사용하지 않는다.
+Cloudflare의 별도 Replay 배포 자격과 repository ID·workflow·branch별 OIDC 신뢰가 필요하다.
+GitHub Secrets로 장기 키를 복사하거나 이 저장소의 신뢰 정책을 모든 저장소에 개방하지 않는다.
+Replay의 기존 GCP 진단 중단 지시는 유지하며 이번 GitOps 요청을 GCP 이전으로 해석하지 않는다.
+replay-live 파일은 이번 작업에서 변경하지 않았고 해당 저장소의 자동 배포는 아직 구현·활성화 전이다.
 
 ## 검증과 경계
 

@@ -72,3 +72,15 @@ test('LiteLLM archives exact commit and uses personal VM through IAP', () => {
   }
   assert.doesNotMatch(JSON.stringify(steps), /socar|accounts\.py|dify|docker.*down/);
 });
+test('Replay and Festa are separate-repository targets, never local deployments', () => {
+  assert.equal(configuration.external.replay.repository, 'hhj4861/replay-live');
+  assert.equal(configuration.external.replay.branch, 'deploy/replay');
+  assert.deepEqual(configuration.external.replay.projects, ['replay-live-poc', 'replay-live-api']);
+  assert.equal(configuration.external.festa.repository, 'hhj4861/venture-studio');
+  assert.equal(configuration.external.festa.branch, 'deploy/festa');
+  assert.equal(configuration.external.festa.currentBranch, 'feature/agent-test');
+  for (const name of ['replay', 'festa']) {
+    assert.throws(() => plan(input(name)));
+    assert.throws(() => deployment(name, env(name)));
+  }
+});

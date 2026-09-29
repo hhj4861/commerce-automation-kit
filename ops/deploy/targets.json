@@ -38,12 +38,22 @@
     }
   },
   "external": {
+    "replay": {
+      "repository": "hhj4861/replay-live",
+      "branch": "deploy/replay",
+      "integration": "feat/* -> develop -> main -> deploy/replay",
+      "directory": ".",
+      "webDirectory": "web",
+      "projects": ["replay-live-poc", "replay-live-api"],
+      "deployment": "Vercel web and API; workflow belongs in that repository; activation pending"
+    },
     "festa": {
       "repository": "hhj4861/venture-studio",
-      "branch": "feature/agent-test",
+      "branch": "deploy/festa",
+      "currentBranch": "feature/agent-test",
       "directory": "ventures/market/party-festival-guide/app",
       "project": "festacheck",
-      "deployment": "manual; workflow belongs in that repository"
+      "deployment": "currently manual; deploy/festa is the requested target; workflow belongs in that repository"
     }
   },
   "unconfigured": {
