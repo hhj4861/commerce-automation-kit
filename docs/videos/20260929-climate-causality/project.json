@@ -4,7 +4,7 @@
   "category": "과학",
   "duration": 60,
   "aspect": "9:16",
-  "voice": "BbsagRO6ohd8MKPS2Ob0",
+  "voice": "n2fbxG88jqAoaVPUy3IG",
   "reference": "/Users/admin/Downloads/KakaoTalk_Video_2026-09-29-16-42-54.mp4",
   "referenceUse": "Style analysis only: cream paper, thin sketch lines, expressive objects, navy explanation scenes, short captions. All graphics newly drawn; no source video/audio reused.",
   "scenes": [
@@ -15,7 +15,7 @@
       "visual": "question",
       "narration": "영점 일 도 뒤 지구 붕괴? 그 숫자는 멸망 시계가 아닙니다.",
       "kind": "video",
-      "duration": 6,
+      "duration": 6.233333333333333,
       "prompt": "Original hand-drawn animated explanation: question",
       "animation": {
         "title": "0.1°C 뒤, 지구 붕괴?",
@@ -33,8 +33,9 @@
           }
         ]
       },
-      "frames": 180,
-      "measuredSpeechSeconds": 5.479909
+      "frames": 187,
+      "originalSpeechSeconds": 3.761633,
+      "measuredSpeechSeconds": 3.018481
     },
     {
       "id": "s2",
@@ -43,7 +44,7 @@
       "visual": "target",
       "narration": "일 점 오 도는 장기 온난화를 제한하려는 목표입니다. 한 해의 기온과도 다르죠.",
       "kind": "video",
-      "duration": 7.3,
+      "duration": 7.066666666666666,
       "prompt": "Original hand-drawn animated explanation: target",
       "animation": {
         "title": "1.5°C는 무엇일까",
@@ -61,8 +62,9 @@
           }
         ]
       },
-      "frames": 219,
-      "measuredSpeechSeconds": 6.780227
+      "frames": 212,
+      "originalSpeechSeconds": 4.829751,
+      "measuredSpeechSeconds": 3.872766
     },
     {
       "id": "s3",
@@ -71,7 +73,7 @@
       "visual": "budget",
       "narration": "삼 년은 지금처럼 배출하면, 남은 탄소예산이 소진될 수 있다는 경고입니다.",
       "kind": "video",
-      "duration": 6.933333333333334,
+      "duration": 6.8,
       "prompt": "Original hand-drawn animated explanation: budget",
       "animation": {
         "title": "‘3년’의 진짜 의미",
@@ -89,8 +91,9 @@
           }
         ]
       },
-      "frames": 208,
-      "measuredSpeechSeconds": 6.408707
+      "frames": 204,
+      "originalSpeechSeconds": 4.504671,
+      "measuredSpeechSeconds": 3.612177
     },
     {
       "id": "s4",
@@ -99,7 +102,7 @@
       "visual": "rain",
       "narration": "따뜻한 공기는 수증기를 더 품어, 강한 비가 내릴 조건을 키웁니다.",
       "kind": "video",
-      "duration": 6.4,
+      "duration": 6.5,
       "prompt": "Original hand-drawn animated explanation: rain",
       "animation": {
         "title": "공기가 더 따뜻해지면",
@@ -117,8 +120,9 @@
           }
         ]
       },
-      "frames": 192,
-      "measuredSpeechSeconds": 5.851429
+      "frames": 195,
+      "originalSpeechSeconds": 4.086712,
+      "measuredSpeechSeconds": 3.288118
     },
     {
       "id": "s5",
@@ -127,7 +131,7 @@
       "visual": "storm",
       "narration": "따뜻한 바다는 태풍의 강한 비를 키울 수 있죠. 태풍 수가 모두 늘어난다는 뜻은 아닙니다.",
       "kind": "video",
-      "duration": 7.766666666666667,
+      "duration": 7.566666666666666,
       "prompt": "Original hand-drawn animated explanation: storm",
       "animation": {
         "title": "바다도 연결되어 있다",
@@ -145,8 +149,9 @@
           }
         ]
       },
-      "frames": 233,
-      "measuredSpeechSeconds": 7.244626
+      "frames": 227,
+      "originalSpeechSeconds": 5.433469,
+      "measuredSpeechSeconds": 4.35517
     },
     {
       "id": "s6",
@@ -155,7 +160,7 @@
       "visual": "attribution",
       "narration": "일본 홍수와 중국 태풍도, 특정 사건의 기후 영향은 별도 분석이 필요합니다.",
       "kind": "video",
-      "duration": 7.4,
+      "duration": 7,
       "prompt": "Original hand-drawn animated explanation: attribution",
       "animation": {
         "title": "그렇다면 일본·중국은?",
@@ -173,8 +178,9 @@
           }
         ]
       },
-      "frames": 222,
-      "measuredSpeechSeconds": 6.873107
+      "frames": 210,
+      "originalSpeechSeconds": 4.736871,
+      "measuredSpeechSeconds": 3.791202
     },
     {
       "id": "s7",
@@ -183,7 +189,7 @@
       "visual": "plates",
       "narration": "네팔 지진의 주된 원인은 인도판과 유라시아판의 충돌입니다.",
       "kind": "video",
-      "duration": 6.4,
+      "duration": 6.2,
       "prompt": "Original hand-drawn animated explanation: plates",
       "animation": {
         "title": "네팔 지진은 다른 원인",
@@ -201,8 +207,9 @@
           }
         ]
       },
-      "frames": 192,
-      "measuredSpeechSeconds": 5.851429
+      "frames": 186,
+      "originalSpeechSeconds": 3.715193,
+      "measuredSpeechSeconds": 2.98805
     },
     {
       "id": "s8",
@@ -211,7 +218,7 @@
       "visual": "causes",
       "narration": "같은 시기의 재난이라고 원인도 같은 건 아닙니다.",
       "kind": "video",
-      "duration": 4.2,
+      "duration": 5.4,
       "prompt": "Original hand-drawn animated explanation: causes",
       "animation": {
         "title": "함께 일어나도, 원인은 다르다",
@@ -229,8 +236,9 @@
           }
         ]
       },
-      "frames": 126,
-      "measuredSpeechSeconds": 3.715193
+      "frames": 162,
+      "originalSpeechSeconds": 2.739955,
+      "measuredSpeechSeconds": 2.196213
     },
     {
       "id": "s9",
@@ -239,7 +247,7 @@
       "visual": "ending",
       "narration": "기후위기는 단 한 번의 절벽이 아닙니다. 줄이는 영점 일 도마다 위험을 낮출 수 있습니다.",
       "kind": "video",
-      "duration": 7.6,
+      "duration": 7.233333333333333,
       "prompt": "Original hand-drawn animated explanation: ending",
       "animation": {
         "title": "줄이는 0.1°C마다 의미가 있다",
@@ -257,11 +265,13 @@
           }
         ]
       },
-      "frames": 228,
-      "measuredSpeechSeconds": 7.105306
+      "frames": 217,
+      "originalSpeechSeconds": 5.06195,
+      "measuredSpeechSeconds": 4.056395
     }
   ],
-  "voiceName": "진건 · 차분한 남성",
+  "voiceName": "Yooni - Natural & Clear",
+  "narrationSpeed": 1.25,
   "artifact": "climate-causality-60s.mp4",
   "appPublished": false,
   "captions": [
@@ -271,7 +281,7 @@
       "source": "script",
       "text": "0.1도 뒤 지구 붕괴?",
       "startFrame": 0,
-      "endFrame": 69,
+      "endFrame": 38,
       "font": "gothic",
       "size": 48,
       "color": "#34372f",
@@ -280,7 +290,7 @@
       "outlineWidth": 0,
       "outlineColor": "#000000",
       "x": 50,
-      "y": 94,
+      "y": 50,
       "backgroundColor": "#fcf8e9",
       "backgroundOpacity": 0.96
     },
@@ -289,8 +299,8 @@
       "clipId": "clip-1",
       "source": "script",
       "text": "그 숫자는 멸망 시계가 아닙니다.",
-      "startFrame": 69,
-      "endFrame": 165,
+      "startFrame": 38,
+      "endFrame": 91,
       "font": "gothic",
       "size": 48,
       "color": "#34372f",
@@ -299,7 +309,7 @@
       "outlineWidth": 0,
       "outlineColor": "#000000",
       "x": 50,
-      "y": 94,
+      "y": 50,
       "backgroundColor": "#fcf8e9",
       "backgroundOpacity": 0.96
     },
@@ -309,7 +319,7 @@
       "source": "script",
       "text": "1.5도는 장기 온난화를\n제한하려는 목표입니다.",
       "startFrame": 0,
-      "endFrame": 136,
+      "endFrame": 78,
       "font": "gothic",
       "size": 48,
       "color": "#34372f",
@@ -318,7 +328,7 @@
       "outlineWidth": 0,
       "outlineColor": "#000000",
       "x": 50,
-      "y": 94,
+      "y": 50,
       "backgroundColor": "#fcf8e9",
       "backgroundOpacity": 0.96
     },
@@ -327,8 +337,8 @@
       "clipId": "clip-2",
       "source": "script",
       "text": "한 해의 기온과도 다르죠.",
-      "startFrame": 136,
-      "endFrame": 204,
+      "startFrame": 78,
+      "endFrame": 117,
       "font": "gothic",
       "size": 48,
       "color": "#34372f",
@@ -337,7 +347,7 @@
       "outlineWidth": 0,
       "outlineColor": "#000000",
       "x": 50,
-      "y": 94,
+      "y": 50,
       "backgroundColor": "#fcf8e9",
       "backgroundOpacity": 0.96
     },
@@ -347,7 +357,7 @@
       "source": "script",
       "text": "삼 년은 지금처럼 배출하면, 남은\n탄소예산이 소진될 수 있다는",
       "startFrame": 0,
-      "endFrame": 157,
+      "endFrame": 89,
       "font": "gothic",
       "size": 48,
       "color": "#34372f",
@@ -356,7 +366,7 @@
       "outlineWidth": 0,
       "outlineColor": "#000000",
       "x": 50,
-      "y": 94,
+      "y": 50,
       "backgroundColor": "#fcf8e9",
       "backgroundOpacity": 0.96
     },
@@ -365,8 +375,8 @@
       "clipId": "clip-3",
       "source": "script",
       "text": "경고입니다.",
-      "startFrame": 157,
-      "endFrame": 193,
+      "startFrame": 89,
+      "endFrame": 109,
       "font": "gothic",
       "size": 48,
       "color": "#34372f",
@@ -375,7 +385,7 @@
       "outlineWidth": 0,
       "outlineColor": "#000000",
       "x": 50,
-      "y": 94,
+      "y": 50,
       "backgroundColor": "#fcf8e9",
       "backgroundOpacity": 0.96
     },
@@ -385,7 +395,7 @@
       "source": "script",
       "text": "따뜻한 공기는 수증기를 더 품어,\n강한 비가 내릴 조건을 키웁니다.",
       "startFrame": 0,
-      "endFrame": 176,
+      "endFrame": 99,
       "font": "gothic",
       "size": 48,
       "color": "#34372f",
@@ -394,7 +404,7 @@
       "outlineWidth": 0,
       "outlineColor": "#000000",
       "x": 50,
-      "y": 94,
+      "y": 50,
       "backgroundColor": "#fcf8e9",
       "backgroundOpacity": 0.96
     },
@@ -404,7 +414,7 @@
       "source": "script",
       "text": "따뜻한 바다는 태풍의 강한 비를\n키울 수 있죠.",
       "startFrame": 0,
-      "endFrame": 112,
+      "endFrame": 67,
       "font": "gothic",
       "size": 48,
       "color": "#34372f",
@@ -413,7 +423,7 @@
       "outlineWidth": 0,
       "outlineColor": "#000000",
       "x": 50,
-      "y": 94,
+      "y": 50,
       "backgroundColor": "#fcf8e9",
       "backgroundOpacity": 0.96
     },
@@ -422,8 +432,8 @@
       "clipId": "clip-5",
       "source": "script",
       "text": "태풍 수가 모두 늘어난다는 뜻은\n아닙니다.",
-      "startFrame": 112,
-      "endFrame": 218,
+      "startFrame": 67,
+      "endFrame": 131,
       "font": "gothic",
       "size": 48,
       "color": "#34372f",
@@ -432,7 +442,7 @@
       "outlineWidth": 0,
       "outlineColor": "#000000",
       "x": 50,
-      "y": 94,
+      "y": 50,
       "backgroundColor": "#fcf8e9",
       "backgroundOpacity": 0.96
     },
@@ -442,7 +452,7 @@
       "source": "script",
       "text": "일본 홍수와 중국 태풍도, 특정\n사건의 기후 영향은 별도 분석이",
       "startFrame": 0,
-      "endFrame": 168,
+      "endFrame": 93,
       "font": "gothic",
       "size": 48,
       "color": "#34372f",
@@ -451,7 +461,7 @@
       "outlineWidth": 0,
       "outlineColor": "#000000",
       "x": 50,
-      "y": 94,
+      "y": 50,
       "backgroundColor": "#fcf8e9",
       "backgroundOpacity": 0.96
     },
@@ -460,8 +470,8 @@
       "clipId": "clip-6",
       "source": "script",
       "text": "필요합니다.",
-      "startFrame": 168,
-      "endFrame": 207,
+      "startFrame": 93,
+      "endFrame": 114,
       "font": "gothic",
       "size": 48,
       "color": "#34372f",
@@ -470,7 +480,7 @@
       "outlineWidth": 0,
       "outlineColor": "#000000",
       "x": 50,
-      "y": 94,
+      "y": 50,
       "backgroundColor": "#fcf8e9",
       "backgroundOpacity": 0.96
     },
@@ -480,7 +490,7 @@
       "source": "script",
       "text": "네팔 지진의 주된 원인은 인도판과\n유라시아판의 충돌입니다.",
       "startFrame": 0,
-      "endFrame": 176,
+      "endFrame": 90,
       "font": "gothic",
       "size": 48,
       "color": "#34372f",
@@ -489,7 +499,7 @@
       "outlineWidth": 0,
       "outlineColor": "#000000",
       "x": 50,
-      "y": 94,
+      "y": 50,
       "backgroundColor": "#fcf8e9",
       "backgroundOpacity": 0.96
     },
@@ -499,7 +509,7 @@
       "source": "script",
       "text": "같은 시기의 재난이라고 원인도\n같은 건 아닙니다.",
       "startFrame": 0,
-      "endFrame": 112,
+      "endFrame": 66,
       "font": "gothic",
       "size": 48,
       "color": "#34372f",
@@ -508,7 +518,7 @@
       "outlineWidth": 0,
       "outlineColor": "#000000",
       "x": 50,
-      "y": 94,
+      "y": 50,
       "backgroundColor": "#fcf8e9",
       "backgroundOpacity": 0.96
     },
@@ -518,7 +528,7 @@
       "source": "script",
       "text": "기후위기는 단 한 번의 절벽이\n아닙니다.",
       "startFrame": 0,
-      "endFrame": 98,
+      "endFrame": 56,
       "font": "gothic",
       "size": 48,
       "color": "#34372f",
@@ -527,7 +537,7 @@
       "outlineWidth": 0,
       "outlineColor": "#000000",
       "x": 50,
-      "y": 94,
+      "y": 50,
       "backgroundColor": "#fcf8e9",
       "backgroundOpacity": 0.96
     },
@@ -536,8 +546,8 @@
       "clipId": "clip-9",
       "source": "script",
       "text": "줄이는 0.1도마다 위험을\n낮출 수 있습니다.",
-      "startFrame": 98,
-      "endFrame": 214,
+      "startFrame": 56,
+      "endFrame": 122,
       "font": "gothic",
       "size": 48,
       "color": "#34372f",
@@ -546,7 +556,7 @@
       "outlineWidth": 0,
       "outlineColor": "#000000",
       "x": 50,
-      "y": 94,
+      "y": 50,
       "backgroundColor": "#fcf8e9",
       "backgroundOpacity": 0.96
     }

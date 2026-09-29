@@ -1,7 +1,7 @@
 {
   "video": "climate-causality-60s.mp4",
-  "sha256": "11a5eb7dc4c2403e5355a4fe321ef35e5df2f41a787a3cc456c422369280eecf",
-  "durationSeconds": 60.0,
+  "sha256": "8fcb9e278d776ab60bfcd813c178ae4bf7b2c14941a93013c8700071099805ef",
+  "durationSeconds": 60,
   "width": 1080,
   "height": 1920,
   "frames": 1800,
@@ -9,20 +9,38 @@
   "videoCodec": "h264",
   "audioCodec": "aac",
   "audioChannels": 2,
-  "meanVolumeDb": -18.7,
-  "peakVolumeDb": -1.6,
+  "meanVolumeDb": -21,
+  "peakVolumeDb": -7.6,
   "fullDecode": "passed",
   "allNarrationFits": true,
-  "narrationTimeStretch": false,
-  "totalSpeechSeconds": 55.309933,
+  "narrationTimeStretch": true,
+  "narrationSpeed": 1.25,
+  "voiceName": "Yooni - Natural & Clear",
+  "voiceId": "n2fbxG88jqAoaVPUy3IG",
+  "originalSpeechSeconds": 38.870205,
+  "totalSpeechSeconds": 31.178572,
+  "tempoDurationToleranceSeconds": 0.08,
   "sceneCount": 9,
   "captionCount": 15,
+  "captionPosition": {
+    "x": 50,
+    "y": 50
+  },
   "ttsRuns": [
-    36546005583,
-    36546675306
+    36548714834
   ],
-  "browserPlayback": {"browser":"Chrome via Playwright","timeAfterPlay":1.484274,"decodedFrames":50,"audioDecodedBytes":43969,"endedAfterSeek":true,"mediaError":null},
-  "visualReview": "Nine rendered scene thumbnails inspected. Korean headings, captions and explanatory conditions visible. Caption position adjusted to avoid condition notes. Plate arrows converge. Audio signal and decoding verified; no listening/transcription review claimed.",
   "referenceFootageReused": false,
-  "published": false
+  "published": false,
+  "browserPlayback": {
+    "browser": "Chrome via Playwright",
+    "timeAfterPlay": 1.584523,
+    "decodedFrames": 53,
+    "audioDecodedBytes": 46138,
+    "duration": 60,
+    "width": 1080,
+    "height": 1920,
+    "mediaError": null,
+    "endedAfterSeek": true
+  },
+  "visualReview": "Nine rendered scene thumbnails inspected; central captions remain readable. Final Nepal scene rechecked after moving Himalayan label clear of captions. Audio signal and browser decoding verified; no listening/transcription review claimed."
 }

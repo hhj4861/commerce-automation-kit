@@ -6,11 +6,11 @@
 - [제작 코드](produce.mjs) / [대본·연출 입력](brief.json)
 - [실측 타임라인·자막](project.json) / [장면 미리보기](storyboard.jpg) / [검증](verification.json)
 
-운영 앱이나 영상 플랫폼에는 등록·발행하지 않은 로컬 검토용 콘텐츠다. 코드로 만든 원본 SVG 애니메이션과 ElevenLabs 한국어 내레이션을 합성한다. 음성은 ‘진건 · 차분한 남성’이며, 배경음악은 사용하지 않는다. 원격 TTS 워크플로가 Cloudflare에서 기존 인증을 받아 생성한다. 인증값은 코드·문서·영상에 저장하지 않는다. Higgsfield나 Gemini 영상 생성은 사용하지 않았다.
+운영 앱이나 영상 플랫폼에는 등록·발행하지 않은 로컬 검토용 콘텐츠다. 코드로 만든 원본 SVG 애니메이션과 ElevenLabs 한국어 내레이션을 합성한다. 음성은 Shorts 공통 정책에 사용자가 선정한 ‘Yooni - Natural & Clear’이며, 배경음악은 사용하지 않는다. 원격 TTS 워크플로가 Cloudflare에서 기존 인증을 받아 생성한다. 인증값은 코드·문서·영상에 저장하지 않는다. Higgsfield나 Gemini 영상 생성은 사용하지 않았다.
 
-음성 생성 기록: [최초 9장면](https://github.com/hhj4861/commerce-automation-kit/actions/runs/36546005583), [길이를 줄인 7·8번 장면](https://github.com/hhj4861/commerce-automation-kit/actions/runs/36546675306). 두 실행 모두 성공했다. 최종 음성 실측 합계는 55.310초이며 장면 전환·호흡 시간을 포함해 총 60초로 편집한다. 음성을 잘라내거나 배속하지 않는다.
+음성 생성 기록: [Yooni 9장면 재생성](https://github.com/hhj4861/commerce-automation-kit/actions/runs/36548714834). 실행이 성공했고, 9개 음성 메타데이터의 보이스 ID가 Shorts 공통 정책의 `n2fbxG88jqAoaVPUy3IG`와 일치함을 확인했다. 원음 합계 38.870초에 음높이를 유지하는 `atempo=1.25`를 적용해 31.179초로 조정했다(MP3 인코더 패딩 포함). 전체 영상은 60초를 유지하며, 남는 시간에는 애니메이션과 설명 도해가 이어진다. 자막은 배속 적용 후 음성 길이에 맞춰 구간을 배분한다. 이는 글자 수에 따른 구간 배분이며 단어 단위 강제 정렬은 아니다.
 
-검증 결과: 60.000초, 1080×1920, 30fps/1800프레임, H.264 + AAC 스테레오, 자막 15구간. ffmpeg 전체 디코딩과 Chrome 실제 재생·음성 디코딩·끝부분 탐색을 통과했다. 모든 장면의 대사가 해당 장면 길이 안에 들어간다. 음성 평균 레벨은 -18.7dB, 최대 -1.6dB이며 9개 장면의 제목·자막·조건 설명을 이미지로 확인했다. 별도의 청음·음성 전사 검증을 했다는 의미는 아니다.
+검증 결과: 60.000초, 1080×1920, 30fps/1800프레임, H.264 + AAC 스테레오, 중앙 자막 15구간. ffmpeg 전체 디코딩과 Chrome 실제 재생·음성 디코딩·끝부분 탐색을 통과했다. 모든 장면의 대사가 해당 장면 길이 안에 들어간다. 음성 평균 레벨은 -21.0dB, 최대 -7.6dB이며 9개 장면의 제목·중앙 자막·조건 설명을 이미지로 확인했다. 별도의 청음·음성 전사 검증을 했다는 의미는 아니다.
 
 ## 샘플에서 반영한 요소
 
@@ -19,7 +19,7 @@
 - 크림색 종이 느낌의 배경, 얇고 약간 불규칙한 손그림 선.
 - 단순한 물체에 얼굴·팔·다리를 붙이는 표현과 작은 흔들림, 등장 동작.
 - 복잡한 관계를 설명할 때 짙은 남색 화면과 선 도해로 전환.
-- 짧은 장면 제목과 하단의 밝은 자막 영역.
+- 짧은 장면 제목과 밝은 자막 배경. 이번 수정에서는 사용자 요청에 따라 자막을 화면 정중앙(x=50%, y=50%)에 배치했다.
 
 새 영상에서는 지구·물방울·구름을 새로 그리고, 탄소예산·판 운동을 도해로 설명한다. 샘플의 캐릭터·브랜딩·실제 프레임·음성은 복사하거나 삽입하지 않았다. 가로 원본의 시각적 특징을 세로 구도로 재구성한 것이며 원본과 동일한 작화·동작을 재현했다는 뜻은 아니다.
 
@@ -57,9 +57,9 @@
 ```sh
 CAK_ENGINE_ROOT=/path/to/engine node docs/videos/20260929-climate-causality/produce.mjs dispatch
 # GitHub Actions에서 최근 tts-remote 실행을 확인한 뒤, 성공한 실행의 narration artifact를 받는다.
-gh run download RUN_ID --repo hhj4861/commerce-automation-kit --name narration --dir /private/tmp/cak-climate-causality-20260929/remote-narration
+gh run download RUN_ID --repo hhj4861/commerce-automation-kit --name narration --dir /private/tmp/cak-climate-causality-yooni125-20260929/remote-narration
 CAK_ENGINE_ROOT=/path/to/engine node docs/videos/20260929-climate-causality/produce.mjs preview
 CAK_ENGINE_ROOT=/path/to/engine node docs/videos/20260929-climate-causality/produce.mjs render
 ```
 
-`dispatch`는 새 유료 TTS 요청을 생성하므로 기존 성공 실행을 재사용할 때는 반복하지 않는다. `preview`와 `render`는 받은 음성과 해당 대본이 일치하는지 검사한다. 음성 길이를 실측해 1800프레임으로 배분하며, 길이가 초과하면 중단한다. 대사를 자르거나 배속하지 않는다. 캐시는 `CLIMATE_VIDEO_CACHE`로 바꿀 수 있다. SVG 도형·움직임·색상은 `produce.mjs`, 대본과 제목은 `brief.json`에서 수정할 수 있다.
+`dispatch`는 새 유료 TTS 요청을 생성하므로 기존 성공 실행을 재사용할 때는 반복하지 않는다. `preview`와 `render`는 받은 음성의 보이스 ID와 해당 대본이 일치하는지 검사한다. 음성 길이를 실측해 1800프레임으로 배분하며, 길이가 초과하면 중단한다. 음높이를 유지하는 `atempo=1.25`를 내레이션에 적용한 뒤 길이를 실측한다. 대사는 자르지 않으며 60초 영상 안에서 남는 시간에는 애니메이션과 도해가 이어진다. 캐시는 `CLIMATE_VIDEO_CACHE`로 바꿀 수 있다. SVG 도형·움직임·색상은 `produce.mjs`, 대본과 제목은 `brief.json`에서 수정할 수 있다.
