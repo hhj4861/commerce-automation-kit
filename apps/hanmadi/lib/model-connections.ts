@@ -98,8 +98,25 @@ export async function accountRequest(
     if (path === "/connections" && method === "GET")
       return { connections: await client.list() };
     if (path === "/connections" && method === "POST") {
-      const input = data as { provider: "codex" | "claude"; apiKey?: string };
-      return await client.connect(input.provider, { apiKey: input.apiKey });
+      const input = data as {
+        provider: "codex" | "claude";
+        apiKey?: string;
+        authMethod?: "claude-code" | "api-key";
+      };
+      return await client.connect(input.provider, {
+        apiKey: input.apiKey,
+        authMethod: input.authMethod,
+      });
+    }
+    if (
+      method === "POST" &&
+      /^\/connections\/[a-f0-9]{32}\/authorize$/.test(path)
+    ) {
+      await client.authorize(
+        path.split("/")[2],
+        (data as { code: string }).code,
+      );
+      return { ok: true };
     }
     if (method === "DELETE" && /^\/connections\/[a-f0-9]{32}$/.test(path)) {
       await client.disconnect(path.split("/").at(-1)!);
@@ -109,7 +126,9 @@ export async function accountRequest(
   } catch (error) {
     throw new ConversationError(
       error instanceof LiteLLMError ? error.status : 502,
-      "계정 연결 상태를 확인해 주세요. 기존 연결을 해제한 뒤 다시 시도할 수 있어요.",
+      path.endsWith("/authorize")
+        ? "승인코드를 확인하지 못했어요. 코드 전체를 다시 붙여넣어 주세요. 만료됐다면 연결을 해제하고 다시 시작해 주세요."
+        : "계정 연결에 실패했어요. 잠시 후 다시 시도하거나 기존 연결을 해제한 뒤 다시 시작해 주세요.",
     );
   }
 }

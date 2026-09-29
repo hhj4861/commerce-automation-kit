@@ -35,6 +35,12 @@ let audioCalls = 0;
 let calls = 0,
   slowStarted;
 const connections = new Map();
+let loginFixture = false;
+const claudeState = "s".repeat(43);
+const claudeLoginUrl =
+  "https://claude.com/cai/oauth/authorize?redirect_uri=https%3A%2F%2Fplatform.claude.com%2Foauth%2Fcode%2Fcallback&response_type=code&code_challenge_method=S256&state=" +
+  claudeState;
+const nativeCode = "fixture-code-only#" + claudeState;
 const mock = createServer(async (req, res) => {
   const chunks = [];
   for await (const c of req) chunks.push(c);
@@ -53,12 +59,32 @@ const mock = createServer(async (req, res) => {
       connections.set(subject, []);
       return res.end(JSON.stringify({ ok: true }));
     }
+    if (req.url.endsWith("/authorize")) {
+      const c = list.find(
+        (c) => req.url === "/connections/" + c.id + "/authorize",
+      );
+      if (
+        !c ||
+        c.provider !== "claude" ||
+        c.state !== "authorizing" ||
+        c.challenge?.submitted ||
+        b.code !== nativeCode
+      ) {
+        res.statusCode = 400;
+        return res.end(JSON.stringify({ error: "invalid_authorization_code" }));
+      }
+      c.challenge.submitted = true;
+      res.statusCode = 202;
+      return res.end(JSON.stringify({ ok: true }));
+    }
     const c = {
-      id: "a".repeat(32),
+      id: (b.provider === "claude" ? "b" : "a").repeat(32),
       provider: b.provider,
-      state: "connected",
-      models: ["test-model"],
+      state: loginFixture ? "authorizing" : "connected",
+      models: loginFixture ? [] : ["test-model"],
     };
+    if (loginFixture && b.provider === "claude")
+      assert.equal(b.authMethod, "claude-code");
     connections.set(subject, [c]);
     return res.end(JSON.stringify(c));
   }
@@ -932,11 +958,11 @@ try {
     .click();
   await page
     .locator(".hm-provider-row button:enabled")
-    .filter({ hasText: "Claude 연결" })
+    .filter({ hasText: "API 키로 연결" })
     .waitFor();
   assert(
     await page
-      .getByRole("button", { name: "Claude 연결", exact: true })
+      .getByRole("button", { name: "API 키로 연결", exact: true })
       .isEnabled(),
   );
   assert.equal(await page.locator(".hm-provider-card").count(), 2);
@@ -967,7 +993,7 @@ try {
     name: "Codex 연결 관리",
     exact: true,
   });
-  await codexCard.getByText("연결 확인 필요", { exact: true }).waitFor();
+  await codexCard.getByText("연결에 실패했어요", { exact: true }).waitFor();
   assert.equal(
     await page.getByRole("heading", { name: "Codex", exact: true }).count(),
     1,
@@ -1004,7 +1030,7 @@ try {
     .getByRole("button", { name: "Codex 계정 연결", exact: true })
     .waitFor();
   assert.equal(
-    await codexCard.getByText("연결 확인 필요", { exact: true }).count(),
+    await codexCard.getByText("연결에 실패했어요", { exact: true }).count(),
     0,
   );
   assert.equal(
@@ -1014,11 +1040,188 @@ try {
   console.log(
     "PASS one card per provider; failed Codex → disconnect → connect action without duplicate entry",
   );
+  // Only provider pages are fixtures; the browser, Hanmadi API and polling run normally.
+  loginFixture = true;
+  await context.route("https://auth.openai.com/codex/device", (route) =>
+    route.fulfill({
+      contentType: "text/html",
+      body: "<h1>Codex device login fixture</h1>",
+    }),
+  );
+  await context.route("https://claude.com/cai/oauth/authorize?**", (route) =>
+    route.fulfill({
+      contentType: "text/html",
+      body: "<h1>Claude login fixture</h1>",
+    }),
+  );
+  await context.grantPermissions(["clipboard-read", "clipboard-write"], {
+    origin: base,
+  });
+  await page.getByRole("checkbox").check();
+  const popupEvent = context.waitForEvent("page");
+  await codexCard
+    .getByRole("button", { name: "Codex 계정 연결", exact: true })
+    .click();
+  const codexPopup = await popupEvent;
+  await codexCard.getByText("공식 인증창을 준비하고 있어요…").waitFor();
+  const currentConnection = () =>
+    [...connections.values()].flat().find((c) => c.state === "authorizing");
+  let authorizing = currentConnection();
+  assert.equal(authorizing.provider, "codex");
+  authorizing.challenge = {
+    url: "https://auth.openai.com/codex/device",
+    code: "TEST-1234",
+    expiresAt: Date.now() / 1000 + 900,
+  };
+  await codexPopup.waitForURL(authorizing.challenge.url);
+  await page.bringToFront();
+  await codexCard.getByLabel("Codex 인증코드", { exact: true }).waitFor();
+  await codexCard
+    .getByRole("button", { name: "인증코드 복사", exact: true })
+    .click();
+  assert.equal(
+    await page.evaluate(() => navigator.clipboard.readText()),
+    "TEST-1234",
+  );
+  await codexCard.getByText("인증코드를 복사했어요.").waitFor();
+  await page.setViewportSize({ width: 390, height: 844 });
+  await codexCard.scrollIntoViewIfNeeded();
+  await page.screenshot({
+    path: resolve(screenshots, "codex-authorizing.png"),
+    fullPage: true,
+  });
+  authorizing.state = "connected";
+  authorizing.models = ["test-model"];
+  delete authorizing.challenge;
+  await codexCard.getByText("연결됨", { exact: true }).waitFor();
+  await page.getByRole("button", { name: /codex · test-model/ }).waitFor();
+  assert.equal(
+    await codexCard.getByRole("button", { name: /확인/ }).count(),
+    0,
+  );
+  await codexPopup.close();
+  await codexCard
+    .getByRole("button", { name: "연결 해제", exact: true })
+    .click();
+  await codexCard
+    .getByRole("button", { name: "Codex 계정 연결", exact: true })
+    .waitFor();
+  console.log(
+    "PASS Codex click → delayed official popup → copy code → automatic connected/model state without confirmation",
+  );
+  const claudeCard = page.getByRole("region", {
+    name: "Claude 연결 관리",
+    exact: true,
+  });
+  const claudePopupEvent = context.waitForEvent("page");
+  await claudeCard
+    .getByRole("button", { name: "Claude 계정 연결", exact: true })
+    .click();
+  const claudePopup = await claudePopupEvent;
+  await claudeCard.getByText("공식 인증창을 준비하고 있어요…").waitFor();
+  authorizing = currentConnection();
+  assert.equal(authorizing.provider, "claude");
+  authorizing.challenge = {
+    kind: "code-entry",
+    url: claudeLoginUrl,
+    code: "",
+    expiresAt: Date.now() / 1000 + 900,
+  };
+  await claudePopup.waitForURL(claudeLoginUrl);
+  await page.bringToFront();
+  await claudeCard.getByLabel("2. Claude 승인코드", { exact: true }).waitFor();
+  await claudeCard.scrollIntoViewIfNeeded();
+  await page.screenshot({
+    path: resolve(screenshots, "claude-authorizing.png"),
+    fullPage: true,
+  });
+  await claudeCard
+    .getByLabel("2. Claude 승인코드", { exact: true })
+    .fill("wrong-code");
+  await claudeCard
+    .getByRole("button", { name: "승인코드로 연결", exact: true })
+    .click();
+  await page
+    .getByRole("alert")
+    .filter({ hasText: "승인코드 전체를 붙여넣어" })
+    .waitFor();
+  assert.equal(
+    await claudeCard
+      .getByLabel("2. Claude 승인코드", { exact: true })
+      .inputValue(),
+    "",
+  );
+  const foreignGrant = await other.request.post(
+    base + "/api/model-connections",
+    {
+      headers: { Origin: base },
+      data: { action: "authorize", id: authorizing.id, code: nativeCode },
+    },
+  );
+  assert.equal(foreignGrant.status(), 400);
+  const grantCsrf = await context.request.post(
+    base + "/api/model-connections",
+    {
+      headers: { Origin: "https://evil.test" },
+      data: { action: "authorize", id: authorizing.id, code: nativeCode },
+    },
+  );
+  assert.equal(grantCsrf.status(), 403);
+  await claudeCard
+    .getByLabel("2. Claude 승인코드", { exact: true })
+    .fill(nativeCode);
+  await claudeCard
+    .getByRole("button", { name: "승인코드로 연결", exact: true })
+    .click();
+  await claudeCard
+    .getByText(
+      "인증 완료를 기다리고 있어요. 연결되면 모델 목록이 자동으로 나타나요.",
+    )
+    .waitFor();
+  assert.equal(authorizing.challenge.submitted, true);
+  assert.equal(
+    await claudeCard
+      .getByRole("button", { name: "승인코드로 연결", exact: true })
+      .count(),
+    0,
+  );
+  for (const width of [320, 390, 768, 1440]) {
+    await page.setViewportSize({ width, height: 844 });
+    assert(
+      await claudeCard.evaluate((el) => el.scrollWidth <= el.clientWidth),
+      `Claude authorization overflow ${width}`,
+    );
+  }
+  authorizing.state = "connected";
+  authorizing.models = ["claude-test"];
+  delete authorizing.challenge;
+  await claudeCard.getByText("연결됨", { exact: true }).waitFor();
+  await page.getByRole("button", { name: /claude · claude-test/ }).waitFor();
+  authorizing.state = "error";
+  authorizing.models = [];
+  await claudeCard
+    .getByRole("alert")
+    .filter({ hasText: "연결에 실패했어요" })
+    .waitFor();
+  await claudePopup.close();
+  await claudeCard
+    .getByRole("button", { name: "연결 해제", exact: true })
+    .click();
+  await claudeCard
+    .getByRole("button", { name: "Claude 계정 연결", exact: true })
+    .waitFor();
+  await page.getByRole("checkbox").uncheck();
+  loginFixture = false;
+  console.log(
+    "PASS Claude native popup → invalid/valid code → automatic success/failure; subject isolation, CSRF, cleared codes",
+  );
   assert.equal(
     await page.getByLabel("Claude API 키", { exact: true }).count(),
     0,
   );
-  await page.getByRole("button", { name: "Claude 연결", exact: true }).click();
+  await page
+    .getByRole("button", { name: "API 키로 연결", exact: true })
+    .click();
   assert.equal(
     await page
       .getByRole("link", { name: /Claude Console에서 키 발급하기/ })
@@ -1053,7 +1256,9 @@ try {
     fullPage: true,
   });
   await page.getByRole("button", { name: "취소", exact: true }).click();
-  await page.getByRole("button", { name: "Claude 연결", exact: true }).click();
+  await page
+    .getByRole("button", { name: "API 키로 연결", exact: true })
+    .click();
   assert.equal(
     await page.getByLabel("Claude API 키", { exact: true }).inputValue(),
     "",
