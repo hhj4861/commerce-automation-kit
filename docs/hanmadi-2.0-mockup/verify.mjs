@@ -86,6 +86,44 @@ try {
   await action('personal-lesson');assert.match(await page.locator('.topbar').innerText(),/클럽·바/);
   assert.match(await page.locator('#app').innerText(),/วันนี้ขออยู่กับเพื่อน/);
   checks.push('8개 상황 / 분류 필터 / 클럽 단계별 표현 / 태국어 상황 AI → 표현 저장 → 같은 상황 스터디');
+  // English and Spanish must support both sources and keep independent progress.
+  for(const [language,order,club] of [
+    ['en','Less sweet, please.','This song is great!'],
+    ['es','Menos dulce, por favor.','¡Qué buena canción!']
+  ]){
+    await page.goto(url+'#onboarding');
+    assert.equal(await page.locator('#app [data-action^="choose-lang:"]').count(),4);
+    await action('choose-lang:'+language);await page.goto(url+'#study');
+    await action('language');assert.equal(await page.locator('dialog [data-action^="choose-lang:"]').count(),4);
+    await page.keyboard.press('Escape');
+    await page.goto(url+'#courses');
+    assert.match(await page.locator('.level-summary').innerText(),/한마디 시작/);
+    assert.equal(await page.locator('.course-meter').getAttribute('aria-valuenow'),'0');
+    await page.goto(url+'#translate');await action('listen');await action('speak-mine');
+    assert.match(await page.locator('.translate-panel.mine').innerText(),new RegExp(order));
+    await action('end-translate');await page.locator('.capture-choice input').check();await action('save-capture');
+    await page.goto(url+'#scenarios');await action('category:전체');await action('scene:club');await action('scene-chat');
+    await action('record-ai');await action('stop-ai');
+    assert.ok((await page.locator('.chat-bubble').last().innerText()).includes(club));
+    await action('end-ai');await page.locator('.capture-choice input').check();await action('save-capture');
+    await page.goto(url+'#expressions');assert.equal(await page.locator('.phrase-card').count(),2);
+    assert.equal(await page.locator(`.phrase-card [lang="${language}"]`).count(),2);
+    await page.locator('[data-action^="practice:"]').last().click();
+    assert.ok((await page.locator('.lesson-word').innerText()).includes(club));
+    await page.goto(url+'#courses');await action('course-unit:smalltalk');
+    await action('lesson-next');await action('record-lesson');await action('stop-lesson');await action('lesson-next');
+    await action('record-lesson');await action('stop-lesson');await action('lesson-next');
+    await page.goto(url+'#courses');assert.equal(await page.locator('.course-meter').getAttribute('aria-valuenow'),'1');
+    await action('course-level:2');
+    await page.goto(url+'#settings');assert.equal(await page.locator('#app [data-action^="choose-lang:"]').count(),4);
+    await action('choose-lang:ja');await page.goto(url+'#courses');
+    assert.match(await page.locator('.level-summary').innerText(),/대화 이어가기/);
+    await page.goto(url+'#settings');await action('choose-lang:'+language);await page.goto(url+'#courses');
+    assert.match(await page.locator('.level-summary').innerText(),/짧은 문답/);
+    await action('course-level:1');assert.equal(await page.locator('.course-meter').getAttribute('aria-valuenow'),'1');
+    await page.goto(url+'#expressions');assert.equal(await page.locator('.phrase-card').count(),2);
+  }
+  checks.push('영어·스페인어: 언어 선택 3곳 / 번역·상황 AI → 각각 저장·수업 / 단계·진행·표현 독립 유지');
   for(const width of [360,390,768,1440]) {
     await page.setViewportSize({width,height:width>760?1000:844});
     for(const route of ['study','courses','scenarios','scenario','onboarding','ai','chat','translate','capture','expressions','lesson','complete','settings']){
@@ -97,7 +135,7 @@ try {
     }
   }
   await page.setViewportSize({width:360,height:844});
-  for(const language of ['ja','th']){
+  for(const language of ['en','ja','th','es']){
     await action('go:study');await action('go:settings');await action('choose-lang:'+language);
     for(const scene of ['smalltalk','club','cafe','restaurant','hotel','directions','shopping','friends']){
       await action('go:study');await action('go:scenarios');await action('category:전체');await action('scene:'+scene);
@@ -105,10 +143,14 @@ try {
         await action('course-level:'+level);
         assert.equal(await page.locator('#app').evaluate(el=>el.scrollWidth<=el.clientWidth),true,`${language}/${scene}/${level} overflow`);
         assert.ok((await page.locator('.phrase-preview .pronunciation').innerText()).length>2);
+        const target=page.locator('.phrase-preview [lang="'+language+'"]');
+        assert.equal(await target.count(),1);
+        assert.ok((await target.innerText()).length>2);
+        if(['en','es'].includes(language))assert.doesNotMatch(await target.innerText(),/[\u3040-\u30ff\u0e00-\u0e7f]/);
       }
     }
   }
-  checks.push('두 언어 × 8개 상황 × 4단계 상세 화면·발음 도움·360px 넘침 확인');
+  checks.push('4개 언어 × 8개 상황 × 4단계 (128개) 상세 화면·발음 도움·360px 넘침 확인');
   checks.push('360·390·768·1440px × 13화면 / 가로 넘침 없음 / 버튼 접근 이름');
   await page.setViewportSize({width:1440,height:1000});await page.goto(url+'#study');await page.reload();
   await page.screenshot({path:path.join(dir,'preview-desktop.png'),fullPage:true});
@@ -119,7 +161,12 @@ try {
   await page.screenshot({path:path.join(dir,'preview-levels.png'),fullPage:true});
   await page.goto(url+'#scenarios');await action('category:사람들과');
   await page.screenshot({path:path.join(dir,'preview-scenarios.png'),fullPage:true});
+  await page.goto(url+'#onboarding');
+  await page.screenshot({path:path.join(dir,'preview-languages.png'),fullPage:true});
+  await action('choose-lang:es');await page.goto(url+'#scenarios');await action('scene:club');
+  await page.waitForTimeout(3100); // Let language-change feedback clear before the review image.
+  await page.screenshot({path:path.join(dir,'preview-spanish.png'),fullPage:true});
   assert.deepEqual(errors,[]);assert.deepEqual(external,[]);
-  checks.push('브라우저 실행 오류 0 / 외부 네트워크 요청 0 / PNG 시안 4개');
+  checks.push('브라우저 실행 오류 0 / 외부 네트워크 요청 0 / PNG 시안 6개');
   console.log(JSON.stringify({status:'passed',browser:browser.version(),checks},null,2));
 }finally{await browser.close();}
