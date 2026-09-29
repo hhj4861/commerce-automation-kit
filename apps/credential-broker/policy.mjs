@@ -9,7 +9,8 @@ export const KEYWORD_KEYS = [
   'TELEGRAM_CHAT_ID', 'SHOPSHORTS_CLOUD_URL', 'SHOPSHORTS_TOKEN',
 ];
 export const GITHUB_KEYS = [...KEYWORD_KEYS, 'ELEVENLABS_API_KEY'];
-export const DEPLOYMENT_KEYS = ['DEPLOY_CLOUDFLARE_API_TOKEN', 'DEPLOY_VERCEL_TOKEN'];
+export const REPLAY_DEPLOYMENT_KEY = 'REPLAY_DEPLOY_VERCEL_TOKEN';
+export const DEPLOYMENT_KEYS = ['DEPLOY_CLOUDFLARE_API_TOKEN', 'DEPLOY_VERCEL_TOKEN', REPLAY_DEPLOYMENT_KEY];
 export const DEPLOYMENT_REFS = {
   'refs/heads/deploy/shopshorts': ['DEPLOY_CLOUDFLARE_API_TOKEN'],
   'refs/heads/deploy/firstframe': ['DEPLOY_CLOUDFLARE_API_TOKEN'],
@@ -31,6 +32,20 @@ export const WORKFLOW_KEYS = {
 };
 
 export function authorizeGithub(claims, env) {
+  // Separate repository and production environment: never inherit CAK's ref allowlist.
+  if (claims.repository === 'hhj4861/replay-live') {
+    const ref = 'refs/heads/deploy/replay';
+    const file = 'deploy-production.yml';
+    if (env.GITHUB_REPLAY_DEPLOY_ENABLED !== 'true' ||
+        claims.repository_id !== '1365111099' || claims.repository_owner_id !== '71001056' ||
+        claims.ref !== ref || !['true', true].includes(claims.ref_protected) ||
+        claims.environment !== 'production' || claims.runner_environment !== 'github-hosted' ||
+        !['push', 'workflow_dispatch'].includes(claims.event_name) ||
+        claims.sub !== 'repo:hhj4861@71001056/replay-live@1365111099:environment:production' ||
+        claims.workflow_ref !== `hhj4861/replay-live/.github/workflows/${file}@${ref}` ||
+        (claims.job_workflow_ref && claims.job_workflow_ref !== claims.workflow_ref)) throw new Error('unauthorized');
+    return { file, keys: [REPLAY_DEPLOYMENT_KEY] };
+  }
   if (Object.hasOwn(DEPLOYMENT_REFS, claims.ref || '')) {
     const file = 'platform-deploy.yml';
     if (claims.repository !== REPOSITORY || claims.repository_id !== '1310729493' ||
