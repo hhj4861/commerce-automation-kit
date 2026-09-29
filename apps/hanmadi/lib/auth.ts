@@ -40,6 +40,15 @@ export type EnvTutor = { name: string; pin: string };
 
 /** 학생에게 열려 있는 경로 — 여기 해당하지 않으면 전부 튜터 인증 필요 */
 export function isOpenPath(pathname: string): boolean {
+  if (
+    pathname === "/" ||
+    pathname === "/study" ||
+    pathname.startsWith("/study/") ||
+    pathname === "/api/study" ||
+    pathname.startsWith("/api/study/") ||
+    pathname === "/api/model-connections"
+  )
+    return true;
   return (
     pathname === "/assessment" ||
     pathname === "/api/learning-profile" ||

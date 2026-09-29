@@ -68,6 +68,12 @@ type Driver = {
   hdel(key: string, field: string): Promise<void>;
   hsetnx(key: string, field: string, value: string): Promise<boolean>;
   hincrby(key: string, field: string, by: number): Promise<number>;
+  cas(
+    key: string,
+    field: string,
+    expected: string | null,
+    value: string,
+  ): Promise<boolean>;
 };
 
 function redisConfig(): { url: string; token: string } | null {
@@ -121,6 +127,22 @@ function createRedisDriver(config: { url: string; token: string }): Driver {
 
   return {
     kind: "redis",
+    async cas(key, field, expected, value) {
+      return (
+        Number(
+          await command([
+            "EVAL",
+            "local v=redis.call('HGET',KEYS[1],ARGV[1]); if ((ARGV[2]=='0' and not v) or (ARGV[2]=='1' and v==ARGV[3])) then redis.call('HSET',KEYS[1],ARGV[1],ARGV[4]); redis.call('PERSIST',KEYS[1]); return 1 end; return 0",
+            1,
+            key,
+            field,
+            expected === null ? "0" : "1",
+            expected ?? "",
+            value,
+          ]),
+        ) === 1
+      );
+    },
     async hgetall(key) {
       const result = await command(["HGETALL", key]);
       const out: Record<string, string> = {};
@@ -147,7 +169,18 @@ function createRedisDriver(config: { url: string; token: string }): Driver {
       ]);
     },
     async hsetnx(key, field, value) {
-      return Number(await command(["EVAL", "local n=redis.call(\"HSETNX\",KEYS[1],ARGV[1],ARGV[2]); redis.call(\"PERSIST\",KEYS[1]); return n", 1, key, field, value])) === 1;
+      return (
+        Number(
+          await command([
+            "EVAL",
+            'local n=redis.call("HSETNX",KEYS[1],ARGV[1],ARGV[2]); redis.call("PERSIST",KEYS[1]); return n',
+            1,
+            key,
+            field,
+            value,
+          ]),
+        ) === 1
+      );
     },
     async hdel(key, field) {
       await command(["HDEL", key, field]);
@@ -159,7 +192,7 @@ function createRedisDriver(config: { url: string; token: string }): Driver {
 }
 
 function createFileDriver(): Driver {
-  const path = join(process.cwd(), ".data", "tutors.json");
+  const path = (process.env.NODE_ENV === "development" && process.env.HANMADI_LOCAL_DATA_FILE) || join(process.cwd(), ".data", "tutors.json");
 
   type FileShape = Record<string, Record<string, string>>;
 
@@ -179,6 +212,13 @@ function createFileDriver(): Driver {
 
   return {
     kind: "file",
+    async cas(key, field, expected, value) {
+      const data = read();
+      if ((data[key]?.[field] ?? null) !== expected) return false;
+      data[key] = { ...(data[key] ?? {}), [field]: value };
+      write(data);
+      return true;
+    },
     async hgetall(key) {
       return read()[key] ?? {};
     },
@@ -310,7 +350,8 @@ export async function removeTutor(
   for (const student of await listStudents()) {
     const ownedById = Boolean(tutor.id) && student.tutorId === tutor.id;
     // tutorId가 아직 없는 레거시 학생은 이름으로 판별한다
-    const ownedByLegacyName = !student.tutorId && student.tutorName === tutor.name;
+    const ownedByLegacyName =
+      !student.tutorId && student.tutorName === tutor.name;
     if (ownedById || ownedByLegacyName) {
       await saveStudent({
         ...student,
@@ -505,14 +546,25 @@ export async function bumpTtsDailyCount(dateKey: string): Promise<number> {
 }
 
 /** Shared, atomic on Redis. Failed upstream attempts still consume a reservation. */
-export async function reserveConversationTurn(actor: string, kind: "chat" | "transcribe" | "speech" = "chat"): Promise<boolean> {
+export async function reserveConversationTurn(
+  actor: string,
+  kind: "chat" | "transcribe" | "speech" = "chat",
+): Promise<boolean> {
   if (process.env.NODE_ENV === "production" && storeKind() !== "redis") {
     throw new Error("Conversation requires shared Redis in production");
   }
   const day = new Date().toISOString().slice(0, 10);
-  const perPerson = await driver().hincrby("hanmadi:conversation-usage", `${day}:${kind}:${actor}`, 1);
+  const perPerson = await driver().hincrby(
+    "hanmadi:conversation-usage",
+    `${day}:${kind}:${actor}`,
+    1,
+  );
   if (perPerson > 30) return false;
-  const total = await driver().hincrby("hanmadi:conversation-usage", `${day}:total`, 1);
+  const total = await driver().hincrby(
+    "hanmadi:conversation-usage",
+    `${day}:total`,
+    1,
+  );
   return total <= 300;
 }
 
@@ -537,19 +589,50 @@ export async function appendLesson(
 
 /** Per-actor/language event fields avoid read-modify-write loss across tabs. */
 function learningKey(actor: string, language: string) {
-  if (!/^[a-f0-9]{64}$/.test(actor) || !["ko", "ja", "th"].includes(language)) throw new Error("Invalid learning identity");
-  if (process.env.NODE_ENV === "production" && storeKind() !== "redis") throw new Error("Learning profiles require Redis in production");
+  if (!/^[a-f0-9]{64}$/.test(actor) || !["ko", "ja", "th"].includes(language))
+    throw new Error("Invalid learning identity");
+  if (process.env.NODE_ENV === "production" && storeKind() !== "redis")
+    throw new Error("Learning profiles require Redis in production");
   return `hanmadi:learning:v1:${actor}:${language}`;
 }
-export async function getLearningRecords(actor: string, language: string): Promise<string[]> {
+export async function getLearningRecords(
+  actor: string,
+  language: string,
+): Promise<string[]> {
   return Object.values(await driver().hgetall(learningKey(actor, language)));
 }
-export async function addLearningRecord(actor: string, language: string, id: string, value: string): Promise<boolean> {
+export async function addLearningRecord(
+  actor: string,
+  language: string,
+  id: string,
+  value: string,
+): Promise<boolean> {
   return driver().hsetnx(learningKey(actor, language), id, value);
 }
 
-export async function reserveLearningAssessment(actor: string): Promise<boolean> {
+export async function reserveLearningAssessment(
+  actor: string,
+): Promise<boolean> {
   learningKey(actor, "ko"); // Validate the actor and production driver before writing.
   const day = new Date().toISOString().slice(0, 10);
-  return (await driver().hincrby("hanmadi:learning-assessment-usage", `${day}:${actor}`, 1)) <= 10;
+  return (
+    (await driver().hincrby(
+      "hanmadi:learning-assessment-usage",
+      `${day}:${actor}`,
+      1,
+    )) <= 10
+  );
+}
+
+// V2 namespaces never accept caller-selected Redis keys. Production requires durable storage.
+export function v2Driver() {
+  const d = driver();
+  if (process.env.NODE_ENV === "production" && d.kind !== "redis")
+    throw new Error("Hanmadi requires durable storage");
+  return {
+    get: (field: string) => d.hget("hanmadi:v2", field),
+    cas: (field: string, expected: string | null, value: string) =>
+      d.cas("hanmadi:v2", field, expected, value),
+    count: (field: string) => d.hincrby("hanmadi:v2:limits", field, 1),
+  };
 }
