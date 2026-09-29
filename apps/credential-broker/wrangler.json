@@ -21,9 +21,14 @@
     "RUNNER_PUBLIC_JWK": "{\"crv\":\"Ed25519\",\"x\":\"Gdu3rj0RqgHpDNNPdXpPNE7PUxrEiz5YKSltS3tVKDE\",\"kty\":\"OKP\"}",
     "GITHUB_ALLOWED_REFS": "refs/heads/main,refs/heads/feat/common-video-generator",
     "GITHUB_DEPLOY_ALLOWED_REFS": "",
-    "GITHUB_REPLAY_DEPLOY_ENABLED": "false"
+    "GITHUB_REPLAY_DEPLOY_ENABLED": "true"
   },
   "secrets_store_secrets": [
+    {
+      "binding": "SS_REPLAY_DEPLOY_VERCEL_TOKEN",
+      "store_id": "de2c8d7c3e9c4067acc22212522c0fc4",
+      "secret_name": "CAK_REPLAY_DEPLOY_VERCEL_TOKEN"
+    },
     {
       "binding": "VAULT_KEY",
       "store_id": "de2c8d7c3e9c4067acc22212522c0fc4",

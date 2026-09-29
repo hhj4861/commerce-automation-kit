@@ -1,7 +1,17 @@
 # Replay 전용 배포 인증
 
 Replay 운영 배포는 `hhj4861/replay-live`의 보호된 `deploy/replay`에서만 허용한다.
-이 정책 PR은 실제 Worker 배포나 비밀 등록을 수행하지 않으며 기본값은 비활성이다.
+정책 PR #62는 main에 머지됐다. 후속 설정은 Replay 전용 binding과 활성화 값을 준비한다.
+소스 설정 변경만으로 실행 중인 Worker가 바뀌지는 않는다. 비밀 등록과 이 구성의 검증·승인 후
+Worker를 별도로 배포해야 적용된다.
+
+## 준비 확인 — 2026-09-29
+
+- 사용자 제공 `replay-deploy` 토큰은 team 범위이며 Replay 웹/API 프로젝트 읽기 권한을 확인했다.
+- 실제 키를 Git이나 추가 로컬 파일로 복사하지 않는다. Cloudflare 전송은 명시적 승인 후 메모리에서 처리한다.
+- `wrangler.json`은 `SS_REPLAY_DEPLOY_VERCEL_TOKEN` binding과 `GITHUB_REPLAY_DEPLOY_ENABLED=true`를 포함한다.
+- 운영 브로커의 기존 변수와 binding 이름을 비교했으며 기존 서비스 변수의 차이는 없었다.
+- 이 기록은 비밀 등록·Worker 배포·실제 GitHub OIDC 인증 성공 증거가 아니다. 각 실행 결과로 확인한다.
 
 ## 신뢰와 격리
 
@@ -24,7 +34,7 @@ Replay 운영 배포는 `hhj4861/replay-live`의 보호된 `deploy/replay`에서
 3. 중앙 Secrets Store `cak-secrets`에 `CAK_REPLAY_DEPLOY_VERCEL_TOKEN`을 등록한다.
    Worker binding은 `SS_REPLAY_DEPLOY_VERCEL_TOKEN`이며 store ID는 `de2c8d7c3e9c4067acc22212522c0fc4`다.
    기존 `admin.mjs register-deploy`는 해당 이름을 허용하며, 토큰은 Git·로그·채팅에 기록하지 않는다.
-   실제 binding 메타데이터는 키를 등록한 뒤 검토·커밋한다. 이 PR에는 존재하지 않는 비밀 binding을 추가하지 않는다.
+   binding에는 비밀의 이름과 저장소 식별자만 포함된다. 실제 키가 등록되기 전에는 이 구성을 배포하지 않는다.
 4. 검토된 구성에서 `GITHUB_REPLAY_DEPLOY_ENABLED=true`를 명시적으로 적용해 broker를 배포한다.
    다른 플랫폼의 vars/bindings와 기존 런타임 키는 보존한다.
 5. Replay의 운영 DB 백업·012/013 마이그레이션 및 환경변수를 준비하고, 별도 승인된 Replay 승격 PR로 배포한다.
