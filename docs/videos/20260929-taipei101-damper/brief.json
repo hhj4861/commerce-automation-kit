@@ -1,0 +1,96 @@
+{
+  "id": "taipei101-damper-20260929",
+  "title": "초고층 빌딩 안에 660톤짜리 쇠공을 매단 이유",
+  "category": "건축학",
+  "duration": 62,
+  "aspect": "9:16",
+  "voice": "n2fbxG88jqAoaVPUy3IG",
+  "voiceName": "Yooni - Natural & Clear",
+  "narrationSpeed": 1.15,
+  "reference": "/Users/admin/Downloads/KakaoTalk_Video_2026-09-29-16-42-54.mp4",
+  "referenceUse": "Original code-drawn educational animation; cream background and hand-drawn visual language, no source footage/audio reused.",
+  "sources": [
+    {
+      "url": "https://www.taipei-101.com.tw/ko/observatory/feature",
+      "title": "TAIPEI 101 공식 전망대 — 댐퍼",
+      "facts": [
+        "660 metric tonnes",
+        "approximately 5.5 m diameter",
+        "41 steel plates",
+        "wind-induced sway comfort",
+        "passive tuned mass damper and hydraulic viscous dampers"
+      ]
+    }
+  ],
+  "scenes": [
+    {
+      "id": "s1",
+      "title": "빌딩 안에 660톤 쇠공?",
+      "subtitle": "타이베이 101에 숨은 거대한 장치",
+      "visual": "hook",
+      "narration": "초고층 빌딩 안에 육백육십 톤짜리 쇠공이 매달려 있습니다. 건물을 무겁게 하려는 걸까요? 뜻밖에도, 흔들림을 줄이기 위해서입니다."
+    },
+    {
+      "id": "s2",
+      "title": "높은 건물은 흔들린다",
+      "subtitle": "바람은 건물을 계속 밀어냅니다",
+      "visual": "wind",
+      "narration": "높은 건물은 강한 바람을 받으면 흔들립니다. 구조가 버텨도, 안에 있는 사람은 불편함을 느낄 수 있죠. 그래서 흔들림을 다스릴 장치가 필요합니다."
+    },
+    {
+      "id": "s3",
+      "title": "지름만 약 5.5미터",
+      "subtitle": "강철판 41장을 겹쳐 만든 공",
+      "visual": "sphere",
+      "narration": "타이베이 백일의 해법은 거대한 쇠공입니다. 강철판 마흔한 장을 겹쳐 만들었고, 지름은 약 오 점 오 미터. 건물 위쪽에 케이블로 매달려 있죠."
+    },
+    {
+      "id": "s4",
+      "title": "건물과 공의 움직임",
+      "subtitle": "핵심은 무게만이 아닙니다",
+      "visual": "relative",
+      "narration": "건물이 움직일 때, 매달린 공은 관성 때문에 건물과 다르게 움직입니다. 하지만 무거운 공을 아무렇게나 달아 놓는다고 해결되지는 않습니다."
+    },
+    {
+      "id": "s5",
+      "title": "흔들림의 박자를 맞춘다",
+      "subtitle": "동조질량감쇠기 · TMD",
+      "visual": "tuning",
+      "narration": "공이 흔들리는 주기를 건물의 특성에 맞춰 설계해야 합니다. 이름도 동조질량감쇠기. 건물의 움직임을 이용하는 수동 장치입니다."
+    },
+    {
+      "id": "s6",
+      "title": "에너지는 어디로 갈까?",
+      "subtitle": "공 아래의 유압 댐퍼가 하는 일",
+      "visual": "damper",
+      "narration": "공 아래에는 유압 댐퍼가 연결돼 있습니다. 공과 건물 사이의 움직임에 저항하면서, 진동 에너지를 열로 소모시키죠. 흔들림에 제동을 거는 겁니다."
+    },
+    {
+      "id": "s7",
+      "title": "바람이 사라지는 건 아니다",
+      "subtitle": "같은 바람에도, 흔들림을 줄이도록",
+      "visual": "compare",
+      "narration": "바람을 없애는 것도, 건물을 완전히 멈추는 것도 아닙니다. 건물 구조와 함께 작동하며 흔들림을 줄이고, 사람이 느끼는 불편을 덜어 주는 거죠."
+    },
+    {
+      "id": "s8",
+      "title": "움직이게 해서, 덜 흔들리게",
+      "subtitle": "660톤 쇠공이 알려 주는 건축의 지혜",
+      "visual": "ending",
+      "narration": "강한 건축은 무조건 꼼짝하지 않는 건축일까요? 때로는 일부를 움직이게 해서, 전체의 흔들림을 줄입니다. 육백육십 톤 쇠공의 진짜 역할입니다."
+    }
+  ],
+  "narrationProvenance": {
+    "runId": 36586659576,
+    "sourceBeatIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7
+    ]
+  }
+}
