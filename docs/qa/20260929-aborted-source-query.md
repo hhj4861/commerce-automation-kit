@@ -62,3 +62,26 @@ python3 ~/.codex/hooks/task-finish/gate.py reconcile
 Use the printed backup as `TASK_FINISH_GATE` when rerunning installer regression
 tests after installation. Never delete pending call/state entries or synthesize
 native execution/transcript evidence to make the completion hook pass.
+
+## Applied local result
+
+- Installed the committed helper with exit 0. Backup:
+  `~/.codex/hooks/task-finish/backups/interruption-recovery-20260929T043915764157Z.py`.
+  The 13 regression tests passed again using that backup as their baseline.
+- The first apply attempt failed closed because the live transcript changed
+  during reading. Automatic approval review rejected a retry with the earlier
+  digest and required a new plan. A new plan completed with exit 0; its digest
+  was unchanged because the target evidence and file observations were unchanged.
+  The subsequent normal approval completed with exit 0.
+- The original call now has a retained interrupted receipt and unknown exit
+  code. Ordinary reconciliation archived it; it is no longer pending.
+- Eight unrelated paths surfaced during normal reconciliation. Their contents,
+  Git diffs and commits were checked before official `exclude` calls: four
+  existing GitOps instructions, three PR #58 files, and the scheduled keyword
+  collector's daily status. None of those files was edited.
+- Final installed-checker result: `original_pending=false`,
+  `original_archived=true`, `unknown_files=[]`, `hold=null`,
+  `completion_problems=[]`. This used the unchanged `reconcile_calls`/`check`
+  implementation; it did not synthesize a Stop event or bypass any checks.
+- No Hanmadi PR merge, production deployment, hook trust/configuration change,
+  transcript edit or fabricated original exit status occurred.
