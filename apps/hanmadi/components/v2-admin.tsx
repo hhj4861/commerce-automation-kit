@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
+import { YoutubeVideoSearch, type SelectedVideo } from "./youtube-video-search";
 import {
   studyLanguages,
   curriculum,
@@ -27,7 +28,9 @@ async function api(body?: unknown) {
   return d;
 }
 export function V2Admin() {
-  const [tab, setTab] = useState<"editor" | "inbox" | "preview">("editor");
+  const [tab, setTab] = useState<"videos" | "editor" | "inbox" | "preview">(
+    "videos",
+  );
   const [contributions, setContributions] = useState<PublicContribution[]>([]);
   const [events, setEvents] = useState<KnowledgeEvent[]>([]);
   const [candidateId, setCandidateId] = useState<string | null>(null);
@@ -49,10 +52,6 @@ export function V2Admin() {
     [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
     [notice, setNotice] = useState(""),
-    [query, setQuery] = useState(""),
-    [videos, setVideos] = useState<
-      { url: string; title: string; channel: string }[]
-    >([]),
     [searchConfigured, setSearchConfigured] = useState(false);
   useEffect(() => {
     let active = true;
@@ -90,10 +89,7 @@ export function V2Admin() {
     setTranscript("");
     setNotice("");
   }
-  async function work(
-    action: "search" | "generate" | "save",
-    status = "draft",
-  ) {
+  async function work(action: "generate" | "save", status = "draft") {
     if (operation.current || loading) return;
     operation.current = true;
     setBusy(true);
@@ -117,30 +113,60 @@ export function V2Admin() {
         units,
         reviewed,
         status,
-        query,
         ...(action === "save" && current
           ? { id: current.id, revision: current.revision }
           : {}),
       });
-      if (action === "search") setVideos(data.videos);
-      else {
-        edit(data.draft);
-        const refreshed = await api();
-        setDrafts(refreshed.drafts);
-        setContributions(refreshed.contributions);
-        setEvents(refreshed.events);
-        setNotice(
-          data.draft.status === "published"
-            ? "게시했어요. 해당 언어·레벨·상황의 학습과 AI 대화에 반영돼요."
-            : "초안을 저장했어요. 검수 전에는 학습자에게 보이지 않아요.",
-        );
-      }
+      edit(data.draft);
+      const refreshed = await api();
+      setDrafts(refreshed.drafts);
+      setContributions(refreshed.contributions);
+      setEvents(refreshed.events);
+      setNotice(
+        data.draft.status === "published"
+          ? "게시했어요. 해당 언어·레벨·상황의 학습과 AI 대화에 반영돼요."
+          : "초안을 저장했어요. 검수 전에는 학습자에게 보이지 않아요.",
+      );
     } catch (e) {
       setError(e instanceof Error ? e.message : "처리하지 못했어요.");
     } finally {
       setBusy(false);
       operation.current = false;
     }
+  }
+  function prepareVideo(video: SelectedVideo) {
+    if (
+      (title ||
+        sourceUrl ||
+        rights ||
+        transcript ||
+        units.length ||
+        current ||
+        candidateId) &&
+      !window.confirm(
+        "선택한 영상으로 새 자료를 준비할까요? 작성 중인 미저장 내용은 사라져요. 저장된 초안은 콘텐츠 목록에 남아 있어요.",
+      )
+    )
+      return;
+    setCandidateId(null);
+    setCurrent(null);
+    setLanguage(video.language);
+    setScene(video.scene);
+    setTitle(video.title.slice(0, 100));
+    setSourceUrl(video.url);
+    setRights("");
+    setTranscript("");
+    setUnits([]);
+    setConfirmed(false);
+    setReviewed(false);
+    setError("");
+    setNotice(
+      "영상 출처를 연결했어요. 이 영상의 원문 사용권과 직접 제공받은 원문을 입력해 주세요.",
+    );
+    setTab("editor");
+    requestAnimationFrame(() =>
+      document.getElementById("ks-source-title")?.focus(),
+    );
   }
   async function reject(id: string) {
     if (operation.current) return;
@@ -175,6 +201,7 @@ export function V2Admin() {
         <nav className="ks-nav" aria-label="관리자 메뉴">
           {(
             [
+              ["videos", "영상 찾기"],
               ["editor", "자료 만들기"],
               [
                 "inbox",
@@ -208,6 +235,13 @@ export function V2Admin() {
             {notice}
           </p>
         )}
+        <div hidden={tab !== "videos"}>
+          <YoutubeVideoSearch
+            configured={searchConfigured}
+            disabled={busy || loading}
+            onPrepare={prepareVideo}
+          />
+        </div>
         {tab === "inbox" && (
           <section className="hm-panel">
             <h2>사용자가 제공한 번역 후보</h2>
@@ -395,50 +429,6 @@ export function V2Admin() {
                     </select>
                   </label>
                 </div>
-                <details>
-                  <summary>YouTube에서 참고 영상 찾기</summary>
-                  <p>
-                    공식 검색 결과는 원본을 찾는 데만 사용해요. 영상이나 자막을
-                    자동 다운로드하지 않아요.
-                  </p>
-                  <label>
-                    검색어
-                    <input
-                      value={query}
-                      maxLength={100}
-                      onChange={(e) => setQuery(e.target.value)}
-                      placeholder="일본어 여행 스몰토크"
-                    />
-                  </label>
-                  <button
-                    disabled={busy || !searchConfigured}
-                    onClick={() => void work("search")}
-                  >
-                    영상 검색
-                  </button>
-                  {!searchConfigured && (
-                    <p>
-                      공식 검색 API 키 설정이 필요해요. 아래에 출처를 직접
-                      입력할 수 있어요.
-                    </p>
-                  )}
-                  {videos.map((v) => (
-                    <div className="hm-search-result" key={v.url}>
-                      <a href={v.url} target="_blank" rel="noopener noreferrer">
-                        {v.title} ↗
-                      </a>
-                      <small>{v.channel}</small>
-                      <button
-                        onClick={() => {
-                          setSourceUrl(v.url);
-                          setReviewed(false);
-                        }}
-                      >
-                        출처 주소 선택
-                      </button>
-                    </div>
-                  ))}
-                </details>
               </section>
               <details className="hm-panel ks-source" open={units.length === 0}>
                 <summary>
@@ -457,6 +447,7 @@ export function V2Admin() {
                 <label>
                   수업 제목
                   <input
+                    id="ks-source-title"
                     value={title}
                     maxLength={100}
                     onChange={(e) => {

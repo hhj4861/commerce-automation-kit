@@ -5,6 +5,7 @@ import { once } from "node:events";
 import { mkdir, writeFile, unlink } from "node:fs/promises";
 import { resolve } from "node:path";
 import { chromium } from "playwright";
+import { verifyYoutubeSearch } from "./youtube-search-e2e.mjs";
 const testDataFile = resolve(".data/v2-e2e.json");
 await mkdir(resolve(".data"), { recursive: true });
 await writeFile(testDataFile, "{}", { flag: "wx" }); // Never overwrite another running test's state.
@@ -196,6 +197,7 @@ const app = spawn(
       KV_REST_API_TOKEN: "",
       DIFY_BASE_URL: "",
       DIFY_API_KEY: "",
+      YOUTUBE_API_KEY: "e2e-unusable-key",
       LITELLM_BASE_URL: mockBase + "/v1",
       LITELLM_API_KEY: "e2e-only",
       LITELLM_MODEL: "gemini-fixture",
@@ -866,6 +868,7 @@ try {
   await adminPage.getByRole("button", { name: "열기", exact: true }).click();
   await adminPage.waitForURL(base + "/study/admin");
   assert.equal((await state(admin)).identity.owner, true);
+  await verifyYoutubeSearch({ adminPage, post, admin, screenshots });
   const source = {
     language: "ja",
     scene: "smalltalk",
@@ -1127,6 +1130,7 @@ try {
     "PASS shared consent → candidate → admin browser review/publish → learner lesson + actual model context → owner-scoped withdrawal",
   );
   await adminPage.goto(base + "/study/admin");
+  await adminPage.getByRole("button", { name: "자료 만들기", exact: true }).click();
   await adminPage
     .getByRole("heading", { name: "좋은 대화를, 좋은 수업으로." })
     .waitFor();

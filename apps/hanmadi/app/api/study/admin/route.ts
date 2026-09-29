@@ -12,6 +12,10 @@ import { jsonAnswer, parseRoleplay, studyCompletion } from "@/lib/v2-ai";
 import { v2Driver } from "@/lib/store";
 import { readKnowledge, rejectContribution } from "@/lib/knowledge-store";
 import { retrieveKnowledge } from "@/lib/knowledge";
+import {
+  searchYoutubeVideos,
+  validateYoutubeSearch,
+} from "@/lib/youtube-search";
 export const runtime = "nodejs";
 export const maxDuration = 45;
 async function owner() {
@@ -88,53 +92,19 @@ export async function POST(req: Request) {
           503,
           "서버의 YouTube 공식 API 키를 준비 중이에요. 직접 제공받은 원문으로 초안을 만들 수 있어요.",
         );
-      if (typeof b.query !== "string" || b.query.length > 100)
-        throw new ConversationError(
-          400,
-          "검색어는 100자 이내로 입력해 주세요.",
-        );
+      const search = validateYoutubeSearch(b.query, b.pageToken);
       if (
         (await v2Driver().count(
           `youtube:${new Date().toISOString().slice(0, 10)}`,
         )) > 20
       )
         throw new ConversationError(429, "오늘의 영상 검색 예산을 다 썼어요.");
-      const url = new URL("https://www.googleapis.com/youtube/v3/search");
-      url.search = new URLSearchParams({
-        key: process.env.YOUTUBE_API_KEY,
-        part: "snippet",
-        type: "video",
-        maxResults: "8",
-        relevanceLanguage: b.language,
-        q: b.query || `${b.language} ${b.scene} conversation`,
-      }).toString();
-      const res = await fetch(url, {
-        cache: "no-store",
-        signal: AbortSignal.timeout(12000),
-      });
-      if (!res.ok)
-        throw new ConversationError(
-          502,
-          "YouTube 검색을 완료하지 못했어요. 키와 검색 한도를 확인해 주세요.",
-        );
-      const data = await res.json();
-      return conversationJson({
-        videos: (data.items ?? []).flatMap(
-          (v: {
-            id?: { videoId?: string };
-            snippet?: { title?: string; channelTitle?: string };
-          }) =>
-            v.id?.videoId && /^[A-Za-z0-9_-]{11}$/.test(v.id.videoId)
-              ? [
-                  {
-                    url: `https://www.youtube.com/watch?v=${v.id.videoId}`,
-                    title: v.snippet?.title ?? "",
-                    channel: v.snippet?.channelTitle ?? "",
-                  },
-                ]
-              : [],
+      return conversationJson(
+        await searchYoutubeVideos(
+          { ...search, language: b.language },
+          process.env.YOUTUBE_API_KEY,
         ),
-      });
+      );
     }
     if (
       !isLevel(b.level) ||
