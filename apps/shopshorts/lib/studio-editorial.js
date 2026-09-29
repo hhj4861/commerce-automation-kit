@@ -44,8 +44,10 @@ ${scope}
 }
 
 export function narrationGuide(brief) {
-  const min = Math.round(brief.duration * 3), max = Math.round(brief.duration * 4.5);
-  return `작성 순서: 시청자가 가져갈 핵심 메시지 하나 → 처음부터 끝까지 이어지는 내레이션·대사 → 문장과 호흡에 맞춘 장면 분할 → 내용을 돕는 화면 설명.
+  const explainer=brief.workflow==='explainer-v1',rate=explainer?(brief.narrationSpeed??1):1;
+  const min = Math.round(brief.duration * (explainer?5.4:3)*rate), max = Math.round(brief.duration * (explainer?6.5:4.5)*rate);
+  return `${explainer?`사용자가 선택한 내레이션 속도는 ${rate}배입니다. 목표 길이에 맞는 설명 분량을 작성하되 말속도를 추가로 높이거나 빈 장면으로 시간을 채우지 마세요. 최종 길이는 실제 음성을 측정해 맞춥니다.`:''}
+작성 순서: 시청자가 가져갈 핵심 메시지 하나 → 처음부터 끝까지 이어지는 내레이션·대사 → 문장과 호흡에 맞춘 장면 분할 → 내용을 돕는 화면 설명.
 내레이션만 이어 읽어도 상황·이유·마무리를 이해할 수 있어야 합니다. 중요한 설명을 prompt나 화면 자막에만 숨기지 마세요. 화면 연출 요청은 존중하되 말할 내용을 먼저 완성하고, 장면 전환마다 설명을 끊거나 같은 도입을 반복하지 마세요.
 듣는 사람에게 이야기하듯 자연스러운 한국어 구어체와 문장 사이 연결을 쓰세요. 추상적인 표어, 단어 나열, 훈계조, 과한 수사 대신 구체적인 설명과 실제로 해볼 수 있는 예를 쓰세요.
 분량 참고: 설명 중심 한국어 영상의 전체 내레이션은 공백·문장부호 제외 약 ${min}~${max}자를 초안 목표로 삼으세요. 이는 편집용 가이드이며 실제 음성 길이를 측정한 값이 아닙니다. 글자 수를 채우려고 반복하거나 근거 없는 내용을 추가하지 마세요. 대화·극적 침묵·사용자의 명시적 여백 요청은 맥락에 맞게 존중하세요.
