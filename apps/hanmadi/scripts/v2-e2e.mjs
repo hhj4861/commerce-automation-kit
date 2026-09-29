@@ -241,6 +241,58 @@ try {
   await page.setViewportSize({ width: 390, height: 844 });
   console.log("PASS onboarding brand and header 360/390/768/1440");
   await page.getByRole("button", { name: /일본어 日本語/ }).click();
+  for (const width of [320, 360, 390, 768, 1440]) {
+    await page.setViewportSize({ width, height: 844 });
+    for (const lang of ["en", "ja", "th", "es"]) {
+      await page
+        .getByRole("combobox", { name: "학습 언어", exact: true })
+        .selectOption(lang);
+      const layout = await page
+        .getByRole("combobox", { name: "학습 언어", exact: true })
+        .evaluate((el) => {
+          const css = getComputedStyle(el);
+          return {
+            available:
+              el.clientWidth -
+              parseFloat(css.paddingLeft) -
+              parseFloat(css.paddingRight),
+            required:
+              el.selectedOptions[0].textContent.length *
+              parseFloat(css.fontSize),
+            left: el.getBoundingClientRect().left,
+          };
+        });
+      assert(
+        layout.available >= layout.required,
+        `full language label ${lang} at ${width}`,
+      );
+      assert(
+        await page
+          .locator(".hm-header")
+          .evaluate((el) => el.scrollWidth <= el.clientWidth),
+        `header overflow ${width}`,
+      );
+      const actionBox = await page
+        .getByRole("button", { name: "내 AI", exact: true })
+        .boundingBox();
+      assert(
+        actionBox.x > layout.left,
+        `language left, actions right ${width}`,
+      );
+    }
+    if (width === 390)
+      await page.screenshot({
+        path: resolve(screenshots, "spanish-header.png"),
+        fullPage: true,
+      });
+  }
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page
+    .getByRole("combobox", { name: "학습 언어", exact: true })
+    .selectOption("ja");
+  console.log(
+    "PASS all language labels fit and header actions align 320–1440px",
+  );
   await page.getByRole("button", { name: "로그인", exact: true }).click();
   await page.getByRole("button", { name: "처음이에요 · 계정 만들기" }).click();
   const name = `e2e_${Date.now()}`;
@@ -767,6 +819,69 @@ try {
     .click();
   await page.getByRole("button", { name: "설정", exact: true }).click();
   assert.equal(await page.getByRole("dialog").count(), 0);
+  await page
+    .getByRole("region", { name: "현재 로그인 계정", exact: true })
+    .getByText("로그인됨", { exact: true })
+    .waitFor();
+  await page
+    .getByRole("button", { name: "연결·모델 선택", exact: true })
+    .click();
+  assert(
+    await page
+      .getByRole("button", { name: "Claude 연결", exact: true })
+      .isEnabled(),
+  );
+  assert.equal(
+    await page.getByLabel("Claude API 키", { exact: true }).count(),
+    0,
+  );
+  await page.getByRole("button", { name: "Claude 연결", exact: true }).click();
+  assert.equal(
+    await page
+      .getByRole("link", { name: /Claude Console에서 키 발급하기/ })
+      .getAttribute("href"),
+    "https://platform.claude.com/settings/keys",
+  );
+  assert(
+    await page
+      .getByRole("button", { name: "키 확인하고 연결", exact: true })
+      .isDisabled(),
+  );
+  await page
+    .getByLabel("Claude API 키", { exact: true })
+    .fill("sk-ant-api-e2e-fixture-only");
+  assert(
+    await page
+      .getByRole("button", { name: "키 확인하고 연결", exact: true })
+      .isDisabled(),
+  );
+  await page.getByRole("checkbox").check();
+  assert(
+    await page
+      .getByRole("button", { name: "키 확인하고 연결", exact: true })
+      .isEnabled(),
+  );
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page
+    .getByRole("button", { name: "키 확인하고 연결", exact: true })
+    .scrollIntoViewIfNeeded();
+  await page.screenshot({
+    path: resolve(screenshots, "claude-connect.png"),
+    fullPage: true,
+  });
+  await page.getByRole("button", { name: "취소", exact: true }).click();
+  await page.getByRole("button", { name: "Claude 연결", exact: true }).click();
+  assert.equal(
+    await page.getByLabel("Claude API 키", { exact: true }).inputValue(),
+    "",
+  );
+  await page.getByRole("button", { name: "취소", exact: true }).click();
+  await page
+    .getByRole("button", { name: "이전 화면으로", exact: true })
+    .click();
+  console.log(
+    "PASS explicit login identity and Claude button → Console/key steps, consent and cancel clearing",
+  );
   await page.getByRole("button", { name: "15분", exact: true }).click();
   await page.getByText("학습 설정을 저장했어요.", { exact: true }).waitFor();
   assert.equal((await state()).state.profiles.ja.minutes, 15);

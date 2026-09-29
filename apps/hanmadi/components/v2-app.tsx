@@ -376,7 +376,8 @@ function Connections({
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false),
     [consent, setConsent] = useState(false),
-    [key, setKey] = useState("");
+    [key, setKey] = useState(""),
+    [claudeSetup, setClaudeSetup] = useState(false);
   const refresh = useCallback(async () => {
     const data = await request("/api/model-connections");
     setItems(data.connections);
@@ -409,6 +410,7 @@ function Connections({
     try {
       await request("/api/model-connections", body, method);
       await refresh();
+      setClaudeSetup(false);
     } catch (e) {
       setError(e instanceof Error ? e.message : "연결 상태를 확인해 주세요.");
     } finally {
@@ -482,25 +484,75 @@ function Connections({
           <b>Claude</b>
           <small>API 키로 연결 · API 요금 적용</small>
         </div>
+        <button
+          disabled={busy || items.some((c) => c.provider === "claude")}
+          aria-expanded={claudeSetup}
+          aria-controls="claude-connection-setup"
+          onClick={() => setClaudeSetup(true)}
+        >
+          Claude 연결
+        </button>
       </div>
-      <label>
-        Claude API 키
-        <input
-          type="password"
-          autoComplete="off"
-          value={key}
-          onChange={(e) => setKey(e.target.value)}
-          placeholder="sk-ant-api…"
-        />
-      </label>
-      <button
-        disabled={
-          busy || !consent || !key || items.some((c) => c.provider === "claude")
-        }
-        onClick={() => void act({ provider: "claude", apiKey: key })}
-      >
-        Claude 연결
-      </button>
+      {claudeSetup && (
+        <section
+          id="claude-connection-setup"
+          className="hm-claude-setup"
+          aria-label="Claude 연결 안내"
+        >
+          <h3>Claude 연결하기</h3>
+          <p>
+            1. 공식 Claude Console에 로그인해 API 키를 발급하세요. 구독 로그인
+            인증 코드와는 다른 키예요.
+          </p>
+          <a
+            href="https://platform.claude.com/settings/keys"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Claude Console에서 키 발급하기 ↗
+          </a>
+          <p>
+            2. 발급한 API 키를 아래에 붙여넣으세요. API 사용료는 키 소유자에게
+            별도로 청구돼요.
+          </p>
+          <label>
+            Claude API 키
+            <input
+              type="password"
+              autoComplete="off"
+              value={key}
+              onChange={(e) => setKey(e.target.value)}
+              placeholder="sk-ant-api…"
+            />
+          </label>
+          {!consent && (
+            <p>
+              연결을 완료하려면 위의 공급자 전송·암호화 보관 동의 항목을
+              선택하세요.
+            </p>
+          )}
+          <div className="hm-row">
+            <button
+              className="hm-primary"
+              disabled={busy || !consent || !key.trim()}
+              onClick={() =>
+                void act({ provider: "claude", apiKey: key.trim() })
+              }
+            >
+              키 확인하고 연결
+            </button>
+            <button
+              disabled={busy}
+              onClick={() => {
+                setClaudeSetup(false);
+                setKey("");
+              }}
+            >
+              취소
+            </button>
+          </div>
+        </section>
+      )}
       {items.map((c) => (
         <div key={c.id} className="hm-connection-state">
           <strong>{c.provider}</strong>
@@ -1031,6 +1083,9 @@ export function V2App() {
                       </option>
                     ))}
                   </select>
+                  <span className="hm-language-chevron" aria-hidden="true">
+                    <Icon name="down" />
+                  </span>
                 </label>
               )}
               <button
