@@ -1,0 +1,21 @@
+{
+  "id": "climate-causality-20260929",
+  "title": "0.1도 뒤 지구 붕괴? 재난의 연결고리",
+  "category": "과학",
+  "duration": 60,
+  "aspect": "9:16",
+  "voice": "BbsagRO6ohd8MKPS2Ob0",
+  "reference": "/Users/admin/Downloads/KakaoTalk_Video_2026-09-29-16-42-54.mp4",
+  "referenceUse": "Style analysis only: cream paper, thin sketch lines, expressive objects, navy explanation scenes, short captions. All graphics newly drawn; no source video/audio reused.",
+  "scenes": [
+    {"id":"s1","title":"0.1°C 뒤, 지구 붕괴?","subtitle":"숫자부터 제대로 읽기","visual":"question","narration":"영점 일 도 뒤 지구 붕괴? 그 숫자는 멸망 시계가 아닙니다."},
+    {"id":"s2","title":"1.5°C는 무엇일까","subtitle":"산업화 이전 대비 · 장기 온난화 목표","visual":"target","narration":"일 점 오 도는 장기 온난화를 제한하려는 목표입니다. 한 해의 기온과도 다르죠."},
+    {"id":"s3","title":"‘3년’의 진짜 의미","subtitle":"현재 배출량이 계속된다면","visual":"budget","narration":"삼 년은 지금처럼 배출하면, 남은 탄소예산이 소진될 수 있다는 경고입니다."},
+    {"id":"s4","title":"공기가 더 따뜻해지면","subtitle":"수증기 증가 → 강한 비의 위험","visual":"rain","narration":"따뜻한 공기는 수증기를 더 품어, 강한 비가 내릴 조건을 키웁니다."},
+    {"id":"s5","title":"바다도 연결되어 있다","subtitle":"태풍의 강수량과 전체 발생 수는 다르다","visual":"storm","narration":"따뜻한 바다는 태풍의 강한 비를 키울 수 있죠. 태풍 수가 모두 늘어난다는 뜻은 아닙니다."},
+    {"id":"s6","title":"그렇다면 일본·중국은?","subtitle":"일본 홍수 · 중국 태풍","visual":"attribution","narration":"일본 홍수와 중국 태풍도, 특정 사건의 기후 영향은 별도 분석이 필요합니다."},
+    {"id":"s7","title":"네팔 지진은 다른 원인","subtitle":"인도판과 유라시아판의 충돌","visual":"plates","narration":"네팔 지진의 주된 원인은 인도판과 유라시아판의 충돌입니다."},
+    {"id":"s8","title":"함께 일어나도, 원인은 다르다","subtitle":"동시에 발생 ≠ 같은 원인","visual":"causes","narration":"같은 시기의 재난이라고 원인도 같은 건 아닙니다."},
+    {"id":"s9","title":"줄이는 0.1°C마다 의미가 있다","subtitle":"배출 감축 + 재난 대비","visual":"ending","narration":"기후위기는 단 한 번의 절벽이 아닙니다. 줄이는 영점 일 도마다 위험을 낮출 수 있습니다."}
+  ]
+}
