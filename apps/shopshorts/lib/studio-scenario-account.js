@@ -26,7 +26,7 @@ export async function startScenario(request, env, store, project, body, call) {
   if (!status.available) fail('LLM 실행기가 오프라인입니다. 실행기를 연결한 뒤 다시 생성하세요.', 503);
   if (!status.scenarioAvailable) fail('시나리오를 지원하는 LLM 실행기를 연결하세요.', 503);
   if (['queued', 'running'].includes(status.job?.state)) fail('연결한 계정의 다른 요청이 끝난 뒤 다시 생성하세요.', 409);
-  next.task = { ...next.task, runner: 'llm-account', accountOwner: owner, deadline: Date.now() + 240000 };
+  next.task = { ...next.task, runner: 'llm-account', accountOwner: owner, deadline: Date.now() + (project.brief.workflow==='explainer-v1'?600000:240000) };
   const reserved = changed(next);
   if (!await store.cas(reserved, project.revision)) fail('다른 창에서 변경되었습니다. 새로고침 후 다시 시도하세요.', 409);
   // Reserve the project first. A competing browser cannot enqueue a second job.
@@ -71,7 +71,7 @@ export async function syncScenario(store, project, call, now = Date.now()) {
       }
     } else if (job.state === 'failed') {
       next.task.state = 'failed'; next.task.error = job.error || '시나리오 생성에 실패했습니다. 다시 시도하세요.';
-    } else if (job.state === 'running') next.task.state = 'running';
+    } else if (job.state === 'running') {next.task.state = 'running';if(['research','scenario'].includes(job.phase))next.task.phase=job.phase;}
   }
   if (busy(next) && now >= task.deadline) {
     next.task.state = 'failed'; next.task.error = '시나리오 생성 시간이 초과됐습니다. 계정 실행기 상태를 확인하고 다시 시도하세요.';

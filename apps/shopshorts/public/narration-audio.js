@@ -1,9 +1,10 @@
 import { FPS } from './editor-model.js';
 
+export const narrationRate = project => project.brief?.narrationSpeed ?? 1;
 export const narrationId = sceneId => `narration-${sceneId}`;
 export function narrationAsset(project, scene, voice) {
   const asset = project.assets[narrationId(scene.id)];
-  return asset?.purpose === 'narration' && asset.voice === voice && asset.text === scene.narration && asset.key ? asset : null;
+  return asset?.purpose === 'narration' && asset.voice === voice && asset.text === scene.narration && (asset.narrationSpeed??1)===narrationRate(project) && asset.key ? asset : null;
 }
 export function narrationScenes(project, edit) {
   const ids = new Set(edit.clips.map(c => c.sceneId));

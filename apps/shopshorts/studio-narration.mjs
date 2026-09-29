@@ -1,22 +1,34 @@
 import { createHash } from 'node:crypto';
 import { readFile, writeFile, rename, unlink } from 'node:fs/promises';
 import { join } from 'node:path';
-import { narrationAsset, narrationId, narrationScenes } from './public/narration-audio.js';
+import { narrationAsset, narrationId, narrationScenes, narrationRate } from './public/narration-audio.js';
 import { normalizeEdit } from './public/editor-model.js';
 
 export async function narrationFile(job, scene, work, env, io, { runCli, command }) {
   const voice = job.edit.voice;
-  const hash = createHash('sha256').update(`${voice}:${scene.narration}`).digest('hex').slice(0, 24);
+  const rate=narrationRate(job);
+  if(![1,1.15,1.25].includes(rate))throw Error('음성 속도를 확인해 주세요.');
+  const rawHash=createHash('sha256').update(`${voice}:${scene.narration}`).digest('hex').slice(0,24);
+  const hash=rate===1?rawHash:createHash('sha256').update(`${rawHash}:${rate}`).digest('hex').slice(0,24);
   const file = join(work, `${hash}.mp3`);
   const cached = narrationAsset(job, scene, voice);
   if (cached) await writeFile(file, await io.readAsset(cached.key));
   let data;
   try { data = await readFile(file); } catch (e) { if (e.code !== 'ENOENT') throw e; }
   if (!data?.length) {
-    if (!env.ELEVENLABS_API_KEY) throw Error('대본 음성 서비스를 연결해 주세요. 관리자에게 음성 생성 설정 확인을 요청하세요.');
+    const rawFile=join(work,`${rawHash}.mp3`);
+    let original;try{original=await readFile(rawFile);}catch(e){if(e.code!=='ENOENT')throw e;}
+    if (!original?.length && !env.ELEVENLABS_API_KEY) throw Error('대본 음성 서비스를 연결해 주세요. 관리자에게 음성 생성 설정 확인을 요청하세요.');
     const temporary = `${file}.pending.mp3`;
     try {
-      await runCli('@cak/tts-narration', ['generate', '--text', scene.narration, '--out', temporary], { ...env, ELEVENLABS_VOICE_ID: voice });
+      if(!original?.length){
+        const rawPending=rawFile+'.raw.pending.mp3';
+        try{await runCli('@cak/tts-narration', ['generate', '--text', scene.narration, '--out', rawPending], { ...env, ELEVENLABS_VOICE_ID: voice });
+          original=await readFile(rawPending);if(!original.length)throw Error('empty audio');await rename(rawPending,rawFile);
+        }finally{await unlink(rawPending).catch(()=>{});}
+      }
+      if(rate===1)await writeFile(temporary,original);
+      else await command('ffmpeg',['-y','-v','error','-i',rawFile,'-af',`atempo=${rate}`,'-c:a','libmp3lame','-b:a','192k',temporary],env);
       data = await readFile(temporary);
       if (!data.length) throw Error('empty audio');
       await rename(temporary, file);
@@ -38,7 +50,7 @@ export async function generateNarration(job, work, env, io, checkpoint, tools) {
     const { data, duration, hash } = await narrationFile(job, scene, work, env, io, tools);
     const key = `studio/${job.id}/narration-${hash}.mp3`;
     await io.writeAsset(key, data, 'audio/mpeg');
-    assets[narrationId(scene.id)] = { key, kind: 'audio', type: 'audio/mpeg', purpose: 'narration', source: 'ai', voice: edit.voice, text: scene.narration, duration, name: scene.id };
+    assets[narrationId(scene.id)] = { key, kind: 'audio', type: 'audio/mpeg', purpose: 'narration', source: 'ai', voice: edit.voice, text: scene.narration, narrationSpeed:narrationRate(job), duration, name: scene.id };
     await checkpoint({ assets: structuredClone(assets) });
   }
   return { assets };

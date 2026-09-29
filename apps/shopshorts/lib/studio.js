@@ -1,3 +1,4 @@
+import {productionOptions} from './explainer-production.js';
 import {productionStyle, animationPlan, animated} from './animation-plan.js';
 import {captionExtras} from '../public/caption-style.js';
 import {CAMERAS, SHOTS} from '../public/cinematic-motion.js';
@@ -21,7 +22,7 @@ export function validateBrief(input) {
   const duration = Number(input.duration);
   if (!Number.isInteger(duration) || duration < 16 || duration > (input.format === 'short' ? 180 : 600)) fail('영상 길이는 숏폼 16~180초, 롱폼 16~600초입니다.');
   productionStyle(input.productionStyle);
-  return { category: input.category, topic: input.topic.trim(), format: input.format, duration, direction: String(input.direction || '').slice(0, 2000), aspect: input.format === 'short' ? '9:16' : '16:9', ...(input.productionStyle?{productionStyle:input.productionStyle}:{}) };
+  return { ...productionOptions(input), category: input.category, topic: input.topic.trim(), format: input.format, duration, direction: String(input.direction || '').slice(0, 2000), aspect: input.format === 'short' ? '9:16' : '16:9', ...(input.productionStyle?{productionStyle:input.productionStyle}:{}) };
 }
 export function validateScenes(scenes) {
   if (!Array.isArray(scenes) || !scenes.length || scenes.length > 100) fail('장면은 1~100개 필요합니다.');

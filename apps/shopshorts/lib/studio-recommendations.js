@@ -1,3 +1,4 @@
+import {productionOptions} from './explainer-production.js';
 import {productionStyle} from './animation-plan.js';
 import { CATEGORIES, fail } from './studio.js';
 import { editorialGuide } from './studio-editorial.js';
@@ -12,7 +13,7 @@ export function recommendationInput(input) {
   if (input.category === '직접 입력' && !input.topic.trim()) fail('직접 입력은 관심 분야나 주제를 먼저 적어주세요.');
   if (input.focus === 'direction' && !input.topic.trim()) fail('분위기를 추천받을 주제를 먼저 입력하세요.');
   if (!Number.isInteger(input.duration) || input.duration < 16 || input.duration > (input.format === 'short' ? 180 : 600)) fail('영상 길이를 확인하세요.');
-  return {...productionStyle(input.productionStyle),category:input.category,format:input.format,duration:input.duration,focus:input.focus,topic:input.topic.trim(),direction:input.direction.trim(),...(input.intent ? {intent:input.intent} : {})};
+  return {...productionOptions(input),...productionStyle(input.productionStyle),category:input.category,format:input.format,duration:input.duration,focus:input.focus,topic:input.topic.trim(),direction:input.direction.trim(),...(input.intent ? {intent:input.intent} : {})};
 }
 
 export function parseRecommendations(value, searched, intent) {
