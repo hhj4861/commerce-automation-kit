@@ -188,7 +188,426 @@
   font-size: 12px;
   padding: 4px 8px;
 }
+.ks :is(button, a, input, select):focus-visible {
+  outline: 3px solid #3157d5;
+  outline-offset: 3px;
+}
+.ks .vs-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 28px;
+  align-items: start;
+  color: #15243d;
+}
+.ks .vs-library {
+  min-width: 0;
+  background: #fff;
+  border: 1px solid #dbe2ef;
+  border-radius: 16px;
+  overflow: hidden;
+}
+.ks .vs-intro {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 28px 28px 0;
+}
+.ks .vs-intro h2 {
+  font-size: 21px;
+  line-height: 1.45;
+  margin: 0;
+  letter-spacing: -0.5px;
+}
+.ks .vs-intro p {
+  color: #64748b;
+  font-size: 14px;
+  line-height: 1.7;
+  margin: 10px 0 0;
+}
+.ks .vs-service {
+  color: #aa302d;
+  font-size: 12px;
+  font-weight: 650;
+  white-space: nowrap;
+  padding-top: 7px;
+}
+.ks .vs-search {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 14px;
+  padding: 24px 28px;
+  align-items: end;
+}
+.ks .vs-search label {
+  color: #52627c;
+  font-size: 13px;
+  font-weight: 600;
+  margin: 0;
+}
+.ks .vs-query input {
+  font-size: 16px;
+  min-height: 48px;
+  border-radius: 8px;
+}
+.ks .vs-primary {
+  background: #3157d5;
+  color: #fff;
+  border-color: #3157d5;
+  min-height: 48px;
+  padding: 10px 24px;
+}
+.ks .vs-primary:hover:not(:disabled) {
+  background: #2546b8;
+  border-color: #2546b8;
+}
+.ks .vs-filters {
+  display: flex;
+  align-items: end;
+  flex-wrap: wrap;
+  gap: 12px 20px;
+  grid-column: 1 / -1;
+}
+.ks .vs-filters label {
+  flex: 0 1 170px;
+}
+.ks .vs-filters select {
+  min-height: 40px;
+  font-size: 14px;
+  padding: 8px 30px 8px 12px;
+}
+.ks .vs-filters > span {
+  font-size: 12px;
+  color: #64748b;
+  padding-bottom: 10px;
+  margin-left: auto;
+}
+.ks .vs-results {
+  border-top: 1px solid #e0e7f0;
+}
+.ks .vs-results-heading {
+  display: flex;
+  gap: 12px;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 24px 28px 0;
+}
+.ks .vs-results-heading h3 {
+  font-size: 16px;
+  line-height: 1.6;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.ks .vs-results-heading > span {
+  color: #64748b;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.ks .vs-live {
+  margin: 5px 28px 20px;
+  color: #64748b;
+  font-size: 13px;
+}
+.ks .vs-selection-bar {
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  align-items: center;
+  background: #f6f8fc;
+  padding: 12px 28px;
+  font-size: 13px;
+}
+.ks .vs-selection-bar label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  font-size: 13px;
+  cursor: pointer;
+}
+.ks .vs-selection-bar > span {
+  color: #64748b;
+}
+.ks .vs-workspace input[type="checkbox"] {
+  width: 19px;
+  height: 19px;
+  margin: 0;
+  flex-shrink: 0;
+  accent-color: #3157d5;
+  cursor: pointer;
+}
+.ks .vs-video-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.ks .vs-video {
+  display: grid;
+  grid-template-columns: 24px 160px minmax(0, 1fr);
+  align-items: center;
+  gap: 16px;
+  padding: 20px 28px;
+  border-bottom: 1px solid #e0e7f0;
+}
+.ks .vs-video.is-selected {
+  background: #edf3ff;
+}
+.ks .vs-video-check {
+  display: flex;
+  align-self: stretch;
+  justify-content: center;
+  align-items: center;
+  margin: 0;
+  cursor: pointer;
+}
+.ks .vs-thumbnail {
+  aspect-ratio: 16/9;
+  overflow: hidden;
+  border-radius: 8px;
+  display: block;
+  background: #e9edf5;
+}
+.ks .vs-thumbnail img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.ks .vs-thumbnail-fallback {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-size: 12px;
+  color: #62718a;
+}
+.ks .vs-thumbnail-fallback > span {
+  color: #a93633;
+}
+.ks .vs-video-info {
+  min-width: 0;
+}
+.ks .vs-video-info > a {
+  color: #15243d;
+  font-size: 15px;
+  line-height: 1.6;
+  font-weight: 650;
+  text-decoration: none;
+  overflow-wrap: anywhere;
+  word-break: keep-all;
+}
+.ks .vs-video-info > a:hover {
+  text-decoration: underline;
+}
+.ks .vs-link-hint {
+  display: block;
+  margin-top: 4px;
+  color: #53688c;
+  font-size: 12px;
+  font-weight: 400;
+}
+.ks .vs-video-info > p {
+  color: #64748b;
+  font-size: 13px;
+  margin: 5px 0 0;
+  overflow-wrap: anywhere;
+}
+.ks .vs-selected-label {
+  display: inline-block;
+  color: #3157d5;
+  font-size: 12px;
+  margin-top: 6px;
+}
+.ks .vs-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  padding: 22px;
+}
+.ks .vs-pagination button {
+  min-width: 74px;
+  min-height: 42px;
+  font-size: 13px;
+}
+.ks .vs-pagination > span {
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+.ks .vs-empty {
+  text-align: center;
+  padding: 32px 24px 55px;
+  color: #64748b;
+  font-size: 14px;
+  line-height: 1.9;
+}
+.ks .vs-play {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  width: 72px;
+  height: 50px;
+  border: 1px solid #d7e1f5;
+  border-radius: 12px;
+  color: #3157d5;
+  background: #f6f8fc;
+  margin: 12px 0;
+}
+.ks .vs-message,
+.ks .vs-error {
+  margin: 0 28px 24px;
+  padding: 14px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  background: #f6f8fc;
+}
+.ks .vs-error {
+  background: #fff2f1;
+  color: #99342e;
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  justify-content: space-between;
+}
+.ks .vs-error p {
+  margin: 0;
+}
+.ks .vs-error button {
+  font-size: 13px;
+  flex-shrink: 0;
+}
+.ks .vs-tray {
+  min-width: 0;
+  position: sticky;
+  top: 24px;
+  border-top: 3px solid #3157d5;
+  padding-top: 20px;
+  scroll-margin-top: 24px;
+}
+.ks .vs-tray-jump {
+  display: none;
+}
+.ks .vs-tray-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+.ks .vs-tray-heading h2 {
+  margin: 0;
+  font-size: 17px;
+}
+.ks .vs-tray-heading h2 > span {
+  color: #3157d5;
+  margin-left: 5px;
+  font-variant-numeric: tabular-nums;
+}
+.ks .vs-tray-heading button {
+  border: 0;
+  background: transparent;
+  color: #64748b;
+  padding: 8px 0 8px 8px;
+  font-size: 12px;
+}
+.ks .vs-tray-help {
+  color: #64748b;
+  font-size: 13px;
+  line-height: 1.8;
+  margin: 12px 0 20px;
+}
+.ks .vs-tray-empty {
+  border: 1px dashed #c7d2e7;
+  border-radius: 10px;
+  padding: 26px 16px;
+  text-align: center;
+  color: #64748b;
+}
+.ks .vs-tray-empty > span {
+  font-size: 26px;
+  font-weight: 300;
+  color: #3157d5;
+}
+.ks .vs-tray-empty p {
+  font-size: 14px;
+  margin: 8px 0;
+  color: #364967;
+}
+.ks .vs-tray-empty small {
+  font-size: 12px;
+  line-height: 1.8;
+}
+.ks .vs-queue {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  max-height: 580px;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+}
+.ks .vs-queue li {
+  padding: 16px 0;
+  border-bottom: 1px solid #dbe2ef;
+}
+.ks .vs-queue strong {
+  display: block;
+  font-size: 14px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.ks .vs-queue small {
+  display: block;
+  font-size: 12px;
+  color: #64748b;
+  margin-top: 6px;
+  overflow-wrap: anywhere;
+}
+.ks .vs-queue-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-top: 12px;
+}
+.ks .vs-queue-actions button {
+  padding: 8px 12px;
+  font-size: 12px;
+  min-height: 38px;
+}
+.ks .vs-queue-actions button:first-child {
+  border-color: #c0cfee;
+  color: #3157d5;
+  background: #fff;
+}
+.ks .vs-queue-actions button:last-child {
+  background: transparent;
+  border-color: transparent;
+  color: #64748b;
+}
+.ks .vs-rights-note {
+  border-top: 1px solid #dbe2ef;
+  margin-top: 24px;
+  padding-top: 20px;
+  font-size: 13px;
+  line-height: 1.8;
+}
+.ks .vs-rights-note strong {
+  color: #364967;
+  font-size: 13px;
+}
+.ks .vs-rights-note p {
+  color: #64748b;
+  margin: 5px 0;
+}
 @media (max-width: 1150px) {
+  .ks .vs-workspace {
+    grid-template-columns: minmax(0, 1fr) 260px;
+    gap: 20px;
+  }
+  .ks .vs-video {
+    grid-template-columns: 24px 120px minmax(0, 1fr);
+    gap: 12px;
+  }
   .ks .hm-admin-layout {
     grid-template-columns: 220px minmax(0, 1fr);
   }
@@ -213,7 +632,12 @@
     grid-column: 1;
   }
   .ks .ks-nav {
-    gap: 20px;
+    gap: 12px;
+    justify-content: space-between;
+  }
+  .ks .ks-nav button {
+    font-size: 13px;
+    white-space: nowrap;
   }
   .ks .hm-panel {
     padding: 20px;
@@ -228,8 +652,100 @@
     width: 100%;
   }
 }
+@media (max-width: 900px) {
+  .ks .vs-workspace {
+    grid-template-columns: 1fr;
+  }
+  .ks .vs-tray {
+    position: static;
+  }
+  .ks .vs-queue {
+    max-height: none;
+  }
+  .ks .vs-tray-jump {
+    display: inline;
+    color: #3157d5;
+    font-size: 12px;
+  }
+  .ks .vs-selection-bar {
+    flex-wrap: wrap;
+  }
+  .ks .vs-selection-bar > span {
+    margin-left: auto;
+  }
+}
+@media (max-width: 600px) {
+  .ks .vs-intro {
+    padding: 22px 18px 0;
+    display: block;
+  }
+  .ks .vs-intro h2 {
+    font-size: 19px;
+  }
+  .ks .vs-service {
+    display: inline-block;
+    margin-top: 8px;
+  }
+  .ks .vs-search {
+    padding: 20px 18px;
+    gap: 12px 8px;
+  }
+  .ks .vs-primary {
+    padding: 10px 14px;
+    font-size: 14px;
+  }
+  .ks .vs-filters {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 12px;
+  }
+  .ks .vs-filters > span {
+    grid-column: 1/-1;
+    margin: 0;
+    padding: 0;
+  }
+  .ks .vs-results-heading {
+    padding: 20px 18px 0;
+  }
+  .ks .vs-live {
+    margin: 5px 18px 18px;
+  }
+  .ks .vs-selection-bar {
+    padding: 12px 18px;
+  }
+  .ks .vs-video {
+    grid-template-columns: 22px 94px minmax(0, 1fr);
+    gap: 10px;
+    padding: 18px 14px;
+  }
+  .ks .vs-video-info > a {
+    font-size: 14px;
+  }
+  .ks .vs-thumbnail {
+    align-self: start;
+    margin-top: 3px;
+  }
+  .ks .vs-video-check {
+    align-self: start;
+    padding: 4px 0;
+  }
+  .ks .vs-message,
+  .ks .vs-error {
+    margin: 0 18px 20px;
+  }
+  .ks .vs-error {
+    flex-wrap: wrap;
+  }
+}
 @media (prefers-reduced-motion: reduce) {
   .ks * {
     transition: none !important;
+  }
+}
+@media (max-width: 360px) {
+  .ks .ks-nav {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0 12px;
   }
 }
