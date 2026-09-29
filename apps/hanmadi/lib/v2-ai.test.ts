@@ -271,3 +271,44 @@ test("club AI missions progress from a short utterance to answers, reasons and n
     ),
   );
 });
+
+test("multi-turn roleplay preserves the toast, Korean acceptance and selected model on repair", async () => {
+  const toast = {
+    text: "こんにちは！一緒に乾杯しませんか？",
+    reading: "곤니치와! 잇쇼니 간파이 시마셍카?",
+    meaning: "안녕하세요! 같이 건배할래요? (답변 힌트: 좋아요!)",
+  };
+  const history = [
+    { role: "user" as const, content: "대화를 시작해 주세요." },
+    { role: "assistant" as const, content: JSON.stringify(toast) },
+    { role: "user" as const, content: "좋아! 건배!" },
+  ];
+  const reaction = {
+    text: "乾杯！楽しい夜にしましょう！",
+    reading: "간파이! 타노시이 요루니 시마쇼오!",
+    meaning: "건배! 즐거운 밤 보내요!",
+  };
+  const original = JSON.stringify(history);
+  let calls = 0;
+  const reply = await roleplayReply(
+    "ja",
+    1,
+    "club",
+    history,
+    "personal:model",
+    async (system, sent, selection, format) => {
+      calls++;
+      assert.deepEqual(sent, history);
+      assert.equal(selection, "personal:model");
+      assert.deepEqual(format, roleplayResponseFormat("ja"));
+      assert.match(system, /Conversation continuity takes priority/);
+      assert.match(system, /not events or words the learner said/);
+      assert.match(system, /If the learner actually requests water/);
+      assert.doesNotMatch(system, /exactly one easy follow-up question/);
+      return calls === 1 ? "invalid JSON" : JSON.stringify(reaction);
+    },
+  );
+  assert.equal(calls, 2);
+  assert.deepEqual(reply, reaction); // A valid conversational reaction needs no question.
+  assert.equal(JSON.stringify(history), original);
+});
