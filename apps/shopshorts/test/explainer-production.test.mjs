@@ -12,6 +12,7 @@ import {executeStudioTask,command} from '../studio-runner.mjs';
 import {normalizeEdit} from '../public/editor-model.js';
 import {narrationAsset,narrationReady} from '../public/narration-audio.js';
 import {automaticStatus} from '../public/automatic-creation.js';
+import {sceneMediaPrompt} from '../lib/scene-media-prompt.js';
 import {animationPlan} from '../lib/animation-plan.js';
 import {animationSvg} from '../studio-animation.mjs';
 import {Resvg} from '@resvg/resvg-js';
@@ -75,4 +76,10 @@ test('explicit cinematic selection routes to Higgsfield even without provider en
 });
 test('progress reports actual research, voice and media work',()=>{
  const p={brief,scenes,assets:{},task:{action:'scenario',state:'running',phase:'research'}};assert.match(automaticStatus(p),/자료 확인/);p.task.phase='scenario';assert.match(automaticStatus(p),/대본 작성/);p.task.action='media';assert.equal(automaticStatus(p),'음성 생성 0 / 2');p.assets={a:{purpose:'narration'},b:{purpose:'narration'}};assert.equal(automaticStatus(p),'장면 생성 0 / 2');
+});
+
+test('new cinematic shots retain shared style without repeating the preceding shot description',()=>{
+ const first={...scenes[0],prompt:'PREVIOUS_PISTON_DETAIL'},second={...scenes[1],prompt:'CURRENT_QUIET_ROOM'};
+ const p={brief:{...brief,productionStyle:'cinematic'},scenes:[first,second],visualStyle:'consistent amber and green'};
+ const prompt=sceneMediaPrompt(p,second);assert.match(prompt,/CURRENT_QUIET_ROOM/);assert.match(prompt,/consistent amber and green/);assert.ok(!prompt.includes('PREVIOUS_PISTON_DETAIL'));
 });
