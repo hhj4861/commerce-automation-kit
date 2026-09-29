@@ -144,3 +144,57 @@ test("lesson completion schedules review without claiming speaking proficiency",
   );
   assert.deepEqual(state.profiles.ja.practiced, {});
 });
+
+test("club levels have forty different speaking expressions per language, with distinct goals and stable lesson IDs", async () => {
+  const { lessonPhrases, lessonPlan } = await import("./v2-lesson");
+  const normalize = (value: string) =>
+    value
+      .normalize("NFKC")
+      .replace(/[\s\p{P}]/gu, "")
+      .toLowerCase();
+  for (const language of ["ja", "th", "en", "es"] as const) {
+    const units = starterUnits(language).filter(
+      (unit) => unit.scene === "club",
+    );
+    const phrases = units.flatMap(lessonPhrases);
+    assert.deepEqual(
+      units.map((u) => u.id),
+      [1, 2, 3, 4].map((n) => `starter:${language}:club:${n}`),
+    );
+    assert.equal(phrases.length, 40);
+    assert.equal(
+      new Set(phrases.map((p) => normalize(p.text))).size,
+      40,
+      `${language}: cross-level reuse`,
+    );
+    assert.equal(new Set(phrases.map((p) => normalize(p.meaning))).size, 40);
+    assert.equal(new Set(units.map((u) => lessonPlan(u)?.goal)).size, 4);
+    for (const unit of units) {
+      const plan = lessonPlan(unit)!;
+      assert.equal(plan.cues.length, 10);
+      assert.equal(plan.title, unit.title);
+      for (const phrase of lessonPhrases(unit)) {
+        assert(safePractice(phrase), `${unit.id}: invalid phrase`);
+        assert.match(phrase.reading, /[가-힣]/);
+        assert(!/[a-zぁ-ゖァ-ヺ一-龯ก-๛]/i.test(phrase.reading));
+      }
+    }
+    const meanings = units.map((u) =>
+      lessonPhrases(u)
+        .map((p) => p.meaning)
+        .join(" "),
+    );
+    assert.match(meanings[0], /물 한 잔/);
+    assert.match(meanings[1], /어떤 음악.*댄스 음악/);
+    assert.match(meanings[2], /있어서|이유|하지만/);
+    assert.match(meanings[3], /고맙지만|다시 확인|안 오면/);
+  }
+  const units = starterUnits("en").filter((u) => u.scene === "club");
+  const averageWords = units.map(
+    (u) =>
+      lessonPhrases(u).reduce((n, p) => n + p.text.split(/\s+/).length, 0) / 10,
+  );
+  assert(averageWords[2] > averageWords[0] * 1.5);
+  assert(averageWords[3] > averageWords[2]);
+  assert.equal(lessonPlan({ ...units[3], source: "admin" }), undefined);
+});

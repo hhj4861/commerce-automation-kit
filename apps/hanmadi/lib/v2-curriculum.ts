@@ -1,3 +1,4 @@
+import { clubLevels } from "./v2-club-lessons";
 // Design fixtures only. Language examples and pronunciation aids need native review.
 // Phrase tuple: Korean meaning, Japanese + aid, Thai + aid, English + aid, Spanish + aid.
 export const curriculum = {
@@ -103,54 +104,9 @@ export const curriculum = {
       icon: "music",
       color: "peach",
       role: "클럽에서 만난 사람",
-      topics: ["음악 이야기", "취향 묻기", "함께 즐기기", "정중하게 거절하기"],
+      topics: clubLevels.map((level) => level.title),
       prompt: "좋아하는 음악이 나오는 클럽에서 옆 사람과 이야기해요.",
-      phrases: [
-        [
-          "이 노래 좋네요!",
-          "この曲、いいですね！",
-          "코노 쿄쿠, 이이데스네",
-          "เพลงนี้เพราะดีนะคะ",
-          "플렝 니 프러 디 나 카",
-          "This song is great!",
-          "디스 송 이즈 그레이트",
-          "¡Qué buena canción!",
-          "께 부에나 깐시온",
-        ],
-        [
-          "어떤 음악을 좋아하세요?",
-          "どんな音楽が好きですか？",
-          "돈나 온가쿠가 스키데스카",
-          "ชอบเพลงแนวไหนคะ",
-          "촙 플렝 내우 나이 카",
-          "What kind of music do you like?",
-          "왓 카인드 오브 뮤직 두 유 라이크",
-          "¿Qué tipo de música te gusta?",
-          "께 띠뽀 데 무시까 떼 구스따",
-        ],
-        [
-          "이 노래 좋아해요. 같이 춤추실래요?",
-          "この曲が好きです。一緒に踊りませんか？",
-          "코노 쿄쿠가 스키데스. 잇쇼니 오도리마셍카",
-          "ชอบเพลงนี้ค่ะ เต้นด้วยกันไหมคะ",
-          "촙 플렝 니 카. 뗀 두아이 깐 마이 카",
-          "I love this song. Would you like to dance?",
-          "아이 러브 디스 송. 우드 유 라이크 투 댄스",
-          "Me encanta esta canción. ¿Quieres bailar?",
-          "메 엔깐따 에스따 깐시온. 끼에레스 바일라르",
-        ],
-        [
-          "고마워요. 오늘은 친구들과 있을게요.",
-          "ありがとうございます。今日は友達と過ごしたいです。",
-          "아리가토오 고자이마스. 쿄오와 토모다치토 스고시타이데스",
-          "ขอบคุณค่ะ วันนี้ขออยู่กับเพื่อนนะคะ",
-          "컵쿤 카. 완 니 커 유 깝 프안 나 카",
-          "Thanks, but I’d like to stay with my friends tonight.",
-          "땡크스, 벗 아이드 라이크 투 스테이 위드 마이 프렌즈 투나이트",
-          "Gracias, pero hoy prefiero estar con mis amigos.",
-          "그라시아스, 뻬로 오이 쁘레피에로 에스따르 꼰 미스 아미고스",
-        ],
-      ],
+      phrases: clubLevels.map((level) => level.rows.split("\n")[0].split("|")),
     },
     {
       id: "cafe",
