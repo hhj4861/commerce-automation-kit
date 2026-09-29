@@ -2105,3 +2105,27 @@
   height: 16px;
   flex-shrink: 0;
 }
+
+.hm-provider-card {
+  border: 1px solid #e2e7f0;
+  border-radius: 16px;
+  padding: 16px;
+  margin: 16px 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.hm-provider-card .hm-provider-row {
+  padding: 0;
+  border: 0;
+}
+.hm-provider-card .hm-provider-row h3 {
+  margin: 0;
+  font-size: 16px;
+}
+.hm-provider-card .hm-connection-state {
+  margin: 14px 0 0;
+  padding: 12px 0 0;
+  border: 0;
+  border-top: 1px solid #e2e7f0;
+  border-radius: 0;
+}

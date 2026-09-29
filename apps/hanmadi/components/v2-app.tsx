@@ -525,153 +525,153 @@ function Connections({
         대화를 선택한 공급자에 전달하고 연결 자격을 서버에 암호화 보관하는 데
         동의해요.
       </label>
-      <div className="hm-provider-row">
-        <div>
-          <b>Codex</b>
-          <small>ChatGPT 계정 로그인</small>
-        </div>
-        <button
-          disabled={
-            busy ||
-            pending ||
-            !!loadError ||
-            !consent ||
-            items.some((c) => c.provider === "codex")
-          }
-          onClick={() => void act({ provider: "codex" })}
-        >
-          Codex 계정 연결
-        </button>
-      </div>
       {!consent && (
         <p className="hm-muted">
-          내 계정을 연결하려면 위 동의 항목을 선택하세요. 기본 Gemini는 별도
+          새 계정을 연결하려면 위 동의 항목을 선택하세요. 기본 Gemini는 별도
           연결이 필요 없어요.
         </p>
       )}
-      <div className="hm-provider-row">
-        <div>
-          <b>Claude</b>
-          <small>API 키로 연결 · API 요금 적용</small>
-        </div>
-        <button
-          disabled={
-            busy ||
-            pending ||
-            !!loadError ||
-            items.some((c) => c.provider === "claude")
-          }
-          aria-expanded={claudeSetup}
-          aria-controls="claude-connection-setup"
-          onClick={() => setClaudeSetup(true)}
-        >
-          Claude 연결
-        </button>
-      </div>
-      {claudeSetup && (
+      {(["codex", "claude"] as const).map((provider) => (
         <section
-          id="claude-connection-setup"
-          className="hm-claude-setup"
-          aria-label="Claude 연결 안내"
+          key={provider}
+          className="hm-provider-card"
+          aria-label={`${provider === "codex" ? "Codex" : "Claude"} 연결 관리`}
         >
-          <h3>Claude 연결하기</h3>
-          <p>
-            1. 공식 Claude Console에 로그인해 API 키를 발급하세요. 구독 로그인
-            인증 코드와는 다른 키예요.
-          </p>
-          <a
-            href="https://platform.claude.com/settings/keys"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Claude Console에서 키 발급하기 ↗
-          </a>
-          <p>
-            2. 발급한 API 키를 아래에 붙여넣으세요. API 사용료는 키 소유자에게
-            별도로 청구돼요.
-          </p>
-          <label>
-            Claude API 키
-            <input
-              type="password"
-              autoComplete="off"
-              value={key}
-              onChange={(e) => setKey(e.target.value)}
-              placeholder="sk-ant-api…"
-            />
-          </label>
-          {!consent && (
-            <p>
-              연결을 완료하려면 위의 공급자 전송·암호화 보관 동의 항목을
-              선택하세요.
-            </p>
-          )}
-          <div className="hm-row">
-            <button
-              className="hm-primary"
-              disabled={busy || !consent || !key.trim()}
-              onClick={() =>
-                void act({ provider: "claude", apiKey: key.trim() })
-              }
-            >
-              키 확인하고 연결
-            </button>
-            <button
-              disabled={busy}
-              onClick={() => {
-                setClaudeSetup(false);
-                setKey("");
-              }}
-            >
-              취소
-            </button>
+          <div className="hm-provider-row">
+            <div>
+              <h3>{provider === "codex" ? "Codex" : "Claude"}</h3>
+              <small>
+                {provider === "codex"
+                  ? "ChatGPT 계정 로그인"
+                  : "API 키로 연결 · API 요금 적용"}
+              </small>
+            </div>
+            {!items.some((c) => c.provider === provider) &&
+              (provider === "codex" ? (
+                <button
+                  disabled={busy || pending || !!loadError || !consent}
+                  onClick={() => void act({ provider: "codex" })}
+                >
+                  Codex 계정 연결
+                </button>
+              ) : (
+                <button
+                  disabled={busy || pending || !!loadError}
+                  aria-expanded={claudeSetup}
+                  aria-controls="claude-connection-setup"
+                  onClick={() => setClaudeSetup(true)}
+                >
+                  Claude 연결
+                </button>
+              ))}
           </div>
-        </section>
-      )}
-      {items.map((c) => (
-        <div key={c.id} className="hm-connection-state">
-          <strong>{c.provider === "codex" ? "Codex" : "Claude"}</strong>
-          <p>
-            {
-              {
-                connected: "연결됨",
-                authorizing: "공식 로그인 대기",
-                expired: "다시 로그인 필요",
-                quota_exceeded: "사용 한도 초과",
-                error: "연결 확인 필요",
-                disconnected: "연결 해제됨",
-              }[c.state]
-            }
-          </p>
-          {["error", "expired", "quota_exceeded"].includes(c.state) && (
-            <p className="hm-muted">
-              {c.state === "quota_exceeded"
-                ? "계정의 사용 한도를 확인하거나 기본 Gemini를 선택해 주세요."
-                : "인증을 다시 확인해야 해요. 아래에서 연결을 해제한 뒤 다시 연결해 주세요."}
-            </p>
-          )}
-          {c.challenge && (
-            <>
+          {items
+            .filter((c) => c.provider === provider)
+            .map((c) => (
+              <div key={c.id} className="hm-connection-state">
+                <p>
+                  {
+                    {
+                      connected: "연결됨",
+                      authorizing: "공식 로그인 대기",
+                      expired: "다시 로그인 필요",
+                      quota_exceeded: "사용 한도 초과",
+                      error: "연결 확인 필요",
+                      disconnected: "연결 해제됨",
+                    }[c.state]
+                  }
+                </p>
+                {["error", "expired", "quota_exceeded"].includes(c.state) && (
+                  <p className="hm-muted">
+                    {c.state === "quota_exceeded"
+                      ? "계정의 사용 한도를 확인하거나 기본 Gemini를 선택해 주세요."
+                      : "인증을 다시 확인해야 해요. 아래에서 연결을 해제한 뒤 다시 연결해 주세요."}
+                  </p>
+                )}
+                {c.challenge && (
+                  <>
+                    <p>
+                      인증 코드: <strong>{c.challenge.code}</strong>
+                    </p>
+                    <a
+                      href={c.challenge.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      공식 로그인 열기 ↗
+                    </a>
+                    <p>로그인 후 여기로 돌아와 모델을 선택하세요.</p>
+                  </>
+                )}
+                <button
+                  disabled={busy}
+                  onClick={() => void act({ id: c.id }, "DELETE")}
+                >
+                  연결 해제
+                </button>
+              </div>
+            ))}
+          {provider === "claude" && claudeSetup && (
+            <section
+              id="claude-connection-setup"
+              className="hm-claude-setup"
+              aria-label="Claude 연결 안내"
+            >
+              <h3>Claude 연결하기</h3>
               <p>
-                인증 코드: <strong>{c.challenge.code}</strong>
+                1. 공식 Claude Console에 로그인해 API 키를 발급하세요. 구독
+                로그인 인증 코드와는 다른 키예요.
               </p>
               <a
-                href={c.challenge.url}
+                href="https://platform.claude.com/settings/keys"
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                공식 로그인 열기 ↗
+                Claude Console에서 키 발급하기 ↗
               </a>
-              <p>로그인 후 여기로 돌아와 모델을 선택하세요.</p>
-            </>
+              <p>
+                2. 발급한 API 키를 아래에 붙여넣으세요. API 사용료는 키
+                소유자에게 별도로 청구돼요.
+              </p>
+              <label>
+                Claude API 키
+                <input
+                  type="password"
+                  autoComplete="off"
+                  value={key}
+                  onChange={(e) => setKey(e.target.value)}
+                  placeholder="sk-ant-api…"
+                />
+              </label>
+              {!consent && (
+                <p>
+                  연결을 완료하려면 위의 공급자 전송·암호화 보관 동의 항목을
+                  선택하세요.
+                </p>
+              )}
+              <div className="hm-row">
+                <button
+                  className="hm-primary"
+                  disabled={busy || !consent || !key.trim()}
+                  onClick={() =>
+                    void act({ provider: "claude", apiKey: key.trim() })
+                  }
+                >
+                  키 확인하고 연결
+                </button>
+                <button
+                  disabled={busy}
+                  onClick={() => {
+                    setClaudeSetup(false);
+                    setKey("");
+                  }}
+                >
+                  취소
+                </button>
+              </div>
+            </section>
           )}
-          <button
-            disabled={busy}
-            onClick={() => void act({ id: c.id }, "DELETE")}
-          >
-            연결 해제
-          </button>
-        </div>
+        </section>
       ))}
       {error && <p role="alert">{error}</p>}
 
