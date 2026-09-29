@@ -120,6 +120,10 @@ export async function learnerLogin(
   const value = Buffer.from(
     JSON.stringify({ id: account.id, name, expires: Date.now() + TTL * 1000 }),
   ).toString("base64url");
+  // A learner login must not retain privileges from a previous tutor session.
+  const jar = await cookies();
+  jar.delete("hanmadi_tutor");
+  jar.delete("hanmadi_language");
   (await cookies()).set(COOKIE, `${value}.${signature(value)}`, {
     httpOnly: true,
     sameSite: "lax",

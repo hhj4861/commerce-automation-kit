@@ -25,7 +25,7 @@ flowchart LR
   Published --> API
 ```
 
-학습자 쿠키는 튜터 쿠키와 별도이고 HMAC 서명·HttpOnly·SameSite=Lax·운영 Secure를 적용한다. 비밀번호는 scrypt 해시, 개인 AI subject는 기존 서버 비밀로 HMAC 처리한다. 서버가 계정으로 actor를 결정하며 클라이언트 actor/관리자 플래그를 신뢰하지 않는다. 변경 요청은 Origin 검증과 본문 크기 제한을 적용한다.
+학습자↔튜터 로그인 전환 시 이전 역할의 쿠키를 폐기한다. 학습자 쿠키는 튜터 쿠키와 별도이고 HMAC 서명·HttpOnly·SameSite=Lax·운영 Secure를 적용한다. 비밀번호는 scrypt 해시, 개인 AI subject는 기존 서버 비밀로 HMAC 처리한다. 서버가 계정으로 actor를 결정하며 클라이언트 actor/관리자 플래그를 신뢰하지 않는다. 변경 요청은 Origin 검증과 본문 크기 제한을 적용한다.
 
 기존 Redis 드라이버에 compare-and-set을 추가했다. 개인 학습 상태와 콘텐츠 초안은 충돌 시 다시 읽어 갱신한다. 삭제와 자동 반영 변경은 저장 세대를 올려 먼저 시작된 AI 응답이 늦게 표현을 되살리지 못하게 한다. 개인 표현 500개, 기록 2,000개, 관리자 초안 200개 상한과 기존 AI 일별 예산을 적용한다. 운영에서 파일 저장 폴백은 거부한다.
 

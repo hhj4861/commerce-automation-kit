@@ -5,9 +5,9 @@ import { once } from "node:events";
 import { mkdir, writeFile, unlink } from "node:fs/promises";
 import { resolve } from "node:path";
 import { chromium } from "playwright";
-const testDataFile=resolve('.data/v2-e2e.json');
-await mkdir(resolve('.data'),{recursive:true});
-await writeFile(testDataFile,'{}',{flag:'wx'}); // Never overwrite another running test's state.
+const testDataFile = resolve(".data/v2-e2e.json");
+await mkdir(resolve(".data"), { recursive: true });
+await writeFile(testDataFile, "{}", { flag: "wx" }); // Never overwrite another running test's state.
 const phrases = {
   ja: {
     text: "韓国から来ました。",
@@ -141,7 +141,7 @@ const app = spawn(
     env: {
       ...process.env,
       NODE_ENV: "development",
-      HANMADI_LOCAL_DATA_FILE:testDataFile,
+      HANMADI_LOCAL_DATA_FILE: testDataFile,
       AUTH_SECRET: "e2e-only-secret-with-at-least-32-characters",
       TUTOR_PINS: "e2e-owner:839271",
       UPSTASH_REDIS_REST_URL: "",
@@ -414,6 +414,7 @@ try {
     "PASS AI starter conversation → explicit phrase save → spoken practice → next review",
   );
   const other = await browser.newContext();
+  await other.request.post(base + "/api/auth", { data: { pin: "839271" } });
   await post(
     {
       action: "signup",
@@ -476,12 +477,21 @@ try {
   });
   assert.equal(csrf.status(), 403);
   const admin = await browser.newContext();
-  assert.equal(
-    (
-      await admin.request.post(base + "/api/auth", { data: { pin: "839271" } })
-    ).status(),
-    200,
+  await post(
+    {
+      action: "signup",
+      name: `owner_switch_${Date.now()}`,
+      password: "test-password-1234",
+    },
+    admin,
+    "/api/study/account",
   );
+  const adminPage = await admin.newPage();
+  await adminPage.goto(base + "/login?from=%2Fstudy%2Fadmin");
+  await adminPage.getByLabel("PIN", { exact: true }).fill("839271");
+  await adminPage.getByRole("button", { name: "열기", exact: true }).click();
+  await adminPage.waitForURL(base + "/study/admin");
+  assert.equal((await state(admin)).identity.owner, true);
   const source = {
     language: "ja",
     scene: "smalltalk",
@@ -538,7 +548,6 @@ try {
   console.log(
     "PASS account isolation, CSRF, owner-only admin, draft/review/publish/unpublish, revision conflict",
   );
-  const adminPage = await admin.newPage();
   await adminPage.goto(base + "/study/admin");
   await adminPage
     .getByRole("heading", { name: "좋은 대화를, 좋은 수업으로." })

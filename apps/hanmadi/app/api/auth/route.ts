@@ -33,7 +33,10 @@ export async function POST(req: Request) {
   if (record && record.count >= MAX_ATTEMPTS && Date.now() < record.until) {
     const mins = Math.ceil((record.until - Date.now()) / 60000);
     return NextResponse.json(
-      { ok: false, error: `시도가 너무 많아요. ${mins}분 후 다시 시도해 주세요.` },
+      {
+        ok: false,
+        error: `시도가 너무 많아요. ${mins}분 후 다시 시도해 주세요.`,
+      },
       { status: 429 },
     );
   }
@@ -48,7 +51,10 @@ export async function POST(req: Request) {
   if (!owner && !registered) {
     if (envTutors.length === 0) {
       return NextResponse.json(
-        { ok: false, error: "서버에 TUTOR_PINS 환경변수가 설정되지 않았습니다." },
+        {
+          ok: false,
+          error: "서버에 TUTOR_PINS 환경변수가 설정되지 않았습니다.",
+        },
         { status: 500 },
       );
     }
@@ -67,7 +73,12 @@ export async function POST(req: Request) {
   }
 
   const session = owner
-    ? { n: owner.name, r: "owner" as const, tid: `owner:${owner.name}`, t: Date.now() }
+    ? {
+        n: owner.name,
+        r: "owner" as const,
+        tid: `owner:${owner.name}`,
+        t: Date.now(),
+      }
     : {
         n: registered!.name,
         e: registered!.email,
@@ -82,13 +93,18 @@ export async function POST(req: Request) {
     role: session.r,
   });
   res.cookies.delete(LEARNING_LANGUAGE_COOKIE);
-  res.cookies.set(TUTOR_COOKIE, await signSession(session, getAuthSecret(process.env)), {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-    maxAge: SESSION_TTL_MS / 1000,
-    path: "/",
-  });
+  res.cookies.delete("hanmadi_learner");
+  res.cookies.set(
+    TUTOR_COOKIE,
+    await signSession(session, getAuthSecret(process.env)),
+    {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      maxAge: SESSION_TTL_MS / 1000,
+      path: "/",
+    },
+  );
   return res;
 }
 
@@ -97,5 +113,6 @@ export async function DELETE() {
   const res = NextResponse.json({ ok: true });
   res.cookies.delete(TUTOR_COOKIE);
   res.cookies.delete(LEARNING_LANGUAGE_COOKIE);
+  res.cookies.delete("hanmadi_learner");
   return res;
 }

@@ -1231,6 +1231,9 @@ export function V2App() {
                             : studyLanguages[language].name}
                         </span>
                         <p>{translation.original}</p>
+                        {translation.from !== "ko" && (
+                          <p className="hm-reading">{translation.reading}</p>
+                        )}
                       </div>
                       <div>
                         <span className="hm-eyebrow">
@@ -1239,7 +1242,9 @@ export function V2App() {
                             : "한국어"}
                         </span>
                         <p className="hm-native">{translation.translated}</p>
-                        <p className="hm-reading">{translation.reading}</p>
+                        {translation.from === "ko" && (
+                          <p className="hm-reading">{translation.reading}</p>
+                        )}
                         <Speaker
                           key={translation.translated}
                           text={translation.translated}

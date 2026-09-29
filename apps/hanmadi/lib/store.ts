@@ -192,7 +192,10 @@ function createRedisDriver(config: { url: string; token: string }): Driver {
 }
 
 function createFileDriver(): Driver {
-  const path = (process.env.NODE_ENV === "development" && process.env.HANMADI_LOCAL_DATA_FILE) || join(process.cwd(), ".data", "tutors.json");
+  const path =
+    (process.env.NODE_ENV === "development" &&
+      process.env.HANMADI_LOCAL_DATA_FILE) ||
+    join(process.cwd(), ".data", "tutors.json");
 
   type FileShape = Record<string, Record<string, string>>;
 
