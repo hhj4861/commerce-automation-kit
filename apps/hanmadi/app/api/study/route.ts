@@ -22,15 +22,9 @@ import {
   starterUnits,
   curriculum,
 } from "@/lib/v2";
-import {
-  studyCompletion,
-  roleplayPrompt,
-  translate,
-  parsePhrase,
-  jsonAnswer,
-} from "@/lib/v2-ai";
+import { roleplayReply, translate, parsePhrase } from "@/lib/v2-ai";
 export const runtime = "nodejs";
-export const maxDuration = 45;
+export const maxDuration = 90;
 export async function GET() {
   try {
     const identity = await studyIdentity();
@@ -255,14 +249,12 @@ export async function POST(req: Request) {
         throw new ConversationError(400, "AI 모델을 선택해 주세요.");
       await reserveRequest(actor, "chat");
       return conversationJson({
-        reply: parsePhrase(
-          jsonAnswer(
-            await studyCompletion(
-              roleplayPrompt(language, profile.level, String(b.scene)),
-              messages,
-              selection,
-            ),
-          ),
+        reply: await roleplayReply(
+          language,
+          profile.level,
+          String(b.scene),
+          messages,
+          selection,
         ),
       });
     }
