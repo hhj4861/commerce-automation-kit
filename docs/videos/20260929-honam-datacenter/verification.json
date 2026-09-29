@@ -1,0 +1,23 @@
+{
+  "video": "honam-datacenter-60s.mp4",
+  "sha256": "348a43608038b00d7b8f941643088a21341ef6128786474a35bc59fbb560fe54",
+  "durationSeconds": 60.0,
+  "width": 1080,
+  "height": 1920,
+  "frames": 1800,
+  "fps": 30,
+  "videoCodec": "h264",
+  "audioCodec": "aac",
+  "audioChannels": 2,
+  "meanVolumeDb": -19.1,
+  "peakVolumeDb": -1.5,
+  "decode": "ffmpeg full audio/video decode succeeded",
+  "allNarrationFits": true,
+  "narrationTimeStretch": false,
+  "totalSpeechSeconds": 50.433742,
+  "sceneCount": 8,
+  "captionCount": 16,
+  "ttsRun": "https://github.com/hhj4861/commerce-automation-kit/actions/runs/36543974986",
+  "browserPlayback": {"browser":"Chrome via Playwright","timeAfterPlay":1.483262,"decodedFrames":49,"audioDecodedBytes":43788,"endedAfterSeek":true,"mediaError":null},
+  "visualReview": "All eight rendered scene thumbnails inspected; Korean headings and subtitles visible, no overlaps observed. Audio signal and browser decoding verified; no listening/transcription review claimed."
+}

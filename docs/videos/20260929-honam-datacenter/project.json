@@ -1,0 +1,518 @@
+{
+  "title": "메가 데이터센터가 호남에 위치해야 하는 이유",
+  "category": "건축학",
+  "format": "short",
+  "aspect": "9:16",
+  "duration": 60,
+  "voice": {
+    "name": "진건 · 차분한 남성",
+    "provider": "ElevenLabs",
+    "id": "BbsagRO6ohd8MKPS2Ob0"
+  },
+  "productionStyle": "animation",
+  "artifact": "honam-datacenter-60s.mp4",
+  "appPublished": false,
+  "recipe": "produce.mjs",
+  "engineCommit": "88f804c4bdf4123dc50db3ad8a2e8d8c1dd2a928",
+  "visuals": "Original bespoke SVG episode artwork; not the generic in-app icon renderer",
+  "scenes": [
+    {
+      "id": "scene-1",
+      "kind": "video",
+      "duration": 7.4,
+      "narration": "메가 데이터센터, 왜 호남일까요? 답은 땅값보다 전기에 있습니다.",
+      "prompt": "Original animated architectural diagram: intro. 왜 호남인가. 답은 땅보다, 전력. No actual site or built project represented.",
+      "animation": {
+        "title": "왜 호남인가",
+        "layout": "sequence",
+        "elements": [
+          {
+            "icon": "home",
+            "label": "데이터센터",
+            "motion": "enter"
+          },
+          {
+            "icon": "star",
+            "label": "전력과 인프라",
+            "motion": "pulse"
+          }
+        ]
+      },
+      "visual": "intro",
+      "title": "왜 호남인가",
+      "subtitle": "답은 땅보다, 전력",
+      "measuredSpeechSeconds": 6.176508,
+      "frames": 222
+    },
+    {
+      "id": "scene-2",
+      "kind": "video",
+      "duration": 7.5,
+      "narration": "서버는 밤낮없이 전기를 쓰고 열을 냅니다. 전력과 냉각이 먼저죠.",
+      "prompt": "Original animated architectural diagram: server. 잠들지 않는 건물. 24시간, 전력과 냉각. No actual site or built project represented.",
+      "animation": {
+        "title": "잠들지 않는 건물",
+        "layout": "sequence",
+        "elements": [
+          {
+            "icon": "home",
+            "label": "데이터센터",
+            "motion": "enter"
+          },
+          {
+            "icon": "star",
+            "label": "전력과 인프라",
+            "motion": "pulse"
+          }
+        ]
+      },
+      "visual": "server",
+      "title": "잠들지 않는 건물",
+      "subtitle": "24시간, 전력과 냉각",
+      "measuredSpeechSeconds": 6.315828,
+      "frames": 225
+    },
+    {
+      "id": "scene-3",
+      "kind": "video",
+      "duration": 7.666666666666667,
+      "narration": "호남의 기회는 재생에너지입니다. 전남은 출력 제한을 줄일 저장장치도 추진하죠.",
+      "prompt": "Original animated architectural diagram: energy. 호남의 기회. 재생에너지와 저장. No actual site or built project represented.",
+      "animation": {
+        "title": "호남의 기회",
+        "layout": "sequence",
+        "elements": [
+          {
+            "icon": "home",
+            "label": "데이터센터",
+            "motion": "enter"
+          },
+          {
+            "icon": "star",
+            "label": "전력과 인프라",
+            "motion": "pulse"
+          }
+        ]
+      },
+      "visual": "energy",
+      "title": "호남의 기회",
+      "subtitle": "재생에너지와 저장",
+      "measuredSpeechSeconds": 6.455147,
+      "frames": 230
+    },
+    {
+      "id": "scene-4",
+      "kind": "video",
+      "duration": 7.033333333333333,
+      "narration": "전기를 멀리 보내는 대신, 데이터를 전기가 있는 곳으로 옮기는 겁니다.",
+      "prompt": "Original animated architectural diagram: shift. 발상을 뒤집으면. 데이터를 전력 곁으로. No actual site or built project represented.",
+      "animation": {
+        "title": "발상을 뒤집으면",
+        "layout": "sequence",
+        "elements": [
+          {
+            "icon": "home",
+            "label": "데이터센터",
+            "motion": "enter"
+          },
+          {
+            "icon": "star",
+            "label": "전력과 인프라",
+            "motion": "pulse"
+          }
+        ]
+      },
+      "visual": "shift",
+      "title": "발상을 뒤집으면",
+      "subtitle": "데이터를 전력 곁으로",
+      "measuredSpeechSeconds": 5.851429,
+      "frames": 211
+    },
+    {
+      "id": "scene-5",
+      "kind": "video",
+      "duration": 7.266666666666667,
+      "narration": "서버동과 변전소, 냉각 설비를 하나의 캠퍼스로 설계할 기회도 생깁니다.",
+      "prompt": "Original animated architectural diagram: campus. 건축의 해법. 하나의 인프라 캠퍼스. No actual site or built project represented.",
+      "animation": {
+        "title": "건축의 해법",
+        "layout": "sequence",
+        "elements": [
+          {
+            "icon": "home",
+            "label": "데이터센터",
+            "motion": "enter"
+          },
+          {
+            "icon": "star",
+            "label": "전력과 인프라",
+            "motion": "pulse"
+          }
+        ]
+      },
+      "visual": "campus",
+      "title": "건축의 해법",
+      "subtitle": "하나의 인프라 캠퍼스",
+      "measuredSpeechSeconds": 6.083628,
+      "frames": 218
+    },
+    {
+      "id": "scene-6",
+      "kind": "video",
+      "duration": 6.3,
+      "narration": "이런 입지 분산은 수도권에 몰린 전력 수요를 나누는 방향이기도 하죠.",
+      "prompt": "Original animated architectural diagram: network. 집중에서 분산으로. 전력 수요도 나누기. No actual site or built project represented.",
+      "animation": {
+        "title": "집중에서 분산으로",
+        "layout": "sequence",
+        "elements": [
+          {
+            "icon": "home",
+            "label": "데이터센터",
+            "motion": "enter"
+          },
+          {
+            "icon": "star",
+            "label": "전력과 인프라",
+            "motion": "pulse"
+          }
+        ]
+      },
+      "visual": "network",
+      "title": "집중에서 분산으로",
+      "subtitle": "전력 수요도 나누기",
+      "measuredSpeechSeconds": 5.10839,
+      "frames": 189
+    },
+    {
+      "id": "scene-7",
+      "kind": "video",
+      "duration": 8.3,
+      "narration": "물론 조건은 있습니다. 계통 연결, 냉각과 용수, 통신망을 검증해야 합니다.",
+      "prompt": "Original animated architectural diagram: check. 입지에는 조건이 있다. 반드시 확인할 세 가지. No actual site or built project represented.",
+      "animation": {
+        "title": "입지에는 조건이 있다",
+        "layout": "sequence",
+        "elements": [
+          {
+            "icon": "home",
+            "label": "데이터센터",
+            "motion": "enter"
+          },
+          {
+            "icon": "star",
+            "label": "전력과 인프라",
+            "motion": "pulse"
+          }
+        ]
+      },
+      "visual": "check",
+      "title": "입지에는 조건이 있다",
+      "subtitle": "반드시 확인할 세 가지",
+      "measuredSpeechSeconds": 7.105306,
+      "frames": 249
+    },
+    {
+      "id": "scene-8",
+      "kind": "video",
+      "duration": 8.533333333333333,
+      "narration": "호남이 주목받는 이유. 땅만 고르는 게 아니라, 에너지와 건축을 함께 설계하기 때문입니다.",
+      "prompt": "Original animated architectural diagram: final. 호남을 보는 새 기준. 에너지와 건축을 함께. No actual site or built project represented.",
+      "animation": {
+        "title": "호남을 보는 새 기준",
+        "layout": "sequence",
+        "elements": [
+          {
+            "icon": "home",
+            "label": "데이터센터",
+            "motion": "enter"
+          },
+          {
+            "icon": "star",
+            "label": "전력과 인프라",
+            "motion": "pulse"
+          }
+        ]
+      },
+      "visual": "final",
+      "title": "호남을 보는 새 기준",
+      "subtitle": "에너지와 건축을 함께",
+      "measuredSpeechSeconds": 7.337506,
+      "frames": 256
+    }
+  ],
+  "captions": [
+    {
+      "id": "clip-1-caption-0",
+      "clipId": "clip-1",
+      "source": "script",
+      "text": "메가 데이터센터, 왜 호남일까요?",
+      "startFrame": 0,
+      "endFrame": 96,
+      "font": "gothic",
+      "size": 48,
+      "color": "#ffffff",
+      "position": "bottom",
+      "background": false,
+      "outlineWidth": 1,
+      "outlineColor": "#112c35",
+      "y": 92,
+      "x": 50
+    },
+    {
+      "id": "clip-1-caption-1",
+      "clipId": "clip-1",
+      "source": "script",
+      "text": "답은 땅값보다 전기에 있습니다.",
+      "startFrame": 96,
+      "endFrame": 186,
+      "font": "gothic",
+      "size": 48,
+      "color": "#ffffff",
+      "position": "bottom",
+      "background": false,
+      "outlineWidth": 1,
+      "outlineColor": "#112c35",
+      "y": 92,
+      "x": 50
+    },
+    {
+      "id": "clip-2-caption-0",
+      "clipId": "clip-2",
+      "source": "script",
+      "text": "서버는 밤낮없이 전기를 쓰고 열을\n냅니다.",
+      "startFrame": 0,
+      "endFrame": 122,
+      "font": "gothic",
+      "size": 48,
+      "color": "#ffffff",
+      "position": "bottom",
+      "background": false,
+      "outlineWidth": 1,
+      "outlineColor": "#112c35",
+      "y": 92,
+      "x": 50
+    },
+    {
+      "id": "clip-2-caption-1",
+      "clipId": "clip-2",
+      "source": "script",
+      "text": "전력과 냉각이 먼저죠.",
+      "startFrame": 122,
+      "endFrame": 190,
+      "font": "gothic",
+      "size": 48,
+      "color": "#ffffff",
+      "position": "bottom",
+      "background": false,
+      "outlineWidth": 1,
+      "outlineColor": "#112c35",
+      "y": 92,
+      "x": 50
+    },
+    {
+      "id": "clip-3-caption-0",
+      "clipId": "clip-3",
+      "source": "script",
+      "text": "호남의 기회는 재생에너지입니다.",
+      "startFrame": 0,
+      "endFrame": 83,
+      "font": "gothic",
+      "size": 48,
+      "color": "#ffffff",
+      "position": "bottom",
+      "background": false,
+      "outlineWidth": 1,
+      "outlineColor": "#112c35",
+      "y": 92,
+      "x": 50
+    },
+    {
+      "id": "clip-3-caption-1",
+      "clipId": "clip-3",
+      "source": "script",
+      "text": "전남은 출력 제한을 줄일\n저장장치도 추진하죠.",
+      "startFrame": 83,
+      "endFrame": 194,
+      "font": "gothic",
+      "size": 48,
+      "color": "#ffffff",
+      "position": "bottom",
+      "background": false,
+      "outlineWidth": 1,
+      "outlineColor": "#112c35",
+      "y": 92,
+      "x": 50
+    },
+    {
+      "id": "clip-4-caption-0",
+      "clipId": "clip-4",
+      "source": "script",
+      "text": "전기를 멀리 보내는 대신,\n데이터를 전기가 있는 곳으로",
+      "startFrame": 0,
+      "endFrame": 135,
+      "font": "gothic",
+      "size": 48,
+      "color": "#ffffff",
+      "position": "bottom",
+      "background": false,
+      "outlineWidth": 1,
+      "outlineColor": "#112c35",
+      "y": 92,
+      "x": 50
+    },
+    {
+      "id": "clip-4-caption-1",
+      "clipId": "clip-4",
+      "source": "script",
+      "text": "옮기는 겁니다.",
+      "startFrame": 135,
+      "endFrame": 176,
+      "font": "gothic",
+      "size": 48,
+      "color": "#ffffff",
+      "position": "bottom",
+      "background": false,
+      "outlineWidth": 1,
+      "outlineColor": "#112c35",
+      "y": 92,
+      "x": 50
+    },
+    {
+      "id": "clip-5-caption-0",
+      "clipId": "clip-5",
+      "source": "script",
+      "text": "서버동과 변전소, 냉각 설비를\n하나의 캠퍼스로 설계할 기회도",
+      "startFrame": 0,
+      "endFrame": 153,
+      "font": "gothic",
+      "size": 48,
+      "color": "#ffffff",
+      "position": "bottom",
+      "background": false,
+      "outlineWidth": 1,
+      "outlineColor": "#112c35",
+      "y": 92,
+      "x": 50
+    },
+    {
+      "id": "clip-5-caption-1",
+      "clipId": "clip-5",
+      "source": "script",
+      "text": "생깁니다.",
+      "startFrame": 153,
+      "endFrame": 183,
+      "font": "gothic",
+      "size": 48,
+      "color": "#ffffff",
+      "position": "bottom",
+      "background": false,
+      "outlineWidth": 1,
+      "outlineColor": "#112c35",
+      "y": 92,
+      "x": 50
+    },
+    {
+      "id": "clip-6-caption-0",
+      "clipId": "clip-6",
+      "source": "script",
+      "text": "이런 입지 분산은 수도권에 몰린\n전력 수요를 나누는 방향이기도",
+      "startFrame": 0,
+      "endFrame": 138,
+      "font": "gothic",
+      "size": 48,
+      "color": "#ffffff",
+      "position": "bottom",
+      "background": false,
+      "outlineWidth": 1,
+      "outlineColor": "#112c35",
+      "y": 92,
+      "x": 50
+    },
+    {
+      "id": "clip-6-caption-1",
+      "clipId": "clip-6",
+      "source": "script",
+      "text": "하죠.",
+      "startFrame": 138,
+      "endFrame": 154,
+      "font": "gothic",
+      "size": 48,
+      "color": "#ffffff",
+      "position": "bottom",
+      "background": false,
+      "outlineWidth": 1,
+      "outlineColor": "#112c35",
+      "y": 92,
+      "x": 50
+    },
+    {
+      "id": "clip-7-caption-0",
+      "clipId": "clip-7",
+      "source": "script",
+      "text": "물론 조건은 있습니다.",
+      "startFrame": 0,
+      "endFrame": 65,
+      "font": "gothic",
+      "size": 48,
+      "color": "#ffffff",
+      "position": "bottom",
+      "background": false,
+      "outlineWidth": 1,
+      "outlineColor": "#112c35",
+      "y": 92,
+      "x": 50
+    },
+    {
+      "id": "clip-7-caption-1",
+      "clipId": "clip-7",
+      "source": "script",
+      "text": "계통 연결, 냉각과 용수,\n통신망을 검증해야 합니다.",
+      "startFrame": 65,
+      "endFrame": 214,
+      "font": "gothic",
+      "size": 48,
+      "color": "#ffffff",
+      "position": "bottom",
+      "background": false,
+      "outlineWidth": 1,
+      "outlineColor": "#112c35",
+      "y": 92,
+      "x": 50
+    },
+    {
+      "id": "clip-8-caption-0",
+      "clipId": "clip-8",
+      "source": "script",
+      "text": "호남이 주목받는 이유.",
+      "startFrame": 0,
+      "endFrame": 57,
+      "font": "gothic",
+      "size": 48,
+      "color": "#ffffff",
+      "position": "bottom",
+      "background": false,
+      "outlineWidth": 1,
+      "outlineColor": "#112c35",
+      "y": 92,
+      "x": 50
+    },
+    {
+      "id": "clip-8-caption-1",
+      "clipId": "clip-8",
+      "source": "script",
+      "text": "땅만 고르는 게 아니라, 에너지와\n건축을 함께 설계하기 때문입니다.",
+      "startFrame": 57,
+      "endFrame": 221,
+      "font": "gothic",
+      "size": 48,
+      "color": "#ffffff",
+      "position": "bottom",
+      "background": false,
+      "outlineWidth": 1,
+      "outlineColor": "#112c35",
+      "y": 92,
+      "x": 50
+    }
+  ]
+}
