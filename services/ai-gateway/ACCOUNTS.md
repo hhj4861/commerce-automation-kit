@@ -41,3 +41,11 @@ The service records provider/subject/state, not conversation transcripts. Hanmad
 - Shared-host CI tests the real pinned Caddy container routing.
 
 No production account, provider key, OAuth grant or live billing is exercised by automated fixtures.
+
+## Shared client and Festa
+
+`@cak/litellm-client` 0.2 exports `createAccountClient({baseUrl, apiKey, subject})`. Applications supply their own verified server identity; the service derives platform from its distinct key. The client validates public records, exact device-login URL, model selection and rechecks connection state for every text/JSON generation. Hanmadi and Festa use the same versioned library. No shared login or shared personal credential is introduced.
+
+Festa's optional personal connection is bound to a signed HttpOnly browser session (30 days), not a cross-device user account. Its connect requests include `ttlSeconds` equal to the remaining session lifetime. The service clears encrypted secrets/challenges after expiry, including when the browser never returns, and refuses late refresh writes. Existing identified Hanmadi accounts without TTL are unchanged. The database adds a nullable `expires` column automatically; back up the existing volume before upgrade. An expired record remains as non-secret metadata until disconnected.
+
+Structured completions accept bounded `max_tokens` (1–2000) and `response_format: json_schema`. Both are passed to pinned LiteLLM; provider refusal, truncation or schema incompatibility fails visibly with no fallback. Festa additionally validates actual travel rules on output. Default text callers retain the previous worker input and output limits.

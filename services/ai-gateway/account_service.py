@@ -25,7 +25,9 @@ class Accounts:
         self.root.chmod(0o700)
         self.cipher = Fernet(key.encode())
         with self.db() as db:
-            db.execute('CREATE TABLE IF NOT EXISTS accounts (id TEXT PRIMARY KEY, platform TEXT, subject TEXT, provider TEXT, state TEXT, secret BLOB, challenge BLOB, updated REAL)')
+            db.execute('CREATE TABLE IF NOT EXISTS accounts (id TEXT PRIMARY KEY, platform TEXT, subject TEXT, provider TEXT, state TEXT, secret BLOB, challenge BLOB, updated REAL, expires REAL)')
+            if 'expires' not in {r['name'] for r in db.execute('PRAGMA table_info(accounts)')}:
+                db.execute('ALTER TABLE accounts ADD COLUMN expires REAL')
 
     @contextmanager
     def db(self):
@@ -50,7 +52,12 @@ class Accounts:
             raise ValueError('Credential binding mismatch')
         return data['value']
 
+    def purge_expired(self):
+        with self.db() as db:
+            db.execute("UPDATE accounts SET state='expired',secret=NULL,challenge=NULL WHERE expires IS NOT NULL AND expires <= ? AND state != 'disconnected'", (time.time(),))
+
     def get(self, id, scope=None):
+        self.purge_expired()
         with self.db() as db:
             row = db.execute('SELECT * FROM accounts WHERE id=?', (id,)).fetchone()
         if row is None or (scope and (row['platform'], row['subject']) != scope):
@@ -58,25 +65,26 @@ class Accounts:
         return dict(row)
 
     def list(self, scope):
+        self.purge_expired()
         with self.db() as db:
             return [dict(r) for r in db.execute('SELECT * FROM accounts WHERE platform=? AND subject=? AND state != ? ORDER BY updated', (*scope, 'disconnected'))]
 
-    def create(self, scope, provider, secret=None):
+    def create(self, scope, provider, secret=None, ttl_seconds=None):
         # One unfinished/connected record per provider and platform subject.
         with self.db() as db:
             db.execute('BEGIN IMMEDIATE')
             if db.execute('SELECT 1 FROM accounts WHERE platform=? AND subject=? AND provider=? AND state != ?', (*scope, provider, 'disconnected')).fetchone():
                 raise HTTPException(409, 'disconnect_before_reconnecting')
             id = uuid.uuid4().hex
-            db.execute('INSERT INTO accounts VALUES (?,?,?,?,?,?,?,?)', (id, *scope, provider, 'authorizing', self.seal(id, secret) if secret else None, None, time.time()))
+            db.execute('INSERT INTO accounts (id,platform,subject,provider,state,secret,challenge,updated,expires) VALUES (?,?,?,?,?,?,?,?,?)', (id, *scope, provider, 'authorizing', self.seal(id, secret) if secret else None, None, time.time(), time.time() + ttl_seconds if ttl_seconds else None))
         return self.get(id)
 
     def update(self, id, *, state=None, secret=None, challenge=None):
         with self.db() as db:
             # Serialize state checks with revocation before encrypting refreshes.
             db.execute('BEGIN IMMEDIATE')
-            row = db.execute('SELECT state FROM accounts WHERE id=?', (id,)).fetchone()
-            if row is None or row['state'] == 'disconnected':
+            row = db.execute('SELECT state,expires FROM accounts WHERE id=?', (id,)).fetchone()
+            if row is None or row['state'] == 'disconnected' or (row['expires'] is not None and row['expires'] <= time.time()):
                 raise HTTPException(409, 'connection_disconnected')
             if secret is not None:
                 db.execute('UPDATE accounts SET secret=? WHERE id=?', (self.seal(id, secret), id))
@@ -123,9 +131,17 @@ def create_app(env=None, runner=None):
         raise ValueError('Explicit provider model allowlists required')
     store = Accounts(env['ACCOUNT_DATA_DIR'], env['ACCOUNT_ENCRYPTION_KEY'])
     tasks = {}
+    async def cleanup():
+        while True:
+            store.purge_expired()
+            await asyncio.sleep(60)
+
     @asynccontextmanager
     async def lifespan(app):
+        cleaner = asyncio.create_task(cleanup())
         yield
+        cleaner.cancel()
+        await asyncio.gather(cleaner, return_exceptions=True)
         for task in tuple(tasks.values()):
             task.cancel()
         await asyncio.gather(*tuple(tasks.values()), return_exceptions=True)
@@ -144,13 +160,13 @@ def create_app(env=None, runner=None):
                 env=child_env, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
             try:
                 stdout, _ = await asyncio.wait_for(proc.communicate(json.dumps(messages).encode()), 920 if action == 'connect' else 32)
-                if len(stdout) > 20000:
+                if len(stdout) > 64000:
                     raise ValueError('Invalid worker output')
                 result = json.loads(stdout)
                 if proc.returncode != 0:
                     raise HTTPException(result.get('status', 502), result.get('error', 'provider_error'))
                 # A revoked connection cannot deliver a late response.
-                if store.get(id)['state'] == 'disconnected':
+                if store.get(id)['state'] != 'connected':
                     raise HTTPException(409, 'connection_disconnected')
                 return result
             except (asyncio.TimeoutError, asyncio.CancelledError) as error:
@@ -220,7 +236,10 @@ def create_app(env=None, runner=None):
         # Refuse excess pending jobs before allocating durable state.
         if len(tasks) >= 8:
             raise HTTPException(429, 'connection_capacity')
-        row = store.create(identity, provider, {'api_key': key} if key else None)
+        ttl = data.get('ttlSeconds')
+        if ttl is not None and (type(ttl) is not int or not 60 <= ttl <= 2592000):
+            raise HTTPException(400, 'invalid_expiry')
+        row = store.create(identity, provider, {'api_key': key} if key else None, ttl)
         task = asyncio.create_task(connect_job(row['id'], provider))
         tasks[row['id']] = task
         task.add_done_callback(lambda _: tasks.pop(row['id'], None))
@@ -251,7 +270,18 @@ def create_app(env=None, runner=None):
         messages = data.get('messages')
         if not isinstance(messages, list) or not 1 <= len(messages) <= 21 or any(not isinstance(m, dict) or m.get('role') not in ('system', 'user', 'assistant') or not isinstance(m.get('content'), str) or not 1 <= len(m['content']) <= 8000 for m in messages):
             raise HTTPException(400, 'invalid_messages')
-        result = await run('chat', id, model, messages)
+        options = {}
+        if 'response_format' in data:
+            format = data['response_format']
+            if not isinstance(format, dict) or format.get('type') != 'json_schema' or not isinstance(format.get('json_schema'), dict) or not isinstance(format['json_schema'].get('schema'), dict):
+                raise HTTPException(400, 'invalid_response_format')
+            options['response_format'] = format
+        if 'max_tokens' in data:
+            if type(data['max_tokens']) is not int or not 1 <= data['max_tokens'] <= 2000:
+                raise HTTPException(400, 'invalid_max_tokens')
+            options['max_tokens'] = data['max_tokens']
+        # Legacy text callers keep the existing worker input contract.
+        result = await run('chat', id, model, {'messages': messages, **options} if options and options != {'max_tokens': 700} else messages)
         return {'choices': [{'message': {'role': 'assistant', 'content': result['reply']}}]}
 
     return app

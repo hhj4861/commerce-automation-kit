@@ -16,7 +16,7 @@
     "test:language-flow": "node scripts/language-flow-smoke.mjs"
   },
   "dependencies": {
-    "@cak/litellm-client": "file:vendor/cak-litellm-client-0.1.0.tgz",
+    "@cak/litellm-client": "file:vendor/cak-litellm-client-0.2.0.tgz",
     "next": "16.2.10",
     "react": "19.2.4",
     "react-dom": "19.2.4"
