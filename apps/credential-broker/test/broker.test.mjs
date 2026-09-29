@@ -64,6 +64,24 @@ test('GitHub response is scoped, uncached, and has no CORS header', async () => 
   assert.equal(result.headers.get('cache-control'), 'no-store');
   assert.equal(result.headers.get('access-control-allow-origin'), null);
 });
+test('deployment route returns one key, runtime cannot retrieve deployment tokens', async () => {
+  const ref = 'refs/heads/deploy/hanmadi';
+  const identity = { ...claims(), ref, sub: `${SUBJECT_PREFIX}:ref:${ref}`, event_name: 'push',
+    workflow_ref: `${REPOSITORY}/.github/workflows/platform-deploy.yml@${ref}` };
+  const config = { ...env(), GITHUB_DEPLOY_ALLOWED_REFS: ref,
+    SS_DEPLOY_VERCEL_TOKEN: { get: async () => 'fixture-vercel' },
+    SS_DEPLOY_CLOUDFLARE_API_TOKEN: { get: async () => 'fixture-cloudflare' } };
+  const response = await handleRequest(request('/github/secrets'), config, { github: async () => identity });
+  assert.equal(response.status, 200);
+  assert.deepEqual((await response.json()).values, { DEPLOY_VERCEL_TOKEN: 'fixture-vercel' });
+  const runtime = await handleRequest(request('/runner/secrets'), config, verify());
+  assert.equal(runtime.status, 200);
+  assert.doesNotMatch(await runtime.text(), /fixture-vercel|fixture-cloudflare|DEPLOY_/);
+  delete config.SS_DEPLOY_VERCEL_TOKEN;
+  const missing = await handleRequest(request('/github/secrets'), config, { github: async () => identity });
+  assert.equal(missing.status, 503);
+  assert.doesNotMatch(await missing.text(), /fixture-/);
+});
 test('missing required key fails whole response without plaintext errors', async () => {
   const config = env(); delete config.SS_NAVER_CLIENT_ID;
   const result = await handleRequest(request('/github/secrets'), config, verify());

@@ -9,6 +9,12 @@ export const KEYWORD_KEYS = [
   'TELEGRAM_CHAT_ID', 'SHOPSHORTS_CLOUD_URL', 'SHOPSHORTS_TOKEN',
 ];
 export const GITHUB_KEYS = [...KEYWORD_KEYS, 'ELEVENLABS_API_KEY'];
+export const DEPLOYMENT_KEYS = ['DEPLOY_CLOUDFLARE_API_TOKEN', 'DEPLOY_VERCEL_TOKEN'];
+export const DEPLOYMENT_REFS = {
+  'refs/heads/deploy/shopshorts': ['DEPLOY_CLOUDFLARE_API_TOKEN'],
+  'refs/heads/deploy/firstframe': ['DEPLOY_CLOUDFLARE_API_TOKEN'],
+  'refs/heads/deploy/hanmadi': ['DEPLOY_VERCEL_TOKEN'],
+};
 export const STATIC_KEYS = [...GITHUB_KEYS,
   'UPLOAD_POST_API_KEY', 'UPLOAD_POST_USER', 'PEXELS_API_KEY', 'GEMINI_API_KEY',
   'YOUTUBE_API_KEY', 'GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET',
@@ -25,6 +31,17 @@ export const WORKFLOW_KEYS = {
 };
 
 export function authorizeGithub(claims, env) {
+  if (Object.hasOwn(DEPLOYMENT_REFS, claims.ref || '')) {
+    const file = 'platform-deploy.yml';
+    if (claims.repository !== REPOSITORY || claims.repository_id !== '1310729493' ||
+        claims.repository_owner_id !== '71001056' || claims.runner_environment !== 'github-hosted' ||
+        !(env.GITHUB_DEPLOY_ALLOWED_REFS || '').split(',').includes(claims.ref) ||
+        !['push', 'workflow_dispatch'].includes(claims.event_name) ||
+        claims.sub !== `${SUBJECT_PREFIX}:ref:${claims.ref}` ||
+        claims.workflow_ref !== `${REPOSITORY}/.github/workflows/${file}@${claims.ref}` ||
+        (claims.job_workflow_ref && claims.job_workflow_ref !== claims.workflow_ref)) throw new Error('unauthorized');
+    return { file, keys: DEPLOYMENT_REFS[claims.ref] };
+  }
   const refs = (env.GITHUB_ALLOWED_REFS || 'refs/heads/main').split(',');
   if (claims.repository !== REPOSITORY || claims.repository_id !== '1310729493' ||
       claims.repository_owner_id !== '71001056' || !refs.includes(claims.ref) ||

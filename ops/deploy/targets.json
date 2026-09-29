@@ -1,0 +1,55 @@
+{
+  "repository": "hhj4861/commerce-automation-kit",
+  "targets": {
+    "shopshorts": {
+      "branch": "deploy/shopshorts",
+      "driver": "pages",
+      "directory": "apps/shopshorts",
+      "output": "public",
+      "project": "shopshorts-dash",
+      "account": "8707f7095965c1c134cd93e0b68248ca",
+      "paths": ["apps/shopshorts/", "package.json", "package-lock.json"]
+    },
+    "hanmadi": {
+      "branch": "deploy/hanmadi",
+      "driver": "vercel",
+      "directory": "apps/hanmadi",
+      "project": "prj_xJ5tTXyMYNV6qL1fVnWxFBuIRoRf",
+      "organization": "team_RUHKd04LgBmYVYUwwRTJlW8b",
+      "paths": ["apps/hanmadi/"]
+    },
+    "firstframe": {
+      "branch": "deploy/firstframe",
+      "driver": "pages",
+      "directory": "apps/firstframe",
+      "output": "dist",
+      "project": "firstframe-showcase",
+      "account": "8707f7095965c1c134cd93e0b68248ca",
+      "paths": ["apps/firstframe/", "packages/showcase-site/", "packages/contracts/", "package.json", "package-lock.json"]
+    },
+    "litellm": {
+      "branch": "deploy/litellm",
+      "driver": "gcp",
+      "directory": "services/ai-gateway",
+      "project": "replay-live-508202",
+      "instance": "shared-ai",
+      "zone": "us-central1-a",
+      "paths": ["services/ai-gateway/gateway.py", "services/ai-gateway/subscriptions.py", "services/ai-gateway/subscription_runtime.py", "services/ai-gateway/compose.yaml", "services/ai-gateway/.env.example"]
+    }
+  },
+  "external": {
+    "festa": {
+      "repository": "hhj4861/venture-studio",
+      "branch": "feature/agent-test",
+      "directory": "ventures/market/party-festival-guide/app",
+      "project": "festacheck",
+      "deployment": "manual; workflow belongs in that repository"
+    }
+  },
+  "unconfigured": {
+    "ai-accounts": "Independent server release; not restarted by a LiteLLM release.",
+    "dify": "Independent server release with database migrations; retain its current deployment process.",
+    "shopshorts-workers": "Local production workers are not replaced by the Pages deployment.",
+    "credential-broker": "Bootstrap trust service; deploy its reviewed policy separately before enabling web release branches."
+  }
+}

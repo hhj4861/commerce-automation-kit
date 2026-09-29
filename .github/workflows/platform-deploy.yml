@@ -1,0 +1,78 @@
+name: Platform deployment
+on:
+  push:
+    branches: [deploy/shopshorts, deploy/hanmadi, deploy/firstframe, deploy/litellm]
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Select the matching deployment branch in Use workflow from
+        required: true
+        type: choice
+        options: [shopshorts, hanmadi, firstframe, litellm]
+permissions:
+  contents: read
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      matrix: ${{ steps.plan.outputs.matrix }}
+      ready: ${{ steps.plan.outputs.ready }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - id: plan
+        run: |
+          test "$GITHUB_REF_PROTECTED" = true || { echo '::error::Deployment branch must require pull requests'; exit 1; }
+          node ops/deploy/plan.mjs
+  deploy:
+    needs: plan
+    if: needs.plan.outputs.ready == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      id-token: write
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
+    concurrency:
+      group: platform-production-${{ matrix.name }}
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate deployment code
+        run: |
+          node --test ops/deploy/test.mjs
+          python3 -m unittest discover -s ops/deploy -p 'test_*.py'
+      - name: Load only this platform's credentials from Cloudflare
+        if: matrix.driver != 'gcp'
+        env:
+          CAK_SECRETS_URL: ${{ vars.CAK_SECRETS_URL }}
+        run: node apps/credential-broker/github-client.mjs
+      - name: Check GCP identity configuration
+        if: matrix.driver == 'gcp'
+        env:
+          PROVIDER: ${{ vars.GCP_DEPLOY_WIF_PROVIDER }}
+          SERVICE_ACCOUNT: ${{ vars.GCP_DEPLOY_SERVICE_ACCOUNT }}
+        run: |
+          test -n "$PROVIDER" || { echo '::error::Configure GCP_DEPLOY_WIF_PROVIDER'; exit 1; }
+          test -n "$SERVICE_ACCOUNT" || { echo '::error::Configure GCP_DEPLOY_SERVICE_ACCOUNT'; exit 1; }
+      - uses: google-github-actions/auth@v3
+        if: matrix.driver == 'gcp'
+        with:
+          workload_identity_provider: ${{ vars.GCP_DEPLOY_WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOY_SERVICE_ACCOUNT }}
+      - uses: google-github-actions/setup-gcloud@v3
+        if: matrix.driver == 'gcp'
+      - name: Deploy the exact triggering revision
+        env:
+          TARGET: ${{ matrix.name }}
+        run: node ops/deploy/deploy.mjs "$TARGET"
