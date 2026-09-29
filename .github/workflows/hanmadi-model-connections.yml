@@ -30,3 +30,19 @@ jobs:
         working-directory: apps/hanmadi
       - run: node scripts/model-connections-smoke.mjs
         working-directory: apps/hanmadi
+  native-runtime:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build pinned native account runtime
+        run: docker build -f services/ai-gateway/Dockerfile.accounts -t cak-native-accounts services/ai-gateway
+      - name: Verify official binary and isolated account lifecycle
+        run: |
+          docker run --rm --read-only --tmpfs /tmp --cap-drop ALL --security-opt no-new-privileges \
+            -v "$PWD/services/ai-gateway:/accounts:ro" -e PYTHONDONTWRITEBYTECODE=1 -e PYTHONPATH=/accounts -e CLAUDE_CONFIG_DIR=/tmp/runtime-check \
+            cak-native-accounts sh -c '
+              claude --version &&
+              python -m unittest discover -s tests -p test_accounts.py -v &&
+              python -m unittest discover -s tests -p test_claude_code.py -v
+            '

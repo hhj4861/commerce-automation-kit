@@ -14,11 +14,18 @@ from account_service import Accounts
 def execute(action, id, model, messages):
     if importlib.metadata.version('litellm') != '1.102.1':
         raise RuntimeError('Pinned LiteLLM required')
-    store = Accounts(os.environ['ACCOUNT_DATA_DIR'], os.environ['ACCOUNT_ENCRYPTION_KEY'])
+    store = Accounts(os.environ['ACCOUNT_DATA_DIR'], os.environ['ACCOUNT_ENCRYPTION_KEY'], os.environ.get('ACCOUNT_CLAUDE_CONFIG_ROOT'))
     with store.lock(id), tempfile.TemporaryDirectory(prefix='account-auth-') as temp:
         row = store.get(id)
         if row['state'] == 'disconnected':
             raise RuntimeError('Disconnected')
+        secret = store.unseal(id, row['secret']) or {}
+        if row['provider'] == 'claude' and secret.get('kind') == 'claude-code':
+            from claude_code import connect, chat
+            binary = os.environ.get('ACCOUNT_CLAUDE_BINARY', '/usr/local/bin/claude')
+            if action == 'connect':
+                return connect(store, id, binary, store.claude_root)
+            return chat(store, id, model, messages, binary, store.claude_root)
         import litellm
         litellm.set_verbose = False
         litellm.turn_off_message_logging = True
@@ -77,7 +84,7 @@ def main():
         state = 'expired' if status in (401, 403) else 'quota_exceeded' if status == 429 else 'error'
         if status != 409:  # A busy lock must not invalidate the in-flight owner.
             try:
-                store = Accounts(os.environ['ACCOUNT_DATA_DIR'], os.environ['ACCOUNT_ENCRYPTION_KEY'])
+                store = Accounts(os.environ['ACCOUNT_DATA_DIR'], os.environ['ACCOUNT_ENCRYPTION_KEY'], os.environ.get('ACCOUNT_CLAUDE_CONFIG_ROOT'))
                 store.update(id, state=state, challenge={})
             except Exception:
                 pass

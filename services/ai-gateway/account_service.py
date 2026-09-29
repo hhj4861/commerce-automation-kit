@@ -8,6 +8,7 @@ import os
 from pathlib import Path
 import re
 import sqlite3
+import signal
 import subprocess
 import sys
 import time
@@ -19,7 +20,10 @@ from fastapi.responses import JSONResponse
 
 
 class Accounts:
-    def __init__(self, directory, key):
+    def __init__(self, directory, key, claude_root=None):
+        if claude_root and not Path(claude_root).is_absolute():
+            raise ValueError('Absolute Claude Code profile root required')
+        self.claude_root = claude_root
         self.root = Path(directory)
         self.root.mkdir(parents=True, exist_ok=True, mode=0o700)
         self.root.chmod(0o700)
@@ -54,7 +58,39 @@ class Accounts:
 
     def purge_expired(self):
         with self.db() as db:
+            expired = [r['id'] for r in db.execute("SELECT id FROM accounts WHERE expires IS NOT NULL AND expires <= ? AND state NOT IN ('disconnected','expired')", (time.time(),))]
             db.execute("UPDATE accounts SET state='expired',secret=NULL,challenge=NULL WHERE expires IS NOT NULL AND expires <= ? AND state != 'disconnected'", (time.time(),))
+
+        from claude_code import remove_profile
+        for id in expired:
+            remove_profile(self.claude_root, id)
+
+    def submit_code(self, id, scope, code):
+        from claude_code import code_for_challenge
+        self.get(id, scope)
+        with self.db() as db:
+            db.execute('BEGIN IMMEDIATE')
+            row = db.execute('SELECT * FROM accounts WHERE id=?', (id,)).fetchone()
+            challenge = self.unseal(id, row['challenge']) or {}
+            secret = self.unseal(id, row['secret']) or {}
+            if (row['provider'] != 'claude' or secret.get('kind') != 'claude-code'
+                    or row['state'] != 'authorizing' or challenge.get('expiresAt', 0) <= time.time()
+                    or (row['expires'] is not None and row['expires'] <= time.time()) or challenge.get('submitted')):
+                raise HTTPException(409, 'authorization_unavailable')
+            challenge.update(submittedCode=code_for_challenge(code, challenge), submitted=True)
+            db.execute('UPDATE accounts SET challenge=? WHERE id=?', (self.seal(id, challenge), id))
+
+    def take_code(self, id):
+        with self.db() as db:
+            db.execute('BEGIN IMMEDIATE')
+            row = db.execute('SELECT state,challenge,expires FROM accounts WHERE id=?', (id,)).fetchone()
+            if not row or row['state'] != 'authorizing' or (row['expires'] is not None and row['expires'] <= time.time()):
+                return None
+            challenge = self.unseal(id, row['challenge']) or {}
+            code = challenge.pop('submittedCode', None)
+            if code:
+                db.execute('UPDATE accounts SET challenge=? WHERE id=?', (self.seal(id, challenge), id))
+            return code if challenge.get('expiresAt', 0) > time.time() else None
 
     def get(self, id, scope=None):
         self.purge_expired()
@@ -117,7 +153,7 @@ def public_record(store, row, models):
     result = {'id': row['id'], 'provider': row['provider'], 'state': state,
               'models': models.get(row['provider'], []) if state == 'connected' else []}
     if challenge and challenge.get('expiresAt', 0) > time.time():
-        result['challenge'] = challenge
+        result['challenge'] = {k: challenge[k] for k in ('url', 'code', 'expiresAt', 'kind', 'submitted') if k in challenge}
     return result
 
 
@@ -129,11 +165,32 @@ def create_app(env=None, runner=None):
         raise ValueError('Strong per-platform keys required')
     if set(models) != {'codex', 'claude'} or any(not isinstance(v, list) or not v or any(not isinstance(m, str) or not re.fullmatch(r'[a-zA-Z0-9.-]{1,100}', m) for m in v) for v in models.values()):
         raise ValueError('Explicit provider model allowlists required')
-    store = Accounts(env['ACCOUNT_DATA_DIR'], env['ACCOUNT_ENCRYPTION_KEY'])
+    store = Accounts(env['ACCOUNT_DATA_DIR'], env['ACCOUNT_ENCRYPTION_KEY'], env.get('ACCOUNT_CLAUDE_CONFIG_ROOT'))
     tasks = {}
+    processes = {}
+
+    async def stop_processes(id):
+        for proc in tuple(processes.get(id, ())):
+            if proc.returncode is None:
+                try:
+                    os.killpg(proc.pid, signal.SIGKILL)
+                except ProcessLookupError:
+                    pass
+                await proc.wait()
+
     async def cleanup():
         while True:
             store.purge_expired()
+            from claude_code import remove_profile
+            with store.db() as db:
+                expired = [r['id'] for r in db.execute("SELECT id FROM accounts WHERE state IN ('expired','disconnected')")]
+            for id in expired:
+                task = tasks.get(id)
+                if task:
+                    task.cancel()
+                    await asyncio.gather(task, return_exceptions=True)
+                await stop_processes(id)
+                remove_profile(store.claude_root, id)
             await asyncio.sleep(60)
 
     @asynccontextmanager
@@ -145,6 +202,8 @@ def create_app(env=None, runner=None):
         for task in tuple(tasks.values()):
             task.cancel()
         await asyncio.gather(*tuple(tasks.values()), return_exceptions=True)
+        for id in tuple(processes):
+            await stop_processes(id)
     app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None, lifespan=lifespan)
     app.state.store = store
     slots = {action: asyncio.Semaphore(8) for action in ('connect', 'chat')}
@@ -155,9 +214,11 @@ def create_app(env=None, runner=None):
                 return await runner(action, id, model, messages, store)
             child_env = {k: env[k] for k in ('PATH', 'LANG', 'SSL_CERT_FILE') if k in env}
             child_env.update({k: env[k] for k in ('ACCOUNT_DATA_DIR', 'ACCOUNT_ENCRYPTION_KEY')})
+            child_env.update({k: env[k] for k in ('ACCOUNT_CLAUDE_CONFIG_ROOT', 'ACCOUNT_CLAUDE_BINARY') if k in env})
             child_env.update(LITELLM_TELEMETRY='False', PYTHONNOUSERSITE='1')
             proc = await asyncio.create_subprocess_exec(sys.executable, str(Path(__file__).with_name('account_worker.py')), action, id, model,
-                env=child_env, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+                start_new_session=True, env=child_env, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+            processes.setdefault(id, set()).add(proc)
             try:
                 stdout, _ = await asyncio.wait_for(proc.communicate(json.dumps(messages).encode()), 920 if action == 'connect' else 32)
                 if len(stdout) > 64000:
@@ -171,13 +232,23 @@ def create_app(env=None, runner=None):
                 return result
             except (asyncio.TimeoutError, asyncio.CancelledError) as error:
                 if proc.returncode is None:
-                    proc.kill()
+                    try:
+                        os.killpg(proc.pid, signal.SIGKILL)
+                    except ProcessLookupError:
+                        pass
                 await proc.communicate()
                 if isinstance(error, asyncio.CancelledError):
                     raise
                 raise HTTPException(504, 'provider_timeout') from None
             except (ValueError, KeyError):
                 raise HTTPException(502, 'provider_error') from None
+            finally:
+                processes[id].discard(proc)
+                if not processes[id]:
+                    processes.pop(id, None)
+                if store.get(id)['state'] in ('expired', 'disconnected'):
+                    from claude_code import remove_profile
+                    remove_profile(store.claude_root, id)
 
     async def connect_job(id, provider):
         try:
@@ -188,6 +259,10 @@ def create_app(env=None, runner=None):
                     store.update(id, state='error', challenge={})
             except HTTPException:
                 pass  # Explicitly disconnected while the provider was running.
+        finally:
+            if provider == 'claude' and store.get(id)['state'] != 'connected':
+                from claude_code import remove_profile
+                remove_profile(store.claude_root, id)
 
     def scope(req):
         supplied = req.headers.get('authorization', '')
@@ -229,7 +304,12 @@ def create_app(env=None, runner=None):
         provider, key = data.get('provider'), data.get('apiKey')
         if provider not in models:
             raise HTTPException(400, 'unsupported_provider')
-        if provider == 'claude' and (not isinstance(key, str) or not re.fullmatch(r'sk-ant-api[A-Za-z0-9_-]{20,500}', key)):
+        native = provider == 'claude' and data.get('authMethod') == 'claude-code'
+        if data.get('authMethod') not in (None, 'api-key', 'claude-code') or (provider == 'codex' and data.get('authMethod') is not None):
+            raise HTTPException(400, 'invalid_auth_method')
+        if native and (key is not None or not env.get('ACCOUNT_CLAUDE_CONFIG_ROOT')):
+            raise HTTPException(400 if key is not None else 503, 'claude_code_unavailable')
+        if provider == 'claude' and not native and (not isinstance(key, str) or not re.fullmatch(r'sk-ant-api[A-Za-z0-9_-]{20,500}', key)):
             raise HTTPException(400, 'claude_api_key_required')
         if provider == 'codex' and key is not None:
             raise HTTPException(400, 'use_official_device_login')
@@ -239,11 +319,18 @@ def create_app(env=None, runner=None):
         ttl = data.get('ttlSeconds')
         if ttl is not None and (type(ttl) is not int or not 60 <= ttl <= 2592000):
             raise HTTPException(400, 'invalid_expiry')
-        row = store.create(identity, provider, {'api_key': key} if key else None, ttl)
+        row = store.create(identity, provider, {'kind': 'claude-code'} if native else {'api_key': key} if key else None, ttl)
         task = asyncio.create_task(connect_job(row['id'], provider))
         tasks[row['id']] = task
         task.add_done_callback(lambda _: tasks.pop(row['id'], None))
         return JSONResponse(public_record(store, row, models), status_code=202)
+
+    @app.post('/connections/{id}/authorize')
+    async def authorize(id: str, req: Request):
+        identity = scope(req)
+        data = await body(req)
+        store.submit_code(id, identity, data.get('code'))
+        return JSONResponse({'ok': True}, status_code=202)
 
     @app.delete('/connections/{id}')
     async def disconnect(id: str, req: Request):
@@ -252,6 +339,9 @@ def create_app(env=None, runner=None):
         if task:
             task.cancel()
             await asyncio.gather(task, return_exceptions=True)
+        await stop_processes(id)
+        from claude_code import remove_profile
+        remove_profile(store.claude_root, id)
         return {'ok': True, 'providerGrantRevoked': False}
 
     @app.post('/v1/chat/completions')
