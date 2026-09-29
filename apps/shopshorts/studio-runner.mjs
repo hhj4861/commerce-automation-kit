@@ -1,3 +1,5 @@
+import {explainer} from './lib/explainer-production.js';
+import {narrationAsset} from './public/narration-audio.js';
 import {animated} from './lib/animation-plan.js';
 import {renderAnimationScene} from './studio-animation.mjs';
 import {sceneMediaPrompt} from './lib/scene-media-prompt.js';
@@ -146,16 +148,20 @@ export async function executeStudioTask(job, env, io, checkpoint, { fetcher = fe
   await lintProject(job, work, env, action === 'publish');
   if (action === 'narration') return generateNarration(job, work, env, io, checkpoint, { runCli, command });
   if (action === 'media') {
-    const assets = { ...job.assets };
+    let assets = { ...job.assets };
+    if(explainer(job.brief)&&job.automation&&!job.edit){
+      const prepared={...job,assets,edit:normalizeEdit(job)};
+      assets=(await generateNarration(prepared,work,env,io,checkpoint,{runCli,command})).assets;
+    }
     for (const scene of job.scenes) {
       if (assets[scene.id] || (job.task.sceneIds && !job.task.sceneIds.includes(scene.id))) continue;
       const mediaPrompt=sceneMediaPrompt(job,scene);
       let data, type, providerInfo = {};
       if (animated(job.brief)) {
         if(scene.kind!=='video')throw Error('애니메이션 장면은 영상으로 생성해 주세요.');
-        const result=await renderAnimationScene(job,scene,work,env);
+        const result=await renderAnimationScene(job,explainer(job.brief)&&job.automation&&!job.edit?{...scene,duration:Math.ceil(((narrationAsset({...job,assets},scene,normalizeEdit(job).voice)?.duration||scene.duration)+.3)*FPS)/FPS}:scene,work,env);
         ({data,type}=result);providerInfo={provider:result.provider};
-      } else if (env.SHOPSHORTS_MEDIA_PROVIDER === 'higgsfield') {
+      } else if (job.brief.mediaProvider === 'higgsfield' || env.SHOPSHORTS_MEDIA_PROVIDER === 'higgsfield') {
         const result = await generateHiggsfieldScene(job, scene, env, work, checkpoint, { run: runHiggsfield, fetcher });
         ({ data, type } = result); providerInfo = { provider: result.provider, providerJobId: result.providerJobId };
       } else if (scene.kind === 'image') {

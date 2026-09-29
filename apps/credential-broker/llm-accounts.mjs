@@ -27,6 +27,7 @@ export function publicAccount(value = {}, now = Date.now()) {
     connected: !!value.credential, provider: value.credential ? value.provider || 'codex' : null,
     account: value.credential ? String(value.account || (value.provider === 'claude' ? 'Claude' : 'ChatGPT')).slice(0, 200) : null,
     job: job ? { id: job.id, kind: job.kind, provider: job.provider || value.provider || 'codex', state, deadline: job.deadline,
+      ...(['research','scenario'].includes(job.phase)?{phase:job.phase}:{}),
       error: expired ? '연결 시간이 지났거나 실행기가 중단됐습니다. 다시 시도하세요.' : job.error || null,
       ...(device ? { device: { url: device.url, code: device.code } } : {}),
       ...(manual ? { manual: { url: manual.url }, codeSubmitted: job.codeSubmitted === true } : {}),
@@ -133,7 +134,7 @@ export async function accountAction(env, owner, operation, input = {}, now = Dat
   if (operation === 'scenario' && heartbeat.value.scenario !== true) return problem('시나리오를 지원하는 LLM 실행기를 연결하세요.', 503);
   const provider = operation === 'connect' ? input.provider : value.provider || 'codex';
   if (value.lastKind === operation && value.lastProvider === provider && value.lastRequest > now - 5000) return problem('잠시 후 다시 시도하세요.', 429);
-  const job = { id: operation === 'scenario' ? input.id : crypto.randomUUID(), kind: operation, provider, state: 'queued', createdAt: now, deadline: now + (operation === 'connect' ? 600000 : 240000),
+  const job = { id: operation === 'scenario' ? input.id : crypto.randomUUID(), kind: operation, provider, state: 'queued', createdAt: now, deadline: now + (operation === 'connect' || (operation === 'scenario' && input.brief.workflow==='explainer-v1') ? 600000 : 240000),
     ...(['recommend', 'scenario'].includes(operation) ? { input: input.brief } : {}),
     ...(operation === 'scenario' ? { projectId: input.projectId } : {}) };
   await retainScenario(env, owner, record, now);

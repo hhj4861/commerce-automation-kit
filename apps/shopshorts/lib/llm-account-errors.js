@@ -10,6 +10,7 @@ const messages = Object.freeze({
   CODEX_OUTPUT_INVALID: 'Codex 생성 결과를 읽지 못했습니다. 다시 시도해 주세요.',
   CODEX_REQUEST_FAILED: 'Codex 요청을 완료하지 못했습니다. 잠시 후 다시 시도하고, 반복되면 운영자에게 확인을 요청해 주세요.',
   RECOMMENDATION_REPEATED: '이전 추천과 다른 기획을 완성하지 못했어요. 관심사를 구체화한 뒤 다시 추천받으세요.',
+  SCENARIO_RESEARCH_INVALID: '주제를 뒷받침할 검색 근거를 확인하지 못했어요. 주제를 구체화해 다시 시도해 주세요.',
   SCENARIO_ARC_INVALID: '도입·킬링파트·마무리가 연결된 대본을 완성하지 못했습니다. 시나리오를 다시 생성해 주세요.',
   SCENARIO_DIRECTION_INVALID: '영상의 공통 연출과 장면별 구도를 완성하지 못했어요. 대본을 다시 생성해 주세요.',
   CLAUDE_LOGIN_RUNTIME_MISSING: 'Claude 연결 실행 환경이 준비되지 않았습니다. 운영자에게 확인을 요청해 주세요.',
@@ -29,7 +30,7 @@ export const codexFailure = (code = 'CODEX_REQUEST_FAILED', status = 502) => Obj
 export const accountFailureCode = error => Object.hasOwn(messages, error?.code) ? error.code : 'UNKNOWN';
 export function accountFailureMessage(provider, error) {
   const code = accountFailureCode(error);
-  if (['SCENARIO_ARC_INVALID', 'SCENARIO_DIRECTION_INVALID', 'RECOMMENDATION_REPEATED'].includes(code)) return messages[code];
+  if (['SCENARIO_RESEARCH_INVALID', 'SCENARIO_ARC_INVALID', 'SCENARIO_DIRECTION_INVALID', 'RECOMMENDATION_REPEATED'].includes(code)) return messages[code];
   return provider === 'claude' ? messages[code] || messages.CLAUDE_REQUEST_FAILED
     : code.startsWith('CODEX_') ? messages[code] : messages.CODEX_REQUEST_FAILED;
 }

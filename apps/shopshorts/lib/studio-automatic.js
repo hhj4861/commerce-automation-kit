@@ -25,7 +25,8 @@ export async function startAutomatic(request, env, store, input, call) {
   const result = parseRecommendations(saved.result, true, 'keywords');
   const selected = result.suggestions[input.index];
   const project = {...createProject({...brief, topic: selected.topic, direction: selected.direction, productionStyle:brief.productionStyle||'cinematic'}), id,
-    automation: {version: 1, recommendationId: input.recommendationId, keyword: selected.keyword, sources: result.sources, checkedAt: saved.result.checkedAt}};
+    ...(brief.voiceId?{voicePreference:brief.voiceId}:{}),
+    automation: {version: brief.workflow?2:1, recommendationId: input.recommendationId, keyword: selected.keyword, sources: result.sources, checkedAt: saved.result.checkedAt}};
   try { await store.create(project); }
   catch (error) { const concurrent = await store.get(id); if (concurrent) return {project: concurrent}; throw error; }
   try { return {project: await startScenario(request, env, store, project, {confirm:true}, call)}; }
