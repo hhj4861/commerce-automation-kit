@@ -1,0 +1,235 @@
+.hm.ks {
+  background: #f5f7fc;
+  font-family: "Pretendard", "Apple SD Gothic Neo", system-ui, sans-serif;
+  padding-bottom: 40px;
+}
+.ks .hm-header {
+  max-width: 1460px;
+  margin: auto;
+  padding: 26px 40px;
+  border: 0;
+  background: transparent;
+}
+.ks .hm-main {
+  max-width: 1460px;
+  margin: auto;
+  padding: 10px 40px 40px;
+}
+.ks h1 {
+  font-size: 30px;
+  letter-spacing: -1px;
+}
+.ks h2 {
+  font-size: 18px;
+}
+.ks .hm-brand {
+  font-size: 23px;
+}
+.ks .hm-brand span {
+  font-size: 13px;
+}
+.ks .ks-nav {
+  display: flex;
+  gap: 30px;
+  border-bottom: 1px solid #d4dceb;
+  margin: 28px 0;
+}
+.ks .ks-nav button {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  padding: 12px 0;
+  color: #63718c;
+}
+.ks .ks-nav button[aria-pressed="true"] {
+  color: #3157d5;
+  border-bottom: 3px solid #3157d5;
+  font-weight: 700;
+}
+.ks .ks-form {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+.ks [hidden] {
+  display: none;
+}
+.ks .hm-admin-layout {
+  display: grid;
+  grid-template-columns: 250px minmax(0, 1fr) 280px;
+  gap: 22px;
+  align-items: start;
+}
+.ks .hm-panel {
+  border-radius: 12px;
+  box-shadow: none;
+  background: #fff;
+  padding: 24px;
+  border: 1px solid #dbe2ef;
+  min-width: 0;
+}
+.ks .hm-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.ks .hm-grid label {
+  min-width: 0;
+}
+.ks button {
+  border-radius: 8px;
+}
+.ks textarea,
+.ks input,
+.ks select {
+  border-radius: 6px;
+  background: white;
+  max-width: 100%;
+}
+.ks .hm-draft {
+  text-align: left;
+  border: 0;
+  border-bottom: 1px solid #e4e9f3;
+  border-radius: 0;
+  padding: 16px 12px;
+}
+.ks .hm-draft[aria-pressed="true"] {
+  background: #eaf0ff;
+  border-left: 3px solid #3157d5;
+}
+.ks .hm-row {
+  flex-wrap: wrap;
+}
+.ks .hm-review-unit {
+  border: 0;
+  border-top: 1px solid #e3e8f2;
+  border-radius: 0;
+  padding: 22px 0 10px;
+}
+.ks .hm-review-unit legend {
+  padding: 0 8px 0 0;
+}
+.ks .ks-note {
+  border-left: 3px solid #3157d5;
+  padding-left: 13px;
+  font-size: 13px;
+}
+.ks .ks-source {
+  margin: 0;
+}
+.ks .ks-source summary {
+  cursor: pointer;
+}
+.ks .ks-source summary h2 {
+  display: inline;
+}
+.ks .ks-source[open] summary {
+  margin-bottom: 22px;
+}
+.ks .ks-preview {
+  background: #edf2ff;
+  border-radius: 10px;
+  padding: 20px;
+  margin: 20px 0 25px;
+  overflow-wrap: anywhere;
+}
+.ks .ks-preview strong {
+  display: block;
+  font-size: 22px;
+  font-weight: 500;
+  margin: 12px 0;
+}
+.ks .ks-rail dl {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  font-size: 13px;
+  margin: 0 0 24px;
+}
+.ks .ks-rail dd {
+  margin: 0;
+  text-align: right;
+  font-weight: 600;
+}
+.ks .ks-events {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.ks .ks-events li {
+  padding: 12px 0;
+  border-bottom: 1px solid #e3e8f2;
+  font-size: 13px;
+}
+.ks .ks-candidates article {
+  display: flex;
+  gap: 25px;
+  justify-content: space-between;
+  padding: 22px 0;
+  border-top: 1px solid #e3e8f2;
+}
+.ks .ks-candidates strong {
+  display: block;
+  font-size: 20px;
+  margin-top: 10px;
+}
+.ks .ks-candidates p {
+  margin: 4px 0;
+}
+.ks .ks-candidate-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.ks .ks-tag {
+  color: #355287;
+  background: #edf2ff;
+  border-radius: 4px;
+  font-size: 12px;
+  padding: 4px 8px;
+}
+@media (max-width: 1150px) {
+  .ks .hm-admin-layout {
+    grid-template-columns: 220px minmax(0, 1fr);
+  }
+  .ks .ks-rail {
+    grid-column: 2;
+  }
+}
+@media (max-width: 700px) {
+  .ks .hm-header {
+    padding: 20px;
+  }
+  .ks .hm-main {
+    padding: 5px 20px 30px;
+  }
+  .ks h1 {
+    font-size: 26px;
+  }
+  .ks .hm-admin-layout {
+    grid-template-columns: 1fr;
+  }
+  .ks .ks-rail {
+    grid-column: 1;
+  }
+  .ks .ks-nav {
+    gap: 20px;
+  }
+  .ks .hm-panel {
+    padding: 20px;
+  }
+  .ks .ks-candidates article {
+    flex-direction: column;
+  }
+  .ks .hm-grid {
+    grid-template-columns: 1fr;
+  }
+  .ks .hm-draft {
+    width: 100%;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ks * {
+    transition: none !important;
+  }
+}

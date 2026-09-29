@@ -1,4 +1,7 @@
-import { createHash, randomUUID } from "node:crypto";
+import { createHash } from "node:crypto";
+import { readKnowledge, saveKnowledgeDraft } from "./knowledge-store";
+import type { ContentDraft } from "./knowledge";
+export type { ContentDraft } from "./knowledge";
 import { v2Driver } from "./store";
 import { ConversationError } from "./conversation";
 import {
@@ -75,22 +78,8 @@ export async function saveExpression(
   });
   return { saved, state };
 }
-export type ContentDraft = {
-  id: string;
-  title: string;
-  language: StudyLanguage;
-  scene: string;
-  level: number;
-  sourceUrl: string;
-  rights: string;
-  units: Phrase[];
-  status: "draft" | "published";
-  revision: number;
-  updatedAt: number;
-};
 export async function readContent(): Promise<ContentDraft[]> {
-  const raw = await v2Driver().get("curriculum");
-  return raw ? JSON.parse(raw) : [];
+  return (await readKnowledge()).drafts;
 }
 export async function writeContent(
   draft: Omit<ContentDraft, "id" | "revision" | "updatedAt"> & {
@@ -98,35 +87,7 @@ export async function writeContent(
     revision?: number;
   },
 ) {
-  const db = v2Driver();
-  const id = draft.id ?? randomUUID();
-  for (let attempt = 0; attempt < 8; attempt++) {
-    const raw = await db.get("curriculum");
-    const items: ContentDraft[] = raw ? JSON.parse(raw) : [];
-    const old = items.find((d) => d.id === id);
-    if (draft.id && (!old || old.revision !== draft.revision))
-      throw new ConversationError(
-        409,
-        "다른 관리자가 수정했어요. 새로 불러와 주세요.",
-      );
-    if (!old && items.length >= 200)
-      throw new ConversationError(409, "콘텐츠 보관 한도에 도달했어요.");
-    const updated = {
-      ...draft,
-      id,
-      revision: (old?.revision ?? 0) + 1,
-      updatedAt: Date.now(),
-    };
-    if (
-      await db.cas(
-        "curriculum",
-        raw,
-        JSON.stringify([...items.filter((d) => d.id !== id), updated]),
-      )
-    )
-      return updated;
-  }
-  throw new ConversationError(409, "저장 중 충돌했어요. 다시 시도해 주세요.");
+  return saveKnowledgeDraft(draft);
 }
 export async function publishedUnits(): Promise<Unit[]> {
   return (await readContent())

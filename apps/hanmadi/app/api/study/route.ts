@@ -13,7 +13,15 @@ import {
   changeStudy,
   saveExpression,
   publishedUnits,
+  readContent,
 } from "@/lib/v2-store";
+import {
+  contribute,
+  contributionEpoch,
+  withdrawContributions,
+  type ContributionResult,
+} from "@/lib/knowledge-store";
+import { retrieveKnowledge } from "@/lib/knowledge";
 import {
   isStudyLanguage,
   isLevel,
@@ -44,6 +52,9 @@ export async function POST(req: Request) {
     const b = (await readConversationJson(req)) as Record<string, unknown>;
     if (!b || typeof b.action !== "string")
       throw new ConversationError(400, "요청을 확인해 주세요.");
+    if (b.action === "withdraw-contributions") {
+      return conversationJson(await withdrawContributions(actor));
+    }
     if (b.action === "settings") {
       if (
         (b.autoSave !== undefined && typeof b.autoSave !== "boolean") ||
@@ -174,7 +185,9 @@ export async function POST(req: Request) {
         typeof b.text !== "string" ||
         !b.text.trim() ||
         b.text.length > 1000 ||
-        !["auto", "ko", language].includes(String(b.from))
+        !["auto", "ko", language].includes(String(b.from)) ||
+        (b.shareForLearning !== undefined &&
+          typeof b.shareForLearning !== "boolean")
       )
         throw new ConversationError(
           400,
@@ -187,7 +200,20 @@ export async function POST(req: Request) {
       if (from === "confirm")
         return conversationJson({ needsConfirmation: true });
       await reserveRequest(actor, "chat");
-      const result = await translate(b.text.trim(), language, from);
+      const epoch =
+        b.shareForLearning === true ? await contributionEpoch(actor) : null;
+      const references = retrieveKnowledge(await readContent(), {
+        language,
+        mode: "translation",
+        text: b.text,
+      });
+      const result = await translate(
+        b.text.trim(),
+        language,
+        from,
+        undefined,
+        references,
+      );
       const saved = result.practice
         ? await saveExpression(
             actor,
@@ -197,7 +223,23 @@ export async function POST(req: Request) {
             before.saveEpoch,
           )
         : { saved: false, state: await readStudy(actor) };
-      return conversationJson({ ...result, from, ...saved });
+      let contribution: ContributionResult = "not-requested";
+      if (epoch !== null) {
+        contribution = "no-safe-expression";
+        if (result.practice) {
+          try {
+            contribution = await contribute(
+              actor,
+              language,
+              result.practice,
+              epoch,
+            );
+          } catch {
+            contribution = "unavailable";
+          } // Translation survives, failed collection is explicit.
+        }
+      }
+      return conversationJson({ ...result, from, ...saved, contribution });
     }
     if (b.action === "save-chat") {
       const phrase = parsePhrase(b.phrase);
@@ -248,6 +290,13 @@ export async function POST(req: Request) {
       )
         throw new ConversationError(400, "AI 모델을 선택해 주세요.");
       await reserveRequest(actor, "chat");
+      const references = retrieveKnowledge(await readContent(), {
+        language,
+        mode: "chat",
+        level: profile.level,
+        scene: String(b.scene),
+        text: messages.at(-1)?.content ?? "",
+      });
       return conversationJson({
         reply: await roleplayReply(
           language,
@@ -255,6 +304,8 @@ export async function POST(req: Request) {
           String(b.scene),
           messages,
           selection,
+          undefined,
+          references,
         ),
       });
     }

@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import {
   studyLanguages,
@@ -8,6 +8,12 @@ import {
   type Phrase,
 } from "@/lib/v2";
 import type { ContentDraft } from "@/lib/v2-store";
+import type {
+  Contribution,
+  KnowledgeEvent,
+  KnowledgeMatch,
+} from "@/lib/knowledge";
+type PublicContribution = Omit<Contribution, "actor">;
 async function api(body?: unknown) {
   const res = await fetch("/api/study/admin", {
     method: body ? "POST" : "GET",
@@ -21,6 +27,13 @@ async function api(body?: unknown) {
   return d;
 }
 export function V2Admin() {
+  const [tab, setTab] = useState<"editor" | "inbox" | "preview">("editor");
+  const [contributions, setContributions] = useState<PublicContribution[]>([]);
+  const [events, setEvents] = useState<KnowledgeEvent[]>([]);
+  const [candidateId, setCandidateId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState("");
+  const operation = useRef(false);
   const [drafts, setDrafts] = useState<ContentDraft[]>([]),
     [language, setLanguage] = useState<StudyLanguage>("ja"),
     [scene, setScene] = useState("smalltalk"),
@@ -48,16 +61,23 @@ export function V2Admin() {
         if (active) {
           setDrafts(d.drafts);
           setSearchConfigured(d.searchConfigured);
+          setContributions(d.contributions);
+          setEvents(d.events);
         }
       })
       .catch((e) => {
         if (active) setError(e.message);
+      })
+      .finally(() => {
+        if (active) setLoading(false);
       });
     return () => {
       active = false;
     };
   }, []);
   function edit(d: ContentDraft) {
+    setCandidateId(null);
+    setConfirmed(false);
     setCurrent(d);
     setLanguage(d.language);
     setScene(d.scene);
@@ -74,13 +94,18 @@ export function V2Admin() {
     action: "search" | "generate" | "save",
     status = "draft",
   ) {
-    if (busy) return;
+    if (operation.current || loading) return;
+    operation.current = true;
     setBusy(true);
     setError("");
     setNotice("");
     try {
       const data = await api({
-        action,
+        action:
+          action === "generate" && candidateId
+            ? "generate-contribution"
+            : action,
+        ...(candidateId ? { contributionId: candidateId } : {}),
         language,
         scene,
         level,
@@ -102,9 +127,11 @@ export function V2Admin() {
         edit(data.draft);
         const refreshed = await api();
         setDrafts(refreshed.drafts);
+        setContributions(refreshed.contributions);
+        setEvents(refreshed.events);
         setNotice(
           data.draft.status === "published"
-            ? "게시했어요. 해당 언어·레벨·상황의 학습에 나타나요."
+            ? "게시했어요. 해당 언어·레벨·상황의 학습과 AI 대화에 반영돼요."
             : "초안을 저장했어요. 검수 전에는 학습자에게 보이지 않아요.",
         );
       }
@@ -112,22 +139,65 @@ export function V2Admin() {
       setError(e instanceof Error ? e.message : "처리하지 못했어요.");
     } finally {
       setBusy(false);
+      operation.current = false;
+    }
+  }
+  async function reject(id: string) {
+    if (operation.current) return;
+    operation.current = true;
+    setBusy(true);
+    setError("");
+    setNotice("");
+    try {
+      await api({ action: "reject", contributionId: id });
+      const refreshed = await api();
+      setContributions(refreshed.contributions);
+      setEvents(refreshed.events);
+      setNotice("후보를 반려했어요. 앱 학습에 사용하지 않아요.");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "반려하지 못했어요.");
+    } finally {
+      operation.current = false;
+      setBusy(false);
     }
   }
   return (
-    <div className="hm">
+    <div className="hm ks">
       <header className="hm-header">
         <Link className="hm-brand" href="/study">
-          한마디<span>content studio</span>
+          한마디<span>콘텐츠 스튜디오</span>
         </Link>
-        <Link href="/study">학습 화면으로 →</Link>
+        <Link href="/study">학습 앱 열기</Link>
       </header>
       <main className="hm-main">
-        <span className="hm-eyebrow">CURATED BY PEOPLE, ASSISTED BY AI</span>
         <h1>좋은 대화를, 좋은 수업으로.</h1>
-        <p>
-          언어와 상황에 맞는 원문으로 초안을 만들고, 검수한 표현만 게시하세요.
-        </p>
+        <p>검수한 표현이 레벨별 수업과 AI 대화에 이어집니다.</p>
+        <nav className="ks-nav" aria-label="관리자 메뉴">
+          {(
+            [
+              ["editor", "자료 만들기"],
+              [
+                "inbox",
+                `번역 후보 (${contributions.filter((c) => c.status === "pending").length})`,
+              ],
+              ["preview", "앱 반영 확인"],
+            ] as const
+          ).map(([id, label]) => (
+            <button
+              key={id}
+              disabled={busy}
+              aria-pressed={tab === id}
+              onClick={() => {
+                setTab(id);
+                setError("");
+                setNotice("");
+              }}
+            >
+              {label}
+            </button>
+          ))}
+        </nav>
+        {loading && <p role="status">자료를 불러오는 중이에요.</p>}
         {error && (
           <p className="hm-alert" role="alert">
             {error}
@@ -138,287 +208,579 @@ export function V2Admin() {
             {notice}
           </p>
         )}
-        <div className="hm-admin-layout">
-          <aside className="hm-panel">
-            <div className="hm-row hm-between">
-              <h2>콘텐츠 목록</h2>
-              <button
-                disabled={busy}
-                onClick={() => {
-                  setCurrent(null);
-                  setTitle("");
-                  setUnits([]);
-                  setTranscript("");
-                  setSourceUrl("");
-                  setRights("");
-                  setReviewed(false);
-                  setConfirmed(false);
-                }}
-              >
-                새 초안
-              </button>
+        {tab === "inbox" && (
+          <section className="hm-panel">
+            <h2>사용자가 제공한 번역 후보</h2>
+            <p className="hm-muted">
+              별도 동의한 짧은 표현입니다. 개인정보와 뜻을 검수한 후 교재로
+              가져오세요. 제공 철회 시 연결된 교재도 함께 회수됩니다.
+            </p>
+            {!contributions.length && (
+              <p>
+                아직 제공된 후보가 없어요. 사용자가 번역 화면에서 공용 제공에
+                동의하면 여기에 도착해요.
+              </p>
+            )}
+            <div className="ks-candidates">
+              {contributions
+                .slice()
+                .reverse()
+                .map((c) => (
+                  <article key={c.id}>
+                    <div>
+                      <span className="ks-tag">
+                        {studyLanguages[c.language].name}
+                      </span>
+                      <strong>{c.phrase.text}</strong>
+                      <p>{c.phrase.meaning}</p>
+                      <small>{c.phrase.reading}</small>
+                      <small>
+                        제공 동의:{" "}
+                        {new Date(c.createdAt).toLocaleDateString("ko-KR")} /{" "}
+                        {c.status === "pending"
+                          ? "검수 대기"
+                          : c.status === "converted"
+                            ? "교재로 가져옴"
+                            : "반려됨"}
+                      </small>
+                    </div>
+                    {c.status === "pending" && (
+                      <div className="ks-candidate-actions">
+                        <button
+                          disabled={busy}
+                          onClick={() => {
+                            setCandidateId(c.id);
+                            setCurrent(null);
+                            setLanguage(c.language);
+                            setTitle(c.phrase.meaning.slice(0, 100));
+                            setSourceUrl("");
+                            setTranscript("");
+                            setUnits([]);
+                            setReviewed(false);
+                            setConfirmed(false);
+                            setRights(
+                              "사용자가 공용 학습 예시 제공에 별도 동의함. 개인정보·재사용 가능 여부는 게시 전 검수.",
+                            );
+                            setTab("editor");
+                          }}
+                        >
+                          교재 초안으로 가져오기
+                        </button>
+                        <button
+                          disabled={busy}
+                          onClick={() => void reject(c.id)}
+                        >
+                          반려
+                        </button>
+                      </div>
+                    )}
+                  </article>
+                ))}
             </div>
-            {drafts.length === 0 && <p>첫 수업을 추가해 보세요.</p>}
-            {drafts.map((d) => (
-              <button
-                disabled={busy}
-                className="hm-draft"
-                key={d.id}
-                onClick={() => edit(d)}
-              >
-                <strong>{d.title}</strong>
-                <small>
-                  {studyLanguages[d.language].name} · L{d.level} ·{" "}
-                  {d.status === "published" ? "게시됨" : "초안"}
-                </small>
-              </button>
-            ))}
-          </aside>
-          <div className="hm-stack">
-            <section className="hm-panel">
-              <h2>01. 언어와 상황</h2>
-              <div className="hm-grid">
-                <label>
-                  학습 언어
-                  <select
-                    value={language}
-                    disabled={busy}
-                    onChange={(e) => {
-                      setLanguage(e.target.value as StudyLanguage);
-                      setReviewed(false);
-                    }}
-                  >
-                    {Object.entries(studyLanguages).map(([id, l]) => (
-                      <option key={id} value={id}>
-                        {l.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label>
-                  상황
-                  <select
-                    value={scene}
-                    disabled={busy}
-                    onChange={(e) => {
-                      setScene(e.target.value);
-                      setReviewed(false);
-                    }}
-                  >
-                    {curriculum.scenes.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.title}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label>
-                  연습 레벨
-                  <select
-                    value={level}
-                    disabled={busy}
-                    onChange={(e) => {
-                      setLevel(Number(e.target.value));
-                      setReviewed(false);
-                    }}
-                  >
-                    {curriculum.levels.map((l) => (
-                      <option key={l.id} value={l.id}>
-                        {l.id} · {l.title}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              </div>
-              <details>
-                <summary>YouTube에서 참고 영상 찾기</summary>
-                <p>
-                  공식 검색 결과는 원본을 찾는 데만 사용해요. 영상이나 자막을
-                  자동 다운로드하지 않아요.
-                </p>
-                <label>
-                  검색어
-                  <input
-                    value={query}
-                    maxLength={100}
-                    onChange={(e) => setQuery(e.target.value)}
-                    placeholder="일본어 여행 스몰토크"
-                  />
-                </label>
+          </section>
+        )}
+        {tab === "preview" && <KnowledgePreview />}
+        <fieldset
+          className="ks-form"
+          disabled={busy || loading}
+          hidden={tab !== "editor"}
+        >
+          <div className="hm-admin-layout">
+            <aside className="hm-panel">
+              <div className="hm-row hm-between">
+                <h2>콘텐츠 목록</h2>
                 <button
-                  disabled={busy || !searchConfigured}
-                  onClick={() => void work("search")}
+                  disabled={busy}
+                  onClick={() => {
+                    setCurrent(null);
+                    setTitle("");
+                    setUnits([]);
+                    setTranscript("");
+                    setSourceUrl("");
+                    setRights("");
+                    setReviewed(false);
+                    setConfirmed(false);
+                    setCandidateId(null);
+                  }}
                 >
-                  영상 검색
+                  새 초안
                 </button>
-                {!searchConfigured && (
-                  <p>
-                    공식 검색 API 키 설정이 필요해요. 아래에 출처를 직접 입력할
-                    수 있어요.
-                  </p>
-                )}
-                {videos.map((v) => (
-                  <div className="hm-search-result" key={v.url}>
-                    <a href={v.url} target="_blank" rel="noopener noreferrer">
-                      {v.title} ↗
-                    </a>
-                    <small>{v.channel}</small>
-                    <button
-                      onClick={() => {
-                        setSourceUrl(v.url);
+              </div>
+              <label className="ks-filter">
+                교재 찾기
+                <input
+                  value={filter}
+                  onChange={(e) => setFilter(e.target.value)}
+                  placeholder="제목 또는 언어"
+                />
+              </label>
+              {drafts.length === 0 && <p>첫 수업을 추가해 보세요.</p>}
+              {drafts
+                .filter((d) =>
+                  `${d.title} ${studyLanguages[d.language].name}`.includes(
+                    filter,
+                  ),
+                )
+                .map((d) => (
+                  <button
+                    disabled={busy}
+                    className="hm-draft"
+                    aria-pressed={current?.id === d.id}
+                    key={d.id}
+                    onClick={() => edit(d)}
+                  >
+                    <strong>{d.title}</strong>
+                    <small>
+                      {studyLanguages[d.language].name} · L{d.level} ·{" "}
+                      {d.status === "published" ? "게시됨" : "초안"}
+                    </small>
+                  </button>
+                ))}
+            </aside>
+            <div className="hm-stack">
+              <section className="hm-panel">
+                <h2>언어와 상황</h2>
+                <div className="hm-grid">
+                  <label>
+                    학습 언어
+                    <select
+                      value={language}
+                      disabled={
+                        busy || !!candidateId || !!current?.contributionId
+                      }
+                      onChange={(e) => {
+                        setLanguage(e.target.value as StudyLanguage);
                         setReviewed(false);
                       }}
                     >
-                      출처 주소 선택
-                    </button>
-                  </div>
-                ))}
-              </details>
-            </section>
-            <section className="hm-panel">
-              <h2>02. 사용권이 있는 원문</h2>
-              <label>
-                수업 제목
-                <input
-                  value={title}
-                  maxLength={100}
-                  onChange={(e) => {
-                    setTitle(e.target.value);
-                    setReviewed(false);
-                  }}
-                  placeholder="카페에서 취향을 이야기하기"
-                />
-              </label>
-              <label>
-                참고 영상 주소 (선택)
-                <input
-                  type="url"
-                  value={sourceUrl}
-                  onChange={(e) => {
-                    setSourceUrl(e.target.value);
-                    setReviewed(false);
-                  }}
-                  placeholder="https://www.youtube.com/watch?v=…"
-                />
-              </label>
-              <label>
-                원문 사용권 근거
-                <textarea
-                  value={rights}
-                  maxLength={500}
-                  onChange={(e) => {
-                    setRights(e.target.value);
-                    setConfirmed(false);
-                    setReviewed(false);
-                  }}
-                  placeholder="직접 제작한 원문 또는 권리자로부터 AI 처리·수업 재사용을 허락받은 근거와 날짜"
-                />
-              </label>
-              <label>
-                직접 제공받은 텍스트·SRT·VTT 원문
-                <textarea
-                  className="hm-transcript"
-                  value={transcript}
-                  onChange={(e) => setTranscript(e.target.value)}
-                  maxLength={12000}
-                  placeholder="영상 제작자에게 직접 받은 원문 또는 본인이 제작한 대본을 붙여 넣으세요."
-                />
-              </label>
-              <label className="hm-check">
-                <input
-                  type="checkbox"
-                  checked={confirmed}
-                  onChange={(e) => setConfirmed(e.target.checked)}
-                />
-                이 원문을 AI로 처리하고 학습 표현으로 재사용할 권한을
-                확인했어요.
-              </label>
-              <button
-                className="hm-primary"
-                disabled={busy || !confirmed || transcript.trim().length < 20}
-                onClick={() => void work("generate")}
-              >
-                {busy ? "처리 중…" : "AI로 학습 초안 만들기"}
-              </button>
-              <p className="hm-muted">
-                원문은 초안 생성에만 전달하고 보관하지 않아요. 출처 주소만으로
-                사용권이 확인되는 것은 아니에요.
-              </p>
-            </section>
-            <section className="hm-panel">
-              <h2>03. 표현 검수 · 게시</h2>
-              {units.length === 0 ? (
-                <p>초안을 만들면 여기에서 내용을 수정할 수 있어요.</p>
-              ) : (
-                <>
-                  {units.map((p, i) => (
-                    <fieldset className="hm-review-unit" key={i}>
-                      <legend>표현 {i + 1}</legend>
-                      {(
-                        [
-                          ["text", "학습 언어 표현"],
-                          ["reading", "한글 발음 도움"],
-                          ["meaning", "한국어 뜻"],
-                        ] as const
-                      ).map(([key, label]) => (
-                        <label key={key}>
-                          {label}
-                          <textarea
-                            maxLength={300}
-                            value={p[key]}
-                            onChange={(e) => {
-                              setUnits(
-                                units.map((u, n) =>
-                                  n === i ? { ...u, [key]: e.target.value } : u,
-                                ),
-                              );
-                              setReviewed(false);
-                            }}
-                          />
-                        </label>
+                      {Object.entries(studyLanguages).map(([id, l]) => (
+                        <option key={id} value={id}>
+                          {l.name}
+                        </option>
                       ))}
+                    </select>
+                  </label>
+                  <label>
+                    상황
+                    <select
+                      value={scene}
+                      disabled={busy}
+                      onChange={(e) => {
+                        setScene(e.target.value);
+                        setReviewed(false);
+                      }}
+                    >
+                      {curriculum.scenes.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.title}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    연습 레벨
+                    <select
+                      value={level}
+                      disabled={busy}
+                      onChange={(e) => {
+                        setLevel(Number(e.target.value));
+                        setReviewed(false);
+                      }}
+                    >
+                      {curriculum.levels.map((l) => (
+                        <option key={l.id} value={l.id}>
+                          {l.id} · {l.title}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+                <details>
+                  <summary>YouTube에서 참고 영상 찾기</summary>
+                  <p>
+                    공식 검색 결과는 원본을 찾는 데만 사용해요. 영상이나 자막을
+                    자동 다운로드하지 않아요.
+                  </p>
+                  <label>
+                    검색어
+                    <input
+                      value={query}
+                      maxLength={100}
+                      onChange={(e) => setQuery(e.target.value)}
+                      placeholder="일본어 여행 스몰토크"
+                    />
+                  </label>
+                  <button
+                    disabled={busy || !searchConfigured}
+                    onClick={() => void work("search")}
+                  >
+                    영상 검색
+                  </button>
+                  {!searchConfigured && (
+                    <p>
+                      공식 검색 API 키 설정이 필요해요. 아래에 출처를 직접
+                      입력할 수 있어요.
+                    </p>
+                  )}
+                  {videos.map((v) => (
+                    <div className="hm-search-result" key={v.url}>
+                      <a href={v.url} target="_blank" rel="noopener noreferrer">
+                        {v.title} ↗
+                      </a>
+                      <small>{v.channel}</small>
                       <button
-                        disabled={units.length === 1}
                         onClick={() => {
-                          setUnits(units.filter((_, n) => i !== n));
+                          setSourceUrl(v.url);
                           setReviewed(false);
                         }}
                       >
-                        이 표현 제외
+                        출처 주소 선택
                       </button>
-                    </fieldset>
+                    </div>
                   ))}
-                  <label className="hm-check">
-                    <input
-                      type="checkbox"
-                      checked={reviewed}
-                      onChange={(e) => setReviewed(e.target.checked)}
+                </details>
+              </section>
+              <details className="hm-panel ks-source" open={units.length === 0}>
+                <summary>
+                  <h2>
+                    {candidateId
+                      ? "번역 후보로 교재 만들기"
+                      : "사용권이 있는 원문"}
+                  </h2>
+                </summary>
+                {candidateId && (
+                  <p className="ks-note">
+                    사용자가 제공한 표현으로 초안을 만듭니다. 원래 사용자의 계정
+                    정보와 전체 번역문은 제공하지 않아요.
+                  </p>
+                )}
+                <label>
+                  수업 제목
+                  <input
+                    value={title}
+                    maxLength={100}
+                    onChange={(e) => {
+                      setTitle(e.target.value);
+                      setReviewed(false);
+                    }}
+                    placeholder="카페에서 취향을 이야기하기"
+                  />
+                </label>
+                <label>
+                  참고 영상 주소 (선택)
+                  <input
+                    type="url"
+                    value={sourceUrl}
+                    onChange={(e) => {
+                      setSourceUrl(e.target.value);
+                      setReviewed(false);
+                    }}
+                    placeholder="https://www.youtube.com/watch?v=…"
+                  />
+                </label>
+                <label>
+                  원문 사용권 근거
+                  <textarea
+                    value={rights}
+                    maxLength={500}
+                    onChange={(e) => {
+                      setRights(e.target.value);
+                      setConfirmed(false);
+                      setReviewed(false);
+                    }}
+                    placeholder="직접 제작한 원문 또는 권리자로부터 AI 처리·수업 재사용을 허락받은 근거와 날짜"
+                  />
+                </label>
+                {!candidateId && (
+                  <label>
+                    직접 제공받은 텍스트·SRT·VTT 원문
+                    <textarea
+                      className="hm-transcript"
+                      value={transcript}
+                      onChange={(e) => {
+                        setTranscript(e.target.value);
+                        setConfirmed(false);
+                      }}
+                      maxLength={12000}
+                      placeholder="영상 제작자에게 직접 받은 원문 또는 본인이 제작한 대본을 붙여 넣으세요."
                     />
-                    목표 언어·발음 도움·난이도·개인정보·사용권을 검수했어요.
                   </label>
-                  <div className="hm-row">
-                    <button
-                      disabled={busy}
-                      onClick={() => void work("save", "draft")}
-                    >
-                      {current?.status === "published"
-                        ? "게시 내리고 초안 저장"
-                        : "초안 저장"}
-                    </button>
-                    <button
-                      className="hm-primary"
-                      disabled={busy || !reviewed}
-                      onClick={() => void work("save", "published")}
-                    >
-                      검수 완료 · 학습에 게시
-                    </button>
-                  </div>
-                </>
+                )}
+                <label className="hm-check">
+                  <input
+                    type="checkbox"
+                    checked={confirmed}
+                    onChange={(e) => setConfirmed(e.target.checked)}
+                  />
+                  이 원문을 AI로 처리하고 학습 표현으로 재사용할 권한을
+                  확인했어요.
+                </label>
+                <button
+                  className="hm-primary"
+                  disabled={
+                    busy ||
+                    !confirmed ||
+                    (!candidateId && transcript.trim().length < 20)
+                  }
+                  onClick={() => void work("generate")}
+                >
+                  {busy ? "처리 중…" : "AI로 학습 초안 만들기"}
+                </button>
+                <p className="hm-muted">
+                  원문은 초안 생성에만 전달하고 보관하지 않아요. 출처 주소만으로
+                  사용권이 확인되는 것은 아니에요.
+                </p>
+              </details>
+              <section className="hm-panel">
+                <h2>표현 검수 · 게시</h2>
+                {units.length === 0 ? (
+                  <p>초안을 만들면 여기에서 내용을 수정할 수 있어요.</p>
+                ) : (
+                  <>
+                    {units.map((p, i) => (
+                      <fieldset className="hm-review-unit" key={i}>
+                        <legend>표현 {i + 1}</legend>
+                        {(
+                          [
+                            ["text", "학습 언어 표현"],
+                            ["reading", "한글 발음 도움"],
+                            ["meaning", "한국어 뜻"],
+                          ] as const
+                        ).map(([key, label]) => (
+                          <label key={key}>
+                            {label}
+                            <textarea
+                              maxLength={300}
+                              value={p[key]}
+                              onChange={(e) => {
+                                setUnits(
+                                  units.map((u, n) =>
+                                    n === i
+                                      ? { ...u, [key]: e.target.value }
+                                      : u,
+                                  ),
+                                );
+                                setReviewed(false);
+                              }}
+                            />
+                          </label>
+                        ))}
+                        <button
+                          disabled={units.length === 1}
+                          onClick={() => {
+                            setUnits(units.filter((_, n) => i !== n));
+                            setReviewed(false);
+                          }}
+                        >
+                          이 표현 제외
+                        </button>
+                      </fieldset>
+                    ))}
+                    <label className="hm-check">
+                      <input
+                        type="checkbox"
+                        checked={reviewed}
+                        onChange={(e) => setReviewed(e.target.checked)}
+                      />
+                      목표 언어·발음 도움·난이도·개인정보·사용권을 검수했어요.
+                    </label>
+                    <div className="hm-row">
+                      <button
+                        disabled={busy}
+                        onClick={() => void work("save", "draft")}
+                      >
+                        {current?.status === "published"
+                          ? "게시 내리고 초안 저장"
+                          : "초안 저장"}
+                      </button>
+                      <button
+                        className="hm-primary"
+                        disabled={busy || !reviewed}
+                        onClick={() => void work("save", "published")}
+                      >
+                        검수 완료 · 학습에 게시
+                      </button>
+                    </div>
+                  </>
+                )}
+              </section>
+            </div>
+            <aside className="hm-panel ks-rail">
+              <h2>앱 적용 범위</h2>
+              <dl>
+                <dt>학습 언어</dt>
+                <dd>{studyLanguages[language].name}</dd>
+                <dt>연습 레벨</dt>
+                <dd>레벨 {level}</dd>
+                <dt>상황</dt>
+                <dd>{curriculum.scenes.find((s) => s.id === scene)?.title}</dd>
+                <dt>저장된 상태</dt>
+                <dd>
+                  {current?.status === "published"
+                    ? `게시됨 / 버전 ${current.revision}`
+                    : current
+                      ? `초안 / 버전 ${current.revision}`
+                      : "아직 저장하지 않음"}
+                </dd>
+              </dl>
+              <p className="ks-note">
+                게시된 표현은 해당 수업과 AI 대화의 참고 자료로 사용됩니다. 모델
+                자체의 파인튜닝은 실행하지 않아요.
+              </p>
+              {units[0] && (
+                <div className="ks-preview">
+                  <small>편집 중인 학습 카드</small>
+                  <strong>{units[0].text}</strong>
+                  <p>{units[0].meaning}</p>
+                  <small>{units[0].reading}</small>
+                </div>
               )}
-            </section>
+              <h2>반영 이력</h2>
+              {!current && (
+                <p className="hm-muted">자료를 선택하면 이력을 볼 수 있어요.</p>
+              )}
+              <ul className="ks-events">
+                {events
+                  .filter((e) => e.target === current?.id)
+                  .slice(-5)
+                  .reverse()
+                  .map((e) => (
+                    <li key={e.id}>
+                      <strong>
+                        {e.action === "published"
+                          ? "게시"
+                          : e.action === "unpublished"
+                            ? "게시 내림"
+                            : "초안 저장"}{" "}
+                        / 버전 {e.revision}
+                      </strong>
+                      <small>{new Date(e.at).toLocaleString("ko-KR")}</small>
+                    </li>
+                  ))}
+              </ul>
+            </aside>
           </div>
-        </div>
+        </fieldset>
       </main>
     </div>
+  );
+}
+
+function KnowledgePreview() {
+  const [language, setLanguage] = useState<StudyLanguage>("ja");
+  const [level, setLevel] = useState(1),
+    [scene, setScene] = useState("smalltalk");
+  const [mode, setMode] = useState("chat"),
+    [query, setQuery] = useState("");
+  const [matches, setMatches] = useState<KnowledgeMatch[] | null>(null);
+  const [busy, setBusy] = useState(false),
+    [error, setError] = useState("");
+  async function preview() {
+    setBusy(true);
+    setError("");
+    setMatches(null);
+    try {
+      setMatches(
+        (await api({ action: "preview", language, level, scene, mode, query }))
+          .matches,
+      );
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "확인하지 못했어요.");
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <section className="hm-panel">
+      <h2>AI가 참고할 게시 자료 확인</h2>
+      <p className="hm-muted">
+        실제 검색 조건으로 확인합니다. 모델 호출 비용은 발생하지 않아요.
+      </p>
+      <fieldset
+        className="ks-form"
+        disabled={busy}
+        onChange={() => setMatches(null)}
+      >
+        <div className="hm-grid">
+          <label>
+            학습 언어
+            <select
+              value={language}
+              onChange={(e) => setLanguage(e.target.value as StudyLanguage)}
+            >
+              {Object.entries(studyLanguages).map(([id, l]) => (
+                <option key={id} value={id}>
+                  {l.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            연습 레벨
+            <select
+              value={level}
+              onChange={(e) => setLevel(Number(e.target.value))}
+            >
+              {curriculum.levels.map((l) => (
+                <option key={l.id} value={l.id}>
+                  레벨 {l.id}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            상황
+            <select value={scene} onChange={(e) => setScene(e.target.value)}>
+              {curriculum.scenes.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.title}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            적용 기능
+            <select value={mode} onChange={(e) => setMode(e.target.value)}>
+              <option value="chat">AI 대화</option>
+              <option value="translation">번역</option>
+            </select>
+          </label>
+        </div>
+        <label>
+          대화·번역 예시
+          <input
+            value={query}
+            maxLength={2000}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="예: 커피를 주문하고 싶어요"
+          />
+        </label>
+        <button className="hm-primary" onClick={() => void preview()}>
+          적용 자료 확인
+        </button>
+      </fieldset>
+      {error && (
+        <p role="alert" className="hm-alert">
+          {error}
+        </p>
+      )}
+      {matches && (
+        <p role="status">
+          {matches.length
+            ? `${matches.length}개 표현을 참고합니다.`
+            : "조건에 맞는 게시 자료가 없어요. 기본 AI 설정으로 답변합니다."}
+        </p>
+      )}
+      {matches?.map((m, i) => (
+        <article key={`${m.id}:${i}`} className="ks-preview">
+          <small>
+            {m.title} / 버전 {m.revision} / 레벨 {m.level}
+          </small>
+          <strong>{m.phrase.text}</strong>
+          <p>{m.phrase.meaning}</p>
+          <small>{m.phrase.reading}</small>
+        </article>
+      ))}
+    </section>
   );
 }
