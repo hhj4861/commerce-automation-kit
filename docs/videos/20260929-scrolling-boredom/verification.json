@@ -1,0 +1,62 @@
+{
+  "video": "scrolling-boredom-60s.mp4",
+  "sha256": "c99fd9242a6fd5ea60e5f79a92c264429f70ee802d7d8eef86a5185104113ed6",
+  "durationSeconds": 60,
+  "width": 1080,
+  "height": 1920,
+  "frames": 1800,
+  "fps": 30,
+  "videoCodec": "h264",
+  "audioCodec": "aac",
+  "audioChannels": 2,
+  "meanVolumeDb": -18.5,
+  "peakVolumeDb": -8.3,
+  "fullDecode": "passed",
+  "allNarrationFits": true,
+  "narrationSpeed": 1.25,
+  "voiceName": "Yooni - Natural & Clear",
+  "voiceId": "n2fbxG88jqAoaVPUy3IG",
+  "originalSpeechSeconds": 71.05306,
+  "totalSpeechSeconds": 56.917959,
+  "addedPauseSeconds": [
+    0.36954666666666647,
+    0.35163299999999964,
+    0.36238100000000006,
+    0.338594333333333,
+    0.32598599999999944,
+    0.3329023333333341,
+    0.34056700000000006,
+    0.34179099999999973,
+    0.318639666666666
+  ],
+  "silenceDetection": {
+    "thresholdDb": -40,
+    "minimumDurationSeconds": 0.7,
+    "durationsSeconds": []
+  },
+  "sceneCount": 9,
+  "captionCount": 28,
+  "captionPosition": {
+    "x": 50,
+    "y": 50
+  },
+  "ttsRuns": [
+    36565021120
+  ],
+  "referenceFootageReused": false,
+  "published": false,
+  "allNarrationTextPreservedInCaptions": true,
+  "captionTimingContinuousWithinScene": true,
+  "browserPlayback": {
+    "browser": "Chrome via Playwright",
+    "timeAfterPlay": 1.584429,
+    "decodedFrames": 52,
+    "audioDecodedBytes": 45906,
+    "duration": 60,
+    "width": 1080,
+    "height": 1920,
+    "mediaError": null,
+    "endedAfterSeek": true
+  },
+  "visualReview": "Final nine-scene contact sheet inspected. Center captions readable; book illustrations clear of upper labels; all spoken narration preserved in captions. Audio levels, silence detection and browser decoding verified. No human listening or speech-transcription review claimed."
+}

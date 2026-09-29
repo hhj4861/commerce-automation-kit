@@ -1,0 +1,92 @@
+{
+  "id": "scrolling-boredom-20260929",
+  "title": "쇼츠를 계속 보는데 왜 더 심심할까?",
+  "category": "심리학",
+  "duration": 60,
+  "aspect": "9:16",
+  "voice": "n2fbxG88jqAoaVPUy3IG",
+  "voiceName": "Yooni - Natural & Clear",
+  "narrationSpeed": 1.25,
+  "reference": "/Users/admin/Downloads/KakaoTalk_Video_2026-09-29-16-42-54.mp4",
+  "referenceUse": "Original hand-drawn animation inspired by the cream/navy palette and expressive objects in the user reference; no footage or audio reused.",
+  "scenes": [
+    {
+      "id": "s1",
+      "title": "왜 더 심심할까?",
+      "subtitle": "재미를 찾는데, 지루함이 쌓인다",
+      "visual": "hook",
+      "narration": "쇼츠를 한참 봤는데, 오히려 더 심심했던 적 있나요? 영상은 끝없이 나오는데, 이상하게 만족스럽지는 않습니다."
+    },
+    {
+      "id": "s2",
+      "title": "다음 건 재밌겠지",
+      "subtitle": "한 번만 더, 한 번만 더",
+      "visual": "swipe",
+      "narration": "그래서 손가락은 다시 위로 올라갑니다. 다음 건 재밌겠지. 그런데 지루함을 피하려고 하는 이 행동이, 지루함을 더 키울 수도 있습니다."
+    },
+    {
+      "id": "s3",
+      "title": "직접 비교해 봤더니",
+      "subtitle": "같은 10분 · 다른 시청 방식",
+      "visual": "experiment",
+      "narration": "연구진은 같은 십 분 동안, 영상 하나를 이어서 볼 때와 여러 영상을 자유롭게 바꿔 볼 때를 비교했습니다. 어느 쪽이 덜 지루했을까요?"
+    },
+    {
+      "id": "s4",
+      "title": "예상과 반대였다",
+      "subtitle": "넘겨 보기보다, 이어 보기",
+      "visual": "result",
+      "narration": "결과는 예상과 달랐습니다. 하나를 이어 본 조건에서 지루함은 더 낮고, 만족감과 몰입감은 더 높았습니다. 선택지가 많다고 더 즐겁지는 않았죠."
+    },
+    {
+      "id": "s6",
+      "title": "이야기에 들어가기 전에",
+      "subtitle": "첫 장만 계속 읽는다면",
+      "visual": "book",
+      "narration": "책으로 비유해 볼까요? 첫 장을 읽다가 다른 책으로, 또 다른 책으로 바꿉니다. 읽은 책은 많아져도, 이야기 속에 머물 시간은 짧아집니다."
+    },
+    {
+      "id": "s7",
+      "title": "재미를 찾는 동안",
+      "subtitle": "찾기 → 넘기기 → 다시 찾기",
+      "visual": "loop",
+      "narration": "영상도 계속 바꾸면 내용에 주의를 붙잡아 두기 어려워질 수 있습니다. 재미를 찾느라, 정작 재미에 들어갈 시간을 놓치는 셈이죠."
+    },
+    {
+      "id": "s8",
+      "title": "모든 사람에게 같을까?",
+      "subtitle": "실험 결과 ≠ 모두의 진단",
+      "visual": "limits",
+      "narration": "물론 누구에게나 똑같다는 뜻은 아닙니다. 표본과 콘텐츠에 따라 결과는 달랐고, 이 연구로 뇌 손상이나 중독을 진단할 수는 없습니다."
+    },
+    {
+      "id": "s9",
+      "title": "오늘은 딱 하나만",
+      "subtitle": "직접 고르고 · 넘기지 않고",
+      "visual": "try",
+      "narration": "다음에 심심해지면, 관심 있는 영상 하나를 직접 골라 보세요. 중간에 넘기지 않고 본 뒤, 계속 넘겼을 때보다 어땠는지 비교해 보는 겁니다."
+    },
+    {
+      "id": "s10",
+      "title": "다음 영상보다, 지금",
+      "subtitle": "재미에 들어갈 시간을 주기",
+      "visual": "ending",
+      "narration": "핵심은 억지로 오래 버티는 게 아닙니다. 더 많은 영상을 찾기 전에, 지금 보는 이야기에 들어갈 시간을 한 번 줘 보는 겁니다."
+    }
+  ],
+  "narrationProvenance": {
+    "runId": 36565021120,
+    "sourceBeatIndices": [
+      0,
+      1,
+      2,
+      3,
+      5,
+      6,
+      7,
+      8,
+      9
+    ],
+    "note": "A redundant personal-choice example was removed after measuring the first narration pass."
+  }
+}
