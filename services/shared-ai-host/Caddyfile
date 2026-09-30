@@ -10,6 +10,14 @@
             flush_interval -1
         }
     }
+    @jev {
+        method POST
+        path /llm/typesafe/v1/systemone
+    }
+    handle @jev {
+        uri strip_prefix /llm
+        reverse_proxy 127.0.0.1:4100
+    }
     @accounts path /accounts/connections /accounts/connections/* /accounts/v1/chat/completions
     handle @accounts {
         uri strip_prefix /accounts

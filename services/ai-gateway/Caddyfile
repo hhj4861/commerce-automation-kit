@@ -4,6 +4,13 @@
     handle @inference {
         reverse_proxy gateway:4000
     }
+    @jev {
+        method POST
+        path /typesafe/v1/systemone
+    }
+    handle @jev {
+        reverse_proxy gateway:4000
+    }
     handle {
         respond "Not found" 404
     }

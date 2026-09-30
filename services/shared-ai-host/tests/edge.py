@@ -29,11 +29,11 @@ class Upstream(BaseHTTPRequestHandler):
         pass
 
 
-def request(port, path, key=None):
+def request(port, path, key=None, method="POST"):
     headers = {"Content-Type": "application/json"}
     if key:
         headers["Authorization"] = "Bearer " + key
-    req = urllib.request.Request(f"http://127.0.0.1:{port}" + path, data=b"{}", headers=headers)
+    req = urllib.request.Request(f"http://127.0.0.1:{port}" + path, data=b"{}", headers=headers, method=method)
     try:
         with urllib.request.urlopen(req, timeout=5) as res:
             return res.status, res.read()
@@ -67,6 +67,15 @@ try:
         assert code == 200 and json.loads(body) == {"port": target, "path": forwarded}, path
     assert request(8080, "/health") == (200, b"edge alive")
     assert request(8080, "/healthz")[0] == 404
+    for edge, path, target in ((8080, "/llm/typesafe/v1/systemone", 4100), (8081, "/typesafe/v1/systemone", 4000)):
+        assert request(edge, path)[0] == 401
+        assert request(edge, path, "invalid-key")[0] == 401
+        code, body = request(edge, path, KEY)
+        assert code == 200 and json.loads(body) == {"port": target, "path": "/typesafe/v1/systemone"}
+        for method in ("GET", "PUT", "PATCH", "DELETE"):
+            assert request(edge, path, KEY, method)[0] == 404, (edge, method)
+        for other in (path + "/extra", path.replace("systemone", "models"), path.replace("v1/systemone", "key/generate")):
+            assert request(edge, other, KEY)[0] == 404, other
     for edge in (8080, 8081):
         for path in ("/", "/install", "/console/api/setup", "/ui", "/key/generate", "/llm/key/generate", "/v1/files", "/v1/chat-messages/../console/api/setup", "/llm/v1/responses/../../key/generate"):
             assert request(edge, path, KEY)[0] == 404, (edge, path)
