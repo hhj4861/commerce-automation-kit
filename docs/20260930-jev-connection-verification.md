@@ -25,6 +25,21 @@
 | 모델 목록 특이점 | 목록에는 `jev-latest`·`jev-preview`만 표시되지만 고정 버전 실호출은 성공 |
 | 새 Caddy 경로 | 실제 Caddy + 합성 업스트림 검증 통과. prefix 제거·인증 보존·미인증/잘못된 키 거부·관리/기타 경로와 비POST 거부 |
 | 기존 gateway 로컬 단위 검사 | 9개 통과 |
+| 운영 공급자 키 | 비공개 `.env`에 반영 후 gateway만 재기동, healthy 확인. 백업 `/opt/shared-ai/backups/jev-key-1790743413/gateway.env`(0600) |
+| 공통 모듈 → 운영 LiteLLM → Jev | SSH 터널 실호출 통과. `jev-1.13.0`, 703ms, 입력 413 / 출력 66 tokens |
+| 한국어 복합 판단 | choice=`delivered`(confidence 1), noul=0.98, score=1(0~1 기준), 계약 검증 통과 |
+| 권한 격리 | 잘못된 키 401, 허용하지 않은 `jev-preview` 403, 기존 Festa 키의 Jev 호출 403 |
+| 임시 키 정리 | 검증 후 회수하고 재사용 401 확인. SSH 터널도 종료 |
+
+실측한 검증 키는 `models: ["jev-1.13.0"]`,
+`allowed_routes: ["/typesafe/v1/systemone"]`, 1시간 만료, 분당 10회, 하루 $0.05 예산이었다.
+이 버전의 권한 검사는 요청의 **접두사 없는 모델명**을 사용한다. 청구 로그의
+`typesafe/jev-1.13.0` 식별자와 혼동하지 않는다. 기존 앱 키는 변경하지 않았다.
+이는 임시 검증 키 설정이고, 향후 앱 운영 키 발급·예산 승인을 대신하지 않는다.
+
+공개 edge 경로는 [PR #87](https://github.com/hhj4861/commerce-automation-kit/pull/87)의
+사용자 승인·머지·운영 반영을 기다리고 있다. 위 성공은 운영 LiteLLM의 SSH 경유 실호출이며
+공개 HTTPS 전체 경로 성공으로 간주하지 않는다.
 
 Caddy 검증은 운영 포트와 다른 24xxx 포트 및 임시 컨테이너에서 수행했고 모두 종료했다.
 운영 이미지 업그레이드, 기존 앱 권한 확대, DB/Dify 변경은 이 경로 추가에 필요하지 않다.
