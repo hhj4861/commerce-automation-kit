@@ -1214,7 +1214,8 @@ export function V2App() {
         phrase: data.reply,
       },
     ]);
-    setChatInput("");
+    // The learner may already be writing their next turn while this request runs.
+    setChatInput((current) => (current === value ? "" : current));
   }
   const profile = language ? state.profiles[language] : undefined;
   const units = language
