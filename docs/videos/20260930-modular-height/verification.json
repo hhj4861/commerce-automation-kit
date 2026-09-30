@@ -1,0 +1,57 @@
+{
+  "durationSeconds": 69.0,
+  "resolution": [
+    1080,
+    1920
+  ],
+  "fps": "30/1",
+  "frames": 2070,
+  "videoCodec": "h264",
+  "audioCodec": "aac",
+  "bytes": 31691636,
+  "sha256": "6301aeca8bd09267be09919c525d82a7721a77c355f12cd5f9fde34a1274f5c0",
+  "fullDecode": "passed",
+  "narrationSpeed": 1.15,
+  "voiceId": "n2fbxG88jqAoaVPUy3IG",
+  "narrationMetadataMatches": 8,
+  "captions": 28,
+  "captionTextMatchesNarration": true,
+  "captionMaxLines": 2,
+  "captionMaxCharactersPerLine": 20,
+  "captionPosition": "center x=50 y=50",
+  "scenePaddingSeconds": [
+    0.335,
+    0.343,
+    0.341,
+    0.336,
+    0.332,
+    0.32,
+    0.329,
+    0.321
+  ],
+  "audioLevelsDb": {
+    "mean_volume": -18.5,
+    "max_volume": -8.4
+  },
+  "ttsRunId": 36671592754,
+  "higgsfieldGenerationCredits": 288,
+  "paidClips": 4,
+  "visualInspection": "8 final scene frames reviewed; central captions readable; provider-baked lettering removed from opening/ending by crop; photo-to-concept dissolve checked in recipe",
+  "browserPlayback": "Not performed: browser security policy blocks file URLs. No workaround attempted. Full FFmpeg decode passed.",
+  "published": false,
+  "animationMotionChecks": [
+    {
+      "scene": "s4",
+      "meanPixelDifference": 13.886
+    },
+    {
+      "scene": "s5",
+      "meanPixelDifference": 0.725
+    },
+    {
+      "scene": "s6",
+      "meanPixelDifference": 0.359
+    }
+  ],
+  "humanListeningOrSTT": "Not performed; audio stream decoded, levels measured, provider text and voice metadata checked."
+}

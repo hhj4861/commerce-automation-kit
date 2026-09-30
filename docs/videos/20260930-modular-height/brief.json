@@ -1,0 +1,190 @@
+{
+  "id": "modular-height-20260930",
+  "title": "레고처럼 쌓는 집, 몇 층까지 가능할까?",
+  "category": "건축학",
+  "duration": 85,
+  "autoDuration": true,
+  "aspect": "9:16",
+  "voice": "n2fbxG88jqAoaVPUy3IG",
+  "voiceName": "Yooni - Natural & Clear",
+  "narrationSpeed": 1.15,
+  "reference": "/Users/admin/Downloads/KakaoTalk_Video_2026-09-28-14-16-50.mp4",
+  "referenceUse": "Reference viewed at five timestamps: dark cinematic architecture, warm directional lighting, macro/wide contrast. Original generated media only; no reference pixels or soundtrack reused.",
+  "direction": "실사풍 외관·공장·크레인과 직접 그린 구조 개념 애니메이션을 연결한다. 실제 50층 준공 사례를 소개하되 AI 건물은 실제 College Road 촬영이나 정확한 복원으로 제시하지 않는다. 모든 구조 그림은 일반 원리 개념도로 실제 설계도·하중 계산이 아니다. 50층을 기술적 상한이라고 주장하지 않는다.",
+  "visualStyle": "High-end cinematic architectural essay. Consistent charcoal and muted forest-green palette, antique gold highlights, sculptural warm side light, controlled highlights, realistic materials and fine film grain. Restrained slow camera movement. Original illustrative photorealistic recreation, NOT archival footage or an exact replica of College Road. Vertical 9:16, no letterbox, no logos, no generated words or captions. Keep central area calm for Korean subtitles. Generic residential modular tower with straight rectangular geometry, pale stone horizontal bands and dark bronze window grid.",
+  "backgroundMusic": "Original quiet synthesized harmonic ambience, ducked beneath narration.",
+  "sources": [
+    {
+      "url": "https://tideconstruction.co.uk/projects/college-road/",
+      "title": "Tide — College Road",
+      "facts": [
+        "Completed 50-storey tower, height 163m",
+        "Factory produced volumetric modules"
+      ]
+    },
+    {
+      "url": "https://hta.co.uk/story/college-road-sustainability-and-building-physics",
+      "title": "HTA — College Road Sustainability & Building Physics",
+      "facts": [
+        "Modules customized to loading at each floor to optimize steel",
+        "Factory fitted homes"
+      ]
+    },
+    {
+      "url": "https://obrgroup.co.uk/projects/college-road-croydon",
+      "title": "OBR — College Road concrete works",
+      "facts": [
+        "Reinforced concrete cores and substructure"
+      ]
+    },
+    {
+      "url": "https://steelconstruction.info/sectors/healthcare-buildings/modular-construction",
+      "title": "Steel Construction Institute — Modular construction",
+      "facts": [
+        "Structural form varies by module system",
+        "Tall modular buildings can incorporate concrete or steel cores"
+      ]
+    },
+    {
+      "url": "https://visionvolumetric.co.uk/",
+      "title": "Vision Volumetric",
+      "facts": [
+        "Tall buildings undergo wind tunnel testing",
+        "Forces on concrete core and completed building are evaluated"
+      ]
+    }
+  ],
+  "scenes": [
+    {
+      "id": "s1",
+      "title": "쌓아서 만든 50층",
+      "subtitle": "맨 아래 방은 괜찮을까?",
+      "visual": "hero",
+      "kind": "video",
+      "shot": "wide",
+      "camera": "push-in",
+      "narration": "공장에서 만든 방을 하나씩 쌓았습니다. 그런데 무려 오십 층입니다. 맨 아래 방은 위에 쌓인 무게에 찌그러지지 않을까요?",
+      "prompt": "A monumental fifty-storey-scale modular residential tower at blue hour, generic original architecture, narrow rectangular high-rise with pale stone horizontal bands and dark bronze window grid, warm inhabited windows. Low-angle slow upward camera tilt, dramatic sense of height, rigid straight geometry. A few low buildings at base for scale. No structural deformation, no collapse, no letters. This is an illustrative generic tower, not actual College Road."
+    },
+    {
+      "id": "s2",
+      "title": "방이 공장에서 나온다",
+      "subtitle": "현장으로 옮기기 전",
+      "visual": "factory",
+      "kind": "video",
+      "shot": "medium",
+      "camera": "pan-right",
+      "narration": "모듈러 건축은 방 같은 입체 공간을 공장에서 만들고, 현장에서 조립하는 방식입니다. 창문과 내부 마감까지 갖춘 방이 공장을 나올 수도 있죠.",
+      "prompt": "Inside a premium volumetric housing factory, one rectangular room-sized steel module on a grounded production line, dark olive structural steel corner posts, pale timber interior, installed window and small built-in kitchenette visible through open front. Finished room beside an unfinished frame in background. Warm overhead industrial lighting, smooth slow lateral dolly reveals room depth. Stable single room, no morphing, no people close up, no words."
+    },
+    {
+      "id": "s3",
+      "title": "실제로 지어진 50층",
+      "subtitle": "College Road · 163m",
+      "visual": "crane",
+      "kind": "video",
+      "shot": "wide",
+      "camera": "locked",
+      "narration": "영국 런던의 칼리지 로드는 실제로 오십 층, 높이 백육십삼 미터까지 지어졌습니다. 그렇다면 같은 방을 계속 쌓기만 하면 될까요?",
+      "prompt": "Photorealistic medium-wide construction view high above a city: one rigid rectangular volumetric apartment module suspended from four taut crane slings, slowly lowered a short distance toward aligned modular steel frames next to a tall cast-concrete service core. Generic original construction visualization, not a record of College Road. Dark olive steel, pale warm facade panels, bronze glazing. Controlled dawn light, stable locked camera, believable gravity, no sudden stacking or disappearing modules, no lettering."
+    },
+    {
+      "id": "s4",
+      "title": "벽지가 무게를 받는 건 아니다",
+      "subtitle": "힘이 내려가는 길",
+      "visual": "load",
+      "kind": "video",
+      "shot": "detail",
+      "camera": "locked",
+      "narration": "아닙니다. 먼저 방의 겉면을 벗겨 보죠. 무게를 받는 건 벽지나 가구가 아니라, 설계된 구조입니다. 철골 모듈에서는 보와 기둥, 연결부를 통해 힘이 아래로 전달됩니다.",
+      "prompt": "Original engineered explanatory drawing. Reveal steel module frame and conceptual gravity load path. Not an exact engineering drawing."
+    },
+    {
+      "id": "s5",
+      "title": "똑같아 보여도, 다른 역할",
+      "subtitle": "층별 하중에 맞춘 설계",
+      "visual": "floor",
+      "kind": "video",
+      "shot": "detail",
+      "camera": "locked",
+      "narration": "아래쪽은 위에서 내려오는 무게까지 받아야 합니다. 칼리지 로드도 각 층의 하중에 맞춰 모듈의 철골을 조정했습니다. 겉모습이 같다고 구조까지 전부 같은 건 아닙니다.",
+      "prompt": "Original concept animation comparing upper and lower module demands. Schematic only; no numerical load simulation."
+    },
+    {
+      "id": "s6",
+      "title": "위에서 누르는 힘만 있을까?",
+      "subtitle": "옆에서 미는 바람도 고려",
+      "visual": "core",
+      "kind": "video",
+      "shot": "wide",
+      "camera": "locked",
+      "narration": "그리고 높은 건물에는 옆에서 미는 바람도 작용합니다. 이런 고층 모듈러는 콘크리트 코어 같은 구조와 함께 설계할 수 있습니다. 방만 쌓는 게 아니라, 건물 전체를 묶어 버티게 하는 거죠.",
+      "prompt": "Original sectional concept animation of modules connected to a reinforced concrete stability core. General principle; not actual College Road structural plans."
+    },
+    {
+      "id": "s7",
+      "title": "그럼 100층도 가능할까?",
+      "subtitle": "층수 하나로 답할 수 없다",
+      "visual": "detail",
+      "kind": "video",
+      "shot": "close",
+      "camera": "push-in",
+      "narration": "그렇다면 백 층도 될까요? 오십 층은 실제 사례이지, 정해진 한계가 아닙니다. 더 높이 지으려면 구조와 연결부, 바람과 화재 안전까지 함께 검토해야 합니다.",
+      "prompt": "Cinematic macro of a generic engineered bolted steel module connection in a clean factory: thick dark steel end plates, aligned bolt heads and beam-column junction, warm gold grazing light reveals metal texture. Gentle push in, no hands, no motion of bolts, no floating components. This is illustrative, not a fabrication instruction or a real project-specific connection. No printed text, no diagrams."
+    },
+    {
+      "id": "s8",
+      "title": "조립은 간단해 보여도",
+      "subtitle": "그 안에는 정교한 설계가 있다",
+      "visual": "ending",
+      "providerAssetId": "s1",
+      "kind": "video",
+      "shot": "wide",
+      "camera": "locked",
+      "narration": "모듈러 건축의 비밀은 상자를 얼마나 많이 쌓느냐가 아닙니다. 무게와 흔들림을 어디로 보내느냐에 있습니다. 레고처럼 조립하지만, 레고처럼 똑같이 만들지는 않습니다.",
+      "prompt": "Reuse the opening generic tower shot with a new editorial crop; no additional generation. Return to the complete building after revealing its structural system."
+    }
+  ],
+  "narrationProvenance": {
+    "runId": 36671592754,
+    "verifiedMetadataBeats": 8
+  },
+  "mediaProvenance": {
+    "generationCredits": 288,
+    "generated": {
+      "s1": {
+        "provider": "higgsfield",
+        "fingerprint": "378dc45e444f2c31b4fa9dfd3266c1292822b7d55deeac865b945a8ae65e3d45",
+        "state": "accepted",
+        "model": "seedance_2_0",
+        "credits": 63,
+        "id": "3f25d94f-e4dd-4e97-a087-c83bb5224539"
+      },
+      "s2": {
+        "provider": "higgsfield",
+        "fingerprint": "f2ca45a2bad56d37447994e23e1258a52fe755874e0f9e704af16b1748b4c6a4",
+        "state": "accepted",
+        "model": "seedance_2_0",
+        "credits": 72,
+        "id": "c81e5750-3ff9-40dd-a558-a082d03a7a46"
+      },
+      "s3": {
+        "provider": "higgsfield",
+        "fingerprint": "883cfabff43620e2ef719bb7f451c7150d0e85a3b5d57b61ec469577e8865ab8",
+        "state": "accepted",
+        "model": "seedance_2_0",
+        "credits": 72,
+        "id": "5cff178a-a8d1-4079-9bf2-ac2791c3ef82"
+      },
+      "s7": {
+        "provider": "higgsfield",
+        "fingerprint": "adacb94a3e3b05f1add8b8a23937e407859b0807d7c1ced95d35c0dc85e3f838",
+        "state": "accepted",
+        "model": "seedance_2_0",
+        "credits": 81,
+        "id": "c5867362-ea35-4968-bc72-af81e32a6ac1"
+      }
+    },
+    "allFourDownloaded": true
+  }
+}
