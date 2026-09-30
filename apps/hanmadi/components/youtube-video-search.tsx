@@ -4,22 +4,54 @@ import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { curriculum, studyLanguages, type StudyLanguage } from "@/lib/v2";
 import type { YoutubeSearchPage, YoutubeVideo } from "@/lib/youtube-search";
+import type { ContentDraft } from "@/lib/knowledge";
+import { VideoPreparationQueue } from "./video-preparation-queue";
 
 export type SelectedVideo = YoutubeVideo & {
   language: StudyLanguage;
   scene: string;
 };
 type Search = { query: string; language: StudyLanguage; scene: string };
-type LoadedPage = YoutubeSearchPage & { search: Search };
+type LoadedPage = YoutubeSearchPage & { search: Search; token?: string };
+
+async function fetchPage(search: Search, signal: AbortSignal, token?: string) {
+  const response = await fetch("/api/study/admin", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      action: "search",
+      ...search,
+      ...(token ? { pageToken: token } : {}),
+    }),
+    cache: "no-store",
+    signal: AbortSignal.any([signal, AbortSignal.timeout(20000)]),
+  });
+  const data = await response.json();
+  if (!response.ok)
+    throw new Error(data.error || "검색하지 못했어요. 다시 시도해 주세요.");
+  return { ...data, search, token } as LoadedPage;
+}
+function searchError(error: unknown) {
+  return error instanceof Error &&
+    !["TimeoutError", "TypeError", "SyntaxError"].includes(error.name)
+    ? error.message
+    : "검색 서버에 연결하지 못했어요. 잠시 후 다시 시도해 주세요.";
+}
 
 export function YoutubeVideoSearch({
   configured,
   disabled,
-  onPrepare,
+  onCreated,
+  onReview,
+  onOpenLibrary,
+  onBusyChange,
 }: {
   configured: boolean;
   disabled: boolean;
-  onPrepare: (video: SelectedVideo) => void;
+  onCreated: (draft: ContentDraft) => void;
+  onReview: (draft: ContentDraft) => void;
+  onOpenLibrary: () => void;
+  onBusyChange: (busy: boolean) => void;
 }) {
   const [query, setQuery] = useState("");
   const [language, setLanguage] = useState<StudyLanguage>("ja");
@@ -27,7 +59,11 @@ export function YoutubeVideoSearch({
   const [pages, setPages] = useState<LoadedPage[]>([]);
   const [pageIndex, setPageIndex] = useState(0);
   const [selected, setSelected] = useState<SelectedVideo[]>([]);
-  const [busy, setBusy] = useState(false);
+  const [searchBusy, setBusy] = useState(false);
+  const [batchBusy, setBatchBusy] = useState(false);
+  const busy = searchBusy || batchBusy;
+  const [selectingAll, setSelectingAll] = useState(false);
+  const [bulkStatus, setBulkStatus] = useState("");
   const [error, setError] = useState("");
   const request = useRef<AbortController | null>(null);
   const selectAll = useRef<HTMLInputElement>(null);
@@ -42,6 +78,17 @@ export function YoutubeVideoSearch({
   const selectedHere =
     page?.videos.filter((v) => selectedIds.has(v.id)).length ?? 0;
   const allHere = !!page?.videos.length && selectedHere === page.videos.length;
+  const searchVideos = [
+    ...new Map(pages.flatMap((p) => p.videos).map((v) => [v.id, v])).values(),
+  ];
+  const searchSelected = searchVideos.filter((v) =>
+    selectedIds.has(v.id),
+  ).length;
+  const allPagesSelected =
+    !!pages.length &&
+    !pages.at(-1)?.nextPageToken &&
+    searchVideos.length > 0 &&
+    searchSelected === searchVideos.length;
 
   useEffect(() => {
     if (selectAll.current)
@@ -51,7 +98,7 @@ export function YoutubeVideoSearch({
 
   async function load(search: Search, index: number, token?: string) {
     // A ref closes the same-tick double submit window, including keyboard Enter.
-    if (request.current || disabled || !configured) return;
+    if (request.current || batchBusy || disabled || !configured) return;
     if (!search.query) {
       setError("검색어를 입력해 주세요.");
       setRetry(null);
@@ -60,28 +107,13 @@ export function YoutubeVideoSearch({
     const controller = new AbortController();
     request.current = controller;
     setBusy(true);
+    onBusyChange(true);
     setError("");
+    setBulkStatus("");
     setRetry({ search, index, token });
     try {
-      const response = await fetch("/api/study/admin", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "search",
-          ...search,
-          ...(token ? { pageToken: token } : {}),
-        }),
-        cache: "no-store",
-        signal: AbortSignal.any([
-          controller.signal,
-          AbortSignal.timeout(20000),
-        ]),
-      });
-      const data = await response.json();
-      if (!response.ok)
-        throw new Error(data.error || "검색하지 못했어요. 다시 시도해 주세요.");
+      const loaded = await fetchPage(search, controller.signal, token);
       if (controller.signal.aborted) return;
-      const loaded: LoadedPage = { ...data, search };
       setPages((previous) =>
         index === 0 ? [loaded] : [...previous.slice(0, index), loaded],
       );
@@ -91,22 +123,86 @@ export function YoutubeVideoSearch({
         resultsHeading.current?.focus({ preventScroll: true }),
       );
     } catch (e) {
-      if (!controller.signal.aborted)
-        setError(
-          e instanceof Error &&
-            !["TimeoutError", "TypeError", "SyntaxError"].includes(e.name)
-            ? e.message
-            : "검색 서버에 연결하지 못했어요. 잠시 후 다시 시도해 주세요.",
-        );
+      if (!controller.signal.aborted) setError(searchError(e));
     } finally {
       if (request.current === controller) {
         request.current = null;
         setBusy(false);
+        onBusyChange(false);
+      }
+    }
+  }
+  async function selectEveryPage() {
+    if (!page || request.current || batchBusy || disabled) return;
+    const controller = new AbortController();
+    request.current = controller;
+    setBusy(true);
+    setSelectingAll(true);
+    onBusyChange(true);
+    setError("");
+    setRetry(null);
+    let loaded = [...pages];
+    const visited = new Set(loaded.map((p) => p.token).filter(Boolean));
+    const ids = new Set<string>();
+    function include(items: LoadedPage[]) {
+      const additions = items.flatMap((p) =>
+        p.videos.map((v) => {
+          ids.add(v.id);
+          return { ...v, language: p.search.language, scene: p.search.scene };
+        }),
+      );
+      setSelected((previous) => {
+        const byId = new Map(previous.map((v) => [v.id, v]));
+        for (const video of additions)
+          if (!byId.has(video.id)) byId.set(video.id, video);
+        return [...byId.values()];
+      });
+      setBulkStatus(
+        `${loaded.length}페이지 확인 · 이 검색에서 ${ids.size}개 선택`,
+      );
+    }
+    include(loaded);
+    try {
+      let token = loaded.at(-1)?.nextPageToken;
+      while (token) {
+        if (visited.has(token))
+          throw new Error(
+            "다음 페이지가 반복되어 중단했어요. 검색어를 바꿔 다시 검색해 주세요.",
+          );
+        visited.add(token);
+        const next = await fetchPage(page.search, controller.signal, token);
+        if (controller.signal.aborted) return;
+        loaded = [...loaded, next];
+        setPages(loaded);
+        include([next]);
+        token = next.nextPageToken;
+      }
+      setBulkStatus(
+        `모든 페이지 확인 완료 · 이 검색의 영상 ${ids.size}개를 준비 목록에 담았어요.`,
+      );
+    } catch (e) {
+      if (!controller.signal.aborted) {
+        setError(searchError(e));
+        setBulkStatus(
+          `${loaded.length}페이지까지 ${ids.size}개를 담았어요. 전체 선택은 끝나지 않았어요. 다시 누르면 남은 페이지부터 이어집니다.`,
+        );
+      }
+    } finally {
+      if (controller.signal.aborted)
+        setBulkStatus(
+          `전체 선택을 중지했어요. ${ids.size}개는 준비 목록에 남아 있어요. 다시 누르면 이어집니다.`,
+        );
+      if (request.current === controller) {
+        request.current = null;
+        setBusy(false);
+        setSelectingAll(false);
+        onBusyChange(false);
       }
     }
   }
   function togglePage() {
     if (!page) return;
+    setBulkStatus("");
     setSelected((previous) =>
       allHere
         ? previous.filter((v) => !page.videos.some((item) => item.id === v.id))
@@ -167,7 +263,7 @@ export function YoutubeVideoSearch({
             className="vs-primary"
             disabled={busy || disabled || !configured || !query.trim()}
           >
-            {busy ? "검색 중…" : "영상 검색"}
+            {searchBusy ? "검색 중…" : "영상 검색"}
           </button>
           <div className="vs-filters">
             <label>
@@ -224,7 +320,7 @@ export function YoutubeVideoSearch({
             )}
           </div>
         )}
-        <div className="vs-results" aria-busy={busy}>
+        <div className="vs-results" aria-busy={searchBusy}>
           <div className="vs-results-heading">
             <h3 ref={resultsHeading} tabIndex={-1}>
               {page
@@ -234,12 +330,55 @@ export function YoutubeVideoSearch({
             {page && <span>{studyLanguages[page.search.language].name}</span>}
           </div>
           <p className="vs-live" role="status">
-            {busy
+            {searchBusy
               ? "영상을 찾고 있어요."
-              : page
-                ? `${pageIndex + 1}페이지 · 영상 ${page.videos.length}개 · 전체 선택 ${selected.length}개`
-                : "검색어를 입력하면 참고 영상을 찾을 수 있어요."}
+              : batchBusy
+                ? "준비 목록의 자료를 처리하고 있어요."
+                : page
+                  ? `${pageIndex + 1}페이지 · 영상 ${page.videos.length}개 · 준비 목록 ${selected.length}개`
+                  : "검색어를 입력하면 참고 영상을 찾을 수 있어요."}
           </p>
+          {page && (
+            <div className="vs-total">
+              <strong>
+                {page.totalResults == null
+                  ? "검색 총개수 확인 불가"
+                  : `검색 결과 약 ${page.totalResults.toLocaleString("ko-KR")}개`}
+              </strong>
+              <small>
+                YouTube 제공 추정치 · 실제 선택 수와 다를 수 있어요.
+              </small>
+            </div>
+          )}
+          {page && (searchVideos.length > 0 || page.nextPageToken) && (
+            <div className="vs-all-pages">
+              <div>
+                <strong>페이지를 넘기지 않고 한 번에</strong>
+                <p>이 검색의 모든 페이지를 확인해 준비 목록에 담아요.</p>
+              </div>
+              {selectingAll ? (
+                <button type="button" onClick={() => request.current?.abort()}>
+                  전체 선택 중지
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="vs-primary"
+                  disabled={busy || disabled || allPagesSelected}
+                  onClick={() => void selectEveryPage()}
+                >
+                  {allPagesSelected
+                    ? "모든 페이지 선택 완료"
+                    : "모든 페이지 전체 선택"}
+                </button>
+              )}
+              {bulkStatus && (
+                <p className="vs-bulk-status" role="status">
+                  {bulkStatus}
+                </p>
+              )}
+            </div>
+          )}
           {page && page.videos.length > 0 && (
             <div className="vs-selection-bar">
               <label>
@@ -299,7 +438,8 @@ export function YoutubeVideoSearch({
                       aria-label={`${video.title} 선택`}
                       checked={checked}
                       disabled={busy || disabled}
-                      onChange={() =>
+                      onChange={() => {
+                        setBulkStatus("");
                         setSelected((previous) =>
                           checked
                             ? previous.filter((v) => v.id !== video.id)
@@ -311,8 +451,8 @@ export function YoutubeVideoSearch({
                                   scene: page.search.scene,
                                 },
                               ],
-                        )
-                      }
+                        );
+                      }}
                     />
                   </label>
                   <a
@@ -366,82 +506,25 @@ export function YoutubeVideoSearch({
           )}
         </div>
       </section>
-      <aside
-        className="vs-tray"
-        id="video-preparation"
-        tabIndex={-1}
-        aria-label="자료 준비 목록"
-      >
-        <div className="vs-tray-heading">
-          <h2>
-            자료 준비 목록 <span>{selected.length}</span>
-          </h2>
-          <button
-            type="button"
-            disabled={!selected.length || disabled}
-            onClick={() => setSelected([])}
-          >
-            전체 해제
-          </button>
-        </div>
-        <p className="vs-tray-help">
-          페이지를 옮기거나 다시 검색해도 선택은 유지돼요. 이 화면을
-          새로고침하면 비워져요.
-        </p>
-        {selected.length === 0 ? (
-          <div className="vs-tray-empty">
-            <span aria-hidden="true">＋</span>
-            <p>함께 살펴볼 영상을 담아보세요.</p>
-            <small>
-              ‘이 페이지 모두 선택’으로
-              <br />
-              여러 영상을 한 번에 담을 수 있어요.
-            </small>
-          </div>
-        ) : (
-          <ol className="vs-queue">
-            {selected.map((video) => (
-              <li key={video.id}>
-                <div>
-                  <strong>{video.title}</strong>
-                  <small>
-                    {studyLanguages[video.language].name} · {video.channel}
-                  </small>
-                </div>
-                <div className="vs-queue-actions">
-                  <button
-                    type="button"
-                    disabled={disabled}
-                    onClick={() => onPrepare(video)}
-                    aria-label={`${video.title} 자료 만들기`}
-                  >
-                    자료 만들기
-                  </button>
-                  <button
-                    type="button"
-                    disabled={disabled}
-                    onClick={() =>
-                      setSelected((previous) =>
-                        previous.filter((v) => v.id !== video.id),
-                      )
-                    }
-                    aria-label={`${video.title} 선택 해제`}
-                  >
-                    해제
-                  </button>
-                </div>
-              </li>
-            ))}
-          </ol>
-        )}
-        <div className="vs-rights-note">
-          <strong>선택한 다음에는</strong>
-          <p>
-            영상별로 사용권을 확인하고 원문을 입력해 주세요. 영상과 자막은
-            자동으로 가져오지 않아요.
-          </p>
-        </div>
-      </aside>
+      <VideoPreparationQueue
+        videos={selected}
+        disabled={disabled || searchBusy}
+        onRemove={(id) => {
+          setBulkStatus("");
+          setSelected((previous) => previous.filter((v) => v.id !== id));
+        }}
+        onClear={() => {
+          setSelected([]);
+          setBulkStatus("");
+        }}
+        onCreated={onCreated}
+        onReview={onReview}
+        onOpenLibrary={onOpenLibrary}
+        onBusyChange={(value) => {
+          setBatchBusy(value);
+          onBusyChange(value);
+        }}
+      />
     </div>
   );
 }

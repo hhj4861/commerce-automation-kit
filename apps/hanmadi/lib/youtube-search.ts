@@ -11,6 +11,8 @@ export type YoutubeVideo = {
 export type YoutubeSearchPage = {
   videos: YoutubeVideo[];
   nextPageToken: string | null;
+  /** YouTube's estimate, not a pagination boundary or an exact count. */
+  totalResults: number | null;
 };
 
 // Tokens are opaque. Bound their size without interpreting or constructing them.
@@ -125,8 +127,15 @@ export async function searchYoutubeVideos(
       ];
     })
     .slice(0, YOUTUBE_PAGE_SIZE);
+  const totalResults = record(data.pageInfo).totalResults;
   return {
     videos,
+    totalResults:
+      typeof totalResults === "number" &&
+      Number.isSafeInteger(totalResults) &&
+      totalResults >= 0
+        ? totalResults
+        : null,
     // A short/empty page can still have a next page. totalResults is approximate.
     nextPageToken: isPageToken(data.nextPageToken) ? data.nextPageToken : null,
   };

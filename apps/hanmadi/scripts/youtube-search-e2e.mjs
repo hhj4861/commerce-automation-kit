@@ -59,15 +59,59 @@ export async function verifyYoutubeSearch({
           body: '<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180"><rect width="320" height="180" fill="#dae5ee"/><rect x="24" y="24" width="272" height="132" rx="8" fill="#fbfcfe"/><text x="160" y="80" text-anchor="middle" font-family="sans-serif" font-size="24" fill="#3157d5">카페에서 한마디</text><text x="160" y="118" text-anchor="middle" font-family="sans-serif" font-size="16" fill="#64748b">브라우저 검증용 이미지</text></svg>',
         });
   let failThird = true;
+  let holdSearch = false,
+    releaseSearch;
+  let holdGeneration = true,
+    releaseGeneration;
+  let failGeneration = true,
+    loseResponse = false;
+  const generations = [];
+  const uncertainVideo = {
+    ...videos[0],
+    id: "video000008",
+    url: "https://www.youtube.com/watch?v=video000008",
+    title: "응답 유실 확인용 영상",
+    thumbnail: null,
+  };
   const handler = async (route) => {
     const request = route.request();
-    if (
-      request.method() !== "POST" ||
-      request.postDataJSON()?.action !== "search"
-    )
-      return route.continue();
+    if (request.method() !== "POST") return route.continue();
     const body = request.postDataJSON();
+    if (body.action === "generate") {
+      generations.push(body);
+      if (holdGeneration) {
+        holdGeneration = false;
+        await new Promise((resolve) => {
+          releaseGeneration = resolve;
+        });
+      }
+      if (body.sourceUrl === videos[1].url && failGeneration) {
+        failGeneration = false;
+        return route.fulfill({
+          status: 400,
+          json: { error: "검증용 원문 확인 오류" },
+        });
+      }
+      if (loseResponse) {
+        loseResponse = false;
+        const result = await route.fetch();
+        assert.equal(
+          result.status(),
+          200,
+          "the uncertain response was saved by the real handler",
+        );
+        return route.abort("failed");
+      }
+      return route.continue();
+    }
+    if (body.action !== "search") return route.continue();
     calls.push(body);
+    if (body.pageToken === "SECOND" && holdSearch) {
+      holdSearch = false;
+      await new Promise((resolve) => {
+        releaseSearch = resolve;
+      });
+    }
     await new Promise((r) => setTimeout(r, 100));
     if (body.pageToken === "THIRD" && failThird) {
       failThird = false;
@@ -77,16 +121,27 @@ export async function verifyYoutubeSearch({
       });
     }
     const data =
+      body.query === "응답 확인"
+        ? { videos: [uncertainVideo], nextPageToken: null }
+        : body.query === "결과 없는 검색"
+          ? { videos: [], nextPageToken: null }
+          : !body.pageToken
+            ? { videos: videos.slice(0, 5), nextPageToken: "SECOND" }
+            : body.pageToken === "SECOND"
+              ? { videos: videos.slice(4, 7), nextPageToken: "THIRD" }
+              : body.pageToken === "THIRD"
+                ? { videos: [], nextPageToken: "FOURTH" }
+                : { videos: videos.slice(7), nextPageToken: null };
+    data.totalResults =
       body.query === "결과 없는 검색"
-        ? { videos: [], nextPageToken: null }
-        : !body.pageToken
-          ? { videos: videos.slice(0, 5), nextPageToken: "SECOND" }
-          : body.pageToken === "SECOND"
-            ? { videos: videos.slice(4, 7), nextPageToken: "THIRD" }
-            : body.pageToken === "THIRD"
-              ? { videos: [], nextPageToken: "FOURTH" }
-              : { videos: videos.slice(7), nextPageToken: null };
-    return route.fulfill({ json: data });
+        ? 0
+        : body.query === "응답 확인"
+          ? 1
+          : 12500;
+    // A deliberately cancelled search may no longer have an active browser request.
+    return route.fulfill({ json: data }).catch((error) => {
+      if (!request.failure()) throw error;
+    });
   };
   await page.route("**/api/study/admin", handler);
   await page.route("https://i.ytimg.com/**", thumbnailHandler);
@@ -101,6 +156,7 @@ export async function verifyYoutubeSearch({
     await query.press("Enter");
     await status.filter({ hasText: "1페이지 · 영상 5개" }).waitFor();
     assert.equal(await page.locator(".vs-video").count(), 5);
+    await page.getByText("검색 결과 약 12,500개", { exact: true }).waitFor();
     await page.locator(".vs-video").first().locator("img").waitFor();
     await page.waitForFunction(
       () => document.querySelector(".vs-video img")?.naturalWidth > 0,
@@ -168,6 +224,7 @@ export async function verifyYoutubeSearch({
     await query.press("Enter");
     await status.filter({ hasText: "1페이지 · 영상 0개" }).waitFor();
     assert.equal(await queue.locator("li").count(), 7);
+    await page.getByText("검색 결과 약 0개", { exact: true }).waitFor();
     assert(await next.isDisabled());
     assert.equal(
       calls.at(-1).pageToken,
@@ -207,8 +264,189 @@ export async function verifyYoutubeSearch({
         );
       }
     }
+    // Whole-search selection fetches unseen pages, resumes after quota failure, and skips cached pages.
+    const selectEvery = () =>
+      page.getByRole("button", { name: "모든 페이지 전체 선택", exact: true });
+    await queue.getByRole("button", { name: "전체 해제", exact: true }).click();
+    failThird = true;
+    const beforeBulk = calls.length;
+    await selectEvery().click();
+    await page.getByRole("alert").filter({ hasText: "검색 한도" }).waitFor();
+    await page.getByText(/전체 선택은 끝나지 않았어요/).waitFor();
+    assert.equal(await queue.locator("li").count(), 7);
+    assert.deepEqual(
+      calls.slice(beforeBulk).map((c) => c.pageToken),
+      ["SECOND", "THIRD"],
+    );
+    await selectEvery().click();
+    await page
+      .getByRole("button", { name: "모든 페이지 선택 완료", exact: true })
+      .waitFor();
+    assert.equal(await queue.locator("li").count(), 8);
+    assert.deepEqual(
+      calls.slice(beforeBulk).map((c) => c.pageToken),
+      ["SECOND", "THIRD", "THIRD", "FOURTH"],
+    );
+    assert.equal(
+      await page.locator(".vs-video").count(),
+      5,
+      "bulk selection keeps five-item display",
+    );
+
+    // Cancelling preserves the selected prefix, and a new invocation continues at the pending token.
+    await queue.getByRole("button", { name: "전체 해제", exact: true }).click();
+    await query.fill("중단 확인");
+    await query.press("Enter");
+    await status.filter({ hasText: "1페이지 · 영상 5개" }).waitFor();
+    holdSearch = true;
+    const waitingSearch = page.waitForRequest(
+      (r) => r.method() === "POST" && r.postDataJSON()?.pageToken === "SECOND",
+    );
+    await selectEvery().click();
+    await waitingSearch;
+    await page.waitForFunction(
+      () =>
+        document.querySelector(".vs-all-pages button")?.textContent ===
+        "전체 선택 중지",
+    );
+    await page
+      .getByRole("button", { name: "전체 선택 중지", exact: true })
+      .click();
+    await page.getByText(/전체 선택을 중지했어요/).waitFor();
+    assert.equal(await queue.locator("li").count(), 5);
+    releaseSearch();
+    await selectEvery().click();
+    await page
+      .getByRole("button", { name: "모든 페이지 선택 완료", exact: true })
+      .waitFor();
+    assert.equal(await queue.locator("li").count(), 8);
+
+    // All sources are explicitly mapped to their own video, with a shared rights attestation.
+    const batchButton = () =>
+      queue.getByRole("button", { name: /^(전체|남은) 자료 만들기/ });
+    assert(await batchButton().isDisabled());
+    await queue.getByLabel("공통 연습 레벨", { exact: true }).selectOption("2");
+    const rights =
+      "직접 제작한 영상별 원문이며 AI 처리와 수업 재사용 권한을 보유합니다.";
     await queue
-      .getByRole("button", { name: `${names[0]} 자료 만들기`, exact: true })
+      .getByLabel("목록 전체의 원문 사용권 근거", { exact: true })
+      .fill(rights);
+    const texts = videos.map(
+      (v, i) =>
+        `영상 ${i + 1}의 직접 작성한 원문입니다. 카페에서 인사하고 주문하는 개별 회화입니다. ${v.title}`,
+    );
+    const sourceFiles = videos.map((v, i) => ({
+      name: `${v.id}.txt`,
+      mimeType: "text/plain",
+      buffer: Buffer.from(texts[i]),
+    }));
+    const upload = queue.getByLabel("원문 파일 여러 개 연결", { exact: true });
+    await upload.setInputFiles(sourceFiles.slice(0, 7));
+    await queue.getByText("원문 7개를 연결했어요.", { exact: true }).waitFor();
+    assert(
+      await batchButton().isDisabled(),
+      "missing source blocks bulk start",
+    );
+    await upload.setInputFiles([
+      sourceFiles[7],
+      {
+        name: "unmatched.txt",
+        mimeType: "text/plain",
+        buffer: Buffer.from(texts[0]),
+      },
+    ]);
+    await queue.getByText(/연결하지 못한 파일 1개/).waitFor();
+    await queue
+      .getByLabel(
+        "목록의 모든 원문을 AI로 처리하고 수업에 재사용할 권한을 확인했어요.",
+        { exact: true },
+      )
+      .check();
+    assert(!(await batchButton().isDisabled()));
+    await page.setViewportSize({ width: 390, height: 1100 });
+    assert(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    );
+    await queue.screenshot({
+      path: resolve(screenshots, "video-batch-ready.png"),
+    });
+    const waitingGeneration = page.waitForRequest(
+      (r) => r.method() === "POST" && r.postDataJSON()?.action === "generate",
+    );
+    await batchButton().click();
+    await waitingGeneration;
+    assert(
+      await page
+        .getByRole("button", { name: "학습 관리", exact: true })
+        .isDisabled(),
+    );
+    await queue
+      .getByRole("button", { name: "현재 영상까지만 만들기", exact: true })
+      .click();
+    releaseGeneration();
+    await queue.getByText(/초안 완료 1개 · 만들 자료 7개/).waitFor();
+    await batchButton().waitFor();
+    assert.equal(
+      generations.length,
+      1,
+      "stop finishes the in-flight video and starts no more",
+    );
+    await batchButton().click();
+    await queue.getByText(/초안 완료 7개 · 만들 자료 1개/).waitFor();
+    await batchButton().waitFor();
+    assert.equal(generations.length, 8);
+    await batchButton().click();
+    await queue.getByText(/초안 완료 8개 · 만들 자료 0개/).waitFor();
+    await batchButton().waitFor();
+    assert(await batchButton().isDisabled());
+    assert.equal(
+      generations.length,
+      9,
+      "only the one explicit failure is retried",
+    );
+    for (const body of generations) {
+      const index = videos.findIndex((v) => v.url === body.sourceUrl);
+      assert.equal(body.transcript, texts[index]);
+      assert.equal(body.title, names[index]);
+      assert.equal(body.level, 2);
+      assert.equal(body.language, "ja");
+      assert.equal(body.rights, rights);
+      assert.equal(body.rightsConfirmed, true);
+      assert.equal(body.status, undefined, "batch does not publish drafts");
+    }
+    const snapshot = await (
+      await admin.request.get(new URL("/api/study/admin", page.url()).href)
+    ).json();
+    const created = snapshot.drafts.filter((d) =>
+      videos.some((v) => v.url === d.sourceUrl),
+    );
+    assert.equal(created.length, 8, "one separate stored draft per video");
+    assert.equal(
+      new Set(created.map((d) => d.sourceHash)).size,
+      8,
+      "per-video source provenance stays separate",
+    );
+    assert(created.every((d) => d.status === "draft"));
+    await page
+      .getByRole("button", { name: "자료 만들기", exact: true })
+      .click();
+    await page
+      .getByLabel("원문 사용권 근거", { exact: true })
+      .fill("편집 중인 미저장 사용권 기록을 유지해야 합니다.");
+    await page.getByRole("button", { name: "영상 찾기", exact: true }).click();
+    page.once("dialog", (dialog) => dialog.dismiss());
+    await queue
+      .getByRole("button", { name: `${names[0]} 초안 검수`, exact: true })
+      .click();
+    assert(
+      await queue.isVisible(),
+      "cancel preserves an editor containing only rights notes",
+    );
+    page.once("dialog", (dialog) => dialog.accept());
+    await queue
+      .getByRole("button", { name: `${names[0]} 초안 검수`, exact: true })
       .click();
     assert.equal(
       await page
@@ -220,67 +458,50 @@ export async function verifyYoutubeSearch({
       await page.getByLabel("수업 제목", { exact: true }).inputValue(),
       names[0],
     );
-    assert(
-      await page
-        .getByRole("button", { name: "AI로 학습 초안 만들기", exact: true })
-        .isDisabled(),
-      "metadata alone cannot generate a lesson",
-    );
-    await page
-      .getByLabel("원문 사용권 근거", { exact: true })
-      .fill("작성 중인 첫 영상의 원문 사용권 확인 내용");
-    await page
-      .getByLabel("직접 제공받은 텍스트·SRT·VTT 원문", { exact: true })
-      .fill(
-        "첫 번째 영상의 직접 작성한 원문입니다. 다음 영상으로 복사되면 안 됩니다.",
-      );
-    const rightsCheck = page.getByLabel(
-      "이 원문을 AI로 처리하고 학습 표현으로 재사용할 권한을 확인했어요.",
-      { exact: true },
-    );
-    await rightsCheck.check();
+    await page.getByLabel("교재 찾기", { exact: true }).fill("이전 검색 필터");
     await page.getByRole("button", { name: "영상 찾기", exact: true }).click();
-    page.once("dialog", (dialog) => dialog.dismiss());
+
+    // A saved response lost on the wire is marked unknown and never silently retried.
+    await queue.getByRole("button", { name: "전체 해제", exact: true }).click();
+    await query.fill("응답 확인");
+    await query.press("Enter");
+    await status.filter({ hasText: "1페이지 · 영상 1개" }).waitFor();
+    await selectEvery().click();
+    await queue.getByRole("button", { name: /전체 자료 만들기/ }).waitFor();
+    await upload.setInputFiles([
+      {
+        name: `${uncertainVideo.id}.txt`,
+        mimeType: "text/plain",
+        buffer: Buffer.from(texts[0]),
+      },
+    ]);
+    await queue.getByText("원문 1개를 연결했어요.", { exact: true }).waitFor();
     await queue
-      .getByRole("button", { name: `${names[1]} 자료 만들기`, exact: true })
+      .getByLabel(
+        "목록의 모든 원문을 AI로 처리하고 수업에 재사용할 권한을 확인했어요.",
+        { exact: true },
+      )
+      .check();
+    loseResponse = true;
+    await batchButton().click();
+    await queue
+      .getByText(/초안 완료 0개 · 만들 자료 0개 · 확인 필요 1개/)
+      .waitFor();
+    await batchButton().waitFor();
+    assert(await batchButton().isDisabled());
+    assert.equal(generations.length, 10);
+    await queue
+      .getByRole("button", { name: "콘텐츠 목록에서 확인", exact: true })
       .click();
-    assert(await queue.isVisible(), "cancel preserves the current editor");
     await page
-      .getByRole("button", { name: "자료 만들기", exact: true })
-      .click();
-    assert.equal(
-      await page.getByLabel("수업 제목", { exact: true }).inputValue(),
-      names[0],
-    );
-    assert(await rightsCheck.isChecked());
-    await page.getByRole("button", { name: "영상 찾기", exact: true }).click();
-    page.once("dialog", (dialog) => dialog.accept());
-    await queue
-      .getByRole("button", { name: `${names[1]} 자료 만들기`, exact: true })
-      .click();
-    assert.equal(
-      await page
-        .getByLabel("참고 영상 주소 (선택)", { exact: true })
-        .inputValue(),
-      videos[1].url,
-    );
-    assert.equal(
-      await page.getByLabel("원문 사용권 근거", { exact: true }).inputValue(),
-      "",
-    );
-    assert.equal(
-      await page
-        .getByLabel("직접 제공받은 텍스트·SRT·VTT 원문", { exact: true })
-        .inputValue(),
-      "",
-    );
-    assert.equal(await rightsCheck.isChecked(), false);
+      .locator(".hm-draft")
+      .filter({ hasText: uncertainVideo.title })
+      .waitFor();
     await page.getByRole("button", { name: "영상 찾기", exact: true }).click();
     await queue.getByRole("button", { name: "전체 해제", exact: true }).click();
     assert.equal(await queue.locator("li").count(), 0);
-    assert.equal(await all.isChecked(), false);
     console.log(
-      "PASS YouTube 5/page, bulk and cross-page selection, cached paging, errors/retry, empty pages, mobile layout, per-video editor and rights reset",
+      "PASS search totals, five-item paging, ALL unseen pages, cancel/resume, partial failures, source imports, sequential bulk drafts, stop/retry, response-loss guard, separate provenance and human review",
     );
   } finally {
     await page.unroute("**/api/study/admin", handler);
