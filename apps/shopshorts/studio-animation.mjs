@@ -4,6 +4,7 @@ import {readFile,rm} from 'node:fs/promises';
 import {fileURLToPath} from 'node:url';
 import {join} from 'node:path';
 import {Resvg} from '@resvg/resvg-js';
+import {illustratedSvg,illustrationSymbol} from './illustrated-animation.mjs';
 import {animationPlan} from './lib/animation-plan.js';
 
 const escape=v=>String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[c]));
@@ -47,11 +48,11 @@ function engineeringDiagram(plan,time,portrait) {
     diagram='<path d="M-180 120V-130H180V120ZM-180-45H180M-180 40H180" fill="#dce7d9" stroke="'+ink+'" stroke-width="3"/>';
     for(let i=0;i<plan.elements.length;i++){
       const x=-245+((time*.14+i/plan.elements.length)%1)*490,y=-85+(i%3)*85;
-      diagram+=`<path d="M-230 ${y}H230" stroke="#a0baad" stroke-dasharray="6 8" fill="none"/><g transform="translate(${x} ${y}) scale(.35)" fill="${colors[i]}" stroke="${ink}" stroke-width="3">${icons[plan.elements[i].icon]}</g>`;
+      diagram+=`<path d="M-230 ${y}H230" stroke="#a0baad" stroke-dasharray="6 8" fill="none"/><g transform="translate(${x} ${y}) scale(.35)" fill="${colors[i]}" stroke="${ink}" stroke-width="3">${icons[plan.elements[i].icon]||illustrationSymbol(plan.elements[i],time)}</g>`;
     }
   }else{
     diagram='<ellipse rx="220" ry="87" fill="none" stroke="#b2ad96" stroke-width="2" stroke-dasharray="6 8"/>';
-    plan.elements.forEach((e,i)=>{const angle=time*.7+i*2*Math.PI/(plan.elements.length-1);diagram+=`<g transform="translate(${i?Math.cos(angle)*220:0} ${i?Math.sin(angle)*87:0}) scale(${i?.5:.8})" fill="${colors[i]}" stroke="${ink}" stroke-width="3">${icons[e.icon]}</g>`;});
+    plan.elements.forEach((e,i)=>{const angle=time*.7+i*2*Math.PI/(plan.elements.length-1);diagram+=`<g transform="translate(${i?Math.cos(angle)*220:0} ${i?Math.sin(angle)*87:0}) scale(${i?.5:.8})" fill="${colors[i]}" stroke="${ink}" stroke-width="3">${icons[e.icon]||illustrationSymbol(e,time)}</g>`;});
   }
   const labels=plan.elements.map((e,i)=>label(e.label,portrait?160+(i%2)*400:180+i*300,portrait?830+Math.floor(i/2)*75:515,23,16)).join('');
   return `<g transform="translate(${center} ${top}) scale(${scale})">${diagram}</g>${labels}${label(plan.takeaway||'움직임으로 살펴보는 원리',center,portrait?1050:610,portrait?31:29,portrait?20:36)}${label('원리 설명용 · 움직임과 비율 과장',center,portrait?1170:670,17,40)}`;
@@ -60,6 +61,7 @@ function engineeringDiagram(plan,time,portrait) {
 // Frame-based transforms make exports deterministic and independent of wall time.
 export function animationSvg(scene,aspect,time) {
   const plan=animationPlan(scene.animation),portrait=aspect==='9:16',w=portrait?720:1280,h=portrait?1280:720;
+  if(plan.presentation==='illustrated'&&(!plan.diagram||plan.diagram==='objects'))return illustratedSvg(plan,scene.duration,aspect,time,icons);
   const duration=scene.duration,n=plan.elements.length;
   const points=plan.elements.map((_,i)=>portrait?{x:n===2||(n===3&&i===2)?w/2:180+(i%2)*360,y:n===2?410+i*370:420+Math.floor(i/2)*355}:{x:140+i*(1000/(n-1)),y:365});
   let body='';
@@ -69,7 +71,7 @@ export function animationSvg(scene,aspect,time) {
   plan.elements.forEach((e,i)=>{
     const t=time-i*duration*.12,show=ease(t/.65),p=points[i],phase=Math.max(0,t)*2.5;
     const dy=(1-show)*30+(e.motion==='float'?Math.sin(phase)*9:0),rotation=e.motion==='shake'?Math.sin(phase*2)*4:0,scale=show*(e.motion==='pulse'?1+Math.sin(phase)*.035:1);
-    body+=`<g opacity="${show}" transform="translate(${p.x} ${p.y+dy})"><circle r="${portrait?107:95}" fill="${colors[i]}" opacity=".15"/><g transform="rotate(${rotation}) scale(${scale})" fill="${colors[i]}" stroke="${ink}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">${icons[e.icon]}</g>${label(e.label,0,portrait?150:138,portrait?27:25,portrait?10:9)}<circle cx="-70" cy="-82" r="16" fill="${ink}"/><text x="-70" y="-76" text-anchor="middle" fill="#fffaf0" font-size="16" font-family="NanumGothic">${i+1}</text></g>`;
+    body+=`<g opacity="${show}" transform="translate(${p.x} ${p.y+dy})"><circle r="${portrait?107:95}" fill="${colors[i]}" opacity=".15"/><g transform="rotate(${rotation}) scale(${scale})" fill="${colors[i]}" stroke="${ink}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">${icons[e.icon]||illustrationSymbol(e,time)}</g>${label(e.label,0,portrait?150:138,portrait?27:25,portrait?10:9)}<circle cx="-70" cy="-82" r="16" fill="${ink}"/><text x="-70" y="-76" text-anchor="middle" fill="#fffaf0" font-size="16" font-family="NanumGothic">${i+1}</text></g>`;
   });
   if(plan.diagram&&plan.diagram!=='objects')body=engineeringDiagram(plan,time,portrait);
   else if(plan.takeaway)body+=label(plan.takeaway,w/2,portrait?1100:610,portrait?28:25,portrait?22:40);

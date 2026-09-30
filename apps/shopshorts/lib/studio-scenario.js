@@ -29,6 +29,11 @@ export function scenarioResult(value, input) {
   if (total > (brief.format === 'short' ? 180 : 600) || Math.abs(total - brief.duration) > Math.max(2, brief.duration * .1)) fail('시나리오 길이가 목표와 맞지 않습니다. 다시 생성하세요.', 502);
   if (typeof value.title !== 'string' || !value.title.trim() || value.title.length > 100) fail('시나리오 제목을 확인하지 못했습니다. 다시 생성하세요.', 502);
   if(animated(brief) && scenes.some(s=>s.kind!=='video'||!s.animation))fail('애니메이션 동작 구성을 완성하지 못했어요. 시나리오를 다시 생성해 주세요.',502);
+  // New automatic scripts default to artwork even when the model omits the optional selector.
+  // Saved legacy scenes are not migrated by the general scene validator.
+  if(animated(brief)&&explainer(brief))for(const scene of scenes){
+    scene.animation.presentation??=scene.animation.diagram&&scene.animation.diagram!=='objects'?'diagram':'illustrated';
+  }
   const result = { title: value.title.trim(), scenes };
   if(explainer(brief))result.research={...validateResearch(value.research),checkedAt:value.research.checkedAt};
   if(brief.productionStyle==='cinematic') {
