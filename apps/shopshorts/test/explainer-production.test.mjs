@@ -19,7 +19,7 @@ import {Resvg} from '@resvg/resvg-js';
 const brief={category:'건축학',topic:'초고층의 진동을 줄이는 원리',format:'short',duration:16,direction:'원리를 쉽게',workflow:'explainer-v1',productionStyle:'animation',voiceId:'n2fbxG88jqAoaVPUy3IG',narrationSpeed:1.15,captionPosition:'middle'};
 const research={sources:[{id:'source-1',title:'공식 건축 자료',url:'https://www.taipei-101.com.tw/ko/observatory/feature'}],facts:[{claim:'매달린 질량과 댐퍼로 진동을 줄인다.',sourceIds:['source-1']}],limitations:['도해의 진폭은 실제 측정값이 아니다.']};
 const plan={title:'움직여서 덜 흔들리게',layout:'contrast',diagram:'pendulum',takeaway:'상대운동에 저항하는 댐퍼',elements:[{icon:'building',label:'건물',motion:'shake'},{icon:'damper',label:'댐퍼',motion:'pulse'}]};
-const scenes=[{id:'s1',duration:8,kind:'video',narration:'왜 움직일까요?',prompt:'매달린 질량의 원리 설명',animation:plan},{id:'s2',duration:8,kind:'video',narration:'움직이며 줄입니다. 원리를 이해해 보세요.',prompt:'진동 에너지 감소 도해',animation:plan}];
+const scenes=[{id:'s1',duration:8,kind:'video',narration:'왜 움직일까요?',prompt:'매달린 질량의 원리 설명',animation:{...plan,diagram:'objects',presentation:'illustrated',staging:'reaction',elements:[{icon:'person',label:'사람',motion:'talk'},{icon:'robot',label:'도움',motion:'wave'}]}},{id:'s2',duration:8,kind:'video',narration:'움직이며 줄입니다. 원리를 이해해 보세요.',prompt:'진동 에너지 감소 도해',animation:plan}];
 const generated={title:'움직임의 원리',scenes,storyArc:{hook:{sceneId:'s1',line:'왜 움직일까요?'},payoff:{sceneId:'s2',line:'움직이며 줄입니다.'},ending:{sceneId:'s2',line:'원리를 이해해 보세요.'}}};
 test('production choices persist and reject unsupported rates, providers and voices',()=>{
  const b=validateBrief(brief);assert.equal(b.mediaProvider,'animation');assert.equal(recommendationInput({...brief,focus:'topic'}).voiceId,brief.voiceId);
@@ -35,6 +35,10 @@ test('selected topic is researched before script, evidence is retained, missing 
  }});
  assert.deepEqual(phases,['research','scenario']);assert.equal(calls,2);assert.deepEqual(result.research.facts,research.facts);
  assert.deepEqual(scenarioResult(result,brief).research,result.research);
+ assert.equal(result.scenes[0].animation.presentation,'illustrated');
+ assert.equal(result.scenes[1].animation.presentation,'diagram');
+ const omitted={...generated,scenes:generated.scenes.map(s=>({...s,animation:{...plan,diagram:'objects'}})),research};
+ assert.equal(scenarioResult(omitted,brief).scenes[0].animation.presentation,'illustrated');
  await assert.rejects(scenarioBrief(brief,{}, {generate:async()=>({searched:false,value:research})}),{code:'SCENARIO_RESEARCH_INVALID'});
  assert.throws(()=>validateResearch({...research,facts:[{claim:'출처 없는 주장',sourceIds:['source-9']}]}));
  assert.throws(()=>validateResearch({...research,sources:[{id:'source-1',title:'bad',url:'javascript:alert(1)'}]}));
