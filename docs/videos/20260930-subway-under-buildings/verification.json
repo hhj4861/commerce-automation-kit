@@ -1,0 +1,22 @@
+{
+  "file": "subway-under-buildings.mp4",
+  "sha256": "cafcd362379f975be248015e144d2a99dea1f94c4543d6fcbdadf4b6c160ba2c",
+  "duration": 54.933008,
+  "frames": 1648,
+  "resolution": [
+    1080,
+    1920
+  ],
+  "fps": 30,
+  "audio": "AAC 48kHz mono",
+  "voiceId": "n2fbxG88jqAoaVPUy3IG",
+  "speed": 1.15,
+  "ttsRun": "36706679980",
+  "decoder": "ffmpeg full decode with -xerror passed",
+  "renderer": "Blender 4.5.10 Eevee",
+  "sources": "sources.md",
+  "captions": "Sentence-weight timing; not forced word alignment",
+  "bytes": 16064081,
+  "visualReview": "All nine final scene samples checked: geometry, text, cutaway visibility, crop and background continuity",
+  "silenceCheck": "No silence >= 0.75 seconds at -40 dB in the assembled narration"
+}
