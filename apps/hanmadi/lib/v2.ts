@@ -40,6 +40,7 @@ export type StudyState = {
   revision: number;
   saveEpoch: number;
   autoSave: boolean;
+  autoSaveChat?: boolean;
   language?: StudyLanguage;
   profiles: Partial<Record<StudyLanguage, Profile>>;
   expressions: Expression[];
@@ -48,6 +49,7 @@ export const emptyStudy = (): StudyState => ({
   revision: 0,
   saveEpoch: 0,
   autoSave: false,
+  autoSaveChat: true,
   profiles: {},
   expressions: [],
 });

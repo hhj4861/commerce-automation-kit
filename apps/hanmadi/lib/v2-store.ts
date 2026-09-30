@@ -50,6 +50,7 @@ export async function saveExpression(
   phrase: Phrase,
   source: "translation" | "chat",
   epoch: number,
+  automatic = false,
 ) {
   let saved = false;
   const state = await changeStudy(actor, (state) => {
@@ -57,6 +58,7 @@ export async function saveExpression(
     if (
       state.saveEpoch !== epoch ||
       (source === "translation" && !state.autoSave) ||
+      (source === "chat" && automatic && state.autoSaveChat === false) ||
       !safePractice(phrase)
     )
       return;

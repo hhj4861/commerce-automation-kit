@@ -2189,3 +2189,36 @@
 .hm-auth-challenge label {
   margin: 0;
 }
+
+/* Learner recasts keep the same three-line hierarchy as the AI reply. */
+.hm-app .hm-chat-learner {
+  align-self: flex-end;
+  max-width: 100%;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.hm-app .hm-chat-learner .hm-expression {
+  border: 1px solid #ccd7fa;
+  border-radius: 20px 4px 20px 20px;
+  background: #f5f7ff;
+  padding: 19px;
+}
+.hm-app .hm-learning-status,
+.hm-app .hm-original-input {
+  font-size: 12px;
+  color: #53617d;
+  line-height: 1.6;
+}
+.hm-app .hm-original-input {
+  margin-top: 8px;
+}
+.hm-app .hm-original-input summary {
+  cursor: pointer;
+}
+.hm-app .hm-chat-user p {
+  margin: 0;
+}
+.hm-app .hm-chat-user small {
+  display: block;
+  margin-top: 8px;
+}

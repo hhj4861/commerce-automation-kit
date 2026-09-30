@@ -137,6 +137,18 @@ const mock = createServer(async (req, res) => {
   let result = phrases[language];
   if (input === "곤니치와, 현종데스요" && !system.includes("REPAIR:"))
     result = { ...result, text: "안녕하세요! 저는 하나예요." };
+  if (b.response_format?.json_schema?.name === "hanmadi_learner_turn") {
+    if (input.includes("변환실패")) {
+      res.statusCode = 503;
+      return res.end(
+        JSON.stringify({ error: { message: "learner-only failure" } }),
+      );
+    }
+    result = {
+      phrase: input.includes("예시부터 알려") ? null : phrases[language],
+      reusable: !input.includes("현종") && !input.includes("예시부터 알려"),
+    };
+  }
   if (system.includes("travel translator")) {
     assert.equal(b.response_format?.json_schema?.name, "hanmadi_translation");
     result = {
@@ -1153,8 +1165,14 @@ try {
     ).status,
     200,
   );
-  assert.match(modelCalls.at(-1).system, /Reference examples/);
-  assert.match(modelCalls.at(-1).system, /추가 수업 표현/);
+  assert.match(
+    modelCalls.findLast((c) => c.system.includes("speaking coach")).system,
+    /Reference examples/,
+  );
+  assert.match(
+    modelCalls.findLast((c) => c.system.includes("speaking coach")).system,
+    /추가 수업 표현/,
+  );
   await adminPage
     .getByRole("button", { name: "앱 반영 확인", exact: true })
     .click();
@@ -1209,7 +1227,11 @@ try {
     scene: "smalltalk",
     messages: [{ role: "user", content: "한국에서 왔어요." }],
   });
-  assert(!modelCalls.at(-1).system.includes("Reference examples"));
+  assert(
+    !modelCalls
+      .findLast((c) => c.system.includes("speaking coach"))
+      .system.includes("Reference examples"),
+  );
   assert.equal((await adminSnapshot()).contributions.length, 0);
   const collectionStarted = new Promise((resolve) => {
     slowStarted = resolve;
@@ -1868,6 +1890,200 @@ try {
   assert.deepEqual(errors, []);
   console.log(
     "PASS responsive 360/390/768/1440, dialogs, logout, no browser exceptions",
+  );
+  const learnerContext = await browser.newContext({
+    viewport: { width: 390, height: 844 },
+  });
+  assert.equal(
+    (
+      await post(
+        {
+          action: "signup",
+          name: "learner-recast",
+          password: "fixture-password-only",
+        },
+        learnerContext,
+        "/api/study/account",
+      )
+    ).status,
+    200,
+  );
+  for (const language of ["ja", "th", "en", "es"])
+    await post(
+      {
+        action: "assess",
+        language,
+        answers: [0, 1, 2],
+        confidence: 1,
+        minutes: 10,
+      },
+      learnerContext,
+    );
+  await post({ action: "settings", language: "ja" }, learnerContext);
+  await learnerContext.addInitScript(() => {
+    const style = document.createElement("style");
+    style.textContent = "nextjs-portal { display:none !important; }";
+    document.addEventListener(
+      "DOMContentLoaded",
+      () => document.head.append(style),
+      { once: true },
+    );
+  });
+  const learnerPage = await learnerContext.newPage();
+  await learnerPage.goto(base + "/study");
+  await learnerPage
+    .getByRole("button", { name: "AI 대화", exact: true })
+    .click();
+  await learnerPage
+    .getByLabel("말이 막히면 한국어로 도움 요청")
+    .fill("한국에서 왔어요");
+  await learnerPage
+    .getByRole("button", { name: "보내기", exact: true })
+    .click();
+  const learnerCard = learnerPage.locator(".hm-chat-learner");
+  await learnerCard
+    .getByText("내 표현에 저장했어요 · 스터디에서 복습할 수 있어요.")
+    .waitFor();
+  assert.equal(
+    await learnerCard.locator(".hm-native").innerText(),
+    phrases.ja.text,
+  );
+  assert.equal(
+    await learnerCard.locator(".hm-reading").innerText(),
+    phrases.ja.reading,
+  );
+  const lines = await learnerCard
+    .locator(".hm-expression > p")
+    .allTextContents();
+  assert.deepEqual(lines.slice(0, 3), [
+    phrases.ja.text,
+    phrases.ja.reading,
+    phrases.ja.meaning,
+  ]);
+  await learnerCard.getByRole("button", { name: /들어보기/ }).waitFor();
+  for (const width of [320, 390, 768]) {
+    await learnerPage.setViewportSize({ width, height: 844 });
+    assert(
+      await learnerCard.evaluate((el) => el.scrollWidth <= el.clientWidth),
+      `learner recast overflow ${width}`,
+    );
+  }
+  await learnerPage.setViewportSize({ width: 390, height: 844 });
+  await learnerCard.scrollIntoViewIfNeeded();
+  await learnerPage.screenshot({
+    path: resolve(screenshots, "learner-recast.png"),
+  });
+  let learnerState = (await state(learnerContext)).state;
+  assert.equal(learnerState.expressions.length, 1);
+  assert.equal(learnerState.expressions[0].source, "chat");
+  assert.equal(learnerState.expressions[0].text, phrases.ja.text);
+  assert.equal(
+    learnerState.expressions[0].content,
+    undefined,
+    "raw conversation not persisted",
+  );
+  await learnerPage
+    .getByRole("button", { name: "스터디", exact: true })
+    .click();
+  await learnerPage.getByText(phrases.ja.text, { exact: true }).waitFor();
+  await learnerPage.reload();
+  await learnerPage
+    .getByRole("button", { name: "내 표현", exact: true })
+    .click();
+  await learnerPage.getByText(phrases.ja.text, { exact: true }).waitFor();
+  const chatBody = (text, language = "ja") => ({
+    action: "chat",
+    language,
+    scene: "cafe",
+    messages: [{ role: "user", content: text }],
+  });
+  for (const language of ["ja", "th", "en", "es"]) {
+    const response = await post(
+      chatBody("한국에서 왔어요", language),
+      learnerContext,
+    );
+    assert.equal(response.status, 200);
+    assert.equal(response.data.learnerPhrase.text, phrases[language].text);
+    assert.equal(response.data.learning, "saved");
+  }
+  assert.equal(
+    (await state(learnerContext)).state.expressions.length,
+    4,
+    "same-language recast deduplicated",
+  );
+  assert(
+    !(await state(other)).state.expressions.some(
+      (e) => e.id === learnerState.expressions[0].id,
+    ),
+    "private expressions isolated by learner",
+  );
+  await learnerPage.getByRole("button", { name: "설정", exact: true }).click();
+  await learnerPage
+    .getByRole("switch", { name: "내 말 자동 학습", exact: true })
+    .click();
+  await learnerPage
+    .getByRole("switch", {
+      name: "내 말 자동 학습",
+      exact: true,
+      checked: false,
+    })
+    .waitFor();
+  await learnerPage.reload();
+  assert.equal((await state(learnerContext)).state.autoSaveChat, false);
+  assert.equal(
+    (await post(chatBody("한국에서 왔어요"), learnerContext)).data.learning,
+    "disabled",
+  );
+  await post({ action: "settings", autoSaveChat: true }, learnerContext);
+  const personal = await post(chatBody("현종이에요"), learnerContext);
+  assert.equal(personal.data.learning, "not-reusable");
+  const failure = await post(chatBody("변환실패"), learnerContext);
+  assert.equal(failure.status, 200);
+  assert.equal(failure.data.learning, "unavailable");
+  assert(
+    failure.data.reply.text,
+    "AI reply survives learner conversion failure",
+  );
+  const control = await post(
+    chatBody("짧은 인사와 예시부터 알려 주세요"),
+    learnerContext,
+  );
+  assert.equal(control.data.learnerPhrase, null);
+  assert.equal(control.data.learning, "not-needed");
+  const offStarted = new Promise((r) => {
+    slowStarted = r;
+  });
+  const inFlight = post(chatBody("SLOW 한국에서 왔어요"), learnerContext);
+  await offStarted;
+  await post({ action: "settings", autoSaveChat: false }, learnerContext);
+  assert.equal(
+    (await inFlight).data.learning,
+    "disabled",
+    "in-flight opt out respected",
+  );
+  await post({ action: "settings", autoSaveChat: true }, learnerContext);
+  const deletionStarted = new Promise((r) => {
+    slowStarted = r;
+  });
+  const duringDelete = post(chatBody("SLOW 한국에서 왔어요"), learnerContext);
+  await deletionStarted;
+  await post(
+    { action: "delete", id: learnerState.expressions[0].id },
+    learnerContext,
+  );
+  assert.equal(
+    (await duringDelete).data.learning,
+    "not-saved",
+    "in-flight delete barrier respected",
+  );
+  assert(
+    !(await state(learnerContext)).state.expressions.some(
+      (e) => e.language === "ja",
+    ),
+  );
+  await learnerContext.close();
+  console.log(
+    "PASS learner recast: 4 languages, three-line UI, study/reload, dedupe, isolation, opt-out, privacy, failure, deletion barriers",
   );
   await verifyLearning({
     adminPage,
