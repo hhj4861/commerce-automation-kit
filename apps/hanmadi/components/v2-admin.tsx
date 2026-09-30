@@ -169,9 +169,12 @@ export function V2Admin() {
       "영상 출처를 연결했어요. 이 영상의 원문 사용권과 직접 제공받은 원문을 입력해 주세요.",
     );
     setTab("editor");
-    requestAnimationFrame(() =>
-      document.getElementById("ks-source-title")?.focus(),
-    );
+    requestAnimationFrame(() => {
+      // A learner may already have focused another editor field before this frame.
+      if (document.activeElement?.closest(".ks-form:not([hidden])")) return;
+      const title = document.getElementById("ks-source-title");
+      if (title && !title.closest("[hidden]")) title.focus();
+    });
   }
   async function reject(id: string) {
     if (operation.current) return;

@@ -632,8 +632,9 @@
     grid-column: 1;
   }
   .ks .ks-nav {
-    gap: 12px;
-    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0 20px;
+    justify-content: flex-start;
   }
   .ks .ks-nav button {
     font-size: 13px;

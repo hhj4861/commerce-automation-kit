@@ -74,7 +74,7 @@
 
 ## 검증과 반영 범위
 
-2026-09-30 로컬 결과: 단위 테스트 **85/85**, TypeScript·변경 파일 ESLint 통과, 전체 ESLint 오류 0(기존 경고 4), 브라우저 전체 E2E 통과. `npm run build -- --webpack` 운영 빌드 통과. 기본 Turbopack 빌드는 이 로컬 환경에서 Google Fonts 네트워크 제한 및 내부 프로세스 포트 권한 오류로 실패했으며, 기본 빌드는 PR CI에서 별도로 확인한다.
+2026-09-30 로컬 결과: 단위 테스트 **85/85**, TypeScript·변경 파일 ESLint 통과, 전체 ESLint 오류 0(기존 경고 4), 브라우저 전체 E2E 통과. `npm run build -- --webpack` 운영 빌드 통과. 기본 Turbopack 빌드는 이 로컬 환경에서 Google Fonts 네트워크 제한 및 내부 프로세스 포트 권한 오류로 실패했으며, 기본 Turbopack 빌드도 [PR CI 36658901134](https://github.com/hhj4861/commerce-automation-kit/actions/runs/36658901134)의 빌드 단계에서 통과했다. 좁은 화면의 관리자 탭은 줄바꿈하고, 영상 자료 전환 후 이미 선택한 입력란의 포커스를 보존한다.
 
 검증 명령: 앱 디렉터리에서 `npm test`, TypeScript 검사, 변경 파일 ESLint, `npm run test:v2`, `npm run build`.
 
