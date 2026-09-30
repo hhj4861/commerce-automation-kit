@@ -83,3 +83,67 @@ await accounts.disconnect(connections[0].id);
 ```
 
 Use one private platform key per application; derive the 64-hex subject on the server from that application's identity. The browser never chooses a subject, destination or platform key. `allowLocalhost: true` is explicit for local tests only. `ttlSeconds` (60–2592000) is available for browser-bound connections that must expire. A disconnected/unavailable personal model never falls back to default credits. Application authentication, CSRF checks and UI consent remain in the application; lifecycle validation and transport are shared. The private backend lives in `services/ai-gateway` (`ACCOUNTS.md`).
+
+## Jev 판단 API (0.4)
+
+`@cak/litellm-client/jev`는 앱 서버에서 사용하는 독립 진입점이다. 별도 Jev 서버를
+추가하지 않고 **앱 서버 → 이 모듈 → 기존 LiteLLM TypeSafe pass-through → Jev**로 호출한다.
+기존 생성 API와 개인 계정 연결은 그대로 사용할 수 있다.
+
+```ts
+import { createJevClient, JevError } from '@cak/litellm-client/jev';
+
+const jev = createJevClient({
+  baseUrl: env.LITELLM_BASE_URL, // https://ai.example/llm 또는 /llm/v1
+  apiKey: env.LITELLM_API_KEY,   // 이 앱의 LiteLLM virtual key
+  model: 'jev-1.13.0',          // 기본값도 이 버전; 최신 별칭은 명시적으로 선택
+  timeoutMs: 5000,
+});
+
+const result = await jev.evaluate({
+  state: { candidate: candidateTitle, previous: publishedTitles },
+  questions: {
+    duplicate: {
+      type: 'choice',
+      instructions: '제공된 기존 제목과 후보가 같은 주제를 반복하는지 비교하세요.',
+      criteria: { duplicate: '같은 주제를 반복', fresh: '별개의 주제' },
+    },
+  },
+  signal: request.signal, // 선택 사항
+});
+// choice는 TypeScript에서 'duplicate' | 'fresh'로 추론된다.
+const { choice, probabilities, confidence } = result.answers.duplicate;
+// 사용량 원장에는 result.model, result.usage와 앱의 rubric 버전을 기록한다.
+// confidence 기준·보류·기존 로직 복귀는 앱의 검증된 정책으로 결정한다.
+```
+
+- `choice`: 주어진 선택지 중 판단, 확률 분포와 confidence 반환. 선택지 최대 255개.
+- `score`: 순서가 있는 2~10개 기준에 대한 가중 점수, legend·확률 분포·confidence 반환.
+- `noul`: yes 확률 `noul`(0~1)을 반환. confidence 필드나 자동 boolean 변환은 없다.
+- 공통 반환: 실제 응답 `model`, 질문 ID별 `answers`, `usage.input_tokens/output_tokens`.
+- `state`·`instructions`는 문자열/JSON 객체/배열. 함수·순환 참조 등 JSON이 아닌 값은 전송 전에 거부한다.
+- 응답의 질문 ID, 타입, 선택지, 확률 범위·합, 점수 범위, 사용량을 검사한다. 잘못된 응답은 성공으로 취급하지 않는다.
+- 기본 5초 제한은 응답 본문 수신까지 포함한다. 요청/응답 기본 1 MiB, JSON 깊이 64는 로컬 제한이며 제공자의 토큰 한도가 아니다.
+- 재시도·캐시·대체 모델·자동 승인·자동 비용 추정은 없다. 실패는 `JevError`로 전달한다.
+  호출 앱이 오류 코드를 기록하고 기존 처리로 돌아가거나 검토 대기로 전환한다. 실패를 `fresh` 같은 판단으로 바꾸지 않는다.
+- 키/요청 원문/제공자 오류 본문을 오류 메시지에 포함하지 않는다. `apiKey`나 목적 URL은 사용자 입력으로 받지 않는다.
+
+| `JevError.code` | 의미 / 처리 주체 |
+|---|---|
+| `invalid_config`, `server_only` | 서버 설정·호출 위치 수정 |
+| `invalid_input`, `request_too_large` | 앱의 입력·문맥 크기 수정 |
+| `authentication_failed`, `rate_limited`, `overloaded`, `upstream_error` | 게이트웨이/공급자 오류. 앱이 재시도·복귀 정책 결정 |
+| `timeout`, `cancelled`, `network_error` | 제한시간·호출 취소·전송 실패 |
+| `redirect_rejected`, `invalid_response`, `response_too_large` | 목적지/응답 계약 확인 |
+
+**패키지 설치만으로 운영 연결이 켜지지 않는다.** LiteLLM의 `TYPESAFE_API_KEY`, 크레딧,
+앱별 권한·예산, 역방향 프록시의 `/llm/typesafe/v1/systemone` 허용이 먼저 필요하다.
+SDK는 prefix를 보존하여 `/typesafe/v1/systemone`에 POST한다. TypeSafe 직접 URL용 클라이언트가 아니다.
+개인 Codex/Claude 구독으로 Jev 사용권이 생기는 것은 아니다.
+
+LiteLLM **내부 모델 라우터**에서 Jev를 쓰는 기능은 서버의 native Jev 설정으로 별도 구성한다.
+이 JavaScript 모듈을 LiteLLM Python 서버에 설치하는 구조가 아니다.
+배포 준비·검증 범위: [공통 모듈 인수 문서](../../docs/20260930-jev-common-client.md).
+계약 근거: [TypeSafe API](https://docs.typesafe.ai/api),
+[모델](https://docs.typesafe.ai/models),
+[LiteLLM TypeSafe pass-through](https://docs.litellm.ai/docs/pass_through/typesafe).
