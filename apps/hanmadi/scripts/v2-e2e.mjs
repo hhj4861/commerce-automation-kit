@@ -834,8 +834,47 @@ try {
   await page
     .getByLabel("말이 막히면 한국어로 도움 요청")
     .fill("곤니치와, 현종데스요");
+  let releaseChat;
+  const chatRelease = new Promise((resolve) => {
+    releaseChat = resolve;
+  });
+  let chatRequested;
+  const chatRequest = new Promise((resolve) => {
+    chatRequested = resolve;
+  });
+  await page.route("**/api/study", async (route) => {
+    const body = route.request().postDataJSON();
+    if (body?.action === "chat") {
+      chatRequested();
+      await chatRelease;
+    }
+    await route.continue();
+  });
   await page.getByRole("button", { name: "보내기", exact: true }).click();
+  await chatRequest;
+  const nextDraft = "다음에는 차가운 음료를 주문하고 싶어";
+  await page.getByLabel("말이 막히면 한국어로 도움 요청").fill(nextDraft);
+  releaseChat();
   await page.locator(".hm-chat-assistant").nth(1).waitFor();
+  assert.equal(
+    await page.getByLabel("말이 막히면 한국어로 도움 요청").inputValue(),
+    nextDraft,
+    "an arriving AI response must not erase the next message being typed",
+  );
+  await page.unroute("**/api/study");
+  await page.screenshot({ path: resolve(screenshots, "chat-draft-preserved.png"), fullPage: true });
+  await page.route("**/api/study", async (route) => {
+    if (route.request().postDataJSON()?.action === "chat") {
+      await route.fulfill({ status: 502, contentType: "application/json", body: JSON.stringify({ error: "잠시 후 다시 시도해 주세요." }) });
+    } else await route.continue();
+  });
+  await page.getByRole("button", { name: "보내기", exact: true }).click();
+  await page.getByRole("alert").filter({ hasText: "잠시 후 다시 시도해 주세요." }).waitFor();
+  assert.equal(await page.getByLabel("말이 막히면 한국어로 도움 요청").inputValue(), nextDraft);
+  assert.equal(await page.locator(".hm-chat-assistant").count(), 2, "failed send must not append a fake reply");
+  await page.unroute("**/api/study");
+  await page.getByLabel("말이 막히면 한국어로 도움 요청").fill("");
+  console.log("PASS delayed AI reply preserves next draft; failed send preserves text and conversation");
   assert.equal(await page.locator(".hm-chat-assistant").count(), 2);
   assert(
     !(await page.locator(".hm-chat-assistant").nth(1).innerText()).includes(
