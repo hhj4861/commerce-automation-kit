@@ -142,6 +142,29 @@ test("translation repairs IPA and romanization without changing the original inp
     assert.deepEqual(result, translated);
   }
 });
+test("repairs the production Spanish reading with isolated jamo, without publishing persistent failures", async () => {
+  const correct = { translated: "Un café sin hielo, por favor.", reading: "운 카페 신 이에로, 포르 파보르.", practice: null };
+  const invalid = { ...correct, reading: "운 까페 씨ㄴ 이에로, 뽀ㄹ 바호ㄹ." };
+  let calls = 0;
+  const result = await translate("얼음 없이 커피 한 잔 주세요.", "es", "ko", async (prompt) => {
+    calls++;
+    assert.match(prompt, /complete Hangul syllables/);
+    return JSON.stringify(calls === 1 ? invalid : correct);
+  });
+  assert.equal(calls, 2);
+  assert.deepEqual(result, correct);
+  calls = 0;
+  await assert.rejects(translate("얼음 없이 커피 한 잔 주세요.", "es", "ko", async () => {
+    calls++;
+    return JSON.stringify(invalid);
+  }));
+  assert.equal(calls, 2);
+});
+test("chat rejects isolated Hangul letters but accepts canonically decomposed syllables", () => {
+  for (const reading of ["씨ㄴ 이에로", "뽀ㄹ 바호ㄹ", "안녕 ᄀ", "안녕 ㅏ"])
+    assert.throws(() => parseRoleplay(JSON.stringify({ ...good, reading }), "ja"));
+  assert.equal(parseRoleplay(JSON.stringify({ ...good, reading: good.reading.normalize("NFD") }), "ja").text, good.text);
+});
 test("Thai translation rejects mixed Hangul original and recovers", async () => {
   let calls = 0;
   const correct = {
