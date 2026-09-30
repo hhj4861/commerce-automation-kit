@@ -6,6 +6,7 @@ import { mkdir, writeFile, unlink, readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { chromium } from "playwright";
 import { verifyYoutubeSearch } from "./youtube-search-e2e.mjs";
+import { learningProviderFixture, verifyLearning } from "./learning-e2e.mjs";
 const testDataFile = resolve(".data/v2-e2e.json");
 await mkdir(resolve(".data"), { recursive: true });
 await writeFile(testDataFile, "{}", { flag: "wx" }); // Never overwrite another running test's state.
@@ -51,6 +52,7 @@ const mock = createServer(async (req, res) => {
     b = JSON.parse(raw);
   } catch {}
   res.setHeader("Content-Type", "application/json");
+  if (learningProviderFixture(req, res, raw)) return;
   if (req.url?.includes("/connections")) {
     const subject = req.headers["x-ai-subject"];
     const list = connections.get(subject) || [];
@@ -201,6 +203,17 @@ const app = spawn(
       LITELLM_BASE_URL: mockBase + "/v1",
       LITELLM_API_KEY: "e2e-only",
       LITELLM_MODEL: "gemini-fixture",
+      HANMADI_EMBEDDING_BASE_URL: mockBase + "/v1",
+      HANMADI_EMBEDDING_API_KEY: "embedding-fixture-key",
+      HANMADI_EMBEDDING_MODEL: "embedding-fixture",
+      HANMADI_TRAINING_BASE_URL: mockBase + "/v1",
+      HANMADI_TRAINING_API_KEY: "training-fixture-key",
+      HANMADI_TRAINING_MODEL: "training-fixture",
+      HANMADI_TRAINING_ENABLED: "true",
+      HANMADI_TRAINING_MIN_EXAMPLES: "10",
+      HANMADI_TRAINED_MODELS: JSON.stringify({
+        "ft:fixture:trained": "hanmadi-trained-fixture",
+      }),
       LITELLM_STT_MODEL: "stt-fixture",
       LITELLM_TTS_MODEL: "tts-fixture",
       LITELLM_TTS_VOICE: "fixture",
@@ -1856,6 +1869,15 @@ try {
   console.log(
     "PASS responsive 360/390/768/1440, dialogs, logout, no browser exceptions",
   );
+  await verifyLearning({
+    adminPage,
+    post,
+    admin,
+    other,
+    base,
+    screenshots,
+    modelCalls,
+  });
   await other.close();
   await admin.close();
   await context.close();
