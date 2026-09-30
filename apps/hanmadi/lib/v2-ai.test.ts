@@ -435,3 +435,15 @@ test("invalid learner output is repaired once and transport errors never change 
   );
   assert.equal(calls, 1);
 });
+
+test("accepts a valid kanji-only Japanese utterance such as a toast", async () => {
+  const phrase = { text: "乾杯！", reading: "간파이!", meaning: "건배!" };
+  assert.deepEqual(parseRoleplay(JSON.stringify(phrase), "ja"), phrase);
+  const result = await learnerTurn(
+    "ja",
+    [{ role: "user", content: "건배!" }],
+    "default",
+    async () => JSON.stringify({ phrase, reusable: true }),
+  );
+  assert.deepEqual(result, { phrase, reusable: true });
+});

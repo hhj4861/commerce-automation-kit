@@ -319,7 +319,7 @@ export function parseRoleplay(
   const foreignScript = /[ぁ-ゖァ-ヺ一-龯ก-๛]/;
   const targetScript =
     language === "ja"
-      ? /[ぁ-ゖァ-ヺ]/
+      ? /[ぁ-ゖァ-ヺ一-龯]/
       : language === "th"
         ? /[ก-๛]/
         : /[a-záéíóúüñ]/i;
