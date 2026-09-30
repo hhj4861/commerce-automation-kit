@@ -2,6 +2,8 @@
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import Link from "next/link";
 import { V2Icon as Icon } from "./v2-icon";
+import { Speaker } from "./v2-speaker";
+import { studyAudio } from "@/lib/study-audio-client";
 import { V2Lesson } from "./v2-lesson";
 import { lessonPlan } from "@/lib/v2-lesson";
 import { V2Settings } from "./v2-settings";
@@ -69,65 +71,6 @@ function Dialog({
       </div>
       {children}
     </dialog>
-  );
-}
-function Speaker({
-  text,
-  label = "들어보기",
-}: {
-  text: string;
-  label?: string;
-}) {
-  const [busy, setBusy] = useState(false),
-    [error, setError] = useState("");
-  const audio = useRef<HTMLAudioElement | null>(null),
-    url = useRef(""),
-    alive = useRef(true);
-  useEffect(() => {
-    alive.current = true;
-    return () => {
-      alive.current = false;
-      audio.current?.pause();
-      if (url.current) URL.revokeObjectURL(url.current);
-    };
-  }, []);
-  async function play() {
-    if (busy) return;
-    setBusy(true);
-    setError("");
-    try {
-      audio.current?.pause();
-      if (url.current) URL.revokeObjectURL(url.current);
-      const res = await fetch("/api/study/audio", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text }),
-        signal: AbortSignal.timeout(45000),
-      });
-      if (!res.ok)
-        throw new Error(
-          (await res.json()).error || "음성을 재생하지 못했어요.",
-        );
-      const blob = await res.blob();
-      if (!alive.current) return;
-      url.current = URL.createObjectURL(blob);
-      audio.current = new Audio(url.current);
-      audio.current.playbackRate = 0.85;
-      await audio.current.play();
-    } catch (e) {
-      if (alive.current)
-        setError(e instanceof Error ? e.message : "음성을 재생하지 못했어요.");
-    } finally {
-      if (alive.current) setBusy(false);
-    }
-  }
-  return (
-    <span className="hm-audio">
-      <button className="hm-soft" disabled={busy} onClick={() => void play()}>
-        <Icon name="sound" /> {busy ? "음성 준비 중…" : label}
-      </button>
-      {error && <small role="alert">{error}</small>}
-    </span>
   );
 }
 function Microphone({
@@ -292,7 +235,7 @@ function PhraseCard({
       </p>
       <p className="hm-reading">{phrase.reading}</p>
       <p>{phrase.meaning}</p>
-      <Speaker text={phrase.text} />
+      <Speaker key={language + phrase.text} text={phrase.text} language={language} />
       {children}
     </article>
   );
@@ -919,6 +862,7 @@ function Assessment({
           <Speaker
             key={unit.id}
             text={unit.phrase.text}
+            language={language}
             label="문제 들어보기"
           />
           <p lang={language} className="hm-native">
@@ -1050,6 +994,7 @@ export function V2App() {
       } catch {
         /* Optional browser preference. */
       }
+      studyAudio.clear();
       setIdentity(data?.identity ?? null);
       setState(data?.state ?? emptyStudy());
       setExtra(data?.units ?? []);
@@ -1081,7 +1026,7 @@ export function V2App() {
       .finally(() => {
         if (!controller.signal.aborted) setLoading(false);
       });
-    return () => controller.abort();
+    return () => { controller.abort(); studyAudio.clear(); };
   }, [hydrate]);
   async function run(body: Record<string, unknown>) {
     if (!identity) {
@@ -1420,6 +1365,7 @@ export function V2App() {
                 void (async () => {
                   try {
                     await request("/api/study/account", { action: "logout" });
+                    studyAudio.clear();
                     setIdentity(null);
                     setState(emptyStudy());
                     setExtra([]);
@@ -1981,6 +1927,7 @@ export function V2App() {
                           <Speaker
                             key={translation.translated}
                             text={translation.translated}
+                            language={translation.from === "ko" ? language : "ko"}
                             label={
                               translation.from === "ko"
                                 ? "상대에게 들려주기"
