@@ -1,5 +1,7 @@
 # 레고처럼 쌓는 집, 몇 층까지 가능할까?
 
+**최신 자막 개정판:** [modular-height-captions-v2.mp4](modular-height-captions-v2.mp4). 기존 `modular-height.mp4`는 비교용으로 보존한다.
+
 사용자가 승인한 모듈러 건축 설명 쇼츠. 실사풍 외관·공장·인양 장면과 직접 작성한 구조 애니메이션을 결합한다. 애플리케이션 기능 변경이 아닌 독립 영상 산출물이다.
 
 - 9:16 / 1080×1920 / 30fps.
@@ -53,3 +55,24 @@ CAK_ENGINE_ROOT=/Users/admin/workSpace/shopshorts-production node docs/videos/20
 - 실제 Higgsfield 새 생성은 4개·288크레딧. 재접수·추가 유료 생성 없음.
 - Chrome 재생 검증은 브라우저의 `file:` URL 보안 정책에 의해 차단되어 수행하지 못했다. 정책 우회는 하지 않았다. 사람 청음·STT 전사 검증도 수행하지 않았다.
 - 로컬 완성 파일이며 YouTube 발행·운영 Studio 등록은 하지 않았다.
+
+## 자막 스타일 개정 — 2026-09-30
+
+사용자 피드백: 자막이 잘 보이지 않고 스타일이 투박하다.
+
+- 나눔고딕 Regular 48px → **Apple SD Gothic Neo Bold 70~82px**. 중앙 위치 유지, 줄당 실제 글자 폭을 측정해 최대 880px 안에 배치.
+- 네모 배경 제거. 따뜻한 흰색에 핵심 단어만 골드색, 얇은 어두운 외곽선과 부드러운 그림자. 짧은 등장/퇴장 페이드.
+- 기존 28개 자막을 35개 구절로 재구성. 최대 2줄, 최소 표시 0.9초. 내레이션 내용은 공백·줄바꿈 외 변경 없음.
+- 원본 장면 캐시로 다시 합성하여 이전 자막 위에 겹쳐 그리지 않았다. 원본 오디오를 스트림 복사해 Yooni 음성·1.15배속·배경음이 동일하다.
+- 별도 AI/TTS 생성 호출 없음, 추가 생성 크레딧 **0**.
+- `restyle-captions.mjs`: 개정 레시피. `captions-modern.ass`: 스타일/타이밍 원본. `captions-v2.json`: 폭·크기·구절 정보. `caption-preview.jpg`: 도입부 미리보기.
+- macOS 시스템 글꼴을 사용하며 폰트 파일은 저장소에 복사·재배포하지 않는다. 다른 OS에서는 호환 글꼴을 설치하고 폭과 렌더를 다시 검증해야 한다.
+
+```sh
+node docs/videos/20260930-modular-height/restyle-captions.mjs preview
+node docs/videos/20260930-modular-height/restyle-captions.mjs render
+```
+
+검증: 69.000초, 1080×1920, 30fps, 2,070프레임, 30,568,268바이트. 전체 디코드 통과. 기존/개정판 디코드 오디오 SHA-256이 `fd72ce42b642e7e241650136a648f546e9040b4a9713b0f365c391deefb057fe`로 동일하다. libass의 실제 Bold 글꼴 선택 확인. 도입부와 3/29/48/63초 최종 프레임에서 밝은 외관·어두운 구조 그림 위의 대비와 잘림을 시각 검수했다. 상세 수치는 `verification-captions-v2.json`.
+
+개정 영상 SHA-256: `eeca207524d1dc42d4d92154c7a0998b0fd2fab54c2ddaa8c3a948b576137542`. 브라우저 재생은 이전에 확인된 로컬 파일 URL 정책 때문에 재시도하지 않았다. 플랫폼 기본 자막 스타일 변경이나 운영 배포는 수행하지 않았다.

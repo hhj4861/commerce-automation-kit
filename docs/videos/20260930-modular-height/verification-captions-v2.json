@@ -1,0 +1,32 @@
+{
+  "durationSeconds": 69.0,
+  "frames": 2070,
+  "resolution": [
+    1080,
+    1920
+  ],
+  "fps": 30,
+  "captions": 35,
+  "fontSizes": [
+    70,
+    82
+  ],
+  "fontSelectionVerified": "AppleSDGothicNeo-Bold via libass CoreText",
+  "maxTextWidth": 878.4279725609756,
+  "maxLines": 2,
+  "center": [
+    540,
+    960
+  ],
+  "minimumCaptionSeconds": 0.9,
+  "narrationTextPreserved": true,
+  "fullDecode": "passed",
+  "audioPcmSha256": "fd72ce42b642e7e241650136a648f546e9040b4a9713b0f365c391deefb057fe",
+  "audioIdenticalToOriginal": true,
+  "additionalGenerationCredits": 0,
+  "sha256": "eeca207524d1dc42d4d92154c7a0998b0fd2fab54c2ddaa8c3a948b576137542",
+  "originalVideoSha256": "6301aeca8bd09267be09919c525d82a7721a77c355f12cd5f9fde34a1274f5c0",
+  "bytes": 30568268,
+  "browserPlayback": "not attempted: previously blocked file URL policy",
+  "visualInspection": "Opening preview and final frames at 3, 29, 48, 63 seconds inspected: improved contrast on architecture and diagrams, no clipping observed."
+}
