@@ -10,11 +10,13 @@ export const KEYWORD_KEYS = [
 ];
 export const GITHUB_KEYS = [...KEYWORD_KEYS, 'ELEVENLABS_API_KEY'];
 export const REPLAY_DEPLOYMENT_KEY = 'REPLAY_DEPLOY_VERCEL_TOKEN';
-export const DEPLOYMENT_KEYS = ['DEPLOY_CLOUDFLARE_API_TOKEN', 'DEPLOY_VERCEL_TOKEN', REPLAY_DEPLOYMENT_KEY];
+export const HANMADI_ADMIN_DEPLOYMENT_KEY = 'HANMADI_ADMIN_DEPLOY_VERCEL_TOKEN';
+export const DEPLOYMENT_KEYS = ['DEPLOY_CLOUDFLARE_API_TOKEN', 'DEPLOY_VERCEL_TOKEN', REPLAY_DEPLOYMENT_KEY, HANMADI_ADMIN_DEPLOYMENT_KEY];
 export const DEPLOYMENT_REFS = {
   'refs/heads/deploy/shopshorts': ['DEPLOY_CLOUDFLARE_API_TOKEN'],
   'refs/heads/deploy/firstframe': ['DEPLOY_CLOUDFLARE_API_TOKEN'],
   'refs/heads/deploy/hanmadi': ['DEPLOY_VERCEL_TOKEN'],
+  'refs/heads/deploy/hanmadi-admin': [HANMADI_ADMIN_DEPLOYMENT_KEY],
 };
 export const STATIC_KEYS = [...GITHUB_KEYS,
   'UPLOAD_POST_API_KEY', 'UPLOAD_POST_USER', 'PEXELS_API_KEY', 'GEMINI_API_KEY',
@@ -48,6 +50,7 @@ export function authorizeGithub(claims, env) {
   }
   if (Object.hasOwn(DEPLOYMENT_REFS, claims.ref || '')) {
     const file = 'platform-deploy.yml';
+    if (claims.ref === 'refs/heads/deploy/hanmadi-admin' && !['true', true].includes(claims.ref_protected)) throw new Error('unauthorized');
     if (claims.repository !== REPOSITORY || claims.repository_id !== '1310729493' ||
         claims.repository_owner_id !== '71001056' || claims.runner_environment !== 'github-hosted' ||
         !(env.GITHUB_DEPLOY_ALLOWED_REFS || '').split(',').includes(claims.ref) ||

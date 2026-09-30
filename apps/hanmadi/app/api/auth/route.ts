@@ -10,6 +10,7 @@ import {
   signSession,
 } from "@/lib/auth";
 import { addTutor, findRegisteredTutorByPin } from "@/lib/store";
+import { isAdminDeployment } from "@/lib/deployment";
 
 export const runtime = "nodejs";
 
@@ -46,7 +47,8 @@ export async function POST(req: Request) {
 
   const envTutors = parseEnvTutors(process.env);
   const owner = findEnvTutorByPin(pin, envTutors);
-  let registered = owner ? null : await findRegisteredTutorByPin(pin);
+  let registered =
+    owner || isAdminDeployment() ? null : await findRegisteredTutorByPin(pin);
 
   if (!owner && !registered) {
     if (envTutors.length === 0) {

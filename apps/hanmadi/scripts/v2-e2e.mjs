@@ -3,12 +3,12 @@ import { createServer } from "node:http";
 import { spawn } from "node:child_process";
 import { once } from "node:events";
 import { mkdir, writeFile, unlink, readFile } from "node:fs/promises";
-import { resolve } from "node:path";
+import { resolve, dirname } from "node:path";
 import { chromium } from "playwright";
 import { verifyYoutubeSearch } from "./youtube-search-e2e.mjs";
 import { learningProviderFixture, verifyLearning } from "./learning-e2e.mjs";
-const testDataFile = resolve(".data/v2-e2e.json");
-await mkdir(resolve(".data"), { recursive: true });
+const testDataFile = resolve(process.env.HANMADI_E2E_DATA_FILE || ".data/v2-e2e.json");
+await mkdir(dirname(testDataFile), { recursive: true });
 await writeFile(testDataFile, "{}", { flag: "wx" }); // Never overwrite another running test's state.
 const phrases = {
   ja: {

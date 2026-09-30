@@ -1,14 +1,14 @@
 name: Platform deployment
 on:
   push:
-    branches: [deploy/shopshorts, deploy/hanmadi, deploy/firstframe, deploy/litellm]
+    branches: [deploy/shopshorts, deploy/hanmadi, deploy/hanmadi-admin, deploy/firstframe, deploy/litellm]
   workflow_dispatch:
     inputs:
       target:
         description: Select the matching deployment branch in Use workflow from
         required: true
         type: choice
-        options: [shopshorts, hanmadi, firstframe, litellm]
+        options: [shopshorts, hanmadi, hanmadi-admin, firstframe, litellm]
 permissions:
   contents: read
 jobs:
