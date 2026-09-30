@@ -1,0 +1,32 @@
+{
+  "renderer": "Blender 4.5.10 / Cycles",
+  "geometry": "original code-generated 3D",
+  "durationSeconds": 16.8,
+  "width": 1080,
+  "height": 1920,
+  "fps": "30/1",
+  "frames": 504,
+  "audioCodec": "aac",
+  "audioSource": "videos/20260930-modular-height/modular-height-captions-v2.mp4",
+  "sourceFrameRanges": [
+    [
+      0,
+      203
+    ],
+    [
+      648,
+      301
+    ]
+  ],
+  "voiceId": "n2fbxG88jqAoaVPUy3IG",
+  "narrationSpeed": 1.15,
+  "captions": 9,
+  "fullDecode": "passed",
+  "newPaidGenerationCalls": 0,
+  "sha256": "a05b1f3e4be263571db740a9c33ad4dda446ece5fea30328855bad51392d4658",
+  "limits": [
+    "Conceptual reduced model, not structural calculation or actual College Road geometry",
+    "Narration excerpt from the approved modular video",
+    "Not published or deployed to Studio"
+  ]
+}

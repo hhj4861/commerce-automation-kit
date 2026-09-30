@@ -5,6 +5,10 @@
 공통 CLI와 `@cak/contracts`의 `VideoGenerationRequest` / `VideoGenerationPlan`으로 대화한다.
 기존 광고의 `buildSpotPrompt`, 소구점·고유성·서사·사람 승인 게이트와 연출 강조를 그대로 사용한다.
 
+## 설명 영상 제작 방식
+
+사용자가 2026-09-30 지정한 **‘3D 방식’**의 정의·연출·재사용 절차는 [3D 영상 제작 지침](video-methods/3d.md)에 저장한다. 애니메이션·시네마틱과 구분하며, 아래 광고 품질 정책을 대체하지 않는다. 문서와 테스트 산출물 저장은 운영 Studio의 선택 항목 배포와 별개다.
+
 ## 품질과 비용
 
 - 광고와 쇼츠 모두 기본 `standard`: 광고 엔진의 `seedance_2_0` / `1080p` 설정.

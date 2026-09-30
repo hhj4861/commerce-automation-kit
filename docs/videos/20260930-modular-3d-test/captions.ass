@@ -1,0 +1,25 @@
+[Script Info]
+ScriptType: v4.00+
+PlayResX: 1080
+PlayResY: 1920
+WrapStyle: 2
+ScaledBorderAndShadow: yes
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+Style: Main,Apple SD Gothic Neo,82,&H00F5F9FA,&H00F5F9FA,&H400A100C,&H60000000,-1,0,0,0,100,100,0,0,1,1.4,0,5,85,85,0,1
+Style: Shadow,Apple SD Gothic Neo,82,&H65000000,&H65000000,&H65000000,&H65000000,-1,0,0,0,100,100,0,0,1,7,0,5,85,85,0,1
+Style: Disclosure,Apple SD Gothic Neo,24,&H10FFFFFF,&H10FFFFFF,&H20000000,&H60000000,0,0,0,0,100,100,0,0,1,1,1,2,50,50,100,1
+
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+Dialogue: 1,0:00:00.00,0:00:02.13,Main,,0,0,0,,{\an5\pos(540,960)\bord3\shad2\3c&H101A18&\3a&H10&\fs82\fad(60,70)}{\c&H68AAD2&}공장{\c&HF5F9FA&}에서 만든 방을\N하나씩 쌓았습니다.
+Dialogue: 1,0:00:02.13,0:00:03.67,Main,,0,0,0,,{\an5\pos(540,960)\bord3\shad2\3c&H101A18&\3a&H10&\fs82\fad(60,70)}그런데 무려\N{\c&H68AAD2&}오십 층{\c&HF5F9FA&}입니다.
+Dialogue: 1,0:00:03.67,0:00:05.17,Main,,0,0,0,,{\an5\pos(540,960)\bord3\shad2\3c&H101A18&\3a&H10&\fs82\fad(60,70)}맨 아래 방은\N위에 쌓인 {\c&H68AAD2&}무게{\c&HF5F9FA&}에
+Dialogue: 1,0:00:05.17,0:00:06.43,Main,,0,0,0,,{\an5\pos(540,960)\bord3\shad2\3c&H101A18&\3a&H10&\fs82\fad(60,70)}{\c&H68AAD2&}찌그러지지{\c&HF5F9FA&} 않을까요?
+Dialogue: 1,0:00:06.77,0:00:09.10,Main,,0,0,0,,{\an5\pos(540,960)\bord3\shad2\3c&H101A18&\3a&H10&\fs81\fad(60,70)}아닙니다.\N먼저 방의 겉면을 벗겨 보죠.
+Dialogue: 1,0:00:09.10,0:00:11.27,Main,,0,0,0,,{\an5\pos(540,960)\bord3\shad2\3c&H101A18&\3a&H10&\fs82\fad(60,70)}{\c&H68AAD2&}무게{\c&HF5F9FA&}를 받는 건\N벽지나 가구가 아니라,
+Dialogue: 1,0:00:11.27,0:00:12.50,Main,,0,0,0,,{\an5\pos(540,960)\bord3\shad2\3c&H101A18&\3a&H10&\fs82\fad(60,70)}{\c&H68AAD2&}설계된 구조{\c&HF5F9FA&}입니다.
+Dialogue: 1,0:00:12.50,0:00:14.97,Main,,0,0,0,,{\an5\pos(540,960)\bord3\shad2\3c&H101A18&\3a&H10&\fs82\fad(60,70)}{\c&H68AAD2&}철골{\c&HF5F9FA&} 모듈에서는\N보와 기둥, 연결부를 통해
+Dialogue: 1,0:00:14.97,0:00:16.47,Main,,0,0,0,,{\an5\pos(540,960)\bord3\shad2\3c&H101A18&\3a&H10&\fs82\fad(60,70)}힘이 아래로 전달됩니다.
+Dialogue: 2,0:00:00.00,0:00:16.80,Disclosure,,0,0,0,,3D 개념 모형 · 실제 건물·층수 비례 아님
