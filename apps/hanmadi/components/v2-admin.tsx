@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
-import { YoutubeVideoSearch, type SelectedVideo } from "./youtube-video-search";
+import { YoutubeVideoSearch } from "./youtube-video-search";
 import dynamic from "next/dynamic";
 const LearningAdmin = dynamic(
   () => import("./learning-admin").then((m) => m.LearningAdmin),
@@ -42,6 +42,7 @@ export function V2Admin() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("");
   const operation = useRef(false);
+  const [videoBusy, setVideoBusy] = useState(false);
   const [drafts, setDrafts] = useState<ContentDraft[]>([]),
     [language, setLanguage] = useState<StudyLanguage>("ja"),
     [scene, setScene] = useState("smalltalk"),
@@ -139,7 +140,7 @@ export function V2Admin() {
       operation.current = false;
     }
   }
-  function prepareVideo(video: SelectedVideo) {
+  function reviewVideo(draft: ContentDraft) {
     if (
       (title ||
         sourceUrl ||
@@ -149,32 +150,25 @@ export function V2Admin() {
         current ||
         candidateId) &&
       !window.confirm(
-        "선택한 영상으로 새 자료를 준비할까요? 작성 중인 미저장 내용은 사라져요. 저장된 초안은 콘텐츠 목록에 남아 있어요.",
+        "생성한 자료를 검수할까요? 편집 화면의 미저장 내용은 사라져요. 저장한 초안은 유지됩니다.",
       )
     )
       return;
-    setCandidateId(null);
-    setCurrent(null);
-    setLanguage(video.language);
-    setScene(video.scene);
-    setTitle(video.title.slice(0, 100));
-    setSourceUrl(video.url);
-    setRights("");
-    setTranscript("");
-    setUnits([]);
-    setConfirmed(false);
-    setReviewed(false);
     setError("");
-    setNotice(
-      "영상 출처를 연결했어요. 이 영상의 원문 사용권과 직접 제공받은 원문을 입력해 주세요.",
-    );
+    edit(draft);
     setTab("editor");
-    requestAnimationFrame(() => {
-      // A learner may already have focused another editor field before this frame.
-      if (document.activeElement?.closest(".ks-form:not([hidden])")) return;
-      const title = document.getElementById("ks-source-title");
-      if (title && !title.closest("[hidden]")) title.focus();
-    });
+  }
+  async function openLibrary() {
+    try {
+      const refreshed = await api();
+      setDrafts(refreshed.drafts);
+      setFilter("");
+      setTab("editor");
+    } catch (e) {
+      setError(
+        e instanceof Error ? e.message : "콘텐츠 목록을 불러오지 못했어요.",
+      );
+    }
   }
   async function reject(id: string) {
     if (operation.current) return;
@@ -221,7 +215,7 @@ export function V2Admin() {
           ).map(([id, label]) => (
             <button
               key={id}
-              disabled={busy}
+              disabled={busy || videoBusy}
               aria-pressed={tab === id}
               onClick={() => {
                 setTab(id);
@@ -249,7 +243,15 @@ export function V2Admin() {
           <YoutubeVideoSearch
             configured={searchConfigured}
             disabled={busy || loading}
-            onPrepare={prepareVideo}
+            onCreated={(draft) =>
+              setDrafts((previous) => [
+                ...previous.filter((d) => d.id !== draft.id),
+                draft,
+              ])
+            }
+            onReview={reviewVideo}
+            onOpenLibrary={() => void openLibrary()}
+            onBusyChange={setVideoBusy}
           />
         </div>
         {tab === "inbox" && (

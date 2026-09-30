@@ -752,6 +752,197 @@
 }
 
 /* Learning studio: sequential editorial workflow, matching the existing studio. */
+.ks .vs-total {
+  margin: 0 28px 20px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 14px;
+}
+.ks .vs-total strong {
+  font-size: 18px;
+  font-variant-numeric: tabular-nums;
+}
+.ks .vs-total small {
+  color: #64748b;
+  font-size: 12px;
+}
+.ks .vs-all-pages {
+  margin: 0 20px 20px;
+  padding: 16px;
+  background: #edf3ff;
+  border: 1px solid #d1def9;
+  border-radius: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.ks .vs-all-pages strong {
+  font-size: 14px;
+}
+.ks .vs-all-pages p {
+  margin: 6px 0 0;
+  font-size: 13px;
+  line-height: 1.7;
+}
+.ks .vs-all-pages button {
+  font-size: 13px;
+  min-height: 44px;
+}
+.ks .vs-all-pages .vs-bulk-status {
+  flex-basis: 100%;
+  color: #3157d5;
+}
+.ks .vs-batch-settings {
+  padding: 18px 0;
+  border-block: 1px solid #dce4f2;
+  display: grid;
+  gap: 14px;
+}
+.ks .vs-batch-settings h3 {
+  margin: 0;
+  font-size: 15px;
+}
+.ks .vs-batch-settings label,
+.ks .vs-source-input label {
+  font-size: 13px;
+  margin: 0;
+}
+.ks .vs-batch-settings :is(textarea, select),
+.ks .vs-source-input textarea {
+  width: 100%;
+  min-width: 0;
+  font-size: 13px;
+}
+.ks .vs-batch-settings textarea {
+  min-height: 90px;
+}
+.ks .vs-source-input textarea {
+  min-height: 150px;
+}
+.ks .vs-file-input input {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  font-size: 12px;
+  padding: 8px 0;
+  border: 0;
+}
+.ks .vs-file-input input::file-selector-button {
+  border: 1px solid #c7d2e7;
+  border-radius: 6px;
+  background: white;
+  color: #3157d5;
+  padding: 8px;
+  margin-right: 8px;
+  cursor: pointer;
+}
+.ks .vs-batch-settings small,
+.ks .vs-batch-footer small {
+  font-size: 12px;
+  line-height: 1.8;
+  color: #64748b;
+}
+.ks .vs-batch-queue {
+  max-height: 600px;
+}
+.ks .vs-batch-queue > li {
+  display: block;
+  padding-block: 18px;
+}
+.ks .vs-batch-item-heading {
+  display: grid;
+  gap: 8px;
+}
+.ks .vs-batch-item-heading strong {
+  overflow-wrap: anywhere;
+}
+.ks .vs-job-status {
+  width: fit-content;
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  background: #edf3ff;
+  color: #3157d5;
+}
+.ks .vs-job-created {
+  background: #e7f4ef;
+  color: #166a55;
+}
+.ks .vs-job-failed,
+.ks .vs-job-unknown {
+  background: #fff2df;
+  color: #865012;
+}
+.ks .vs-source-input {
+  margin-block: 12px;
+}
+.ks .vs-source-input summary {
+  cursor: pointer;
+  color: #3157d5;
+  font-size: 13px;
+  padding: 8px 0;
+}
+.ks .vs-item-error {
+  font-size: 12px;
+  line-height: 1.7;
+  color: #865012;
+  margin-block: 10px;
+}
+.ks .vs-batch-footer {
+  display: grid;
+  gap: 12px;
+  padding-block: 18px;
+  border-block: 1px solid #dce4f2;
+}
+.ks .vs-batch-footer p {
+  font-size: 13px;
+  line-height: 1.7;
+  margin: 0;
+}
+.ks .vs-batch-count {
+  font-weight: 600;
+}
+.ks label.vs-batch-confirm {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 13px;
+  line-height: 1.7;
+}
+.ks .vs-batch-confirm input {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  margin-top: 3px;
+  accent-color: #3157d5;
+}
+.ks .vs-create-all {
+  width: 100%;
+  min-height: 48px;
+}
+.ks .vs-batch-notice {
+  padding: 12px;
+  background: #edf3ff;
+  font-size: 13px;
+  line-height: 1.8;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 600px) {
+  .ks .vs-total {
+    margin-inline: 18px;
+  }
+  .ks .vs-all-pages {
+    margin-inline: 14px;
+  }
+  .ks .vs-all-pages > button {
+    width: 100%;
+  }
+}
+
 .la {
   margin-top: 28px;
 }

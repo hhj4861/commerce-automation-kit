@@ -45,6 +45,7 @@ test("requests exactly five videos from the official API, forwarding opaque pagi
     },
   );
   assert.equal(page.videos.length, 1);
+  assert.equal(page.totalResults, 999999);
   assert.equal(
     page.nextPageToken,
     "next+page=",
@@ -105,7 +106,7 @@ test("empty pages retain API next token and final pages have no next token", asy
       "key",
       fixture({ items: [], nextPageToken: "NEXT" }),
     ),
-    { videos: [], nextPageToken: "NEXT" },
+    { videos: [], nextPageToken: "NEXT", totalResults: null },
   );
   assert.equal(
     (
@@ -117,6 +118,20 @@ test("empty pages retain API next token and final pages have no next token", asy
     ).nextPageToken,
     null,
   );
+});
+
+test("total count preserves zero and treats absent or invalid estimates as unknown", async () => {
+  for (const value of [undefined, null, -1, 1.5, "20", 0, 12500]) {
+    const page = await searchYoutubeVideos(
+      { query: "coffee", language: "en" },
+      "key",
+      fixture({ items: [], pageInfo: { totalResults: value } }),
+    );
+    assert.equal(
+      page.totalResults,
+      value === 0 || value === 12500 ? value : null,
+    );
+  }
 });
 
 test("upstream failures and invalid envelopes are surfaced instead of silent empty results", async () => {
