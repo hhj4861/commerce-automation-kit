@@ -1,3 +1,4 @@
+import {architectureValue} from './architecture-fixture.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {studioApi} from '../lib/studio-api.js';
@@ -9,12 +10,12 @@ const input={intent:'keywords',category:'심리학',format:'short',duration:24,f
 const recommendationId='11111111-1111-1111-1111-111111111111';
 const result={intent:'keywords',checkedAt:'2026-09-27T00:00:00Z',suggestions:['감정 알아차리기','결정 피로','주의 회복'].map(keyword=>({keyword,topic:keyword+'의 일상 속 원리',direction:'차분한 설명',reason:'최근 연구의 질문을 일상의 예시로 설명'})),sources:[{url:'https://example.org/research',title:'연구 자료'}]};
 const scenes=[{id:'scene-1',kind:'image',narration:'피곤한 날에는 익숙한 질문도 부담스러울 수 있어요.',prompt:'책상 앞에서 쉬는 부모',duration:12},{id:'scene-2',kind:'image',narration:'잠시 멈추고 내 감정을 먼저 알아차려 보세요.',prompt:'창가에서 숨을 고르는 부모',duration:12}];
-function fixture({unavailable=false}={}){
+function fixture({unavailable=false,savedInput=input,savedResult=result}={}){
  const items=new Map();let scenarioCalls=0,recommendationCalls=0;
  const store={list:async()=>structuredClone([...items.values()]),get:async id=>structuredClone(items.get(id)),create:async p=>{if(items.has(p.id))throw Error('duplicate');items.set(p.id,structuredClone(p));},cas:async(p,revision)=>{if(items.get(p.id)?.revision!==revision)return false;items.set(p.id,structuredClone(p));return true;}};
  const call=async(owner,operation,body)=>{
   assert.match(owner,/^[a-f0-9]{64}$/);assert.notEqual(owner,'browser-owner');
-  if(operation==='recommendation'){recommendationCalls++;return {recommendation:{id:recommendationId,input,state:'done',result}};}
+  if(operation==='recommendation'){recommendationCalls++;return {recommendation:{id:recommendationId,input:savedInput,state:'done',result:savedResult}};}
   if(operation==='status')return {connected:true,available:!unavailable,scenarioAvailable:true};
   if(operation==='scenario'){scenarioCalls++;return {job:{id:body.id,state:'queued'}};}
   if(operation==='scenario-status')return {job:null};
@@ -28,8 +29,8 @@ function fixture({unavailable=false}={}){
 }
 test('all manual categories support keyword research with real search evidence and explicit keyword fields',async()=>{
  for(const category of ['심리학','건축학','상품광고','막장드라마','역사','과학','직접 입력']){
-  const value=await recommendBrief({...input,category,topic:category==='직접 입력'?'정원':''},{},{generate:async prompt=>{assert.match(prompt,/keyword 필드/);assert.ok(prompt.includes(category));return {searched:true,value:result};}});
-  assert.equal(value.intent,'keywords');assert.equal(value.suggestions[0].keyword,'감정 알아차리기');
+  const value=await recommendBrief({...input,category,topic:category==='직접 입력'?'정원':''},{},{generate:async prompt=>{assert.match(prompt,/keyword 필드/);assert.ok(prompt.includes(category));return {searched:true,value:category==='건축학'?architectureValue():result};}});
+  assert.equal(value.intent,'keywords');assert.equal(value.suggestions[0].keyword,category==='건축학'?'영도대교':'감정 알아차리기');
  }
  assert.throws(()=>parseRecommendations(result,false,'keywords'),/검색 근거/);
  assert.throws(()=>parseRecommendations({...result,suggestions:result.suggestions.map(s=>({...s,keyword:undefined}))},true,'keywords'));
@@ -88,7 +89,7 @@ test('real local server serves automatic route and every browser module dependen
  let output='',errors='';child.stderr.on('data',chunk=>errors+=chunk);
  const base=await new Promise((resolve,reject)=>{child.once('error',reject);child.once('exit',code=>reject(Error(`Server ${code}: ${errors}`)));child.stdout.on('data',chunk=>{output+=chunk;const match=output.match(/http:\/\/127\.0\.0\.1:\d+/);if(match)resolve(match[0]);});});
  assert.equal((await fetch(base+'/automatic',{redirect:'manual'})).status,302);
- for(const path of ['/studio/automatic','/automatic','/automatic-creation.js','/automatic-creation.css','/content-library.js','/workspace.css','/ai-account.js','/llm-connection.js']){
+ for(const path of ['/studio/automatic','/automatic','/automatic-creation.js','/automatic-creation.css','/architecture-case.js','/content-library.js','/workspace.css','/ai-account.js','/llm-connection.js']){
   const response=await fetch(base+path,{headers:{cookie:'ss=fixture-static-only'}});assert.equal(response.status,200,path);assert.match(response.headers.get('content-type'),path.endsWith('.js')?/javascript/:path.endsWith('.css')?/css/:/html/);
  }
 });
@@ -100,4 +101,12 @@ test('local worker matches cloud continuation and local storage rejects duplicat
  const worker=startLocalStudio(store,{},async job=>job.task.action==='media'?{assets:Object.fromEntries(scenes.map(s=>[s.id,{key:`studio/${p.id}/${s.id}.png`,kind:'image'}]))}:{render:{key:`studio/${p.id}/final.mp4`}});t.after(()=>worker.stop());
  await worker.tick();p=await store.get(p.id);assert.equal(p.task.action,'render');assert.equal(p.task.state,'queued');
  await worker.tick();p=await store.get(p.id);assert.equal(p.task.state,'done');assert.equal(p.upload,null);assert.equal(automaticStatus(p),'발행 검수');
+});
+
+test('automatic selection preserves the saved architecture case and ignores browser case injection',async()=>{
+ const savedResult={...architectureValue(),intent:'keywords',checkedAt:new Date().toISOString()};
+ const f=fixture({savedInput:{...input,category:'건축학'},savedResult});
+ const response=await f.request('/automatic',{recommendationId,index:1,caseStudy:{entity:'forged'},topic:'forged'});
+ assert.equal(response.status,201);assert.deepEqual(response.project.automation.caseStudy,savedResult.suggestions[1].caseStudy);
+ assert.equal(response.project.brief.topic,savedResult.suggestions[1].topic);assert.equal(response.project.brief.direction,savedResult.suggestions[1].direction);
 });

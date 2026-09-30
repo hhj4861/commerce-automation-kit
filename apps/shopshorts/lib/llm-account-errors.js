@@ -1,6 +1,7 @@
 // Only these fixed diagnostics may cross the runner boundary. Never return CLI
 // stdout/stderr: login output can contain authorization URLs and credentials.
 const messages = Object.freeze({
+  RECOMMENDATION_CASE_INVALID: '실제 건축 사례와 확인 가능한 출처를 갖춘 기획을 완성하지 못했어요. 다시 추천받아 주세요.',
   CODEX_AUTH_FAILED: 'Codex 인증이 만료되었거나 유효하지 않습니다. 계정을 다시 연결해 주세요.',
   CODEX_RATE_LIMITED: 'Codex 구독 사용 한도에 도달했습니다. 한도가 회복된 뒤 다시 시도해 주세요.',
   CODEX_NETWORK_FAILED: 'Codex 서버에 연결하지 못했습니다. 잠시 후 다시 시도해 주세요.',
@@ -30,7 +31,7 @@ export const codexFailure = (code = 'CODEX_REQUEST_FAILED', status = 502) => Obj
 export const accountFailureCode = error => Object.hasOwn(messages, error?.code) ? error.code : 'UNKNOWN';
 export function accountFailureMessage(provider, error) {
   const code = accountFailureCode(error);
-  if (['SCENARIO_RESEARCH_INVALID', 'SCENARIO_ARC_INVALID', 'SCENARIO_DIRECTION_INVALID', 'RECOMMENDATION_REPEATED'].includes(code)) return messages[code];
+  if (['SCENARIO_RESEARCH_INVALID', 'SCENARIO_ARC_INVALID', 'SCENARIO_DIRECTION_INVALID', 'RECOMMENDATION_REPEATED', 'RECOMMENDATION_CASE_INVALID'].includes(code)) return messages[code];
   return provider === 'claude' ? messages[code] || messages.CLAUDE_REQUEST_FAILED
     : code.startsWith('CODEX_') ? messages[code] : messages.CODEX_REQUEST_FAILED;
 }

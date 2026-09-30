@@ -1,3 +1,4 @@
+import {architectureCaseMarkup} from './architecture-case.js';
 import {connectLlm} from './llm-connection.js';
 export function draftPayload(topic,memo='') {
   const clean=String(topic).trim();
@@ -46,7 +47,7 @@ export function mountAutomaticCreation(host,{fetcher=fetch,connect=connectLlm,se
   function result(item){
     saved=item;pending=false;form.querySelector('fieldset').disabled=false;step(1);status.textContent='추천이 준비됐어요. 영상으로 만들 이야기를 선택하세요.';
     const data=item.result;
-    q('[data-keywords]').innerHTML=`<fieldset class="auto-keywords"><legend>어떤 이야기를 만들까요?</legend>${data.suggestions.map((s,i)=>`<label class="auto-keyword"><input type="radio" name="keyword" value="${i}" ${i===0?'checked':''}><span><strong>${esc(s.keyword)}</strong><b>${esc(s.topic)}</b><span>${esc(s.reason)}</span><small>${esc(s.direction)}</small></span></label>`).join('')}</fieldset><details class="auto-sources"><summary>검색 근거 ${data.sources.length}개 · ${esc(data.checkedAt?.slice(0,10))}</summary>${data.sources.map(s=>{let safe=false;try{safe=new URL(s.url).protocol==='https:';}catch{}return safe?`<a href="${esc(s.url)}" target="_blank" rel="noopener noreferrer">${esc(s.title)}</a>`:'';}).join('')}</details><button type="button" class="auto-primary" data-create>이 주제로 자료 확인 · 대본 만들기</button><p class="auto-note">대본 승인 후 장면·음성·자막을 생성하고 영상을 조립합니다. 생성 서비스 사용료가 발생할 수 있어요.</p>`;
+    q('[data-keywords]').innerHTML=`<fieldset class="auto-keywords"><legend>어떤 이야기를 만들까요?</legend>${data.suggestions.map((s,i)=>`<label class="auto-keyword"><input type="radio" name="keyword" value="${i}" ${i===0?'checked':''}><span><strong>${esc(s.keyword)}</strong><b>${esc(s.topic)}</b>${architectureCaseMarkup(s)}<span>${esc(s.reason)}</span><small>${esc(s.direction)}</small></span></label>`).join('')}</fieldset><details class="auto-sources"><summary>검색 근거 ${data.sources.length}개 · ${esc(data.checkedAt?.slice(0,10))}</summary>${data.sources.map(s=>{let safe=false;try{safe=new URL(s.url).protocol==='https:';}catch{}return safe?`<a href="${esc(s.url)}" target="_blank" rel="noopener noreferrer">${esc(s.title)}</a>`:'';}).join('')}</details><button type="button" class="auto-primary" data-create>이 주제로 자료 확인 · 대본 만들기</button><p class="auto-note">대본 승인 후 장면·음성·자막을 생성하고 영상을 조립합니다. 생성 서비스 사용료가 발생할 수 있어요.</p>`;
     selected=0;
     q('[data-keywords]').onchange=e=>{if(e.target.name==='keyword')selected=Number(e.target.value);};
     q('[data-create]').onclick=async e=>{
