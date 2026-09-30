@@ -447,3 +447,29 @@ test("accepts a valid kanji-only Japanese utterance such as a toast", async () =
   );
   assert.deepEqual(result, { phrase, reusable: true });
 });
+
+
+test("reported Thai no-ice coffee misspelling/added temperature is repaired once", async () => {
+  const good = {translated:"ขอกาแฟหนึ่งแก้ว ไม่ใส่น้ำแข็ง",reading:"커 까패 능 깨우 마이 싸이 남캥",practice:null};
+  for (const bad of ["ขอแฟเย็นไม่ใส่น้ำแข็งค่ะ", "ขอกาแฟเย็นไม่ใส่น้ำแข็ง", "ขอกาแฟหนึ่งแก้ว"]) {
+    let calls=0;
+    const result=await translate("얼음 없이 커피 한 잔 주세요.","th","ko",async (prompt) => {
+      calls++; if(calls===2) assert.match(prompt,/REPAIR:/);
+      return JSON.stringify(calls===1 ? {...good,translated:bad} : good);
+    });
+    assert.equal(calls,2); assert.equal(result.translated,good.translated);
+  }
+  let calls=0;
+  await assert.rejects(translate("얼음 없이 커피 한 잔 주세요.","th","ko",async () => {
+    calls++; return JSON.stringify({...good,translated:"ขอแฟเย็นไม่ใส่น้ำแข็งค่ะ"});
+  }),/번역/); assert.equal(calls,2);
+  assert.match(translationPrompt("th","ko"),/without ice.*does NOT mean/);
+});
+
+test("explicit iced coffee remains valid and common Thai no-ice wording is accepted", async () => {
+  for (const phrase of ["ขอกาแฟหนึ่งแก้ว ไม่ต้องใส่น้ำแข็ง", "ขอกาแฟเย็นหนึ่งแก้ว งดน้ำแข็ง"]) {
+    const result = await translate("아이스 커피 한 잔, 얼음 빼 주세요.", "th", "ko", async () =>
+      JSON.stringify({translated:phrase,reading:"커 까패 능 깨우 마이 싸이 남캥",practice:null}));
+    assert.equal(result.translated,phrase);
+  }
+});

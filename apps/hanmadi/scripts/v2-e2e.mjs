@@ -34,6 +34,15 @@ const phrases = {
 };
 const modelCalls = [];
 let audioCalls = 0;
+const speechInputs = [];
+// A real, decodable PCM clip: exercise browser playback instead of an empty ID3 header.
+const speechClip = Buffer.alloc(44 + 4000);
+speechClip.write("RIFF", 0); speechClip.writeUInt32LE(speechClip.length - 8, 4);
+speechClip.write("WAVEfmt ", 8); speechClip.writeUInt32LE(16, 16);
+speechClip.writeUInt16LE(1, 20); speechClip.writeUInt16LE(1, 22);
+speechClip.writeUInt32LE(8000, 24); speechClip.writeUInt32LE(16000, 28);
+speechClip.writeUInt16LE(2, 32); speechClip.writeUInt16LE(16, 34);
+speechClip.write("data", 36); speechClip.writeUInt32LE(4000, 40);
 let calls = 0,
   slowStarted;
 const connections = new Map();
@@ -97,8 +106,10 @@ const mock = createServer(async (req, res) => {
     return res.end(JSON.stringify({ text: "한국에서 왔어요" }));
   }
   if (req.url?.endsWith("/audio/speech")) {
-    res.setHeader("Content-Type", "audio/mpeg");
-    return res.end(Buffer.from([73, 68, 51, 4, 0, 0, 0, 0, 0, 0]));
+    speechInputs.push(b.input);
+    await new Promise(resolve => setTimeout(resolve, 200));
+    res.setHeader("Content-Type", "audio/wav");
+    return res.end(speechClip);
   }
   calls++;
   modelCalls.push({
@@ -158,6 +169,9 @@ const mock = createServer(async (req, res) => {
       reading: result.reading,
       practice: result,
     };
+    if (language === "th" && input === "얼음 없이 커피 한 잔 주세요.") {
+      result = {translated: system.includes("REPAIR:") ? "ขอกาแฟหนึ่งแก้ว ไม่ใส่น้ำแข็ง" : "ขอแฟเย็นไม่ใส่น้ำแข็งค่ะ", reading:"커 까패 능 깨우 마이 싸이 남캥", practice:null};
+    }
     if (input === "따뜻한 커피 한 잔 주세요." && !system.includes("REPAIR:"))
       result.reading = "kho ka fae";
   }
@@ -266,6 +280,12 @@ try {
     }),
     page = await context.newPage();
   await context.addInitScript(() => {
+    window.__playedAudio = 0;
+    const play = HTMLMediaElement.prototype.play;
+    HTMLMediaElement.prototype.play = async function () {
+      await play.call(this);
+      window.__playedAudio++;
+    };
     const style = document.createElement("style");
     style.textContent = "nextjs-portal { display:none !important; }";
     document.addEventListener(
@@ -420,6 +440,17 @@ try {
     .click();
   const lesson = page.getByRole("dialog");
   await lesson.getByText("문장 1 / 10", { exact: true }).waitFor();
+  const firstAudioText = await lesson.locator(".hm-native").innerText();
+  await lesson.getByRole("button", { name: "들어보기", exact: true }).click();
+  await page.waitForFunction(() => window.__playedAudio >= 1);
+  const repeatStart = performance.now();
+  await lesson.getByRole("button", { name: "들어보기", exact: true }).click();
+  await page.waitForFunction(() => window.__playedAudio >= 2);
+  const replayMs = Math.round(performance.now() - repeatStart);
+  assert.equal(speechInputs.filter(text => text === firstAudioText).length, 1,
+    "repeated listening must not request speech twice");
+  console.log(`PASS real browser audio playback; replay without upstream request (${replayMs}ms including automation)`);
+
   assert.equal(
     await lesson
       .getByRole("button", { name: "이전", exact: true })
@@ -669,6 +700,69 @@ try {
     assert.equal(assessed.status, 200);
     await page.reload();
     await page.getByRole("button", { name: "오늘 연습 시작" }).waitFor();
+    await page.getByRole("button", { name: "레벨별", exact: true }).click();
+    for (let level = 1; level <= 4; level++) {
+      await page.locator(".hm-levels button").nth(level - 1).click();
+      assert.equal(await page.locator(".hm-course-card").count(), 8);
+      const labels = await page.locator(".hm-course-card").allTextContents();
+      const expectedTitles = [...Object.values(scenePlans).map(plans => plans[level-1].title), clubTitles[level-1]];
+      for (const title of expectedTitles)
+        assert(labels.some(label => label.includes(title)), `${language} level ${level}: ${title}`);
+    }
+    const rows = JSON.parse(await readFile(resolve("lib/v2-scene-phrases.json"), "utf8"));
+    const column = {en:5, th:3, es:7}[language];
+    const seen = new Set();
+    await page.getByRole("button", {name:"상황별", exact:true}).click();
+    for (const [sceneId, name] of Object.entries({...sceneNames, club:"클럽·바"})) {
+      const back = page.getByRole("button", {name:"모든 상황",exact:true});
+      if (await back.count()) await back.click();
+      await page.locator(".hm-scene-grid button").filter({has:page.getByText(name,{exact:true})}).click();
+      assert.equal(await page.locator(".hm-course-card").count(), 4);
+      for (let level = 1; level <= 4; level++) {
+        await page.locator(".hm-course-card").nth(level-1).click();
+        const dialog = page.getByRole("dialog");
+        for (let n=0; n<10; n++) {
+          await dialog.getByText(`문장 ${n+1} / 10`, {exact:true}).waitFor();
+          const native = dialog.locator(".hm-native");
+          const text = await native.innerText();
+          assert.equal(await native.getAttribute("lang"), language);
+          assert(!seen.has(text), `${language}:${sceneId}:${level}:${n} duplicate`);
+          seen.add(text);
+          const row = rows[`${sceneId}:${level}`]?.[n];
+          if (row) {
+            assert.equal(text, row[column]);
+            assert.equal(await dialog.locator(".hm-reading").innerText(), row[column+1]);
+            await dialog.getByText(row[0], {exact:true}).waitFor();
+            await dialog.getByText(scenePlans[sceneId][level-1].steps[n].cue,{exact:true}).waitFor();
+          }
+          assert(await dialog.evaluate(el => el.scrollWidth <= el.clientWidth), `${language} layout`);
+          if(n<9) await dialog.getByRole("button",{name:"다음",exact:true}).click();
+        }
+        await dialog.getByRole("button",{name:"닫기",exact:true}).click();
+      }
+    }
+    assert.equal(seen.size,320);
+    console.log(`PASS ${language}: 32 scene/level lessons, 320 unique phrases, exact pronunciation/meaning, level filters and mobile layout`);
+    await page.getByRole("button",{name:"번역",exact:true}).click();
+    const details = page.getByText("직접 입력하거나 인식한 말 수정하기");
+    await details.click();
+    await page.getByLabel("번역할 말").fill("한국에서 왔어요");
+    await page.getByRole("button",{name:"번역하기",exact:true}).click();
+    await page.getByText(phrases[language].text,{exact:true}).waitFor();
+    await page.getByText(phrases[language].reading,{exact:true}).waitFor();
+    const reverse = await post({action:"translate",language,from:language,text:phrases[language].text});
+    assert.equal(reverse.status,200);
+    assert.match(reverse.data.translated, /[가-힣]/);
+    if (language === "th") {
+      const repaired = await post({action:"translate", language, from:"ko", text:"얼음 없이 커피 한 잔 주세요."});
+      assert.equal(repaired.status,200);
+      assert.equal(repaired.data.translated,"ขอกาแฟหนึ่งแก้ว ไม่ใส่น้ำแข็ง");
+      console.log("PASS reported Thai coffee meaning drift is repaired before returning to learner");
+    }
+    // Restore the screen's collapsed input before the existing Japanese translation journey.
+    await details.click();
+    await page.getByRole("button", {name:"스터디",exact:true}).click();
+    console.log(`PASS ${language}: Korean → target UI and target → Korean API (fixture provider)`);
   }
   await page.getByLabel("학습 언어", { exact: true }).selectOption("ja");
   await page.getByRole("button", { name: "번역", exact: true }).click();
@@ -1794,7 +1888,14 @@ try {
         .getAttribute("aria-pressed") === "true",
   );
   assert.equal((await state()).state.profiles.ja.level, 2);
+  const autoSaveResponse = page.waitForResponse((response) =>
+    response.url().endsWith("/api/study") &&
+    response.request().method() === "POST" &&
+    response.request().postDataJSON()?.action === "settings" &&
+    response.request().postDataJSON()?.autoSave === true,
+  );
   await page.getByRole("switch", { name: "번역 자동 학습" }).click();
+  assert.equal((await autoSaveResponse).status(), 200);
   await page.waitForFunction(
     () =>
       document.querySelector('[role="switch"]').getAttribute("aria-checked") ===
