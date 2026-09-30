@@ -1,0 +1,78 @@
+{
+  "id": "yeosu-realistic-20260930",
+  "title": "여수의 이 건물은 왜 물고기처럼 아가미를 움직일까?",
+  "speed": 1.0,
+  "voice": null,
+  "voiceReference": "https://youtu.be/sqs5Ra5NDaI",
+  "voiceStatus": "pending user choice; do not clone source voice",
+  "fps": 30,
+  "aspect": "9:16",
+  "visualStyle": "Photorealistic full-scale architectural film of the One Ocean thematic pavilion at Expo 2012 Yeosu, Korea. Long low sculptural white pavilion, flowing roof landscape, a long gently curving land-facing facade of slender off-white vertically mounted flexible lamellas in front of dark recessed glazing. Coastal exhibition plaza, stone paving, realistic life-size scale. Tangible matte GFRP, brushed steel and glass, subtle surface microtexture, restrained warm daylight, natural shadows and realistic reflections. Camera at human or real drone scale with optical lens perspective. NOT a miniature, NOT toy-like, NOT clay render, NOT isometric, NOT cartoon, no outlines or saturated colors, no infographic, no text or logos. Illustrative reconstruction of the 2012 design, not actual documentary footage.",
+  "maxHiggsfieldCredits": 288,
+  "sources": [
+    {
+      "url": "https://www.soma-architecture.com/index.php?page=theme_pavilion&parent=2",
+      "facts": "2012 completion; kinetic lamellas control daylight in Best Practice Area; LED effect at night; facade faces Expo entrance, not sea."
+    },
+    {
+      "url": "https://www.knippershelbig.com/projekte/themenpavillon-expo-2012/",
+      "facts": "Over 100 GFRP lamellas up to 14m tall; actuators at upper and lower ends control deformation."
+    }
+  ],
+  "scenes": [
+    {
+      "id": "hook",
+      "kind": "video",
+      "narration": "건물 벽이 물고기 아가미처럼 움직입니다. 컴퓨터 그래픽으로만 가능한 모습 같지만, 여수엑스포를 위해 실제로 구현한 외벽입니다.",
+      "prompt": "Low human-eye perspective tracking slowly along the land-facing kinetic facade. Long slender white vertical lamellas gently bend and twist in a staggered wave, revealing narrow dark openings between them. Building roof, steel frame and ground remain entirely rigid. Warm late afternoon grazing light, deep dark window recesses, small distant visitors for scale. Single continuous close-to-medium shot. Absolutely no detached floating pieces or rubber movement of the whole building.",
+      "duration": 8,
+      "shot": "wide",
+      "camera": "restrained slow movement"
+    },
+    {
+      "id": "place",
+      "kind": "video",
+      "narration": "이천십이 년 완공된 주제관, 원오션입니다. 외벽에는 백 개가 넘는 긴 패널이 달렸고, 가장 긴 것은 높이가 약 십사 미터에 이릅니다.",
+      "prompt": "Slow oblique drone approach from the exhibition-plaza side toward the long low One Ocean pavilion. Show the wide flowing roof and repetitive tall slender white facade lamellas, dark glazing behind, planted roof areas, coastal horizon distant behind the pavilion. Modest realistic aerial height, maintain a broad horizontal low building in a vertical composition. Structural geometry perfectly stable, only a few facade strips gently flex. No skyscraper, no fantasy dome, no invented signage.",
+      "duration": 8,
+      "shot": "wide",
+      "camera": "restrained slow movement"
+    },
+    {
+      "id": "material",
+      "kind": "code",
+      "narration": "비밀은 무거운 콘크리트 벽이 아니라, 유리섬유로 강화한 플라스틱 패널입니다. 단단하면서도 설계한 방향으로 휘어질 수 있게 만든 겁니다.",
+      "prompt": "Photorealistic material and flexible lamella study; simplified explanatory model, not fabrication geometry.",
+      "duration": 8,
+      "shot": "detail",
+      "camera": "restrained slow movement"
+    },
+    {
+      "id": "motion",
+      "kind": "code",
+      "narration": "위아래의 구동장치가 패널을 변형시키면 옆으로 틈이 열립니다. 여러 패널의 움직임을 순서대로 제어하면서, 외벽 전체에 파도가 흐르는 듯한 모습을 만드는 거죠.",
+      "prompt": "Photorealistic flexing lamella array with fixed support frame and coordinated actuation. Conceptual kinematics only.",
+      "duration": 8,
+      "shot": "detail",
+      "camera": "restrained slow movement"
+    },
+    {
+      "id": "light",
+      "kind": "video",
+      "narration": "이 움직임은 볼거리로 끝나지 않습니다. 낮에는 패널이 열리는 정도에 따라, 안으로 들어오는 빛의 상태도 달라지도록 설계했습니다.",
+      "prompt": "Inside the pavilion best-practice gallery looking obliquely toward floor-to-ceiling dark glazing and the exterior white vertical kinetic lamellas. A slow small lateral camera glide as the lamellas gradually open, changing bands of warm natural sunlight across the textured concrete floor. Quiet real-scale gallery, subtle dust in light, extremely realistic architectural photography. Do not show a mechanical explosion, UI, cartoon light arrows, or floating labels. Keep glass and structure rigid.",
+      "duration": 8,
+      "shot": "wide",
+      "camera": "restrained slow movement"
+    },
+    {
+      "id": "ending",
+      "kind": "video",
+      "narration": "해가 지면 움직이는 패널에 엘이디 빛이 더해집니다. 여수의 이 건물은 바다를 그림으로 붙이는 대신, 외벽 자체가 움직이게 만들었습니다. 건축은 모양뿐 아니라, 움직임까지 설계하는 일이니까요.",
+      "prompt": "Blue-hour to warm architectural lighting already established: close oblique view along the same full-scale white kinetic lamella facade, subtle warm LED lines on the moving lamellas. They gently flex in a coordinated rippling sequence, warm highlights on white composite contrasting deep charcoal glazing and natural dusk sky. Smooth slow pull-back ending on the coherent low pavilion. Quiet restrained real footage aesthetic, no neon rainbow, no fantasy transforming building, no text. Dusk environmental sky is photographic, never a flat blue background.",
+      "duration": 8,
+      "shot": "wide",
+      "camera": "restrained slow movement"
+    }
+  ]
+}
