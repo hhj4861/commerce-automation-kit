@@ -632,8 +632,9 @@
     grid-column: 1;
   }
   .ks .ks-nav {
-    gap: 12px;
-    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0 20px;
+    justify-content: flex-start;
   }
   .ks .ks-nav button {
     font-size: 13px;
@@ -747,5 +748,205 @@
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 0 12px;
+  }
+}
+
+/* Learning studio: sequential editorial workflow, matching the existing studio. */
+.la {
+  margin-top: 28px;
+}
+.la-heading {
+  display: flex;
+  gap: 24px;
+  align-items: start;
+  justify-content: space-between;
+}
+.la-heading h2 {
+  margin: 0;
+  font-size: 1.45rem;
+  letter-spacing: -0.04em;
+}
+.la-heading p,
+.la .hm-panel > p {
+  max-width: 70ch;
+  line-height: 1.7;
+  color: var(--hm-muted, #60718e);
+}
+.la-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px 48px;
+  margin: 28px 0 12px;
+  padding: 22px 0;
+  border-block: 1px solid #d6dfef;
+}
+.la-summary dt {
+  font-size: 0.85rem;
+  color: #60718e;
+}
+.la-summary dd {
+  margin: 6px 0 0;
+  font-weight: 700;
+  font-size: 1.2rem;
+}
+.la-fieldset {
+  border: 0;
+  padding: 0;
+  min-width: 0;
+  display: grid;
+  gap: 24px;
+}
+.la .hm-panel {
+  min-width: 0;
+}
+.la h3 {
+  margin: 0 0 12px;
+  font-size: 1.15rem;
+}
+.la label {
+  display: grid;
+  gap: 8px;
+  margin-block: 16px;
+  font-size: 0.9rem;
+}
+.la input:not([type="checkbox"]),
+.la select,
+.la textarea {
+  width: 100%;
+  min-width: 0;
+  padding: 11px 12px;
+  border: 1px solid #cdd8ee;
+  border-radius: 8px;
+  background: white;
+  color: #182b49;
+  font: inherit;
+}
+.la textarea {
+  min-height: 100px;
+  resize: vertical;
+}
+.la button {
+  min-height: 42px;
+  padding: 9px 14px;
+  border: 1px solid #c9d5ef;
+  border-radius: 8px;
+  color: #2547b5;
+  background: white;
+  font: inherit;
+  font-size: 0.86rem;
+  cursor: pointer;
+}
+.la button.hm-primary {
+  background: #3157d5;
+  color: white;
+  border-color: #3157d5;
+}
+.la button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.la :is(button, input, select, textarea):focus-visible {
+  outline: 3px solid #3157d5;
+  outline-offset: 3px;
+}
+.la-sources {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 24px;
+  margin-block: 16px;
+  border-block: 1px solid #dce4f2;
+  max-height: 320px;
+  overflow: auto;
+}
+.la-sources label,
+.la label.la-check {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  line-height: 1.6;
+}
+.la input[type="checkbox"] {
+  accent-color: #3157d5;
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+  margin-top: 4px;
+}
+.la small {
+  display: block;
+  color: #60718e;
+  font-size: 0.8rem;
+  line-height: 1.65;
+}
+.la-versions,
+.la-jobs {
+  margin: 20px 0;
+  padding: 0;
+  list-style: none;
+}
+.la-versions li {
+  display: flex;
+  gap: 18px;
+  justify-content: space-between;
+  align-items: start;
+  padding: 16px 0;
+  border-bottom: 1px solid #dce4f2;
+}
+.la-versions li > div {
+  min-width: 0;
+}
+.la-versions button {
+  flex-shrink: 0;
+}
+.la-jobs li {
+  padding: 22px 0;
+  border-block-start: 1px solid #dce4f2;
+}
+.la :is(strong, p, small) {
+  overflow-wrap: anywhere;
+}
+.la-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-block: 16px;
+}
+.la-status {
+  font-size: 0.8rem;
+  color: #3157d5;
+  margin-left: 10px;
+  white-space: nowrap;
+}
+.la-empty {
+  padding: 16px;
+  background: #f1f5fc;
+  border-left: 3px solid #b8c9ed;
+}
+.la-review {
+  padding: 4px 20px 20px;
+  border: 1px solid #b8c9ed;
+  border-radius: 10px;
+}
+@media (max-width: 640px) {
+  .la-heading {
+    flex-direction: column;
+    gap: 8px;
+  }
+  .la-sources {
+    grid-template-columns: 1fr;
+  }
+  .la-summary {
+    gap: 22px;
+  }
+  .la-summary > div {
+    flex: 1 0 42%;
+  }
+  .la-status {
+    display: block;
+    margin-left: 0;
+  }
+  .la .hm-panel {
+    padding: 20px 16px;
   }
 }

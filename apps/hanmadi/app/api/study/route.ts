@@ -13,7 +13,6 @@ import {
   changeStudy,
   saveExpression,
   publishedUnits,
-  readContent,
 } from "@/lib/v2-store";
 import {
   contribute,
@@ -21,7 +20,7 @@ import {
   withdrawContributions,
   type ContributionResult,
 } from "@/lib/knowledge-store";
-import { retrieveKnowledge } from "@/lib/knowledge";
+import { searchKnowledge } from "@/lib/learning-retrieval";
 import {
   isStudyLanguage,
   isLevel,
@@ -212,7 +211,7 @@ export async function POST(req: Request) {
       await reserveRequest(actor, "chat");
       const epoch =
         b.shareForLearning === true ? await contributionEpoch(actor) : null;
-      const references = retrieveKnowledge(await readContent(), {
+      const references = await searchKnowledge({
         language,
         mode: "translation",
         text: b.text,
@@ -300,7 +299,7 @@ export async function POST(req: Request) {
       )
         throw new ConversationError(400, "AI 모델을 선택해 주세요.");
       await reserveRequest(actor, "chat");
-      const references = retrieveKnowledge(await readContent(), {
+      const references = await searchKnowledge({
         language,
         mode: "chat",
         level: profile.level,

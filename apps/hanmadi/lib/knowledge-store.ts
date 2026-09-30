@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { v2Driver } from "./store";
 import { ConversationError } from "./conversation";
 import { safePractice, type Phrase, type StudyLanguage } from "./v2";
+import { invalidateLearning } from "./learning-pipeline";
 import {
   decodeKnowledge,
   type KnowledgeState,
@@ -93,6 +94,7 @@ export async function withdrawContributions(
       (d) => d.contributionId && ids.has(d.contributionId),
     );
     const erased = new Set([...ids, ...drafts.map((d) => d.id)]);
+    invalidateLearning(state, new Set(drafts.map((d) => d.id)), true);
     state.drafts = state.drafts.filter(
       (d) => !d.contributionId || !ids.has(d.contributionId),
     );
@@ -168,7 +170,11 @@ export async function saveKnowledgeDraft(
       revision: (old?.revision ?? 0) + 1,
       updatedAt: Date.now(),
       ...(contributionId ? { contributionId } : {}),
+      ...((old?.sourceHash ?? input.sourceHash)
+        ? { sourceHash: old?.sourceHash ?? input.sourceHash }
+        : {}),
     };
+    if (old) invalidateLearning(state, new Set([id]));
     state.drafts = [...state.drafts.filter((d) => d.id !== id), updated];
     if (candidate) candidate.status = "converted";
     record(state, {
