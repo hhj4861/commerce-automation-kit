@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { createServer } from "node:http";
 import { spawn } from "node:child_process";
 import { once } from "node:events";
-import { mkdir, writeFile, unlink } from "node:fs/promises";
+import { mkdir, writeFile, unlink, readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { chromium } from "playwright";
 import { verifyYoutubeSearch } from "./youtube-search-e2e.mjs";
@@ -544,6 +544,91 @@ try {
     "PASS club four levels: 40 distinct displayed sentences, mobile fit, close without changing progress",
   );
 
+  const scenePlans = JSON.parse(
+    await readFile(resolve("lib/v2-scene-plans.json"), "utf8"),
+  );
+  const sceneNames = {
+    smalltalk: "스몰토크",
+    cafe: "카페",
+    restaurant: "식당",
+    hotel: "호텔",
+    directions: "길 찾기·교통",
+    shopping: "쇼핑",
+    friends: "친구와 약속",
+  };
+  const curriculumSeen = new Set(clubSeen);
+  for (const [sceneId, plans] of Object.entries(scenePlans)) {
+    await page.getByRole("button", { name: "모든 상황", exact: true }).click();
+    await page
+      .locator(".hm-scene-grid button")
+      .filter({ has: page.getByText(sceneNames[sceneId], { exact: true }) })
+      .click();
+    for (const [i, plan] of plans.entries()) {
+      const card = page.getByRole("button", {
+        name: new RegExp(`Lv.${i + 1} · ${plan.title}`),
+      });
+      assert((await card.innerText()).includes(plan.goal));
+      await card.click();
+      const dialog = page.getByRole("dialog");
+      await dialog
+        .getByRole("heading", { name: plan.title, exact: true })
+        .waitFor();
+      assert(
+        (await dialog.locator(".hm-lesson-context").innerText()).includes(
+          plan.context,
+        ),
+      );
+      const navigationBox = await dialog
+        .locator(".hm-lesson-navigation")
+        .boundingBox();
+      const dialogBox = await dialog.boundingBox();
+      assert(
+        navigationBox &&
+          dialogBox &&
+          navigationBox.y + navigationBox.height <=
+            dialogBox.y + dialogBox.height + 1,
+        "lesson navigation is visible before scrolling",
+      );
+      for (let n = 1; n <= 10; n++) {
+        await dialog.getByText(`문장 ${n} / 10`, { exact: true }).waitFor();
+        await dialog
+          .getByText(plan.steps[n - 1].cue, { exact: true })
+          .waitFor();
+        const phrase = await dialog.locator(".hm-native").innerText();
+        assert(
+          !curriculumSeen.has(phrase),
+          `duplicate displayed ${sceneId}:${i + 1}:${n}`,
+        );
+        curriculumSeen.add(phrase);
+        assert(
+          await dialog.evaluate((el) => el.scrollWidth <= el.clientWidth),
+          `${sceneId}:${i + 1}:${n} fits mobile`,
+        );
+        if (sceneId === "cafe" && n === 1 && (i === 0 || i === 3)) {
+          await page.screenshot({
+            path: resolve(screenshots, `cafe-level-${i + 1}.png`),
+            fullPage: true,
+          });
+        }
+        if (n < 10)
+          await dialog
+            .getByRole("button", { name: "다음", exact: true })
+            .click();
+      }
+      await dialog.getByRole("button", { name: "이전", exact: true }).click();
+      await dialog.getByText("문장 9 / 10", { exact: true }).waitFor();
+      await dialog.getByRole("button", { name: "닫기", exact: true }).click();
+    }
+  }
+  assert.equal(curriculumSeen.size, 320);
+  assert.deepEqual(
+    (await state()).state.profiles.ja.completedLessons,
+    completedProfile.completedLessons,
+  );
+  console.log(
+    "PASS all 32 lessons: 320 distinct displayed phrases, goals, cues, next/previous, mobile fit, preserved progress",
+  );
+
   for (const language of ["en", "th", "es"]) {
     await page.getByLabel("학습 언어", { exact: true }).selectOption(language);
     await page
@@ -969,7 +1054,9 @@ try {
     false,
     "consent applies to one translation only",
   );
-  await contributorPage.getByText("공용 학습 자료 제공 (선택)", { exact: true }).click();
+  await contributorPage
+    .getByText("공용 학습 자료 제공 (선택)", { exact: true })
+    .click();
   const candidate = (await adminSnapshot()).contributions[0];
   assert.equal(
     candidate.actor,
@@ -1130,7 +1217,9 @@ try {
     "PASS shared consent → candidate → admin browser review/publish → learner lesson + actual model context → owner-scoped withdrawal",
   );
   await adminPage.goto(base + "/study/admin");
-  await adminPage.getByRole("button", { name: "자료 만들기", exact: true }).click();
+  await adminPage
+    .getByRole("button", { name: "자료 만들기", exact: true })
+    .click();
   await adminPage
     .getByRole("heading", { name: "좋은 대화를, 좋은 수업으로." })
     .waitFor();
@@ -1178,6 +1267,40 @@ try {
   );
   console.log(
     "PASS admin browser form → draft → human review → learner curriculum",
+  );
+  await page.goto(base + "/study");
+  await page.getByRole("button", { name: "레벨별", exact: true }).click();
+  await page.locator(".hm-levels button").first().click();
+  await page
+    .getByRole("button", { name: /브라우저에서 만든 스몰토크/ })
+    .click();
+  await page
+    .getByRole("dialog")
+    .getByText("문장 1 / 1", { exact: true })
+    .waitFor();
+  assert.equal(
+    await page
+      .getByRole("dialog")
+      .getByRole("button", { name: "다음", exact: true })
+      .count(),
+    0,
+  );
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: "학습 마치기", exact: true })
+    .click();
+  await page
+    .getByText("1문장 학습을 마쳤어요. 내일 다시 연습해 봐요.", { exact: true })
+    .waitFor();
+  const adminUnit = (await state()).units.find(
+    (u) => u.title === "브라우저에서 만든 스몰토크",
+  );
+  assert.equal(
+    (await state()).state.profiles.ja.completedLessons[adminUnit.id].phrases,
+    1,
+  );
+  console.log(
+    "PASS admin expression: one approved phrase, no filler, accurate completion count",
   );
   for (const width of [390, 1440]) {
     await adminPage.setViewportSize({ width, height: 1000 });

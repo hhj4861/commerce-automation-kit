@@ -1,5 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { starterUnits } from "./v2";
+import { lessonPlan } from "./v2-lesson";
 import {
   parseRoleplay,
   roleplayReply,
@@ -12,6 +14,13 @@ const good = {
   meaning: "안녕하세요. 여행은 처음인가요?",
 };
 const messages = [{ role: "user" as const, content: "곤니치와, 현종데스요" }];
+test("AI missions use the selected scene and level's actual lesson plan without overriding conversation", () => {
+  for (const unit of starterUnits("ja")) {
+    const prompt = roleplayPrompt(unit.language, unit.level, unit.scene);
+    assert(prompt.includes(lessonPlan(unit)!.instruction), unit.id);
+    assert.match(prompt, /Conversation continuity takes priority/);
+  }
+});
 test("accepts original target script, Hangul pronunciation and Korean translation in all four languages", () => {
   for (const [language, text] of Object.entries({
     ja: good.text,

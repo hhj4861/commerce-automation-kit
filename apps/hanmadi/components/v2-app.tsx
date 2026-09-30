@@ -3,6 +3,7 @@ import { useCallback, useEffect, useId, useRef, useState } from "react";
 import Link from "next/link";
 import { V2Icon as Icon } from "./v2-icon";
 import { V2Lesson } from "./v2-lesson";
+import { lessonPlan } from "@/lib/v2-lesson";
 import { V2Settings } from "./v2-settings";
 import {
   curriculum,
@@ -1541,14 +1542,7 @@ export function V2App() {
                           }
                           에서
                           <br />
-                          {
-                            [
-                              "한마디 건네기",
-                              "질문 주고받기",
-                              "대화 이어가기",
-                              "자연스럽게 말하기",
-                            ][(profile?.level ?? 1) - 1]
-                          }
+                          {(queue?.lessons[0] ?? units[0])?.title}
                         </h2>
                         <p>{(queue?.lessons[0] ?? units[0])?.phrase.meaning}</p>
                         <button
@@ -1752,11 +1746,15 @@ export function V2App() {
                                   }{" "}
                                   · {u.title}
                                 </strong>
-                                <small>{u.phrase.meaning}</small>
+                                <small>
+                                  {lessonPlan(u)?.goal ?? u.phrase.meaning}
+                                </small>
                                 <em>
                                   {hasLessonProgress(profile, u.id)
-                                    ? "연습한 표현 · 다시 해보기"
-                                    : `${profile?.minutes ?? 10}분 · ${curriculum.levels[levelFilter - 1].challenge}`}
+                                    ? "복습 · 다시 말해보기"
+                                    : u.source === "starter"
+                                      ? "새 수업 · 10문장 듣고 말하기"
+                                      : "추가 표현 · 1문장"}
                                 </em>
                               </span>
                               <Icon name="arrow" />
@@ -1872,11 +1870,15 @@ export function V2App() {
                                     <strong>
                                       Lv.{u.level} · {u.title}
                                     </strong>
-                                    <small>{u.phrase.meaning}</small>
+                                    <small>
+                                      {lessonPlan(u)?.goal ?? u.phrase.meaning}
+                                    </small>
                                     <em>
                                       {hasLessonProgress(profile, u.id)
-                                        ? "연습한 표현 · 다시 해보기"
-                                        : "듣고 말하기"}
+                                        ? "복습 · 다시 말해보기"
+                                        : u.source === "starter"
+                                          ? "새 수업 · 10문장 듣고 말하기"
+                                          : "추가 표현 · 1문장"}
                                     </em>
                                   </span>
                                   <Icon name="arrow" />
@@ -2479,7 +2481,9 @@ export function V2App() {
                 (data) => {
                   if (data) {
                     setActiveUnit(null);
-                    setNotice("10문장 학습을 마쳤어요. 내일 다시 연습해 봐요.");
+                    setNotice(
+                      `${activeUnit.source === "admin" ? 1 : 10}문장 학습을 마쳤어요. 내일 다시 연습해 봐요.`,
+                    );
                   }
                 },
               )

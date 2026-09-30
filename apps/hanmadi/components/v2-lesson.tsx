@@ -23,7 +23,18 @@ export function V2Lesson({
         문장 {index + 1} / {phrases.length}
       </p>
       <progress aria-label="수업 진행" value={index + 1} max={phrases.length} />
-      <p>{plan?.goal ?? "듣고, 편하게 따라 말해 보세요."}</p>
+      {plan && (
+        <p className="hm-lesson-context">
+          <strong>연습 장면</strong>
+          <br />
+          {plan.context}
+        </p>
+      )}
+      <p className="hm-lesson-goal">
+        <strong>{plan ? "말하기 목표" : "추가 표현"}</strong>
+        <br />
+        {plan?.goal ?? "관리자가 검수한 표현을 듣고, 편하게 따라 말해 보세요."}
+      </p>
       <small>
         {plan?.cues[index] ??
           (index === 0

@@ -1,23 +1,23 @@
-import { clubLevels } from "./v2-club-lessons";
+import { sceneLessonPlans } from "./v2-scene-lessons";
 import type { Phrase, Unit } from "./v2";
-import { lessonRows } from "./v2-lesson-data";
 
 export function lessonPlan(unit: Unit) {
-  return unit.source === "starter" && unit.scene === "club"
-    ? clubLevels[unit.level - 1]
+  return unit.source === "starter"
+    ? sceneLessonPlans[unit.scene]?.[unit.level - 1]
     : undefined;
 }
-/** Use a complete level-specific sequence when available. */
+/** Each starter has a complete authored sequence; never pad with shared phrases. */
 export function lessonPhrases(unit: Unit): Phrase[] {
+  // A published admin item is one approved expression, not ten invented lesson steps.
+  if (unit.source === "admin") return [unit.phrase];
   const plan = lessonPlan(unit);
-  const rows = plan?.rows ?? lessonRows[unit.scene];
-  if (!rows) throw new Error("지원하지 않는 학습 상황이에요.");
+  if (!plan) throw new Error("지원하지 않는 학습 상황이에요.");
   const index = { ja: 1, th: 3, en: 5, es: 7 }[unit.language];
-  const supporting = `${rows}\n${plan ? "" : lessonRows.common}`
+  const phrases = plan.rows
     .trim()
     .split("\n")
     .map((row) => {
-      const values = row.trim().split("|");
+      const values = row.split("|");
       if (values.length !== 9 || values.some((value) => !value.trim()))
         throw new Error("학습 문장을 확인해 주세요.");
       return {
@@ -26,18 +26,6 @@ export function lessonPhrases(unit: Unit): Phrase[] {
         meaning: values[0],
       };
     });
-  const seen = new Set<string>();
-  const phrases = [unit.phrase, ...supporting]
-    .filter((phrase) => {
-      const normalized = phrase.text
-        .normalize("NFKC")
-        .replace(/[\s\p{P}]/gu, "")
-        .toLowerCase();
-      if (seen.has(normalized)) return false;
-      seen.add(normalized);
-      return true;
-    })
-    .slice(0, 10);
-  if (phrases.length < 10) throw new Error("학습 문장이 부족해요.");
+  if (phrases.length !== 10) throw new Error("학습 문장을 확인해 주세요.");
   return phrases;
 }
