@@ -10,6 +10,7 @@ import { SiteChrome } from "@/components/site-chrome";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { getTutorSession } from "@/lib/students";
+import { isAdminDeployment } from "@/lib/deployment";
 
 const gowun = Gowun_Dodum({
   variable: "--font-gowun",
@@ -31,7 +32,9 @@ const plexMono = IBM_Plex_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "한마디 — 영어 · 일본어 · 태국어 · 스페인어",
+    default: isAdminDeployment()
+      ? "Hanmadi Admin — 학습 콘텐츠 관리"
+      : "한마디 — 영어 · 일본어 · 태국어 · 스페인어",
     template: "%s | Hanmadi",
   },
   description:
@@ -63,17 +66,21 @@ export default async function RootLayout({
       className={`${gowun.variable} ${plexKr.variable} ${plexMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        <SiteChrome
-          chrome={
-            <>
-              <Header isTutor={session !== null} savedLanguage={language} />
-              <main className="flex-1">{children}</main>
-              <Footer />
-            </>
-          }
-        >
-          {children}
-        </SiteChrome>
+        {isAdminDeployment() ? (
+          children
+        ) : (
+          <SiteChrome
+            chrome={
+              <>
+                <Header isTutor={session !== null} savedLanguage={language} />
+                <main className="flex-1">{children}</main>
+                <Footer />
+              </>
+            }
+          >
+            {children}
+          </SiteChrome>
+        )}
       </body>
     </html>
   );

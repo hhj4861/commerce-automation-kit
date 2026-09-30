@@ -18,6 +18,18 @@
       "organization": "team_RUHKd04LgBmYVYUwwRTJlW8b",
       "paths": ["apps/hanmadi/"]
     },
+    "hanmadi-admin": {
+      "branch": "deploy/hanmadi-admin",
+      "driver": "vercel",
+      "directory": "apps/hanmadi",
+      "project": "prj_nAbFTwdgyPZkwhJOcyZ73hWiEoKE",
+      "organization": "team_RUHKd04LgBmYVYUwwRTJlW8b",
+      "credential": "HANMADI_ADMIN_DEPLOY_VERCEL_TOKEN",
+      "deploymentMode": "admin",
+      "productionUrl": "https://hanmadi-admin.vercel.app",
+      "learningAppUrl": "https://hanmadi-lake.vercel.app",
+      "paths": ["apps/hanmadi/"]
+    },
     "firstframe": {
       "branch": "deploy/firstframe",
       "driver": "pages",

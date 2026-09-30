@@ -32,7 +32,7 @@ async function api(body?: unknown) {
   if (!res.ok) throw new Error(d.error || "처리하지 못했어요.");
   return d;
 }
-export function V2Admin() {
+export function V2Admin({ appHref = "/study" }: { appHref?: string }) {
   const [tab, setTab] = useState<
     "videos" | "editor" | "inbox" | "preview" | "learning"
   >("videos");
@@ -192,10 +192,10 @@ export function V2Admin() {
   return (
     <div className="hm ks">
       <header className="hm-header">
-        <Link className="hm-brand" href="/study">
+        <Link className="hm-brand" href="/study/admin">
           한마디<span>콘텐츠 스튜디오</span>
         </Link>
-        <Link href="/study">학습 앱 열기</Link>
+        <Link href={appHref}>학습 앱 열기</Link>
       </header>
       <main className="hm-main">
         <h1>좋은 대화를, 좋은 수업으로.</h1>
