@@ -1,4 +1,5 @@
 import { type Phrase, type StudyLanguage } from "./v2";
+import type { LearningState } from "./learning-types";
 
 export type ContentDraft = {
   id: string;
@@ -13,6 +14,7 @@ export type ContentDraft = {
   revision: number;
   updatedAt: number;
   contributionId?: string;
+  sourceHash?: string;
 };
 export type Contribution = {
   id: string;
@@ -36,6 +38,7 @@ export type KnowledgeState = {
   contributions: Contribution[];
   epochs: Record<string, string>;
   events: KnowledgeEvent[];
+  learning?: LearningState;
 };
 export function decodeKnowledge(raw: string | null): KnowledgeState {
   const data = raw ? JSON.parse(raw) : [];

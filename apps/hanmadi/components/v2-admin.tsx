@@ -2,6 +2,11 @@
 import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { YoutubeVideoSearch, type SelectedVideo } from "./youtube-video-search";
+import dynamic from "next/dynamic";
+const LearningAdmin = dynamic(
+  () => import("./learning-admin").then((m) => m.LearningAdmin),
+  { loading: () => <p role="status">학습 관리를 불러오는 중이에요.</p> },
+);
 import {
   studyLanguages,
   curriculum,
@@ -28,9 +33,9 @@ async function api(body?: unknown) {
   return d;
 }
 export function V2Admin() {
-  const [tab, setTab] = useState<"videos" | "editor" | "inbox" | "preview">(
-    "videos",
-  );
+  const [tab, setTab] = useState<
+    "videos" | "editor" | "inbox" | "preview" | "learning"
+  >("videos");
   const [contributions, setContributions] = useState<PublicContribution[]>([]);
   const [events, setEvents] = useState<KnowledgeEvent[]>([]);
   const [candidateId, setCandidateId] = useState<string | null>(null);
@@ -208,6 +213,7 @@ export function V2Admin() {
                 `번역 후보 (${contributions.filter((c) => c.status === "pending").length})`,
               ],
               ["preview", "앱 반영 확인"],
+              ["learning", "학습 관리"],
             ] as const
           ).map(([id, label]) => (
             <button
@@ -225,6 +231,7 @@ export function V2Admin() {
           ))}
         </nav>
         {loading && <p role="status">자료를 불러오는 중이에요.</p>}
+        {tab === "learning" && <LearningAdmin />}
         {error && (
           <p className="hm-alert" role="alert">
             {error}
@@ -685,7 +692,8 @@ function KnowledgePreview() {
     <section className="hm-panel">
       <h2>AI가 참고할 게시 자료 확인</h2>
       <p className="hm-muted">
-        실제 검색 조건으로 확인합니다. 모델 호출 비용은 발생하지 않아요.
+        앱과 같은 검색 조건으로 확인합니다. 의미 검색 사용 시 임베딩 호출 비용이
+        발생할 수 있어요.
       </p>
       <fieldset
         className="ks-form"

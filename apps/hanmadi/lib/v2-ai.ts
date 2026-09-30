@@ -3,6 +3,7 @@ import { createLiteLLMClient } from "@cak/litellm-client";
 import { ConversationError, getLiteLLMConfig } from "./conversation";
 import { modelProvider } from "./model-connections";
 import { knowledgeContext, type KnowledgeMatch } from "./knowledge";
+import { activeTrainingAlias } from "./learning-training";
 import {
   studyLanguages,
   curriculum,
@@ -15,6 +16,7 @@ export async function studyCompletion(
   messages: { role: "user" | "assistant"; content: string }[],
   selection = "default",
   responseFormat?: object,
+  trainingScope?: { language: string; level: number; scene: string },
 ) {
   // The v2 default is the shared Gemini alias; legacy Dify classroom flows remain separate.
   const selected =
@@ -23,9 +25,14 @@ export async function studyCompletion(
       : await modelProvider(selection);
   if (selected.config.provider !== "litellm")
     throw new ConversationError(503, "AI 연결 설정을 확인해 주세요.");
+  const trained =
+    selection === "default" && trainingScope
+      ? await activeTrainingAlias(trainingScope)
+      : null;
   try {
     return await createLiteLLMClient({
       ...selected.config.config,
+      ...(trained ? { model: trained } : {}),
       allowLocalhost: true,
       fetch: selected.fetcher,
     }).completeText({
@@ -338,6 +345,7 @@ export async function roleplayReply(
       messages,
       selection,
       roleplayResponseFormat(language),
+      { language, level, scene: sceneId },
     );
     try {
       return parseRoleplay(raw, language);

@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { getConversationTutor } from "@/lib/conversation-access";
 import { ConversationError } from "@/lib/conversation";
 import {
@@ -7,11 +8,11 @@ import {
   readConversationJson,
 } from "@/lib/conversation-http";
 import { isStudyLanguage, isLevel, curriculum } from "@/lib/v2";
-import { readContent, writeContent } from "@/lib/v2-store";
+import { writeContent } from "@/lib/v2-store";
 import { jsonAnswer, parseRoleplay, studyCompletion } from "@/lib/v2-ai";
 import { v2Driver } from "@/lib/store";
 import { readKnowledge, rejectContribution } from "@/lib/knowledge-store";
-import { retrieveKnowledge } from "@/lib/knowledge";
+import { searchKnowledge } from "@/lib/learning-retrieval";
 import {
   searchYoutubeVideos,
   validateYoutubeSearch,
@@ -77,7 +78,7 @@ export async function POST(req: Request) {
           "언어·레벨·상황과 미리보기 내용을 확인해 주세요.",
         );
       return conversationJson({
-        matches: retrieveKnowledge(await readContent(), {
+        matches: await searchKnowledge({
           language: b.language,
           level: b.level,
           scene: String(b.scene),
@@ -139,6 +140,7 @@ export async function POST(req: Request) {
       throw new ConversationError(429, "오늘의 콘텐츠 작업 한도에 도달했어요.");
     let units;
     let contributionId: string | undefined;
+    let sourceHash: string | undefined;
     if (b.action === "generate" || b.action === "generate-contribution") {
       let transcript = b.transcript;
       if (b.action === "generate-contribution") {
@@ -167,6 +169,9 @@ export async function POST(req: Request) {
           400,
           "AI 처리·수업 재사용 권한이 있는 원문(20~12,000자)을 입력하고 확인해 주세요.",
         );
+      sourceHash = createHash("sha256")
+        .update(transcript.normalize("NFKC").trim().replace(/\s+/g, " "))
+        .digest("hex");
       // Source URLs and YouTube API metadata are deliberately NOT sent to the LLM.
       const result = jsonAnswer(
         await studyCompletion(
@@ -218,6 +223,7 @@ export async function POST(req: Request) {
       }),
       status,
       ...(contributionId ? { contributionId } : {}),
+      ...(sourceHash ? { sourceHash } : {}),
     });
     return conversationJson({ draft });
   } catch (e) {
