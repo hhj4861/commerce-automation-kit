@@ -30,7 +30,12 @@ import {
   starterUnits,
   curriculum,
 } from "@/lib/v2";
-import { roleplayReply, translate, parsePhrase } from "@/lib/v2-ai";
+import {
+  learnerTurn,
+  roleplayReply,
+  translate,
+  parsePhrase,
+} from "@/lib/v2-ai";
 export const runtime = "nodejs";
 export const maxDuration = 90;
 export async function GET() {
@@ -58,6 +63,7 @@ export async function POST(req: Request) {
     if (b.action === "settings") {
       if (
         (b.autoSave !== undefined && typeof b.autoSave !== "boolean") ||
+        (b.autoSaveChat !== undefined && typeof b.autoSaveChat !== "boolean") ||
         (b.language !== undefined && !isStudyLanguage(b.language))
       )
         throw new ConversationError(400, "학습 설정을 확인해 주세요.");
@@ -65,6 +71,10 @@ export async function POST(req: Request) {
         state: await changeStudy(actor, (s) => {
           if (typeof b.autoSave === "boolean") {
             s.autoSave = b.autoSave;
+            s.saveEpoch++;
+          }
+          if (typeof b.autoSaveChat === "boolean") {
+            s.autoSaveChat = b.autoSaveChat;
             s.saveEpoch++;
           }
           if (isStudyLanguage(b.language)) s.language = b.language;
@@ -297,8 +307,8 @@ export async function POST(req: Request) {
         scene: String(b.scene),
         text: messages.at(-1)?.content ?? "",
       });
-      return conversationJson({
-        reply: await roleplayReply(
+      const [reply, learner] = await Promise.all([
+        roleplayReply(
           language,
           profile.level,
           String(b.scene),
@@ -307,6 +317,42 @@ export async function POST(req: Request) {
           undefined,
           references,
         ),
+        learnerTurn(language, messages, selection).then(
+          (value) => ({ ...value, failed: false }),
+          () => ({ phrase: null, reusable: false, failed: true }),
+        ),
+      ]);
+      let learning = learner.failed
+        ? "unavailable"
+        : learner.phrase
+          ? "not-reusable"
+          : "not-needed";
+      let state = before;
+      if (learner.reusable && learner.phrase) {
+        try {
+          const saved = await saveExpression(
+            actor,
+            language,
+            learner.phrase,
+            "chat",
+            before.saveEpoch,
+            true,
+          );
+          state = saved.state;
+          learning = saved.saved
+            ? "saved"
+            : state.autoSaveChat === false
+              ? "disabled"
+              : "not-saved";
+        } catch {
+          learning = "not-saved";
+        }
+      }
+      return conversationJson({
+        reply,
+        learnerPhrase: learner.phrase,
+        learning,
+        state,
       });
     }
     throw new ConversationError(400, "지원하지 않는 요청이에요.");

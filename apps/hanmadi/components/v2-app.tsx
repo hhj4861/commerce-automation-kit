@@ -1025,7 +1025,12 @@ export function V2App() {
       saved: boolean;
     } | null>(null);
   const [chat, setChat] = useState<
-      { role: "user" | "assistant"; content: string; phrase?: Phrase }[]
+      {
+        role: "user" | "assistant";
+        content: string;
+        phrase?: Phrase;
+        learning?: string;
+      }[]
     >([]),
     [chatInput, setChatInput] = useState("");
   const [aiFromSettings, setAiFromSettings] = useState(false);
@@ -1197,7 +1202,12 @@ export function V2App() {
     if (!data) return;
     setChat([
       ...chat,
-      { role: "user", content: value },
+      {
+        role: "user",
+        content: value,
+        phrase: data.learnerPhrase ?? undefined,
+        learning: data.learning,
+      },
       {
         role: "assistant",
         content: JSON.stringify(data.reply),
@@ -1379,6 +1389,10 @@ export function V2App() {
               profile={profile}
               busy={busy}
               autoSave={state.autoSave}
+              autoSaveChat={state.autoSaveChat !== false}
+              onAutoSaveChat={(enabled) =>
+                void run({ action: "settings", autoSaveChat: enabled })
+              }
               onLanguage={(value) => void chooseLanguage(value)}
               onPlan={(level, minutes) =>
                 void run({ action: "level", level, minutes }).then((data) => {
@@ -2236,32 +2250,67 @@ export function V2App() {
                     <div className="hm-chat-log" aria-live="polite">
                       {chat.map((m, i) =>
                         m.phrase ? (
-                          <div key={i} className="hm-chat-assistant">
-                            <span className="hm-eyebrow">한마디 AI</span>
+                          <div
+                            key={i}
+                            className={
+                              m.role === "user"
+                                ? "hm-chat-learner"
+                                : "hm-chat-assistant"
+                            }
+                          >
+                            <span className="hm-eyebrow">
+                              {m.role === "user"
+                                ? "내가 하고 싶은 말"
+                                : "한마디 AI"}
+                            </span>
                             <PhraseCard phrase={m.phrase} language={language}>
-                              <button
-                                disabled={busy}
-                                onClick={async () => {
-                                  const data = await run({
-                                    action: "save-chat",
-                                    phrase: m.phrase,
-                                  });
-                                  if (data)
-                                    setNotice(
-                                      data.saved
-                                        ? "내 표현에 추가했어요."
-                                        : "표현을 저장하지 못했어요.",
-                                    );
-                                }}
-                              >
-                                이 표현 연습에 추가
-                              </button>
+                              {m.role === "user" ? (
+                                <p className="hm-learning-status">
+                                  {m.learning === "saved"
+                                    ? "내 표현에 저장했어요 · 스터디에서 복습할 수 있어요."
+                                    : m.learning === "disabled"
+                                      ? "내 말 자동 학습이 꺼져 있어 저장하지 않았어요."
+                                      : m.learning === "not-saved"
+                                        ? "표현을 저장하지 못했어요. 설정과 내 표현을 확인해 주세요."
+                                        : "개인정보 또는 복습에 적합하지 않은 내용은 저장하지 않아요."}
+                                </p>
+                              ) : (
+                                <button
+                                  disabled={busy}
+                                  onClick={async () => {
+                                    const data = await run({
+                                      action: "save-chat",
+                                      phrase: m.phrase,
+                                    });
+                                    if (data)
+                                      setNotice(
+                                        data.saved
+                                          ? "내 표현에 추가했어요."
+                                          : "표현을 저장하지 못했어요.",
+                                      );
+                                  }}
+                                >
+                                  이 표현 연습에 추가
+                                </button>
+                              )}
                             </PhraseCard>
+                            {m.role === "user" && (
+                              <details className="hm-original-input">
+                                <summary>내 입력 보기</summary>
+                                <p>{m.content}</p>
+                              </details>
+                            )}
                           </div>
                         ) : (
-                          <p key={i} className="hm-chat-user">
-                            {m.content}
-                          </p>
+                          <div key={i} className="hm-chat-user">
+                            <p>{m.content}</p>
+                            {m.learning === "unavailable" && (
+                              <small role="status">
+                                내 말의 번역을 완성하지 못해 원문으로
+                                표시했어요. 학습 자료로 저장하지 않았어요.
+                              </small>
+                            )}
+                          </div>
                         ),
                       )}
                     </div>
@@ -2308,9 +2357,13 @@ export function V2App() {
                       <p>충분히 연습했어요! 새 대화를 열면 계속할 수 있어요.</p>
                     )}
                     <p className="hm-muted">
-                      대화는 이 화면을 떠나면 사라져요. 다시 연습할 표현만 직접
-                      추가하세요. AI는 틀릴 수 있으며 음성 전사로 발음 점수를
-                      매기지 않아요.
+                      한국어로 쓴 내 말은 {studyLanguages[language].name}·한글
+                      발음·한국어 뜻으로 보여드려요.
+                      {state.autoSaveChat !== false
+                        ? " 짧은 일반 표현은 내 표현과 스터디 복습에 자동으로 반영돼요. 설정에서 끌 수 있어요."
+                        : " 내 말 자동 학습이 꺼져 있어 새 표현을 저장하지 않아요."}{" "}
+                      대화 원문은 이 화면을 떠나면 사라져요. AI는 틀릴 수
+                      있어요.
                     </p>
                   </section>
                 </>

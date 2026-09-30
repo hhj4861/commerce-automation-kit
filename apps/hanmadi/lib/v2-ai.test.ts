@@ -321,3 +321,117 @@ test("multi-turn roleplay preserves the toast, Korean acceptance and selected mo
   assert.deepEqual(reply, reaction); // A valid conversational reaction needs no question.
   assert.equal(JSON.stringify(history), original);
 });
+
+import { learnerTurn } from "./v2-ai";
+test("recasts the learner intent in all four languages with the same selected model and contextual history", async () => {
+  for (const [language, text] of Object.entries({
+    ja: "甘さを控えめにしてください。",
+    th: "ขอหวานน้อย",
+    en: "Please make it less sweet.",
+    es: "Menos dulce, por favor.",
+  })) {
+    const phrase = {
+      text,
+      reading: "아마사오 히카에메니 시테 쿠다사이",
+      meaning: "덜 달게 해 주세요.",
+    };
+    const history = [
+      { role: "user" as const, content: "덜 달게 해 달라고 말하고 싶어" },
+    ];
+    const result = await learnerTurn(
+      language as "ja",
+      history,
+      "own-model",
+      async (system, messages, selection, format) => {
+        assert.match(system, /NOT the conversation partner/);
+        assert.match(system, /help-request wrapper/);
+        assert.deepEqual(messages, history);
+        assert.equal(selection, "own-model");
+        assert.equal(
+          (format as { json_schema: { name: string } }).json_schema.name,
+          "hanmadi_learner_turn",
+        );
+        return JSON.stringify({ phrase, reusable: true });
+      },
+    );
+    assert.deepEqual(result, { phrase, reusable: true });
+  }
+});
+test("does not fabricate a learner phrase for a control request or call the model for non-Korean text", async () => {
+  assert.deepEqual(
+    await learnerTurn(
+      "ja",
+      [{ role: "user", content: "こんにちは" }],
+      "default",
+      async () => {
+        throw new Error("must not call");
+      },
+    ),
+    { phrase: null, reusable: false },
+  );
+  assert.deepEqual(
+    await learnerTurn(
+      "ja",
+      [{ role: "user", content: "AI가 먼저 말해줘" }],
+      "default",
+      async () => JSON.stringify({ phrase: null, reusable: false }),
+    ),
+    { phrase: null, reusable: false },
+  );
+});
+test("private learner text is displayable but never automatically reusable", async () => {
+  for (const [input, reusable] of [
+    ["제 이름은 현종이에요", false],
+    ["전화번호는 01012345678이에요", true],
+  ] as const) {
+    const result = await learnerTurn(
+      "ja",
+      [{ role: "user", content: input }],
+      "default",
+      async () => JSON.stringify({ phrase: good, reusable }),
+    );
+    assert.deepEqual(result, { phrase: good, reusable: false });
+  }
+  const contact = { ...good, text: "電話は01012345678です。" };
+  const result = await learnerTurn(
+    "ja",
+    [{ role: "user", content: "제 전화번호예요" }],
+    "default",
+    async () => JSON.stringify({ phrase: contact, reusable: true }),
+  );
+  assert.deepEqual(result, { phrase: contact, reusable: false });
+});
+test("invalid learner output is repaired once and transport errors never change provider", async () => {
+  let calls = 0;
+  const result = await learnerTurn(
+    "ja",
+    messages,
+    "own-model",
+    async (_system, _messages, selection) => {
+      assert.equal(selection, "own-model");
+      return JSON.stringify({
+        phrase: ++calls === 1 ? { ...good, text: "한국어예요" } : good,
+        reusable: true,
+      });
+    },
+  );
+  assert.equal(calls, 2);
+  assert.deepEqual(result.phrase, good);
+  calls = 0;
+  await assert.rejects(
+    learnerTurn("ja", messages, "own-model", async () => {
+      calls++;
+      return "bad JSON";
+    }),
+  );
+  assert.equal(calls, 2);
+  calls = 0;
+  await assert.rejects(
+    learnerTurn("ja", messages, "own-model", async () => {
+      calls++;
+      throw new Error("auth failure");
+    }),
+    /auth failure/,
+  );
+  assert.equal(calls, 1);
+});

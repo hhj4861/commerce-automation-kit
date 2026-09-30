@@ -15,6 +15,8 @@ type Props = {
   profile?: Profile;
   busy: boolean;
   autoSave: boolean;
+  autoSaveChat: boolean;
+  onAutoSaveChat: (enabled: boolean) => void;
   onLanguage: (language: StudyLanguage) => void;
   onPlan: (level: number, minutes: number) => void;
   onAutoSave: (enabled: boolean) => void;
@@ -125,6 +127,27 @@ export function V2Settings(p: Props) {
       <p className="hm-settings-note">
         새로 번역한 짧은 일반 표현부터 적용돼요. 기존 표현은 내 표현에서
         확인·삭제할 수 있어요.
+      </p>
+      <div className="hm-setting-row">
+        <b>내 말 자동 학습</b>
+        <button
+          className="hm-toggle"
+          role="switch"
+          aria-checked={p.autoSaveChat}
+          aria-label="내 말 자동 학습"
+          disabled={p.busy}
+          onClick={() => p.onAutoSaveChat(!p.autoSaveChat)}
+        >
+          <span aria-hidden="true" className="hm-toggle-track">
+            <i />
+          </span>
+          {p.autoSaveChat ? "켜짐" : "꺼짐"}
+        </button>
+      </div>
+      <p className="hm-settings-note">
+        AI 대화에서 한국어로 쓴 내 말을 학습 언어로 바꾼 뒤, 짧은 일반 표현을 내
+        표현과 스터디 복습에 저장해요. 개인정보와 대화 원문은 저장하지 않아요.
+        저장한 표현은 내 표현에서 삭제할 수 있어요.
       </p>
       <div className="hm-setting-row">
         <b>발음 도움</b>
