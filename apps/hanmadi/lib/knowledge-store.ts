@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { v2Driver } from "./store";
 import { ConversationError } from "./conversation";
 import { safePractice, type Phrase, type StudyLanguage } from "./v2";
@@ -127,9 +127,20 @@ export type ContentInput = Omit<
 export async function saveKnowledgeDraft(
   input: ContentInput,
   db: Driver = v2Driver(),
+  expectedDraftDigest?: string,
 ) {
   const id = input.id ?? randomUUID();
   return changeKnowledge((state) => {
+    if (
+      expectedDraftDigest &&
+      createHash("sha256")
+        .update(JSON.stringify(state.drafts))
+        .digest("hex") !== expectedDraftDigest
+    )
+      throw new ConversationError(
+        409,
+        "평가 중 기존 자료가 바뀌었어요. 다시 시도하면 저장된 분석으로 재평가해요.",
+      );
     const old = state.drafts.find((d) => d.id === id);
     if (input.id && (!old || old.revision !== input.revision))
       throw new ConversationError(
@@ -166,6 +177,7 @@ export async function saveKnowledgeDraft(
       throw new ConversationError(409, "이미 교재로 가져온 후보예요.");
     const updated: ContentDraft = {
       ...input,
+      ...(old?.videoReview ? { videoReview: old.videoReview } : {}),
       id,
       revision: (old?.revision ?? 0) + 1,
       updatedAt: Date.now(),

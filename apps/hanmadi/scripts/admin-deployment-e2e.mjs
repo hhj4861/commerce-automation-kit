@@ -7,6 +7,7 @@ import { mkdtemp, rm, mkdir } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { chromium } from "playwright";
+import { verifyYoutubeSearch } from "./youtube-search-e2e.mjs";
 
 const socket = createServer().listen(0, "127.0.0.1");
 await once(socket, "listening");
@@ -42,7 +43,7 @@ const child = spawn(
       UPSTASH_REDIS_REST_TOKEN: "",
       KV_REST_API_URL: "",
       KV_REST_API_TOKEN: "",
-      YOUTUBE_API_KEY: "",
+      YOUTUBE_API_KEY: "fixture-youtube-key",
       LITELLM_BASE_URL: "",
       LITELLM_API_KEY: "",
     },
@@ -68,6 +69,22 @@ try {
     revision,
   });
   assert.equal((await fetch(`${origin}/api/study/admin`)).status, 403);
+  assert.equal(
+    (
+      await fetch(`${origin}/api/study/admin/videos`, {
+        method: "POST",
+        headers: { Origin: origin, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "prepare",
+          ids: ["abcdefghijk"],
+          language: "ja",
+          scene: "cafe",
+          level: 1,
+        }),
+      })
+    ).status,
+    403,
+  );
   assert.equal((await fetch(`${origin}/api/study`)).status, 404);
   assert.equal(
     (await fetch(`${origin}/api/register`, { method: "POST" })).status,
@@ -100,6 +117,21 @@ try {
   await page.getByRole("button", { name: "관리자 로그인" }).click();
   await page.getByRole("navigation", { name: "관리자 메뉴" }).waitFor();
   assert.equal(new URL(page.url()).pathname, "/study/admin");
+  const prepared = await page.request.post(`${origin}/api/study/admin/videos`, {
+    headers: { Origin: origin },
+    data: {
+      action: "prepare",
+      ids: ["abcdefghijk"],
+      language: "ja",
+      scene: "cafe",
+      level: 1,
+    },
+  });
+  assert.equal(
+    prepared.status(),
+    200,
+    "admin deployment allows owner-only video jobs",
+  );
   assert.match(await page.title(), /Hanmadi Admin/);
   assert.equal(
     await page.getByRole("link", { name: "학습 앱 열기" }).getAttribute("href"),
@@ -114,7 +146,9 @@ try {
     200,
   );
   assert.equal((await page.request.get(`${origin}/study`)).status(), 404);
-  const screenshots = resolve(process.env.HANMADI_E2E_SCREENSHOTS || ".next/admin-deployment-evidence");
+  const screenshots = resolve(
+    process.env.HANMADI_E2E_SCREENSHOTS || ".next/admin-deployment-evidence",
+  );
   await mkdir(screenshots, { recursive: true });
   for (const width of [390, 1440]) {
     await page.setViewportSize({ width, height: 900 });
@@ -128,6 +162,26 @@ try {
       path: join(screenshots, `admin-${width}.png`),
     });
   }
+  await verifyYoutubeSearch({
+    adminPage: page,
+    admin: page.context(),
+    screenshots,
+    post: async (body, context, path) => {
+      if (context) {
+        const response = await context.request.post(origin + path, {
+          headers: { Origin: origin },
+          data: body,
+        });
+        return { status: response.status(), data: await response.json() };
+      }
+      const response = await fetch(origin + path, {
+        method: "POST",
+        headers: { Origin: origin, "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      return { status: response.status, data: await response.json() };
+    },
+  });
   console.log(
     "Admin deployment E2E passed: dedicated login, owner-only APIs, learner route isolation, app link, responsive layouts, release identity.",
   );

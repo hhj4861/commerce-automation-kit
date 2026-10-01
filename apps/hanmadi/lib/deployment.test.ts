@@ -25,6 +25,7 @@ test("admin deployment exposes only login, release identity and owner endpoints"
     "/study/admin",
     "/api/study/admin",
     "/api/study/admin/learning",
+    "/api/study/admin/videos",
   ])
     assert.equal(adminPath(path), "owner");
   for (const path of [

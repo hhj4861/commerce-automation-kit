@@ -1,3 +1,4 @@
+import { cachedYoutubeSearch } from "@/lib/youtube-cache";
 import { createHash } from "node:crypto";
 import { getConversationTutor } from "@/lib/conversation-access";
 import { ConversationError } from "@/lib/conversation";
@@ -14,7 +15,6 @@ import { v2Driver } from "@/lib/store";
 import { readKnowledge, rejectContribution } from "@/lib/knowledge-store";
 import { searchKnowledge } from "@/lib/learning-retrieval";
 import {
-  searchYoutubeVideos,
   validateYoutubeSearch,
 } from "@/lib/youtube-search";
 export const runtime = "nodejs";
@@ -70,14 +70,8 @@ export async function POST(req: Request) {
       // Older clients may still send a search language; material settings are optional here.
       if (b.language !== undefined && !isStudyLanguage(b.language))
         throw new ConversationError(400, "검색 언어가 올바르지 않아요.");
-      if (
-        (await v2Driver().count(
-          `youtube:${new Date().toISOString().slice(0, 10)}`,
-        )) > 20
-      )
-        throw new ConversationError(429, "오늘의 영상 검색 예산을 다 썼어요.");
       return conversationJson(
-        await searchYoutubeVideos(
+        await cachedYoutubeSearch(
           { ...search, language: b.language },
           process.env.YOUTUBE_API_KEY,
         ),

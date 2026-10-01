@@ -1117,3 +1117,48 @@
     padding: 20px 16px;
   }
 }
+
+.vs-analysis-steps {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin: 16px 0;
+}
+.vs-analysis-steps span {
+  flex: 1;
+  padding: 10px 6px;
+  background: #edf3ef;
+  color: #31564a;
+  border-radius: 10px;
+  font-size: 12px;
+  text-align: center;
+  font-weight: 650;
+}
+.vs-cache-note {
+  color: #647469;
+  font-size: 12px;
+  margin: 8px 0 14px;
+}
+.vs-job-skipped {
+  background: #f0eee8;
+  color: #756344;
+}
+.vs-item-result {
+  font-size: 13px;
+  line-height: 1.65;
+  color: #536158;
+  margin: 10px 0;
+}
+.vs-video-evidence {
+  font-size: 12px;
+  line-height: 1.7;
+  margin-top: 10px;
+}
+.vs-video-evidence summary {
+  cursor: pointer;
+  color: #31564a;
+}
+.vs-video-evidence a {
+  color: #31564a;
+  font-weight: 650;
+}
