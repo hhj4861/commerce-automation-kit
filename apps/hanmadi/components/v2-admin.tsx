@@ -14,6 +14,7 @@ import {
   type Phrase,
 } from "@/lib/v2";
 import type { ContentDraft } from "@/lib/v2-store";
+import { videoJudgmentLabel, videoJudgmentReason } from "@/lib/video-policy";
 import type {
   Contribution,
   KnowledgeEvent,
@@ -584,6 +585,20 @@ export function V2Admin({ appHref = "/study" }: { appHref?: string }) {
                         JEV 확신이 낮아 검토 대기 중이에요. 영상 구간·뜻·발음·새로운 학습 가치를 직접 확인하고,
                         적합하지 않은 표현은 제외해 주세요. 검수·게시 전에는 학습에 사용하지 않아요.
                       </p>
+                    )}
+                    {current?.videoReview && (
+                      <details className="hm-muted">
+                        <summary>저장 당시 JEV 판정 보기</summary>
+                        <p>영상 분석 당시 후보의 기록이에요. 아래 번호는 현재 편집한 표현 순서와 다를 수 있고, 표현 수정 후 자동으로 재평가되지는 않아요.</p>
+                        <ul>
+                          {current.videoReview.judgments.map((j) => (
+                            <li key={j.index}>
+                              분석 후보 {j.index + 1} · {videoJudgmentLabel(j)} · {videoJudgmentReason(j)}
+                              <p>{current.videoReview!.evidence[j.index]?.evidence}</p>
+                            </li>
+                          ))}
+                        </ul>
+                      </details>
                     )}
                     <label className="hm-check">
                       <input

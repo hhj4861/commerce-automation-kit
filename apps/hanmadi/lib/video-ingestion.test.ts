@@ -20,7 +20,9 @@ import {
 import { memoryTransientStore } from "./transient-store";
 import { saveKnowledgeDraft } from "./knowledge-store";
 import { retrieveKnowledge, type ContentDraft, type KnowledgeState } from "./knowledge";
-import type { VideoAnalysis, VideoSettings } from "./video-policy";
+import { classifyVideoJudgment, videoDisposition, VIDEO_RUBRIC,
+  type VideoAnalysis, type VideoSettings, type VideoChoice, type VideoEvaluation,
+} from "./video-policy";
 const settings: VideoSettings = { language: "ja", scene: "cafe", level: 1 };
 const phrase = {
   text: "窓の近くに座ってもいいですか。",
@@ -362,7 +364,7 @@ test("real Jev SDK contract enforces confidence, exact dedupe and fail-closed be
     assert.equal(b.questions.unit0.type, "choice");
     assert.equal(b.state.candidates, undefined, "shared state must not include the candidate batch");
     assert.equal(b.state.settings.practiceLevel.id, 1);
-    assert.deepEqual(b.questions.unit0.instructions.earlierCandidates, []);
+    assert.equal(b.questions.unit0.instructions.earlierCandidates, undefined);
     assert.equal(b.questions.unit0.instructions.candidate.text, phrase.text);
     return Response.json({
       model: "jev-1.13.0",
@@ -478,4 +480,172 @@ test("low-confidence useful expressions stay in review, outside learning and ded
   assert.equal(published.draft?.revision, 2);
   assert.equal(f.stats().saves, 1);
   assert(comparisonCorpus(f.state.drafts, settings).some((p) => p.text === phrase.text));
+});
+
+
+function evaluation(choice: VideoChoice, confidence = 0.97, selectedProbability = 0.97): VideoEvaluation {
+  return { choice, confidence, probabilities: Object.fromEntries(
+    ["useful", "duplicate", "irrelevant", "unreliable"].map((key) => [key,
+      key === choice ? selectedProbability : (1 - selectedProbability) / 3]),
+  ) as VideoEvaluation["probabilities"] };
+}
+function jevResponse(answers: Record<string, object>) {
+  return Response.json({ model: "jev-1.13.0", usage: { input_tokens: 100, output_tokens: 10 },
+    answers: Object.fromEntries(Object.entries(answers).map(([key, a]) => [key, { type: "choice", ...a }])) });
+}
+function severalUnits(count: number): VideoAnalysis {
+  return { ...analysis, units: Array.from({ length: count }, (_, index) => ({
+    ...analysis.units[0], text: `${phrase.text}${index}`, at: index * 10,
+  })) };
+}
+
+test("v5 preserves low-confidence negative classifications for review without relaxing acceptance", () => {
+  for (const choice of ["useful", "duplicate", "irrelevant", "unreliable"] as const) {
+    for (const a of [evaluation(choice, 0.4), evaluation(choice, 0.95, 0.6)]) {
+      const j = classifyVideoJudgment(0, a);
+      assert.equal(j.disposition, "review");
+      assert.equal(j.accepted, false);
+      assert.equal(j.choice, choice);
+      assert.deepEqual(j.evaluation, a);
+      const exact = classifyVideoJudgment(0, a, true);
+      assert.equal(exact.disposition, "excluded");
+      assert.equal(exact.reason, "exact_duplicate");
+      assert.equal(exact.evaluation?.choice, choice);
+    }
+    assert.equal(classifyVideoJudgment(0, evaluation(choice)).disposition,
+      choice === "useful" ? "accepted" : "excluded");
+  }
+  assert.equal(videoDisposition({ index: 0, choice: "duplicate", confidence: 0.4, accepted: false }), "excluded", "v4 saved decisions stay unchanged");
+  assert.equal(videoDisposition({ index: 0, choice: "useful", confidence: 0.4, accepted: false }), "review");
+  assert.notEqual(VIDEO_RUBRIC, "hanmadi-video-jev-v4");
+});
+
+test("bad earlier meaning/evidence and review candidates never enter dedupe references", async () => {
+  for (const previousChoice of ["unreliable", "irrelevant", "duplicate"] as const) {
+    for (const confidence of [0.97, 0.4]) {
+      const a = severalUnits(2);
+      a.units[0].text = a.units[1].text;
+      a.units[0].meaning = "잘못된 뜻";
+      a.units[0].evidence = "원본 영상 내용을 관찰하지 못한 후보";
+      let calls = 0;
+      const result = await judgeVideo(a, [], settings, async (_, init) => {
+        calls++;
+        const body = JSON.parse(String(init?.body));
+        assert.equal(body.state.candidates, undefined);
+        assert.equal(body.questions.unit1.instructions.earlierCandidates, undefined);
+        assert(!JSON.stringify(body.questions.unit1).includes("잘못된 뜻"));
+        return jevResponse({ unit0: evaluation(previousChoice, confidence), unit1: evaluation("useful") });
+      });
+      assert.equal(calls, 1);
+      assert.equal(result.judgments[1].accepted, true);
+      assert.equal(result.judgments[0].disposition, confidence < 0.85 ? "review" : "excluded");
+    }
+  }
+});
+
+test("pair decisions only use accepted references; uncertain earlier pairs cannot exclude later candidates", async () => {
+  const a = severalUnits(4);
+  let calls = 0;
+  const result = await judgeVideo(a, [], settings, async (_, init) => {
+    const body = JSON.parse(String(init?.body));
+    if (++calls === 1) return jevResponse(Object.fromEntries(a.units.map((_, i) => [`unit${i}`, evaluation("useful")])));
+    assert.equal(Object.keys(body.questions).length, 6);
+    assert.equal(body.questions.pair0_1.instructions.reference.text, a.units[0].text);
+    const pair = (choice: "distinct" | "duplicate", confidence = 0.97) => ({ choice, confidence,
+      probabilities: { distinct: choice === "distinct" ? 0.97 : 0.03, duplicate: choice === "duplicate" ? 0.97 : 0.03 } });
+    return jevResponse({ pair0_1: pair("duplicate", 0.4),
+      pair0_2: pair("distinct"), pair1_2: pair("duplicate"),
+      pair0_3: pair("distinct"), pair1_3: pair("duplicate"), pair2_3: pair("duplicate") });
+  });
+  assert.equal(calls, 2);
+  assert.deepEqual(result.judgments.map(videoDisposition), ["accepted", "review", "accepted", "excluded"]);
+  assert.equal(result.judgments[2].comparisons?.find((c) => c.referenceIndex === 1)?.used, false);
+  assert.equal(result.judgments[3].reason, "batch_duplicate");
+  assert.equal(result.judgments[3].evaluation?.choice, "useful");
+});
+
+test("same-batch exact duplicates need no extra call and retain original answers", async () => {
+  const a = { ...analysis, units: [analysis.units[0], { ...analysis.units[0], at: 20 }] };
+  for (const next of [evaluation("useful"), evaluation("unreliable", 0.4)]) {
+    let calls = 0;
+    const result = await judgeVideo(a, [], settings, async () => {
+      calls++;
+      return jevResponse({ unit0: evaluation("useful"), unit1: next });
+    });
+    assert.equal(calls, 1);
+    assert.equal(result.judgments[0].accepted, true);
+    assert.equal(result.judgments[1].reason, "exact_duplicate");
+    assert.equal(result.judgments[1].disposition, "excluded");
+    assert.deepEqual(result.judgments[1].evaluation, next);
+  }
+});
+
+test("six qualified candidates use at most two requests and fifteen forward pairs", async () => {
+  const a = severalUnits(6);
+  let calls = 0;
+  const result = await judgeVideo(a, [], settings, async (_, init) => {
+    const body = JSON.parse(String(init?.body));
+    if (++calls === 1) return jevResponse(Object.fromEntries(a.units.map((_, i) => [`unit${i}`, evaluation("useful")])));
+    assert.equal(Object.keys(body.questions).length, 15);
+    for (const key of Object.keys(body.questions)) {
+      const [, ref, candidate] = /^pair(\d)_(\d)$/.exec(key)!;
+      assert(Number(ref) < Number(candidate));
+    }
+    return jevResponse(Object.fromEntries(Object.keys(body.questions).map((key) => [key,
+      { choice: "distinct", confidence: 0.97, probabilities: { distinct: 0.97, duplicate: 0.03 } }])));
+  });
+  assert.equal(calls, 2);
+  assert.equal(result.judgments.filter((j) => j.accepted).length, 6);
+});
+
+test("dedupe failure never bypasses quality acceptance; retry reuses video analysis", async () => {
+  for (const failure of ["429", "missing", "network"] as const) {
+    const f = fixture();
+    const a = severalUnits(2);
+    let analyses = 0, fail = true, calls = 0;
+    f.deps.analyze = async () => { analyses++; return a; };
+    f.deps.judge = () => judgeVideo(a, f.state.drafts, settings, async (_, init) => {
+      calls++;
+      const body = JSON.parse(String(init?.body));
+      if (body.questions.unit0) return jevResponse({ unit0: evaluation("useful"), unit1: evaluation("useful") });
+      if (fail) {
+        if (failure === "429") return new Response("sensitive", { status: 429 });
+        if (failure === "network") throw new Error("sensitive network failure");
+        return jevResponse({});
+      }
+      return jevResponse({ pair0_1: { choice: "distinct", confidence: 0.97, probabilities: { distinct: 0.97, duplicate: 0.03 } } });
+    });
+    const failed = await processVideo("abcdefghijk", settings, f.deps);
+    assert.equal(failed.state, "failed");
+    assert.equal(f.stats().saves, 0);
+    assert(!failed.message.includes("sensitive"));
+    fail = false;
+    assert.equal((await processVideo("abcdefghijk", settings, f.deps)).state, "created");
+    assert.equal(analyses, 1);
+    assert.equal(calls, 4);
+    assert.equal(f.stats().saves, 1);
+  }
+});
+
+test("negative review candidates persist with matching evidence, stay outside learning, and restore from cache", async () => {
+  const f = fixture();
+  const a = severalUnits(3);
+  f.deps.analyze = async () => a;
+  f.deps.judge = async () => ({ ...judged, judgments: [
+    classifyVideoJudgment(0, evaluation("duplicate")),
+    classifyVideoJudgment(1, evaluation("unreliable", 0.4)),
+    classifyVideoJudgment(2, evaluation("useful")),
+  ] });
+  const result = await processVideo("abcdefghijk", settings, f.deps);
+  assert.equal(result.state, "review");
+  assert.deepEqual(result.draft?.units.map((u) => u.text), [a.units[1].text, a.units[2].text]);
+  assert.deepEqual(result.draft?.videoReview?.unitEvidenceIndices, [1, 2]);
+  assert.equal(result.draft?.videoReview?.judgments[1].evaluation?.choice, "unreliable");
+  assert.equal(result.draft?.videoReview?.evidence[1].at, a.units[1].at);
+  assert.equal(retrieveKnowledge(f.state.drafts, { ...settings, mode: "chat", text: a.units[1].text }).length, 0);
+  assert(!comparisonCorpus(f.state.drafts, settings).some((p) => a.units.some((u) => u.text === p.text)));
+  const cached = await processVideo("abcdefghijk", settings, f.deps);
+  assert.equal(cached.state, "review");
+  assert.equal(f.stats().saves, 1);
+  assert.deepEqual(cached.judgments, result.judgments);
 });
