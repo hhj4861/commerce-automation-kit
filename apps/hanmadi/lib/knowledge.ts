@@ -19,11 +19,14 @@ export type ContentDraft = {
     requiresHumanReview?: boolean;
     rubric: string;
     model: string;
+    comparisonModel?: string;
     analyzedAt: number;
     comparedCount: number;
     referenceCount: number;
     judgments: import("./video-policy").VideoJudgment[];
     evidence: { at: number; evidence: string }[];
+    // Original saved unit order -> analysis/evidence index (before later human edits).
+    unitEvidenceIndices?: number[];
   };
 };
 export type Contribution = {

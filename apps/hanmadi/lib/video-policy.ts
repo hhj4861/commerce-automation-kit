@@ -3,7 +3,7 @@ import type { ContentDraft } from "./knowledge";
 export const VIDEO_SELECTION_LIMIT = 10;
 export const VIDEO_CONCURRENCY = 3;
 export const VIDEO_MAX_SECONDS = 15 * 60;
-export const VIDEO_RUBRIC = "hanmadi-video-jev-v4";
+export const VIDEO_RUBRIC = "hanmadi-video-jev-v5";
 export type VideoSettings = {
   language: StudyLanguage;
   scene: string;
@@ -15,12 +15,63 @@ export type VideoAnalysis = {
   seconds: number;
   units: VideoEvidence[];
 };
+export type VideoChoice = "useful" | "duplicate" | "irrelevant" | "unreliable";
+export type VideoEvaluation = {
+  choice: VideoChoice;
+  confidence: number;
+  probabilities: Record<VideoChoice, number>;
+};
+export type VideoPairEvaluation = {
+  referenceIndex: number;
+  choice: "duplicate" | "distinct";
+  confidence: number;
+  probabilities: Record<"duplicate" | "distinct", number>;
+  used: boolean;
+};
+export type VideoDisposition = "accepted" | "review" | "excluded";
 export type VideoJudgment = {
   index: number;
-  choice: "useful" | "duplicate" | "irrelevant" | "unreliable";
+  choice: VideoChoice;
   confidence: number;
   accepted: boolean;
+  // Optional for existing v4 drafts. choice retains the effective classification;
+  // evaluation records the original model answer even when exact dedupe overrides it.
+  disposition?: VideoDisposition;
+  reason?: "qualified" | "low_confidence" | "classified_negative" | "exact_duplicate" | "batch_duplicate" | "uncertain_duplicate";
+  evaluation?: VideoEvaluation;
+  comparisons?: VideoPairEvaluation[];
 };
+export function confidentVideoChoice(a: { choice: string; confidence: number; probabilities: Record<string, number> }) {
+  return a.confidence >= 0.85 && a.probabilities[a.choice] >= 0.9;
+}
+export function classifyVideoJudgment(index: number, evaluation: VideoEvaluation, exactDuplicate = false): VideoJudgment {
+  const certain = confidentVideoChoice(evaluation);
+  const disposition: VideoDisposition = exactDuplicate ? "excluded" : !certain ? "review" : evaluation.choice === "useful" ? "accepted" : "excluded";
+  return {
+    index, choice: exactDuplicate ? "duplicate" : evaluation.choice,
+    confidence: evaluation.confidence, accepted: disposition === "accepted",
+    disposition, evaluation,
+    reason: exactDuplicate ? "exact_duplicate" : !certain ? "low_confidence" : evaluation.choice === "useful" ? "qualified" : "classified_negative",
+  };
+}
+export function videoDisposition(j: VideoJudgment): VideoDisposition {
+  return j.disposition ?? (j.accepted ? "accepted" : j.choice === "useful" ? "review" : "excluded");
+}
+export function videoJudgmentLabel(j: VideoJudgment) {
+  return { accepted: "통과", review: "검토 대기", excluded: "제외" }[videoDisposition(j)];
+}
+export function videoJudgmentReason(j: VideoJudgment) {
+  const choice = { useful: "학습에 유용", duplicate: "중복", irrelevant: "상황·레벨 부적합", unreliable: "근거·내용 불확실" }[j.evaluation?.choice ?? j.choice];
+  const reasons = {
+    qualified: "학습 가치 기준 통과",
+    low_confidence: "판정 확신이 낮아 직접 확인 필요",
+    classified_negative: "학습 후보 제외 기준에 해당",
+    exact_duplicate: "기존 자료 또는 통과 후보와 같은 표현",
+    batch_duplicate: "통과 후보와 학습 내용이 중복",
+    uncertain_duplicate: "통과 후보와 중복 여부 확인 필요",
+  };
+  return `JEV 분류: ${choice} · ${j.reason ? reasons[j.reason] : videoJudgmentLabel(j)}`;
+}
 export type VideoResult = {
   state: "created" | "review" | "skipped" | "failed" | "running";
   message: string;
