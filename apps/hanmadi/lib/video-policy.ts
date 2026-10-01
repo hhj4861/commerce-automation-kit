@@ -3,7 +3,7 @@ import type { ContentDraft } from "./knowledge";
 export const VIDEO_SELECTION_LIMIT = 10;
 export const VIDEO_CONCURRENCY = 3;
 export const VIDEO_MAX_SECONDS = 15 * 60;
-export const VIDEO_RUBRIC = "hanmadi-video-jev-v3";
+export const VIDEO_RUBRIC = "hanmadi-video-jev-v4";
 export type VideoSettings = {
   language: StudyLanguage;
   scene: string;
@@ -22,7 +22,7 @@ export type VideoJudgment = {
   accepted: boolean;
 };
 export type VideoResult = {
-  state: "created" | "skipped" | "failed" | "running";
+  state: "created" | "review" | "skipped" | "failed" | "running";
   message: string;
   draft?: ContentDraft;
   judgments?: VideoJudgment[];

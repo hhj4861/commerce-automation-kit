@@ -13,10 +13,12 @@ import {
   judgeVideo,
   parseVideoAnalysis,
   videoDetails,
+  VideoEvaluationError,
+  comparisonCorpus,
 } from "./video-provider";
 import { memoryTransientStore } from "./transient-store";
 import { saveKnowledgeDraft } from "./knowledge-store";
-import type { ContentDraft, KnowledgeState } from "./knowledge";
+import { retrieveKnowledge, type ContentDraft, type KnowledgeState } from "./knowledge";
 import type { VideoAnalysis, VideoSettings } from "./video-policy";
 const settings: VideoSettings = { language: "ja", scene: "cafe", level: 1 };
 const phrase = {
@@ -35,7 +37,7 @@ const analysis: VideoAnalysis = {
     },
   ],
 };
-const judged = {
+const judged: Awaited<ReturnType<typeof judgeVideo>> = {
   judgments: [
     { index: 0, choice: "useful" as const, confidence: 0.97, accepted: true },
   ],
@@ -132,7 +134,7 @@ test("JEV failure never saves; retry reuses video; rejected content never saves"
   const g = fixture();
   g.deps.judge = async () => ({
     ...judged,
-    judgments: [{ ...judged.judgments[0], accepted: false }],
+    judgments: [{ ...judged.judgments[0], choice: "duplicate" as const, accepted: false }],
   });
   assert.equal(
     (await processVideo("abcdefghijk", settings, g.deps)).state,
@@ -342,4 +344,53 @@ test("Jev requires its dedicated key and never sends the general model key", asy
     if (previous === undefined) delete process.env.HANMADI_JEV_API_KEY;
     else process.env.HANMADI_JEV_API_KEY = previous;
   }
+});
+
+test("Jev failures retain safe code and HTTP status without upstream text or credentials", async () => {
+  process.env.LITELLM_BASE_URL = "https://gateway.example/llm/v1";
+  process.env.HANMADI_JEV_API_KEY = "sensitive-admin-key";
+  const original = console.warn;
+  const messages: string[] = [];
+  console.warn = (message) => { messages.push(String(message)); };
+  try {
+    await assert.rejects(judgeVideo(analysis, [], settings, async () =>
+      Response.json({ secret: "upstream-secret-body" })), (error: unknown) => {
+        assert(error instanceof VideoEvaluationError);
+        assert.equal(error.code, "invalid_response");
+        assert.equal(error.upstreamStatus, 200);
+        return true;
+      });
+    assert.equal(messages.length, 1);
+    const metadata = JSON.parse(messages[0]);
+    assert.equal(metadata.code, "invalid_response");
+    assert.equal(metadata.upstreamStatus, 200);
+    assert(!messages[0].includes("sensitive-admin-key"));
+    assert(!messages[0].includes("upstream-secret-body"));
+    assert(!messages[0].includes(phrase.text));
+  } finally { console.warn = original; }
+});
+
+test("low-confidence useful expressions stay in review, outside learning and dedupe until published", async () => {
+  const f = fixture();
+  f.deps.judge = async () => ({ ...judged,
+    judgments: [{ ...judged.judgments[0], confidence: 0.66, accepted: false }] });
+  const originalCache = f.deps.store;
+  const result = await processVideo("abcdefghijk", settings, f.deps);
+  assert.equal(result.state, "review");
+  assert.equal(result.draft?.status, "draft");
+  assert.equal(result.draft?.videoReview?.requiresHumanReview, true);
+  assert.equal(retrieveKnowledge(f.state.drafts, { ...settings, mode: "chat", text: phrase.text }).length, 0);
+  assert(!comparisonCorpus(f.state.drafts, settings).some((p) => p.text === phrase.text));
+  f.deps.store = memoryTransientStore();
+  assert.equal((await processVideo("abcdefghijk", settings, f.deps)).state, "review");
+  assert.equal(f.stats().saves, 1);
+  f.state.drafts[0].status = "published";
+  f.state.drafts[0].revision++;
+  f.deps.store = originalCache;
+  const published = await processVideo("abcdefghijk", settings, f.deps);
+  assert.equal(published.state, "created");
+  assert.equal(published.draft?.status, "published");
+  assert.equal(published.draft?.revision, 2);
+  assert.equal(f.stats().saves, 1);
+  assert(comparisonCorpus(f.state.drafts, settings).some((p) => p.text === phrase.text));
 });

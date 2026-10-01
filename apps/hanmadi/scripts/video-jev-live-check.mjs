@@ -2,7 +2,7 @@
 // Run from apps/hanmadi: node --import tsx scripts/video-jev-live-check.mjs --live
 import videoProvider from "../lib/video-provider.ts";
 import v2 from "../lib/v2.ts";
-const { judgeVideo } = videoProvider;
+const { judgeVideo, VideoEvaluationError } = videoProvider;
 const { starterUnits } = v2;
 
 if (process.argv[2] !== "--live") {
@@ -71,6 +71,7 @@ const duplicateCases = [
   },
 ];
 let requests = 0;
+let lastResponse;
 const started = Date.now();
 const observations = [];
 try {
@@ -85,9 +86,13 @@ try {
       async (url, init) => {
         if (++requests > 2) throw new Error("Live request budget exceeded");
         const response = await fetch(url, init);
+        lastResponse = { httpStatus: response.status };
         if (response.ok) {
           const data = await response.clone().json();
           usage = { inputTokens: data.usage?.input_tokens, outputTokens: data.usage?.output_tokens };
+          for (const [key, value] of Object.entries(usage)) {
+            if (Number.isSafeInteger(value) && value >= 0) lastResponse[key] = value;
+          }
           rawAnswers = data.answers;
         }
         return response;
@@ -106,9 +111,12 @@ try {
   console.log(JSON.stringify({ event: "hanmadi_jev_synthetic_check",
     requests, elapsedMs: Date.now() - started, passed, observations }));
   if (!passed) process.exitCode = 1;
-} catch {
+} catch (error) {
   // Never print the upstream body, exception, URL credentials, or key.
   console.log(JSON.stringify({ event: "hanmadi_jev_synthetic_check", requests,
-    elapsedMs: Date.now() - started, passed: false, error: "evaluation_failed", observations }));
+    elapsedMs: Date.now() - started, passed: false,
+    error: error instanceof VideoEvaluationError ? error.code : "evaluation_failed",
+    upstreamStatus: error instanceof VideoEvaluationError ? error.upstreamStatus : null,
+    lastResponse, observations }));
   process.exitCode = 1;
 }

@@ -1,4 +1,4 @@
-import { createJevClient } from "@cak/litellm-client/jev";
+import { createJevClient, JevError } from "@cak/litellm-client/jev";
 import { ConversationError, getLiteLLMConfig } from "./conversation";
 import { readLimitedBody } from "./conversation-http";
 import { jsonAnswer, parseRoleplay } from "./v2-ai";
@@ -7,6 +7,7 @@ import type { ContentDraft } from "./knowledge";
 import {
   normalizedExpression,
   VIDEO_MAX_SECONDS,
+  VIDEO_RUBRIC,
   type VideoAnalysis,
   type VideoSettings,
   type VideoJudgment,
@@ -181,7 +182,8 @@ export function comparisonCorpus(
       scene: u.scene,
     })),
     ...drafts
-      .filter((d) => d.language === settings.language)
+      .filter((d) => d.language === settings.language &&
+        (!d.videoReview?.requiresHumanReview || d.status === "published"))
       .flatMap((d) =>
         d.units.map((u) => ({
           text: u.text,
@@ -233,6 +235,16 @@ export function judgmentState(
     comparedCount: references.length,
   };
 }
+export class VideoEvaluationError extends ConversationError {
+  constructor(
+    public code: string,
+    public upstreamStatus: number | null,
+    public elapsedMs: number,
+  ) {
+    super(503, "JEV 평가를 완료하지 못했어요. 자료는 저장하지 않았으며, 다시 시도하면 분석 결과를 재사용해요.");
+  }
+}
+
 export async function judgeVideo(
   analysis: VideoAnalysis,
   drafts: ContentDraft[],
@@ -271,6 +283,8 @@ export async function judgeVideo(
     ]),
   );
   let result;
+  let upstreamStatus: number | null = null;
+  const startedAt = Date.now();
   try {
     result = await createJevClient({
       baseUrl,
@@ -278,14 +292,27 @@ export async function judgeVideo(
       model: "jev-1.13.0",
       timeoutMs: 12000,
       allowLocalhost: process.env.NODE_ENV !== "production",
-      fetch: fetcher,
+      fetch: async (url, init) => {
+        const response = await fetcher(url, init);
+        upstreamStatus = response.status;
+        return response;
+      },
     }).evaluate({ state, questions });
-  } catch {
-    throw new ConversationError(
-      503,
-      "JEV 평가를 완료하지 못했어요. 자료는 저장하지 않았으며, 다시 시도하면 분석 결과를 재사용해요.",
+  } catch (error) {
+    const failure = new VideoEvaluationError(
+      error instanceof JevError ? error.code : "unexpected_error",
+      upstreamStatus,
+      Date.now() - startedAt,
     );
+    console.warn(JSON.stringify({ event: "hanmadi_video_judge", rubric: VIDEO_RUBRIC,
+      outcome: "failed", code: failure.code, upstreamStatus,
+      elapsedMs: failure.elapsedMs, candidates: analysis.units.length }));
+    throw failure;
   }
+  console.info(JSON.stringify({ event: "hanmadi_video_judge", rubric: VIDEO_RUBRIC,
+    outcome: "evaluated", upstreamStatus, elapsedMs: Date.now() - startedAt,
+    inputTokens: result.usage.input_tokens, outputTokens: result.usage.output_tokens,
+    candidates: analysis.units.length }));
   const existing = new Set(
     comparisonCorpus(drafts, settings).map((p) => normalizedExpression(p.text)),
   );

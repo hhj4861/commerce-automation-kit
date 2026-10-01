@@ -17,6 +17,7 @@ const labels = {
   waiting: "분석 준비",
   running: "분석·평가 중",
   created: "초안 완료",
+  review: "검토 대기",
   failed: "다시 시도 가능",
   skipped: "학습 후보 제외",
 };
@@ -57,8 +58,9 @@ export function VideoPreparationQueue({
       entries[v.id].state === "running",
   );
   const completed = videos.filter(
-    (v) => entries[v.id]?.state === "created",
+    (v) => ["created", "review"].includes(entries[v.id]?.state),
   ).length;
+  const reviewCount = videos.filter((v) => entries[v.id]?.state === "review").length;
   const skipped = videos.filter(
     (v) => entries[v.id]?.state === "skipped",
   ).length;
@@ -138,7 +140,7 @@ export function VideoPreparationQueue({
               });
               if (!mounted.current) return;
               if (
-                !["created", "skipped", "failed", "running"].includes(
+                !["created", "review", "skipped", "failed", "running"].includes(
                   result.state,
                 )
               )
@@ -214,7 +216,7 @@ export function VideoPreparationQueue({
       </div>
       <p className="vs-tray-help">
         영상만 고르면 내용을 분석하고, 기존 자료와 비교해 학습 가치가 있는
-        표현만 초안으로 만들어요.
+        표현을 초안으로 만들어요. 확신이 낮은 후보는 검토 대기로 보관해요.
       </p>
       <div className="vs-analysis-steps" aria-label="자료 생성 과정">
         <span>1 영상 분석</span>
@@ -318,8 +320,8 @@ export function VideoPreparationQueue({
                   {entry?.judgments && (
                     <small>
                       통과 {entry.judgments.filter((j) => j.accepted).length}개
-                      · 제외 {entry.judgments.filter((j) => !j.accepted).length}
-                      개
+                      · 검토 대기 {entry.judgments.filter((j) => j.choice === "useful" && !j.accepted).length}개
+                      · 제외 {entry.judgments.filter((j) => j.choice !== "useful").length}개
                     </small>
                   )}
                   {entry?.draft?.videoReview && (
@@ -347,7 +349,7 @@ export function VideoPreparationQueue({
                             {String(Math.floor(e.at % 60)).padStart(2, "0")}
                           </a>{" "}
                           {e.evidence} ·{" "}
-                          {entry.judgments?.[i]?.accepted ? "통과" : "제외"}
+                          {entry.judgments?.[i]?.accepted ? "통과" : entry.judgments?.[i]?.choice === "useful" ? "검토 대기" : "제외"}
                         </p>
                       ))}
                     </details>
@@ -377,7 +379,7 @@ export function VideoPreparationQueue({
           </ol>
           <div className="vs-batch-footer">
             <p className="vs-batch-count" role="status">
-              초안 완료 {completed}개 · 제외 {skipped}개 · 남은 영상{" "}
+              초안 보관 {completed}개 (검토 대기 {reviewCount}개) · 제외 {skipped}개 · 남은 영상{" "}
               {pending.length}개
             </p>
             {!language || !scene ? (
@@ -410,8 +412,8 @@ export function VideoPreparationQueue({
               </button>
             )}
             <small>
-              공개 영상의 소리·화면을 분석해요. JEV 평가 실패·불확실·중복 표현은
-              학습 자료에 추가하지 않아요.
+              공개 영상의 소리·화면을 분석해요. 평가 실패·부적합·중복은 제외하고,
+              확신이 낮은 유용 후보는 검수·게시 전까지 학습에 사용하지 않아요.
             </small>
             {completed > 0 && (
               <button type="button" disabled={locked} onClick={onOpenLibrary}>

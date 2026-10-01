@@ -16,6 +16,7 @@ export type ContentDraft = {
   contributionId?: string;
   sourceHash?: string;
   videoReview?: {
+    requiresHumanReview?: boolean;
     rubric: string;
     model: string;
     analyzedAt: number;

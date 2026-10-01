@@ -89,23 +89,36 @@ export async function processVideo(
   const { store } = deps;
   const key = videoJobKey(id, settings),
     resultKey = "result:" + key;
-  const cached = await store.get(resultKey);
-  if (cached) return JSON.parse(cached);
+  async function cachedResult(raw: string | null): Promise<VideoResult | null> {
+    if (!raw) return null;
+    const result = JSON.parse(raw) as VideoResult;
+    if (!result.draft) return result;
+    const fresh = (await deps.read()).drafts.find((d) => d.id === result.draft!.id);
+    if (!fresh) return null;
+    return {
+      ...result,
+      draft: fresh,
+      state: fresh.status === "draft" && fresh.videoReview?.requiresHumanReview ? "review" : "created",
+      message: "이미 저장한 자료의 최신 상태를 불러왔어요.",
+    };
+  }
+  const cached = await cachedResult(await store.get(resultKey));
+  if (cached) return cached;
   const token = randomUUID(),
     lock = "video-lock:" + key;
   if (!(await store.claim(lock, token, 150)))
     return { state: "running", message: "이미 이 영상을 처리하고 있어요." };
   let release: (() => Promise<void>) | null = null;
   try {
-    const done = await store.get(resultKey);
-    if (done) return JSON.parse(done);
+    const done = await cachedResult(await store.get(resultKey));
+    if (done) return done;
     // sourceHash is durable idempotency, even after cache expiry or a lost save response.
     const existing = (await deps.read()).drafts.find(
       (d) => d.sourceHash === key,
     );
     if (existing)
       return {
-        state: "created",
+        state: existing.status === "draft" && existing.videoReview?.requiresHumanReview ? "review" : "created",
         draft: existing,
         message: "이미 저장한 자료를 불러왔어요.",
       };
@@ -147,13 +160,14 @@ export async function processVideo(
       const existing = before.drafts.find((d) => d.sourceHash === key);
       if (existing)
         return {
-          state: "created",
+          state: existing.status === "draft" && existing.videoReview?.requiresHumanReview ? "review" : "created",
           draft: existing,
           message: "이미 저장한 자료를 불러왔어요.",
         };
       const judged = await deps.judge(analysis, before.drafts, settings);
+      const requiresHumanReview = judged.judgments.some((j) => j.choice === "useful" && !j.accepted);
       const units = analysis.units
-        .filter((_, i) => judged.judgments[i]?.accepted)
+        .filter((_, i) => judged.judgments[i]?.choice === "useful")
         .map(({ text, meaning, reading }) => ({ text, meaning, reading }));
       let result: VideoResult;
       if (!units.length)
@@ -175,6 +189,7 @@ export async function processVideo(
             units,
             status: "draft",
             videoReview: {
+              requiresHumanReview,
               rubric: VIDEO_RUBRIC,
               model: judged.model,
               judgments: judged.judgments,
@@ -191,10 +206,12 @@ export async function processVideo(
           hash(before.drafts),
         );
         result = {
-          state: "created",
+          state: requiresHumanReview ? "review" : "created",
           draft,
           judgments: judged.judgments,
-          message: `JEV 평가 통과 ${units.length}개 표현을 초안으로 저장했어요.`,
+          message: requiresHumanReview
+            ? `${units.length}개 표현을 검토 대기로 보관했어요. 낮은 확신의 후보가 있어 검수·게시 전에는 학습과 중복 판정에 사용하지 않아요.`
+            : `JEV 평가 통과 ${units.length}개 표현을 초안으로 저장했어요.`,
         };
       }
       await store.set(resultKey, JSON.stringify(result), TTL);

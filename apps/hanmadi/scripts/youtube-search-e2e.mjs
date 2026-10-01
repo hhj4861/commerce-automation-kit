@@ -135,6 +135,10 @@ export async function verifyYoutubeSearch({
       sourceUrl: videos[index].url,
       rights: "검증용 공식 영상 분석 초안",
       status: "draft",
+      ...(index === 3 ? { videoReview: { requiresHumanReview: true, rubric: "fixture", model: "fixture",
+        analyzedAt: Date.now(), comparedCount: 1, referenceCount: 1,
+        judgments: [{ index: 0, choice: "useful", confidence: 0.66, accepted: false }],
+        evidence: [{ at: 10, evidence: "창가 자리를 묻는 표현을 설명하는 합성 근거" }] } } : {}),
       units: [
         {
           text: "窓の席はありますか。",
@@ -145,11 +149,11 @@ export async function verifyYoutubeSearch({
     };
     return route.fulfill({
       json: {
-        state: "created",
+        state: index === 3 ? "review" : "created",
         draft,
-        message: "JEV 통과 표현을 저장했어요.",
+        message: index === 3 ? "확신이 낮은 표현을 검토 대기로 보관했어요." : "JEV 통과 표현을 저장했어요.",
         judgments: [
-          { index: 0, choice: "useful", confidence: 0.97, accepted: true },
+          { index: 0, choice: "useful", confidence: index === 3 ? 0.66 : 0.97, accepted: index !== 3 },
         ],
       },
     });
@@ -228,14 +232,15 @@ export async function verifyYoutubeSearch({
       })
       .waitFor();
     assert.equal(maxActive, 3);
-    assert.equal(await queue.locator(".vs-job-created").count(), 8);
+    assert.equal(await queue.locator(".vs-job-created").count(), 7);
+    assert.equal(await queue.locator(".vs-job-review").count(), 1);
     assert.equal(await queue.locator(".vs-job-skipped").count(), 1);
     assert.equal(await queue.locator(".vs-job-failed").count(), 1);
     await queue
       .getByRole("button", { name: "남은 영상 분석 (1개)", exact: true })
       .click();
     await page.waitForFunction(
-      () => document.querySelectorAll(".vs-job-created").length === 9,
+      () => document.querySelectorAll(".vs-job-created").length === 8,
     );
     assert.equal(attempts.get(videos[0].id), 1);
     assert.equal(attempts.get(videos[1].id), 2);
@@ -246,6 +251,14 @@ export async function verifyYoutubeSearch({
       path: resolve(screenshots, "video-analysis-result-390.png"),
       fullPage: true,
     });
+    const pendingReview = queue.locator(`li[data-video-id="${videos[3].id}"]`);
+    await pendingReview.scrollIntoViewIfNeeded();
+    await page.screenshot({ path: resolve(screenshots, "video-analysis-review-390.png"), fullPage: false });
+    await pendingReview.getByRole("button", { name: "초안 검수", exact: true }).click();
+    await page.getByText(/JEV 확신이 낮아 검토 대기 중이에요/).waitFor();
+    assert(await page.getByRole("button", { name: "검수 완료 · 학습에 게시", exact: true }).isDisabled());
+    await page.getByRole("button", { name: "새 초안", exact: true }).click();
+    await page.getByRole("navigation", { name: "관리자 메뉴" }).getByRole("button", { name: "영상 찾기", exact: true }).click();
     assert.deepEqual(errors, []);
     await queue.getByRole("button", { name: "전체 해제", exact: true }).click();
     await page.setViewportSize({ width: 1440, height: 1000 });
