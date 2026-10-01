@@ -1,0 +1,65 @@
+{
+  "video": "/Users/admin/Downloads/vedio/tgv-episode-2-short.mp4",
+  "durationSeconds": 98.333333,
+  "videoDurationSeconds": 98.333333,
+  "audioDurationSeconds": 98.333,
+  "resolution": [
+    1080,
+    1920
+  ],
+  "fps": 24,
+  "audioCodec": "aac",
+  "voiceId": "RU7aSi6lT4uQBXMLgDxK",
+  "speed": 1.0,
+  "fullDecode": "passed",
+  "captions": 45,
+  "captionWidthMaxPixels": 850,
+  "captionSafeCenter": [
+    515,
+    1390
+  ],
+  "silencesOver1Second": [],
+  "newPaidRequests": 0,
+  "new3dRenders": 0,
+  "sha256": "44815e5c41ecfafd5b5f2420453c5ace9395cbb17682f64a09ddc058b9e6f63c",
+  "sourceHashes": {
+    "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-glass-substrate/broll-factory.mp4": "76286c8af34c4bc2c2b5b7260debdd315cf3263d1569f071ec935f01cef1228c",
+    "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-tgv/edit/00-visual.mp4": "7bce38dbe1baefbe20d6ec9e84d1c89e02889f7723be97ef21297942bbd9ea4d",
+    "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-tgv/edit/01-visual.mp4": "b05f91fe4fa56377d7ce12d3baead69783cd1e1c8a71ce6b620e0f29cf52400a",
+    "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-tgv/edit/02-visual.mp4": "7c90b19fc8a31865af388e63c3e9b89b0b34b3931ce76c481c07f0b1b3e04abb",
+    "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-tgv/edit/05-visual.mp4": "0da6d66d81bf61ce8db4f430de39d0c0206ac65732182b8f33ae0a594b799cc3",
+    "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-tgv/edit/06-visual.mp4": "94d855e59711cee14581ae9f7507421a88e6991a1412a7922c29fb09e52a29f8",
+    "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-tgv/edit/07-visual.mp4": "af552a7cf832415febdab5ce30c29744e7ff7ae91e74858723281b91250a5a0f",
+    "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-tgv/edit/08-visual.mp4": "a8d2a6ffca3137e5e98c102cbfa6a9d89f655b66ffddfc4d48a1a32391d04192",
+    "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-tgv/edit/09-visual.mp4": "b160d11ee3b23847b747bead5ddb5e849dc8145fe6caa8fc92c936f25925bb3a",
+    "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-tgv/edit/11-visual.mp4": "39e34afa8f650e5de99ec16c7ce6b953c8c13f1eef20ed6426357a66e0d6b0c1",
+    "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-tgv/edit/12-visual.mp4": "650f18f990b065cc5fdff5125b28d7a0387f88d641efbdf1f821d6684a22ff3f",
+    "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-tgv/edit/14-visual.mp4": "d3b9ab55bde769fc27a504893f8b273f1922933753904afac248a6cd807f79c7",
+    "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-tgv/edit/15-visual.mp4": "8270a1a8def510333d66712a7a7c2d8baaf39d51b97d69f95a653368ab28b289",
+    "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-tgv/remote-narration/beat-00.mp3": "7cdfb0dcea21f70cd3507879feca77eaa6d62b95b3ce7d561d615e2e41955e42",
+    "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-tgv/remote-narration/beat-01.mp3": "8c4af9549afc6a317d05bdf0aabbafc389d6cd3e2cd872729efa175db564e97e",
+    "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-tgv/remote-narration/beat-02.mp3": "5e23459d6e3a67b1282b015cf9d00c4d7236e9f2be8447ca6268b9d074e54a95",
+    "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-tgv/remote-narration/beat-05.mp3": "e1cbbdf7911971376acf388b68b900fa35f246feb0b37020fcef85716403bc07",
+    "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-tgv/remote-narration/beat-06.mp3": "879a0cba9f99b3f09c016ee34cf268c0bed22f99f43985b665e42aa20a842c68",
+    "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-tgv/remote-narration/beat-07.mp3": "9e6800561293ff70167c695217641850bba0b844f16a4b1dc276119402f132a8",
+    "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-tgv/remote-narration/beat-08.mp3": "934490a39f4c0747994c978fc8b26bdcbd73328ab7c164eeb9416196cbd536bc",
+    "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-tgv/remote-narration/beat-09.mp3": "3d8ed19d68279d8623f5eec601dba3b7a8c1d1bd26730b356befe2e9fc4388f9",
+    "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-tgv/remote-narration/beat-11.mp3": "cdc10375abd96d9b9d4362d9005e26dc9ec2261ba122441e0704ff57bf2530a1",
+    "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-tgv/remote-narration/beat-12.mp3": "7dbe6e43c5be323fa580e882c606a3d8e5345f077c16767a99e5f7a3e720b762",
+    "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-tgv/remote-narration/beat-14.mp3": "6091e78e8de0ce36d7807a96cd37ae50c7699c3380615644c3d19b1fe4bc1c0d",
+    "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-tgv/remote-narration/beat-15.mp3": "7c09cc861844d75d278f7431b5358cbf19f0697a2595a2993ecf2924d6d82675"
+  },
+  "visualReview": {
+    "status": "passed",
+    "frames": 14,
+    "contactSheet": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-tgv-short/final-contactsheet.jpg",
+    "checks": [
+      "caption readability and safe position",
+      "TGV cutaway and void comparison",
+      "first and last scenes present",
+      "consistent warm background",
+      "diagram labels distinguish conceptual geometry"
+    ]
+  },
+  "uploadedToYoutube": false
+}

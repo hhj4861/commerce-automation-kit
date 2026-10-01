@@ -1,0 +1,157 @@
+{
+  "title": "전기가 안 통하는 유리, 칩은 어떻게 연결할까?",
+  "voice": "RU7aSi6lT4uQBXMLgDxK",
+  "speed": 1.0,
+  "resolution": [
+    1920,
+    1080
+  ],
+  "fps": 24,
+  "captionAlignment": "Reused approved-script Whisper alignment",
+  "renderSourceResolution": [
+    1920,
+    1080
+  ],
+  "renderSourceFps": 12,
+  "deliveryInterpolation": "FFmpeg framerate blend to 24fps",
+  "loopedSceneVideo": false,
+  "newHiggsfieldRequests": 0,
+  "ttsWorkflowRun": 36843465496,
+  "higgsfieldReused": {
+    "generationId": "8a63ba30-24d3-4a05-9e58-fbfa531d6b3d",
+    "placements": [
+      "hook 0-6s"
+    ]
+  },
+  "scenes": [
+    {
+      "id": "hook",
+      "start": 0,
+      "duration": 21.791666666666668,
+      "narration": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-tgv/remote-narration/beat-00.mp3",
+      "visual": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-tgv/3d/hook.mp4",
+      "caption": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-tgv/edit/00.ass"
+    },
+    {
+      "id": "insulator",
+      "start": 21.791666666666668,
+      "duration": 20.791666666666668,
+      "narration": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-tgv/remote-narration/beat-01.mp3",
+      "visual": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-tgv/3d/insulator.mp4",
+      "caption": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-tgv/edit/01.ass"
+    },
+    {
+      "id": "elevator",
+      "start": 42.583333333333336,
+      "duration": 21.375,
+      "narration": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-tgv/remote-narration/beat-02.mp3",
+      "visual": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-tgv/3d/elevator.mp4",
+      "caption": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-tgv/edit/02.ass"
+    },
+    {
+      "id": "route",
+      "start": 63.958333333333336,
+      "duration": 23.041666666666668,
+      "narration": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-tgv/remote-narration/beat-03.mp3",
+      "visual": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-tgv/3d/route.mp4",
+      "caption": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-tgv/edit/03.ass"
+    },
+    {
+      "id": "holes",
+      "start": 87.0,
+      "duration": 23.583333333333332,
+      "narration": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-tgv/remote-narration/beat-04.mp3",
+      "visual": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-tgv/3d/holes.mp4",
+      "caption": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-tgv/edit/04.ass"
+    },
+    {
+      "id": "laser",
+      "start": 110.58333333333333,
+      "duration": 23.583333333333332,
+      "narration": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-tgv/remote-narration/beat-05.mp3",
+      "visual": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-tgv/3d/laser.mp4",
+      "caption": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-tgv/edit/05.ass"
+    },
+    {
+      "id": "seed",
+      "start": 134.16666666666666,
+      "duration": 22.416666666666668,
+      "narration": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-tgv/remote-narration/beat-06.mp3",
+      "visual": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-tgv/3d/seed.mp4",
+      "caption": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-tgv/edit/06.ass"
+    },
+    {
+      "id": "fill",
+      "start": 156.58333333333331,
+      "duration": 23.333333333333332,
+      "narration": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-tgv/remote-narration/beat-07.mp3",
+      "visual": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-tgv/3d/fill.mp4",
+      "caption": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-tgv/edit/07.ass"
+    },
+    {
+      "id": "void",
+      "start": 179.91666666666666,
+      "duration": 23.333333333333332,
+      "narration": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-tgv/remote-narration/beat-08.mp3",
+      "visual": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-tgv/3d/void.mp4",
+      "caption": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-tgv/edit/08.ass"
+    },
+    {
+      "id": "thermal",
+      "start": 203.25,
+      "duration": 24.541666666666668,
+      "narration": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-tgv/remote-narration/beat-09.mp3",
+      "visual": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-tgv/3d/thermal.mp4",
+      "caption": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-tgv/edit/09.ass"
+    },
+    {
+      "id": "inspection",
+      "start": 227.79166666666666,
+      "duration": 23.458333333333332,
+      "narration": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-tgv/remote-narration/beat-10.mp3",
+      "visual": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-tgv/3d/inspection.mp4",
+      "caption": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-tgv/edit/10.ass"
+    },
+    {
+      "id": "industry",
+      "start": 251.25,
+      "duration": 24.0,
+      "narration": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-tgv/remote-narration/beat-11.mp3",
+      "visual": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-tgv/3d/industry.mp4",
+      "caption": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-tgv/edit/11.ass"
+    },
+    {
+      "id": "daily",
+      "start": 275.25,
+      "duration": 23.458333333333332,
+      "narration": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-tgv/remote-narration/beat-12.mp3",
+      "visual": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-tgv/3d/daily.mp4",
+      "caption": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-tgv/edit/12.ass"
+    },
+    {
+      "id": "distinction",
+      "start": 298.7083333333333,
+      "duration": 24.333333333333332,
+      "narration": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-tgv/remote-narration/beat-13.mp3",
+      "visual": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-tgv/3d/distinction.mp4",
+      "caption": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-tgv/edit/13.ass"
+    },
+    {
+      "id": "reveal",
+      "start": 323.04166666666663,
+      "duration": 23.541666666666668,
+      "narration": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-tgv/remote-narration/beat-14.mp3",
+      "visual": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-tgv/3d/reveal.mp4",
+      "caption": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-tgv/edit/14.ass"
+    },
+    {
+      "id": "ending",
+      "start": 346.5833333333333,
+      "duration": 25.833333333333332,
+      "narration": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-tgv/remote-narration/beat-15.mp3",
+      "visual": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-tgv/3d/ending.mp4",
+      "caption": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-tgv/edit/15.ass"
+    }
+  ],
+  "duration": 372.41666666666663
+}

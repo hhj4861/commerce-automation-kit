@@ -1,0 +1,468 @@
+{
+  "title": "전기가 안 통하는 유리, 칩은 어떻게 연결할까?",
+  "voiceId": "RU7aSi6lT4uQBXMLgDxK",
+  "speed": 1.0,
+  "resolution": [
+    1080,
+    1920
+  ],
+  "fps": 24,
+  "newHiggsfieldRequests": 0,
+  "newTtsRequests": 0,
+  "new3dRenders": 0,
+  "source": "existing TGV longform clean visual masters + original Kyle narration",
+  "segments": [
+    {
+      "scene": "hook",
+      "sourceSentenceIndices": [
+        0,
+        0
+      ],
+      "start": 0,
+      "duration": 4.0,
+      "audioStart": 0.0,
+      "audioEnd": 3.9,
+      "visualStart": 0,
+      "visual": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-glass-substrate/broll-factory.mp4",
+      "audio": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-tgv/remote-narration/beat-00.mp3",
+      "heading": "전기가 막히는 것 아닐까?",
+      "narration": "전기가 통하지 않는 유리 위에 AI칩을 올린다고요?"
+    },
+    {
+      "scene": "hook",
+      "sourceSentenceIndices": [
+        1,
+        1
+      ],
+      "start": 4.0,
+      "duration": 3.3333333333333335,
+      "audioStart": 3.9,
+      "audioEnd": 7.14,
+      "visualStart": 3.9,
+      "visual": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-tgv/edit/00-visual.mp4",
+      "audio": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-tgv/remote-narration/beat-00.mp3",
+      "heading": "칩 아래로 내려가는 길",
+      "narration": "그러면 칩 아래로 전기는 어떻게 내려갈까요?"
+    },
+    {
+      "scene": "insulator",
+      "sourceSentenceIndices": [
+        4,
+        4
+      ],
+      "start": 7.333333333333334,
+      "duration": 2.4166666666666665,
+      "audioStart": 15.96,
+      "audioEnd": 18.28,
+      "visualStart": 15.96,
+      "visual": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-tgv/edit/01-visual.mp4",
+      "audio": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-tgv/remote-narration/beat-01.mp3",
+      "heading": "막는 재료 + 잇는 재료",
+      "narration": "유리는 막아 주고, 금속은 이어 줍니다."
+    },
+    {
+      "scene": "elevator",
+      "sourceSentenceIndices": [
+        3,
+        4
+      ],
+      "start": 9.75,
+      "duration": 9.5,
+      "audioStart": 8.98,
+      "audioEnd": 18.4,
+      "visualStart": 8.98,
+      "visual": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-tgv/edit/02-visual.mp4",
+      "audio": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-tgv/remote-narration/beat-02.mp3",
+      "heading": "층 사이를 잇는 TGV",
+      "narration": "기판 표면의 배선이 복도라면, 유리를 관통하는 금속 연결은 층 사이 통로입니다. 이것을 티지브이, 영어로 스루 글라스 비아라고 부릅니다."
+    },
+    {
+      "scene": "laser",
+      "sourceSentenceIndices": [
+        1,
+        2
+      ],
+      "start": 19.25,
+      "duration": 13.583333333333334,
+      "audioStart": 3.76,
+      "audioEnd": 17.24,
+      "visualStart": 3.76,
+      "visual": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-tgv/edit/05-visual.mp4",
+      "audio": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-tgv/remote-narration/beat-05.mp3",
+      "heading": "레이저 변성 → 선택적 제거",
+      "narration": "예를 들어 엘피케이에프의 라이드는 레이저로 유리 내부의 성질을 바꾼 뒤, 그 부분이 더 잘 제거되도록 습식 식각을 이용합니다. 레이저로 표시하고, 선택적으로 제거하는 두 단계입니다."
+    },
+    {
+      "scene": "seed",
+      "sourceSentenceIndices": [
+        3,
+        3
+      ],
+      "start": 32.833333333333336,
+      "duration": 5.541666666666667,
+      "audioStart": 10.28,
+      "audioEnd": 15.72,
+      "visualStart": 10.28,
+      "visual": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-tgv/edit/06-visual.mp4",
+      "audio": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-tgv/remote-narration/beat-06.mp3",
+      "heading": "금속이 붙을 바탕부터",
+      "narration": "한 가지 방법은 표면을 처리한 뒤 얇은 구리 씨앗층을 입히는 것입니다."
+    },
+    {
+      "scene": "fill",
+      "sourceSentenceIndices": [
+        0,
+        3
+      ],
+      "start": 38.375,
+      "duration": 13.458333333333334,
+      "audioStart": 0.0,
+      "audioEnd": 13.36,
+      "visualStart": 0.0,
+      "visual": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-tgv/edit/07-visual.mp4",
+      "audio": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-tgv/remote-narration/beat-07.mp3",
+      "heading": "구리를 붓는 게 아니다",
+      "narration": "다음은 도금입니다. 이 예에서는 씨앗층 위에 구리를 더 쌓아 관통 연결을 만듭니다. 뜨거운 구리를 구멍에 붓는 장면이 아닙니다. 얇고 깊은 통로 속에서도 금속이 고르게 자라야 합니다."
+    },
+    {
+      "scene": "void",
+      "sourceSentenceIndices": [
+        1,
+        2
+      ],
+      "start": 51.833333333333336,
+      "duration": 9.708333333333334,
+      "audioStart": 3.22,
+      "audioEnd": 12.82,
+      "visualStart": 3.22,
+      "visual": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-tgv/edit/08-visual.mp4",
+      "audio": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-tgv/remote-narration/beat-08.mp3",
+      "heading": "겉은 멀쩡해도 속은?",
+      "narration": "입구 쪽이 먼저 막히면 안쪽에 빈틈이 남을 수 있습니다. 겉은 연결된 것처럼 보여도 속에는 좁아진 부분이나 결함이 숨어 있을 수 있죠."
+    },
+    {
+      "scene": "thermal",
+      "sourceSentenceIndices": [
+        2,
+        3
+      ],
+      "start": 61.54166666666667,
+      "duration": 7.583333333333333,
+      "audioStart": 6.16,
+      "audioEnd": 13.66,
+      "visualStart": 6.16,
+      "visual": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-tgv/edit/09-visual.mp4",
+      "audio": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-tgv/remote-narration/beat-09.mp3",
+      "heading": "뜨거워져도 연결 유지",
+      "narration": "유리와 구리는 온도에 따라 늘어나는 정도가 다를 수 있죠. 그 차이는 서로 맞닿은 부분에 부담을 줍니다."
+    },
+    {
+      "scene": "industry",
+      "sourceSentenceIndices": [
+        1,
+        1
+      ],
+      "start": 69.125,
+      "duration": 7.875,
+      "audioStart": 3.18,
+      "audioEnd": 10.94,
+      "visualStart": 3.18,
+      "visual": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-tgv/edit/11-visual.mp4",
+      "audio": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-tgv/remote-narration/beat-11.mp3",
+      "heading": "가공과 도금, 다른 전문 기술",
+      "narration": "엘피케이에프는 유리 가공을, 엠케이에스의 아토텍은 표면 처리와 구리 도금 공정을 공개하고 있습니다."
+    },
+    {
+      "scene": "daily",
+      "sourceSentenceIndices": [
+        2,
+        3
+      ],
+      "start": 77.0,
+      "duration": 9.583333333333334,
+      "audioStart": 8.46,
+      "audioEnd": 17.96,
+      "visualStart": 8.46,
+      "visual": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-tgv/edit/12-visual.mp4",
+      "audio": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-tgv/remote-narration/beat-12.mp3",
+      "heading": "내가 쓰는 AI와의 관계",
+      "narration": "정밀한 연결을 만들 수 있으면 이런 부품을 묶는 설계의 선택지가 넓어집니다. 하지만 티지브이 하나로 앱 속도나 요금이 바로 바뀌는 것은 아닙니다."
+    },
+    {
+      "scene": "reveal",
+      "sourceSentenceIndices": [
+        1,
+        1
+      ],
+      "start": 86.58333333333333,
+      "duration": 4.333333333333333,
+      "audioStart": 2.04,
+      "audioEnd": 6.28,
+      "visualStart": 2.04,
+      "visual": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-tgv/edit/14-visual.mp4",
+      "audio": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-tgv/remote-narration/beat-14.mp3",
+      "heading": "필요한 자리만 연결한다",
+      "narration": "전기를 막는 유리에, 전기가 지나갈 자리만 정밀하게 만드는 겁니다."
+    },
+    {
+      "scene": "ending",
+      "sourceSentenceIndices": [
+        0,
+        0
+      ],
+      "start": 90.91666666666666,
+      "duration": 5.291666666666667,
+      "audioStart": 0.0,
+      "audioEnd": 5.18,
+      "visualStart": 0.0,
+      "visual": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-tgv/edit/15-visual.mp4",
+      "audio": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-tgv/remote-narration/beat-15.mp3",
+      "heading": "길이 좋아져도 기다린다면?",
+      "narration": "하지만 길이 좋아져도 배달할 데이터가 늦으면 계산 칩은 기다립니다."
+    },
+    {
+      "scene": "ending",
+      "sourceSentenceIndices": [
+        2,
+        2
+      ],
+      "start": 96.20833333333333,
+      "duration": 2.125,
+      "audioStart": 10.66,
+      "audioEnd": 12.68,
+      "visualStart": 10.66,
+      "visual": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-tgv/edit/15-visual.mp4",
+      "audio": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-tgv/remote-narration/beat-15.mp3",
+      "heading": "3탄: HBM",
+      "narration": "다음 편은 HBM입니다."
+    }
+  ],
+  "duration": 98.33333333333333,
+  "captions": [
+    {
+      "start": 0,
+      "end": 2.02,
+      "text": "전기가 통하지 않는 유리 위에"
+    },
+    {
+      "start": 2.02,
+      "end": 3.94,
+      "text": "AI칩을 올린다고요?"
+    },
+    {
+      "start": 4.0,
+      "end": 6.279999999999999,
+      "text": "그러면 칩 아래로 전기는 어떻게"
+    },
+    {
+      "start": 6.279999999999999,
+      "end": 7.279999999999999,
+      "text": "내려갈까요?"
+    },
+    {
+      "start": 7.333333333333334,
+      "end": 9.693333333333335,
+      "text": "유리는 막아 주고,\\N금속은 이어 줍니다."
+    },
+    {
+      "start": 9.75,
+      "end": 12.23,
+      "text": "기판 표면의 배선이\\N복도라면, 유리를"
+    },
+    {
+      "start": 12.23,
+      "end": 14.61,
+      "text": "관통하는 금속 연결은 층 사이"
+    },
+    {
+      "start": 14.61,
+      "end": 15.41,
+      "text": "통로입니다."
+    },
+    {
+      "start": 15.41,
+      "end": 17.97,
+      "text": "이것을 티지브이,\\N영어로 스루 글라스"
+    },
+    {
+      "start": 17.97,
+      "end": 19.209999999999997,
+      "text": "비아라고 부릅니다."
+    },
+    {
+      "start": 19.25,
+      "end": 21.93,
+      "text": "예를 들어 엘피케이에프의 라이드는"
+    },
+    {
+      "start": 21.93,
+      "end": 24.33,
+      "text": "레이저로 유리 내부의 성질을"
+    },
+    {
+      "start": 24.33,
+      "end": 26.47,
+      "text": "바꾼 뒤, 그 부분이 더 잘"
+    },
+    {
+      "start": 26.47,
+      "end": 29.130000000000003,
+      "text": "제거되도록 습식 식각을 이용합니다."
+    },
+    {
+      "start": 29.130000000000003,
+      "end": 31.61,
+      "text": "레이저로 표시하고,\\N선택적으로 제거하는"
+    },
+    {
+      "start": 31.61,
+      "end": 32.769999999999996,
+      "text": "두 단계입니다."
+    },
+    {
+      "start": 32.833333333333336,
+      "end": 35.153333333333336,
+      "text": "한 가지 방법은 표면을 처리한 뒤"
+    },
+    {
+      "start": 35.153333333333336,
+      "end": 37.593333333333334,
+      "text": "얇은 구리 씨앗층을 입히는"
+    },
+    {
+      "start": 37.593333333333334,
+      "end": 38.31333333333334,
+      "text": "것입니다."
+    },
+    {
+      "start": 38.375,
+      "end": 39.595,
+      "text": "다음은 도금입니다."
+    },
+    {
+      "start": 39.595,
+      "end": 41.795,
+      "text": "이 예에서는 씨앗층 위에"
+    },
+    {
+      "start": 41.795,
+      "end": 44.815,
+      "text": "구리를 더 쌓아 관통\\N연결을 만듭니다."
+    },
+    {
+      "start": 44.815,
+      "end": 47.835,
+      "text": "뜨거운 구리를 구멍에\\N붓는 장면이 아닙니다."
+    },
+    {
+      "start": 47.835,
+      "end": 50.255,
+      "text": "얇고 깊은 통로 속에서도 금속이"
+    },
+    {
+      "start": 50.255,
+      "end": 51.775,
+      "text": "고르게 자라야 합니다."
+    },
+    {
+      "start": 51.833333333333336,
+      "end": 54.21333333333334,
+      "text": "입구 쪽이 먼저 막히면 안쪽에"
+    },
+    {
+      "start": 54.21333333333334,
+      "end": 55.833333333333336,
+      "text": "빈틈이 남을 수 있습니다."
+    },
+    {
+      "start": 55.833333333333336,
+      "end": 58.35333333333334,
+      "text": "겉은 연결된 것처럼 보여도 속에는"
+    },
+    {
+      "start": 58.35333333333334,
+      "end": 61.473333333333336,
+      "text": "좁아진 부분이나 결함이\\N숨어 있을 수 있죠."
+    },
+    {
+      "start": 61.54166666666667,
+      "end": 63.601666666666674,
+      "text": "유리와 구리는 온도에 따라"
+    },
+    {
+      "start": 63.601666666666674,
+      "end": 65.76166666666667,
+      "text": "늘어나는 정도가 다를 수 있죠."
+    },
+    {
+      "start": 65.76166666666667,
+      "end": 68.48166666666667,
+      "text": "그 차이는 서로 맞닿은 부분에 부담을"
+    },
+    {
+      "start": 68.48166666666667,
+      "end": 69.08166666666668,
+      "text": "줍니다."
+    },
+    {
+      "start": 69.125,
+      "end": 71.485,
+      "text": "엘피케이에프는 유리 가공을,"
+    },
+    {
+      "start": 71.485,
+      "end": 74.105,
+      "text": "엠케이에스의 아토텍은 표면 처리와"
+    },
+    {
+      "start": 74.105,
+      "end": 76.925,
+      "text": "구리 도금 공정을\\N공개하고 있습니다."
+    },
+    {
+      "start": 77.0,
+      "end": 79.53999999999999,
+      "text": "정밀한 연결을 만들\\N수 있으면 이런 부품을"
+    },
+    {
+      "start": 79.53999999999999,
+      "end": 81.88,
+      "text": "묶는 설계의 선택지가 넓어집니다."
+    },
+    {
+      "start": 81.88,
+      "end": 84.06,
+      "text": "하지만 티지브이 하나로 앱 속도나"
+    },
+    {
+      "start": 84.06,
+      "end": 86.53999999999999,
+      "text": "요금이 바로 바뀌는 것은 아닙니다."
+    },
+    {
+      "start": 86.58333333333333,
+      "end": 89.24333333333333,
+      "text": "전기를 막는 유리에,\\N전기가 지나갈 자리만"
+    },
+    {
+      "start": 89.24333333333333,
+      "end": 90.86333333333333,
+      "text": "정밀하게 만드는 겁니다."
+    },
+    {
+      "start": 90.91666666666666,
+      "end": 93.61666666666666,
+      "text": "하지만 길이 좋아져도\\N배달할 데이터가"
+    },
+    {
+      "start": 93.61666666666666,
+      "end": 96.13666666666666,
+      "text": "늦으면 계산 칩은 기다립니다."
+    },
+    {
+      "start": 96.20833333333333,
+      "end": 98.26833333333333,
+      "text": "다음 편은 HBM입니다."
+    }
+  ]
+}

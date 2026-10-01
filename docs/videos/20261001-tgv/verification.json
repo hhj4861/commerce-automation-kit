@@ -1,0 +1,36 @@
+{
+  "video": "/Users/admin/Downloads/vedio/tgv-episode-2-long.mp4",
+  "durationSeconds": 372.416667,
+  "videoDurationSeconds": 372.416667,
+  "audioDurationSeconds": 372.416,
+  "resolution": [
+    1920,
+    1080
+  ],
+  "fps": 24,
+  "source3dFps": 12,
+  "deliveryInterpolation": "frame blend to 24fps",
+  "voiceId": "RU7aSi6lT4uQBXMLgDxK",
+  "speed": 1.0,
+  "fullDecode": "passed",
+  "captions": 113,
+  "captionTextAndTiming": "passed",
+  "silencesOver1_3Seconds": [],
+  "ttsWorkflowRun": 36843465496,
+  "newHiggsfieldRequests": 0,
+  "introReuseSha256": "76286c8af34c4bc2c2b5b7260debdd315cf3263d1569f071ec935f01cef1228c",
+  "sha256": "2851f5a8f01bf6d928193fd0668bbe033270eee83ec46e8f809a8726a4b81fcc",
+  "visualReview": {
+    "status": "passed",
+    "frames": 16,
+    "contactSheet": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-tgv/final-contactsheet.jpg",
+    "checks": [
+      "caption readability and safe position",
+      "TGV cutaway and void comparison",
+      "first and last scenes present",
+      "consistent warm background",
+      "diagram labels distinguish conceptual geometry"
+    ]
+  },
+  "uploadedToYoutube": false
+}
