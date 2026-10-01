@@ -1,5 +1,6 @@
 "use client";
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
+import { prepareLessonAudio } from "@/lib/study-audio-client";
 import { lessonPhrases, lessonPlan } from "@/lib/v2-lesson";
 import type { Phrase, Unit } from "@/lib/v2";
 
@@ -17,6 +18,11 @@ export function V2Lesson({
   const [index, setIndex] = useState(0);
   const phrases = lessonPhrases(unit);
   const plan = lessonPlan(unit);
+  const currentText = phrases[index].text;
+  const nextText = phrases[index + 1]?.text;
+  useEffect(() => prepareLessonAudio(
+    nextText ? [currentText, nextText] : [currentText], unit.language,
+  ), [currentText, nextText, unit.language]);
   return (
     <section className="hm-lesson">
       <p className="hm-lesson-count" role="status">

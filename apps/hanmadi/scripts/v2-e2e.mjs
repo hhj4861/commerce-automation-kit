@@ -3,12 +3,12 @@ import { createServer } from "node:http";
 import { spawn } from "node:child_process";
 import { once } from "node:events";
 import { mkdir, writeFile, unlink, readFile } from "node:fs/promises";
-import { resolve } from "node:path";
+import { resolve, dirname } from "node:path";
 import { chromium } from "playwright";
 import { verifyYoutubeSearch } from "./youtube-search-e2e.mjs";
 import { learningProviderFixture, verifyLearning } from "./learning-e2e.mjs";
-const testDataFile = resolve(".data/v2-e2e.json");
-await mkdir(resolve(".data"), { recursive: true });
+const testDataFile = resolve(process.env.HANMADI_E2E_DATA_FILE || ".data/v2-e2e.json");
+await mkdir(dirname(testDataFile), { recursive: true });
 await writeFile(testDataFile, "{}", { flag: "wx" }); // Never overwrite another running test's state.
 const phrases = {
   ja: {
@@ -34,6 +34,15 @@ const phrases = {
 };
 const modelCalls = [];
 let audioCalls = 0;
+const speechInputs = [];
+// A real, decodable PCM clip: exercise browser playback instead of an empty ID3 header.
+const speechClip = Buffer.alloc(44 + 4000);
+speechClip.write("RIFF", 0); speechClip.writeUInt32LE(speechClip.length - 8, 4);
+speechClip.write("WAVEfmt ", 8); speechClip.writeUInt32LE(16, 16);
+speechClip.writeUInt16LE(1, 20); speechClip.writeUInt16LE(1, 22);
+speechClip.writeUInt32LE(8000, 24); speechClip.writeUInt32LE(16000, 28);
+speechClip.writeUInt16LE(2, 32); speechClip.writeUInt16LE(16, 34);
+speechClip.write("data", 36); speechClip.writeUInt32LE(4000, 40);
 let calls = 0,
   slowStarted;
 const connections = new Map();
@@ -97,8 +106,10 @@ const mock = createServer(async (req, res) => {
     return res.end(JSON.stringify({ text: "한국에서 왔어요" }));
   }
   if (req.url?.endsWith("/audio/speech")) {
-    res.setHeader("Content-Type", "audio/mpeg");
-    return res.end(Buffer.from([73, 68, 51, 4, 0, 0, 0, 0, 0, 0]));
+    speechInputs.push(b.input);
+    await new Promise(resolve => setTimeout(resolve, 200));
+    res.setHeader("Content-Type", "audio/wav");
+    return res.end(speechClip);
   }
   calls++;
   modelCalls.push({
@@ -158,6 +169,17 @@ const mock = createServer(async (req, res) => {
       reading: result.reading,
       practice: result,
     };
+    if (language === "th" && input === "얼음 없이 커피 한 잔 주세요.") {
+      result = {translated: system.includes("REPAIR:") ? "ขอกาแฟหนึ่งแก้ว ไม่ใส่น้ำแข็ง" : "ขอแฟเย็นไม่ใส่น้ำแข็งค่ะ", reading:"커 까패 능 깨우 마이 싸이 남캥", practice:null};
+    }
+    if (language === "es" && input === "계산서 주세요.") {
+      result = {translated: "La cuenta, por favor.",
+        reading: system.includes("REPAIR:") ? "라 꾸엔따, 포르 파보르." : "라 꿰운따, 포르 파보르.", practice: null};
+    }
+    if (language === "es" && input === "Un café sin hielo, por favor.") {
+      result = {translated: system.includes("REPAIR:") ? "얼음 없는 커피 한 잔 주세요." : "얼음 없는 커피 한 잔 주세요, 포르 파보르.",
+        reading: "운 까페 신 이에로, 포르 파보르.", practice: null};
+    }
     if (input === "따뜻한 커피 한 잔 주세요." && !system.includes("REPAIR:"))
       result.reading = "kho ka fae";
   }
@@ -266,6 +288,12 @@ try {
     }),
     page = await context.newPage();
   await context.addInitScript(() => {
+    window.__playedAudio = 0;
+    const play = HTMLMediaElement.prototype.play;
+    HTMLMediaElement.prototype.play = async function () {
+      await play.call(this);
+      window.__playedAudio++;
+    };
     const style = document.createElement("style");
     style.textContent = "nextjs-portal { display:none !important; }";
     document.addEventListener(
@@ -420,6 +448,17 @@ try {
     .click();
   const lesson = page.getByRole("dialog");
   await lesson.getByText("문장 1 / 10", { exact: true }).waitFor();
+  const firstAudioText = await lesson.locator(".hm-native").innerText();
+  await lesson.getByRole("button", { name: "들어보기", exact: true }).click();
+  await page.waitForFunction(() => window.__playedAudio >= 1);
+  const repeatStart = performance.now();
+  await lesson.getByRole("button", { name: "들어보기", exact: true }).click();
+  await page.waitForFunction(() => window.__playedAudio >= 2);
+  const replayMs = Math.round(performance.now() - repeatStart);
+  assert.equal(speechInputs.filter(text => text === firstAudioText).length, 1,
+    "repeated listening must not request speech twice");
+  console.log(`PASS real browser audio playback; replay without upstream request (${replayMs}ms including automation)`);
+
   assert.equal(
     await lesson
       .getByRole("button", { name: "이전", exact: true })
@@ -669,6 +708,86 @@ try {
     assert.equal(assessed.status, 200);
     await page.reload();
     await page.getByRole("button", { name: "오늘 연습 시작" }).waitFor();
+    await page.getByRole("button", { name: "레벨별", exact: true }).click();
+    for (let level = 1; level <= 4; level++) {
+      await page.locator(".hm-levels button").nth(level - 1).click();
+      assert.equal(await page.locator(".hm-course-card").count(), 8);
+      const labels = await page.locator(".hm-course-card").allTextContents();
+      const expectedTitles = [...Object.values(scenePlans).map(plans => plans[level-1].title), clubTitles[level-1]];
+      for (const title of expectedTitles)
+        assert(labels.some(label => label.includes(title)), `${language} level ${level}: ${title}`);
+    }
+    const rows = JSON.parse(await readFile(resolve("lib/v2-scene-phrases.json"), "utf8"));
+    const column = {en:5, th:3, es:7}[language];
+    const seen = new Set();
+    await page.getByRole("button", {name:"상황별", exact:true}).click();
+    for (const [sceneId, name] of Object.entries({...sceneNames, club:"클럽·바"})) {
+      const back = page.getByRole("button", {name:"모든 상황",exact:true});
+      if (await back.count()) await back.click();
+      await page.locator(".hm-scene-grid button").filter({has:page.getByText(name,{exact:true})}).click();
+      assert.equal(await page.locator(".hm-course-card").count(), 4);
+      for (let level = 1; level <= 4; level++) {
+        await page.locator(".hm-course-card").nth(level-1).click();
+        const dialog = page.getByRole("dialog");
+        for (let n=0; n<10; n++) {
+          await dialog.getByText(`문장 ${n+1} / 10`, {exact:true}).waitFor();
+          const native = dialog.locator(".hm-native");
+          const text = await native.innerText();
+          assert.equal(await native.getAttribute("lang"), language);
+          assert(!seen.has(text), `${language}:${sceneId}:${level}:${n} duplicate`);
+          seen.add(text);
+          const row = rows[`${sceneId}:${level}`]?.[n];
+          if (row) {
+            assert.equal(text, row[column]);
+            assert.equal(await dialog.locator(".hm-reading").innerText(), row[column+1]);
+            await dialog.getByText(row[0], {exact:true}).waitFor();
+            await dialog.getByText(scenePlans[sceneId][level-1].steps[n].cue,{exact:true}).waitFor();
+          }
+          assert(await dialog.evaluate(el => el.scrollWidth <= el.clientWidth), `${language} layout`);
+          if(n<9) await dialog.getByRole("button",{name:"다음",exact:true}).click();
+        }
+        await dialog.getByRole("button",{name:"닫기",exact:true}).click();
+      }
+    }
+    assert.equal(seen.size,320);
+    console.log(`PASS ${language}: 32 scene/level lessons, 320 unique phrases, exact pronunciation/meaning, level filters and mobile layout`);
+    await page.getByRole("button",{name:"번역",exact:true}).click();
+    const details = page.getByText("직접 입력하거나 인식한 말 수정하기");
+    await details.click();
+    await page.getByLabel("번역할 말").fill("한국에서 왔어요");
+    await page.getByRole("button",{name:"번역하기",exact:true}).click();
+    await page.getByText(phrases[language].text,{exact:true}).waitFor();
+    await page.getByText(phrases[language].reading,{exact:true}).waitFor();
+    const reverse = await post({action:"translate",language,from:language,text:phrases[language].text});
+    assert.equal(reverse.status,200);
+    assert.match(reverse.data.translated, /[가-힣]/);
+    if (language === "th") {
+      const repaired = await post({action:"translate", language, from:"ko", text:"얼음 없이 커피 한 잔 주세요."});
+      assert.equal(repaired.status,200);
+      assert.equal(repaired.data.translated,"ขอกาแฟหนึ่งแก้ว ไม่ใส่น้ำแข็ง");
+      console.log("PASS reported Thai coffee meaning drift is repaired before returning to learner");
+    }
+    if (language === "es") {
+      const before = calls;
+      await page.getByLabel("번역할 말").fill("계산서 주세요.");
+      await page.getByRole("button", {name:"번역하기",exact:true}).click();
+      await page.getByText("La cuenta, por favor.", {exact:true}).waitFor();
+      await page.getByText("라 꾸엔따, 포르 파보르.", {exact:true}).waitFor();
+      assert.equal(await page.getByText("라 꿰운따, 포르 파보르.", {exact:true}).count(), 0);
+      assert.equal(calls - before, 2, "Spanish pronunciation has one bounded repair");
+      const reverse = await post({action:"translate", language, from:language, text:"Un café sin hielo, por favor."});
+      assert.equal(reverse.status, 200);
+      assert.equal(reverse.data.translated, "얼음 없는 커피 한 잔 주세요.");
+      assert.equal(calls - before, 4, "reverse meaning has one bounded repair");
+      assert(!(await state()).state.expressions.some(e => /꿰운따|포르 파보르/.test(e.meaning)), "bad meaning never saved");
+      await page.locator(".hm-main").evaluate(el => (el.scrollTop = 0));
+      await page.screenshot({path:resolve(screenshots,"spanish-translation-repair.png"),fullPage:true});
+      console.log("PASS Spanish pronunciation repaired in browser; reverse phonetic leakage repaired before response/save");
+    }
+    // Restore the screen's collapsed input before the existing Japanese translation journey.
+    await details.click();
+    await page.getByRole("button", {name:"스터디",exact:true}).click();
+    console.log(`PASS ${language}: Korean → target UI and target → Korean API (fixture provider)`);
   }
   await page.getByLabel("학습 언어", { exact: true }).selectOption("ja");
   await page.getByRole("button", { name: "번역", exact: true }).click();
@@ -834,8 +953,47 @@ try {
   await page
     .getByLabel("말이 막히면 한국어로 도움 요청")
     .fill("곤니치와, 현종데스요");
+  let releaseChat;
+  const chatRelease = new Promise((resolve) => {
+    releaseChat = resolve;
+  });
+  let chatRequested;
+  const chatRequest = new Promise((resolve) => {
+    chatRequested = resolve;
+  });
+  await page.route("**/api/study", async (route) => {
+    const body = route.request().postDataJSON();
+    if (body?.action === "chat") {
+      chatRequested();
+      await chatRelease;
+    }
+    await route.continue();
+  });
   await page.getByRole("button", { name: "보내기", exact: true }).click();
+  await chatRequest;
+  const nextDraft = "다음에는 차가운 음료를 주문하고 싶어";
+  await page.getByLabel("말이 막히면 한국어로 도움 요청").fill(nextDraft);
+  releaseChat();
   await page.locator(".hm-chat-assistant").nth(1).waitFor();
+  assert.equal(
+    await page.getByLabel("말이 막히면 한국어로 도움 요청").inputValue(),
+    nextDraft,
+    "an arriving AI response must not erase the next message being typed",
+  );
+  await page.unroute("**/api/study");
+  await page.screenshot({ path: resolve(screenshots, "chat-draft-preserved.png"), fullPage: true });
+  await page.route("**/api/study", async (route) => {
+    if (route.request().postDataJSON()?.action === "chat") {
+      await route.fulfill({ status: 502, contentType: "application/json", body: JSON.stringify({ error: "잠시 후 다시 시도해 주세요." }) });
+    } else await route.continue();
+  });
+  await page.getByRole("button", { name: "보내기", exact: true }).click();
+  await page.getByRole("alert").filter({ hasText: "잠시 후 다시 시도해 주세요." }).waitFor();
+  assert.equal(await page.getByLabel("말이 막히면 한국어로 도움 요청").inputValue(), nextDraft);
+  assert.equal(await page.locator(".hm-chat-assistant").count(), 2, "failed send must not append a fake reply");
+  await page.unroute("**/api/study");
+  await page.getByLabel("말이 막히면 한국어로 도움 요청").fill("");
+  console.log("PASS delayed AI reply preserves next draft; failed send preserves text and conversation");
   assert.equal(await page.locator(".hm-chat-assistant").count(), 2);
   assert(
     !(await page.locator(".hm-chat-assistant").nth(1).innerText()).includes(
@@ -1755,7 +1913,14 @@ try {
         .getAttribute("aria-pressed") === "true",
   );
   assert.equal((await state()).state.profiles.ja.level, 2);
+  const autoSaveResponse = page.waitForResponse((response) =>
+    response.url().endsWith("/api/study") &&
+    response.request().method() === "POST" &&
+    response.request().postDataJSON()?.action === "settings" &&
+    response.request().postDataJSON()?.autoSave === true,
+  );
   await page.getByRole("switch", { name: "번역 자동 학습" }).click();
+  assert.equal((await autoSaveResponse).status(), 200);
   await page.waitForFunction(
     () =>
       document.querySelector('[role="switch"]').getAttribute("aria-checked") ===

@@ -20,7 +20,7 @@
     "BROKER_URL": "https://cak-credential-broker.guswhd1085.workers.dev",
     "RUNNER_PUBLIC_JWK": "{\"crv\":\"Ed25519\",\"x\":\"Gdu3rj0RqgHpDNNPdXpPNE7PUxrEiz5YKSltS3tVKDE\",\"kty\":\"OKP\"}",
     "GITHUB_ALLOWED_REFS": "refs/heads/main,refs/heads/feat/common-video-generator",
-    "GITHUB_DEPLOY_ALLOWED_REFS": "",
+    "GITHUB_DEPLOY_ALLOWED_REFS": "refs/heads/deploy/hanmadi-admin",
     "GITHUB_REPLAY_DEPLOY_ENABLED": "true"
   },
   "secrets_store_secrets": [
@@ -128,6 +128,11 @@
       "binding": "SS_SHOPSHORTS_CF_QUEUE_TOKEN",
       "store_id": "de2c8d7c3e9c4067acc22212522c0fc4",
       "secret_name": "CAK_SHOPSHORTS_CF_QUEUE_TOKEN"
+    },
+    {
+      "binding": "SS_HANMADI_ADMIN_DEPLOY_VERCEL_TOKEN",
+      "store_id": "de2c8d7c3e9c4067acc22212522c0fc4",
+      "secret_name": "CAK_HANMADI_ADMIN_DEPLOY_VERCEL_TOKEN"
     }
   ]
 }

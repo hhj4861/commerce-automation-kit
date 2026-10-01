@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { adminPath, isAdminDeployment } from "@/lib/deployment";
 import {
   TUTOR_COOKIE,
   getAuthSecret,
@@ -19,6 +20,31 @@ const OWNER_ONLY = ["/admin/tutors"];
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
+  if (isAdminDeployment()) {
+    const access = adminPath(pathname);
+    if (access === "closed")
+      return new NextResponse("Not found", { status: 404 });
+    if (access === "redirect") {
+      const url = req.nextUrl.clone();
+      url.pathname = pathname === "/login" ? "/admin-login" : "/study/admin";
+      url.search = "";
+      return NextResponse.redirect(url);
+    }
+    if (access === "public") return NextResponse.next();
+    const owner = await verifySession(
+      req.cookies.get(TUTOR_COOKIE)?.value,
+      getAuthSecret(process.env),
+    );
+    if (owner?.r !== "owner") {
+      if (pathname.startsWith("/api/"))
+        return NextResponse.json(
+          { error: "관리자 로그인이 필요합니다." },
+          { status: 403 },
+        );
+      return NextResponse.redirect(new URL("/admin-login", req.url));
+    }
+    return NextResponse.next();
+  }
   if (isOpenPath(pathname)) return NextResponse.next();
 
   const session = await verifySession(

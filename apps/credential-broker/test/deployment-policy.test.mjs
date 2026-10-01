@@ -31,3 +31,14 @@ test('deployment credentials stay out of runtime, Pages and migration schemas', 
     ...config, MIGRATION_SHA: 'same', MIGRATION_EXPIRES_AT: String(Date.now() + 10000),
   }));
 });
+
+const adminRef = 'refs/heads/deploy/hanmadi-admin';
+const adminConfig = { GITHUB_DEPLOY_ALLOWED_REFS: adminRef };
+const adminClaims = { ...claims('hanmadi-admin'), ref_protected: 'true' };
+test('admin gets a dedicated credential and cannot use learner or Replay trust', () => {
+  assert.deepEqual(authorizeGithub(adminClaims, adminConfig).keys, ['HANMADI_ADMIN_DEPLOY_VERCEL_TOKEN']);
+  for (const ref_protected of [undefined, false, 'false']) assert.throws(() => authorizeGithub({ ...adminClaims, ref_protected }, adminConfig));
+  for (const patch of [{ repository_id: 'other' }, { repository_owner_id: 'other' }, { event_name: 'pull_request' }, { runner_environment: 'self-hosted' }, { workflow_ref: claims('hanmadi').workflow_ref }, { sub: claims('hanmadi').sub }]) assert.throws(() => authorizeGithub({ ...adminClaims, ...patch }, adminConfig));
+  assert.throws(() => authorizeGithub(claims('hanmadi'), adminConfig));
+  assert.throws(() => authorizeGithub(adminClaims, { GITHUB_REPLAY_DEPLOY_ENABLED: 'true' }));
+});

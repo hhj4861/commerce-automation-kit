@@ -7,6 +7,7 @@
 |---|---|---|---|
 | Shorts 웹 | commerce-automation-kit | `deploy/shopshorts` | Cloudflare Pages `shopshorts-dash` |
 | Hanmadi 웹 | commerce-automation-kit | `deploy/hanmadi` | Vercel `hanmadi` |
+| Hanmadi 관리자 | commerce-automation-kit | `deploy/hanmadi-admin` | Vercel `hanmadi-admin`; [분리·활성화 상태](hanmadi-admin.md) |
 | FIRSTFRAME | commerce-automation-kit | `deploy/firstframe` | Cloudflare Pages `firstframe-showcase` |
 | LiteLLM | commerce-automation-kit | `deploy/litellm` | 개인 GCP `replay-live-508202`의 `shared-ai` |
 | Replay 웹·API | **replay-live** | 목표 `deploy/replay` | Vercel `replay-live-poc` + `replay-live-api`; 별도 저장소에서 연결 필요 |

@@ -42,6 +42,7 @@ export type EnvTutor = { name: string; pin: string };
 export function isOpenPath(pathname: string): boolean {
   if (
     pathname === "/" ||
+    pathname === "/api/deployment" ||
     pathname === "/study" ||
     pathname.startsWith("/study/") ||
     pathname === "/api/study" ||

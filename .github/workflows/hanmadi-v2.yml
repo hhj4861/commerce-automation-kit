@@ -25,9 +25,12 @@ jobs:
       - run: npm run build
       - run: npx playwright install --with-deps chromium
       - run: npm run test:v2
+      - run: npm run test:admin-deployment
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: hanmadi-v2-screens
-          path: docs/hanmadi-v2-e2e/*.png
+          path: |
+            docs/hanmadi-v2-e2e/*.png
+            apps/hanmadi/.next/admin-deployment-evidence/*.png
           retention-days: 7

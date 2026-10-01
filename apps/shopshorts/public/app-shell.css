@@ -96,3 +96,8 @@
     main { padding: 0 18px 45px; }
     .topbar { display: none; }
   }
+
+/* Shared manual/automatic case discovery card. */
+.architecture-case{display:grid;gap:.4rem;margin:.75rem 0;padding:.7rem .85rem;border-left:3px solid #0f766e;background:rgba(15,118,110,.06);border-radius:0 .5rem .5rem 0;line-height:1.55}.architecture-case small{display:block;color:inherit;opacity:.8}
+
+.auto-keyword .architecture-case,.auto-keyword .architecture-case>span,.auto-keyword .architecture-case>small{color:var(--ink);opacity:1}.auto-keyword .architecture-case>small{border:0;padding:0;margin:0}

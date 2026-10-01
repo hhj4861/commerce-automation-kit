@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { configuration, plan } from './plan.mjs';
-import { commands, deployment } from './deploy.mjs';
+import { commands, deployment, verifyAdminRelease, verifyAdminConfiguration } from './deploy.mjs';
 
 const sha = 'a'.repeat(40);
 const env = name => ({ GITHUB_REPOSITORY: configuration.repository,
@@ -83,4 +83,41 @@ test('Replay and Festa are separate-repository targets, never local deployments'
     assert.throws(() => plan(input(name)));
     assert.throws(() => deployment(name, env(name)));
   }
+});
+
+test('admin deploy is isolated from the learner project and does not expose tokens in arguments', () => {
+  const target = configuration.targets['hanmadi-admin'];
+  assert.notEqual(target.project, configuration.targets.hanmadi.project);
+  assert.equal(target.deploymentMode, 'admin');
+  assert.throws(() => commands('hanmadi-admin', target, { ...env('hanmadi-admin'), DEPLOY_VERCEL_TOKEN: 'learner-key' }));
+  const steps = commands('hanmadi-admin', target, { ...env('hanmadi-admin'), HANMADI_ADMIN_DEPLOY_VERCEL_TOKEN: 'admin-fixture-secret' });
+  assert.doesNotMatch(JSON.stringify(steps), /admin-fixture-secret|--token/);
+  for (const arg of ['HANMADI_DEPLOYMENT=admin', `HANMADI_RELEASE_SHA=${sha}`, `githubCommitSha=${sha}`, 'githubCommitRef=deploy/hanmadi-admin']) assert.ok(steps.at(-1).args.includes(arg));
+});
+test('release validation requires the right surface, revision and access boundary', async () => {
+  const target = configuration.targets['hanmadi-admin'];
+  function fixture(patch = {}) {
+    return async url => {
+      const path = new URL(url).pathname;
+      if (path === '/api/deployment') return Response.json({ application: 'hanmadi-admin', revision: sha, ...patch });
+      if (path === '/admin-login') return new Response('Hanmadi Admin');
+      return new Response('', { status: path === '/api/study/admin' ? 403 : 404 });
+    };
+  }
+  await verifyAdminRelease(target, sha, fixture());
+  await assert.rejects(verifyAdminRelease(target, sha, fixture({ revision: 'old' })));
+  await assert.rejects(verifyAdminRelease(target, sha, fixture({ application: 'hanmadi' })));
+  await assert.rejects(verifyAdminRelease(target, sha, async url => url.endsWith('/api/study/admin') ? new Response('open') : fixture()(url)));
+});
+test('missing admin runtime secrets block deployment before a production upload', async () => {
+  const keys = ['HANMADI_DEPLOYMENT', 'HANMADI_APP_URL', 'AUTH_SECRET', 'TUTOR_PINS', 'UPSTASH_REDIS_REST_URL', 'UPSTASH_REDIS_REST_TOKEN', 'YOUTUBE_API_KEY', 'LITELLM_BASE_URL', 'LITELLM_API_KEY', 'LITELLM_MODEL'];
+  const target = configuration.targets['hanmadi-admin'];
+  const fixture = keys => async (url, options) => {
+    assert.equal(new URL(url).searchParams.get('teamId'), target.organization);
+    assert.equal(options.headers.authorization, 'Bearer fixture');
+    return Response.json({ envs: keys.map(key => ({ key, target: ['production'] })) });
+  };
+  await verifyAdminConfiguration(target, 'fixture', fixture(keys));
+  await assert.rejects(verifyAdminConfiguration(target, 'fixture', fixture(keys.filter(key => key !== 'LITELLM_API_KEY'))), /LITELLM_API_KEY/);
+  await assert.rejects(verifyAdminConfiguration(target, 'fixture', async () => Response.json({ envs: keys.map(key => ({ key, target: ['preview'] })) })), /production variables/);
 });
