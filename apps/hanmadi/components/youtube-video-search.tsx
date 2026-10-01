@@ -2,12 +2,18 @@
 
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
+import { VIDEO_SELECTION_LIMIT } from "@/lib/video-policy";
 import type { YoutubeSearchPage, YoutubeVideo } from "@/lib/youtube-search";
 import type { ContentDraft } from "@/lib/knowledge";
 import { VideoPreparationQueue } from "./video-preparation-queue";
 
 type Search = { query: string };
-type LoadedPage = YoutubeSearchPage & { search: Search; token?: string };
+type LoadedPage = YoutubeSearchPage & {
+  search: Search;
+  token?: string;
+  cachedAt?: number;
+  cacheHit?: boolean;
+};
 
 async function fetchPage(search: Search, signal: AbortSignal, token?: string) {
   const response = await fetch("/api/study/admin", {
@@ -136,28 +142,30 @@ export function YoutubeVideoSearch({
     setRetry(null);
     let loaded = [...pages];
     const visited = new Set(loaded.map((p) => p.token).filter(Boolean));
-    const ids = new Set<string>();
+    const ids = new Set(selected.map((v) => v.id));
     function include(items: LoadedPage[]) {
-      const additions = items.flatMap((p) =>
-        p.videos.map((v) => {
-          ids.add(v.id);
-          return v;
-        }),
+      const additions: YoutubeVideo[] = [];
+      for (const video of items.flatMap((p) => p.videos)) {
+        if (ids.size >= VIDEO_SELECTION_LIMIT) break;
+        if (!ids.has(video.id)) {
+          ids.add(video.id);
+          additions.push(video);
+        }
+      }
+      setSelected((previous) =>
+        [
+          ...previous,
+          ...additions.filter((v) => !previous.some((p) => p.id === v.id)),
+        ].slice(0, VIDEO_SELECTION_LIMIT),
       );
-      setSelected((previous) => {
-        const byId = new Map(previous.map((v) => [v.id, v]));
-        for (const video of additions)
-          if (!byId.has(video.id)) byId.set(video.id, video);
-        return [...byId.values()];
-      });
       setBulkStatus(
-        `${loaded.length}페이지 확인 · 이 검색에서 ${ids.size}개 선택`,
+        `${loaded.length}페이지 확인 · 준비 목록 ${ids.size}/${VIDEO_SELECTION_LIMIT}개`,
       );
     }
     include(loaded);
     try {
       let token = loaded.at(-1)?.nextPageToken;
-      while (token) {
+      while (token && ids.size < VIDEO_SELECTION_LIMIT && loaded.length < 20) {
         if (visited.has(token))
           throw new Error(
             "다음 페이지가 반복되어 중단했어요. 검색어를 바꿔 다시 검색해 주세요.",
@@ -171,7 +179,9 @@ export function YoutubeVideoSearch({
         token = next.nextPageToken;
       }
       setBulkStatus(
-        `모든 페이지 확인 완료 · 이 검색의 영상 ${ids.size}개를 준비 목록에 담았어요.`,
+        token
+          ? `준비 목록 ${ids.size}/${VIDEO_SELECTION_LIMIT}개. 안전한 일괄 분석을 위해 추가 선택을 멈췄어요.`
+          : `모든 페이지 확인 완료 · 준비 목록 ${ids.size}개를 담았어요.`,
       );
     } catch (e) {
       if (!controller.signal.aborted) {
@@ -199,7 +209,10 @@ export function YoutubeVideoSearch({
     setSelected((previous) =>
       allHere
         ? previous.filter((v) => !page.videos.some((item) => item.id === v.id))
-        : [...previous, ...page.videos.filter((v) => !selectedIds.has(v.id))],
+        : [
+            ...previous,
+            ...page.videos.filter((v) => !selectedIds.has(v.id)),
+          ].slice(0, VIDEO_SELECTION_LIMIT),
     );
   }
   function move(index: number) {
@@ -218,7 +231,8 @@ export function YoutubeVideoSearch({
           <div>
             <h2>수업의 시작이 될 영상을 찾아보세요</h2>
             <p>
-              관심 있는 영상을 골라두고, 사용 가능한 원문으로 수업을 준비하세요.
+              관심 있는 영상을 고르면 AI가 분석하고 학습 가치가 있는 자료를
+              찾아요.
             </p>
           </div>
           <span className="vs-service">YouTube 검색</span>
@@ -301,16 +315,26 @@ export function YoutubeVideoSearch({
                   ? "검색 총개수 확인 불가"
                   : `검색 결과 약 ${page.totalResults.toLocaleString("ko-KR")}개`}
               </strong>
-              <small>
-                YouTube 제공 추정치 · 실제 선택 수와 다를 수 있어요.
-              </small>
+              <small>YouTube 제공 추정치 · 준비 목록 최대 10개</small>
             </div>
+          )}
+          {page?.cachedAt && (
+            <p className="vs-cache-note">
+              {page.cacheHit ? "저장된 검색 결과" : "새 검색 결과"} ·{" "}
+              {new Date(page.cachedAt).toLocaleTimeString("ko-KR", {
+                hour: "2-digit",
+                minute: "2-digit",
+              })}{" "}
+              기준 · 1시간 재사용
+            </p>
           )}
           {page && (searchVideos.length > 0 || page.nextPageToken) && (
             <div className="vs-all-pages">
               <div>
                 <strong>페이지를 넘기지 않고 한 번에</strong>
-                <p>이 검색의 모든 페이지를 확인해 준비 목록에 담아요.</p>
+                <p>
+                  페이지를 넘겨 최대 10개까지 담아요. 한 번에 3개씩 분석해요.
+                </p>
               </div>
               {selectingAll ? (
                 <button type="button" onClick={() => request.current?.abort()}>
@@ -320,12 +344,19 @@ export function YoutubeVideoSearch({
                 <button
                   type="button"
                   className="vs-primary"
-                  disabled={busy || disabled || allPagesSelected}
+                  disabled={
+                    busy ||
+                    disabled ||
+                    allPagesSelected ||
+                    selected.length >= VIDEO_SELECTION_LIMIT
+                  }
                   onClick={() => void selectEveryPage()}
                 >
                   {allPagesSelected
                     ? "모든 페이지 선택 완료"
-                    : "모든 페이지 전체 선택"}
+                    : selected.length >= VIDEO_SELECTION_LIMIT
+                      ? "최대 10개 선택 완료"
+                      : "모든 페이지에서 최대 10개 선택"}
                 </button>
               )}
               {bulkStatus && (
@@ -342,7 +373,11 @@ export function YoutubeVideoSearch({
                   ref={selectAll}
                   type="checkbox"
                   checked={allHere}
-                  disabled={busy || disabled}
+                  disabled={
+                    busy ||
+                    disabled ||
+                    (!allHere && selected.length >= VIDEO_SELECTION_LIMIT)
+                  }
                   onChange={togglePage}
                 />
                 이 페이지 모두 선택
@@ -393,13 +428,20 @@ export function YoutubeVideoSearch({
                       type="checkbox"
                       aria-label={`${video.title} 선택`}
                       checked={checked}
-                      disabled={busy || disabled}
+                      disabled={
+                        busy ||
+                        disabled ||
+                        (!checked && selected.length >= VIDEO_SELECTION_LIMIT)
+                      }
                       onChange={() => {
                         setBulkStatus("");
                         setSelected((previous) =>
                           checked
                             ? previous.filter((v) => v.id !== video.id)
-                            : [...previous, video],
+                            : [...previous, video].slice(
+                                0,
+                                VIDEO_SELECTION_LIMIT,
+                              ),
                         );
                       }}
                     />
