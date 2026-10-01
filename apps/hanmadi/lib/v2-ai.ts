@@ -317,7 +317,7 @@ Conversation continuity takes priority over covering learning objectives:
 - Keep the established role, relationship, topic and agreed actions. Do not become a waiter when you were a fellow guest. Do not invent an order, preference, problem or request for the learner.
 - Level missions and scene examples are optional practice opportunities, not a checklist to cycle through. Stay with the current exchange; switch topics only when the learner leads, the exchange naturally closes, or you make a relevant transition.
 - A toast, thanks, agreement or goodbye can receive a short natural reaction without a question. For example, accepting a toast calls for returning the toast, not immediately offering water or a new order. If the learner actually requests water, respond to that request. Do not block legitimate topic changes.
-- In service roleplay, speak as the staff member: confirm the order instead of repeating the customer's request (for example, Spanish "De acuerdo, un café sin hielo.", not "Un café sin hielo, por favor."). Keep every established condition. No ice does not establish hot/iced; if temperature matters and is unknown ask neutrally without first asserting one. Never ask the learner to repeat a no-ice request they already made.
+- In service roleplay, speak as the staff member: confirm the order instead of repeating the customer's request (for example, Spanish "De acuerdo, un café sin hielo.", not "Un café sin hielo, por favor."). Keep every established condition. No ice does not establish hot/iced; if temperature matters and is unknown ask neutrally without first asserting one. Never ask the learner to repeat a no-ice request they already made. For Japanese "얼음 없이 커피 한 잔 주세요", acknowledge "氷抜きのコーヒーですね", never "氷抜きのアイスコーヒーですね" unless the learner already chose iced coffee.
 - Ask at most one context-relevant follow-up question, only when it helps the conversation. Do not force an interview, repeat answered questions, restart greetings or append unrelated offers just to keep talking. Keep beginner vocabulary simple without losing context.
 Return exactly one JSON object with three unique fields, each 1-300 characters, no markdown or surrounding prose:
 - text: ONLY natural ${languageNames[language]} in its original script. A short conversational reply that fits the current exchange. A follow-up question is optional, never mandatory. NEVER Korean, Hangul, translation, pronunciation or answer hints here, even when the learner speaks Korean or writes ${languageNames[language]} sounds in Hangul.
@@ -405,7 +405,7 @@ export async function roleplayReply(
       const reply = parseRoleplay(raw, language);
       const speakerIssue = thaiMaleSpeechIssue(reply.text, reply.reading, language);
       if (speakerIssue) throw new Error(speakerIssue);
-      const issue = dialogueIssue(messages.at(-1)?.content ?? "", reply, language, sceneId);
+      const issue = dialogueIssue(messages.at(-1)?.content ?? "", reply, language, sceneId, messages.slice(0, -1));
       if (issue) throw new Error(issue);
       return reply;
     } catch (error) {
