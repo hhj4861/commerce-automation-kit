@@ -48,11 +48,11 @@ function Definition({ text, sentence, language, onSaved }: {
     {phrase && <><p className="hm-reading">{phrase.reading}</p><p>{phrase.meaning}</p>
       <Speaker text={text} language={language} />
       <p><button className="hm-primary" disabled={saving || saved} onClick={() => void save()}>
-        {saved ? "내 표현에 저장했어요" : saving ? "저장 중…" : "내 표현에 추가"}
+        {saved ? "단어장에 저장했어요" : saving ? "저장 중…" : "단어장에 저장"}
       </button></p></>}
     {error && <p role="alert">{error}</p>}
     {error && !phrase && <button onClick={() => { setError(""); setAttempt(n => n + 1); }}>다시 시도</button>}
-    <small className="hm-muted">AI가 문맥에 맞게 설명해요. 저장한 단어는 내 표현에서 복습할 수 있어요.</small>
+    <small className="hm-muted">AI가 문맥에 맞게 설명해요. 저장한 단어는 하단 단어장 메뉴에서 복습할 수 있어요.</small>
   </div>;
 }
 

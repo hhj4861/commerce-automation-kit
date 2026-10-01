@@ -55,7 +55,12 @@ try {
   const dialogs = page.locator("dialog[open]");
   async function openLesson() { await page.getByRole("button", { name: "오늘 연습 시작", exact: true }).click(); await dialogs.first().getByText("문장 1 / 10", { exact: true }).waitFor(); }
   for (const viewport of [{ width: 320, height: 568 }, { width: 390, height: 844 }, { width: 844, height: 390 }]) {
-    await page.setViewportSize(viewport); await openLesson();
+    await page.setViewportSize(viewport);
+    await page.getByRole("button", { name: "단어장", exact: true }).waitFor();
+    assert.equal(await page.locator(".hm-bottom button").count(), 5);
+    assert(await page.locator(".hm-bottom").evaluate(el => el.scrollWidth <= el.clientWidth));
+    for (const b of await page.locator(".hm-bottom button").all()) { const box = await b.boundingBox(); assert(box.width >= 44 && box.height >= 44); }
+    await openLesson();
     const d = dialogs.first(), close = d.getByRole("button", { name: "닫기", exact: true });
     const before = await close.boundingBox();
     const scrolling = await d.locator(".hm-dialog-body").evaluate(el => { el.scrollTop = el.scrollHeight; return { top: el.scrollTop, overflow: el.scrollWidth - el.clientWidth }; });
@@ -78,8 +83,8 @@ try {
     assert.equal(await dialogs.count(), 2);
     assert.equal(await dialogs.last().locator(".hm-native").innerText(), text);
     assert.equal((await state()).expressions.length, initial, "lookup must not auto-save even when translation autoSave is on");
-    await dialogs.last().getByRole("button", { name: "내 표현에 추가", exact: true }).click();
-    await dialogs.last().getByRole("button", { name: "내 표현에 저장했어요", exact: true }).waitFor();
+    await dialogs.last().getByRole("button", { name: "단어장에 저장", exact: true }).click();
+    await dialogs.last().getByRole("button", { name: "단어장에 저장했어요", exact: true }).waitFor();
     assert((await state()).expressions.some(e => e.text === text && e.language === language && e.source === "vocabulary"));
     await page.screenshot({ path: resolve(dir, `word-${language}.png`) });
     await page.keyboard.press("Escape"); assert.equal(await dialogs.count(), 1);
@@ -117,10 +122,40 @@ try {
   fail = false; await dialogs.last().getByRole("button", { name: "다시 시도", exact: true }).click();
   await dialogs.last().getByText("문맥 속 단어 뜻", { exact: true }).waitFor();
   await page.keyboard.press("Escape"); await page.keyboard.press("Escape");
-  await page.getByRole("button", { name: "내 표현", exact: true }).click();
-  await page.getByText("단어장에서", { exact: true }).first().waitFor();
-  await page.reload(); await page.getByRole("button", { name: "내 표현", exact: true }).click();
-  await page.getByText("단어장에서", { exact: true }).first().waitFor();
+  await page.getByRole("button", { name: "단어장", exact: true }).click();
+  await page.getByRole("heading", { name: /나의 단어장/ }).waitFor();
+  assert.equal(await page.locator(".hm-word-card").count(), 1, "selected language only");
+  const callsBeforeBrowse = calls;
+  await page.getByLabel("단어 검색", { exact: true }).fill("없는단어");
+  await page.getByText("검색 결과가 없어요.", { exact: true }).waitFor();
+  await page.getByLabel("단어 검색", { exact: true }).fill("테스트");
+  assert.equal(await page.locator(".hm-word-card").count(), 1);
+  await page.getByRole("button", { name: "뜻 가리기", exact: true }).click();
+  assert.equal(await page.locator(".hm-word-card").getByText("문맥 속 단어 뜻", { exact: true }).count(), 0);
+  await page.getByRole("button", { name: "뜻 보기", exact: true }).click();
+  await page.locator(".hm-word-card").getByText("문맥 속 단어 뜻", { exact: true }).waitFor();
+  await page.getByLabel("단어 검색", { exact: true }).fill("");
+  await page.getByRole("button", { name: "기억나요", exact: true }).click();
+  await page.getByRole("button", { name: "오늘 복습 0", exact: true }).click();
+  await page.getByText("오늘 복습을 마쳤어요. 전체에서 언제든 다시 볼 수 있어요.", { exact: true }).waitFor();
+  await page.getByRole("button", { name: "전체 1", exact: true }).click();
+  await page.screenshot({ path: resolve(dir, "wordbook.png") });
+  assert.equal(calls, callsBeforeBrowse, "browsing, searching and review do not call LLM");
+  await page.reload(); await page.getByRole("button", { name: "단어장", exact: true }).click();
+  await page.getByRole("button", { name: "오늘 복습 0", exact: true }).waitFor();
+  assert.equal(await page.locator(".hm-word-card").count(), 1);
+  await page.getByRole("button", { name: /단어장에서 삭제$/ }).click();
+  await page.getByRole("heading", { name: "첫 단어를 모아 볼까요?" }).waitFor();
+  // A translation/chat expression can join the wordbook without losing its original source.
+  const shared = { text: "Coffee", meaning: "커피", reading: "커피" };
+  await post({ action: "save-chat", language: "en", phrase: shared });
+  await post({ action: "save-word", language: "en", phrase: shared });
+  const expression = (await state()).expressions.find(e => e.text === "Coffee");
+  assert.equal(expression.source, "chat"); assert.equal(expression.inVocabulary, true);
+  await post({ action: "remove-word", language: "en", id: expression.id });
+  const retained = (await state()).expressions.find(e => e.id === expression.id);
+  assert(retained); assert.equal(retained.source, "chat"); assert.equal(retained.inVocabulary, undefined);
+  console.log("PASS wordbook search, meaning toggle, review, reload, removal, shared-expression preservation; zero LLM calls for browsing");
   assert.notEqual(await page.evaluate(() => getComputedStyle(document.body).overflow), "hidden");
   assert.deepEqual(errors, []);
   await writeFile(resolve(dir, "result.json"), JSON.stringify({ passed: true, provider: "fixture", calls, errors, browsers: "Chrome mobile viewport and touch emulation; not physical iOS" }, null, 2));

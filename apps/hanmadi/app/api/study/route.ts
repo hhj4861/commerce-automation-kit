@@ -190,6 +190,18 @@ export async function POST(req: Request) {
       });
     }
     const before = await readStudy(actor);
+    if (b.action === "remove-word") {
+      if (typeof b.id !== "string") throw new ConversationError(400, "삭제할 단어를 선택해 주세요.");
+      return conversationJson({ state: await changeStudy(actor, s => {
+        s.expressions = s.expressions.filter(e => {
+          if (e.id !== b.id || e.language !== language) return true;
+          if (e.source === "vocabulary") return false;
+          delete e.inVocabulary;
+          return true;
+        });
+        s.saveEpoch++;
+      }) });
+    }
     if (b.action === "lookup-word") {
       if (typeof b.text !== "string" || typeof b.sentence !== "string" ||
           !b.text.trim() || b.text.length > 80 || b.sentence.length > 1000 || !b.sentence.includes(b.text))
