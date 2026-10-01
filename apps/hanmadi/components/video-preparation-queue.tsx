@@ -1,5 +1,4 @@
 "use client";
-
 import { useEffect, useRef, useState } from "react";
 import {
   curriculum,
@@ -9,31 +8,19 @@ import {
 } from "@/lib/v2";
 import type { ContentDraft } from "@/lib/knowledge";
 import type { YoutubeVideo } from "@/lib/youtube-search";
-
-type MaterialSettings = {
-  language: StudyLanguage;
-  scene: string;
-  level: number;
-};
-
-type Entry = {
-  text: string;
-  settings?: MaterialSettings;
-  state: "waiting" | "running" | "created" | "failed" | "unknown";
-  message?: string;
-  draft?: ContentDraft;
-};
+import {
+  VIDEO_CONCURRENCY,
+  VIDEO_SELECTION_LIMIT,
+  type VideoResult,
+} from "@/lib/video-policy";
 const labels = {
-  waiting: "원문 준비",
-  running: "만드는 중",
+  waiting: "분석 준비",
+  running: "분석·평가 중",
   created: "초안 완료",
+  review: "검토 대기",
   failed: "다시 시도 가능",
-  unknown: "완료 여부 확인 필요",
+  skipped: "학습 후보 제외",
 };
-const empty: Entry = { text: "", state: "waiting" };
-const validSource = (text: string) =>
-  text.trim().length >= 20 && text.length <= 12000;
-
 export function VideoPreparationQueue({
   videos,
   disabled,
@@ -53,46 +40,35 @@ export function VideoPreparationQueue({
   onOpenLibrary: () => void;
   onBusyChange: (busy: boolean) => void;
 }) {
-  const [entries, setEntries] = useState<Record<string, Entry>>({});
-  const [rights, setRights] = useState("");
+  const [entries, setEntries] = useState<Record<string, VideoResult>>({});
   const [language, setLanguage] = useState<StudyLanguage | "">("");
   const [scene, setScene] = useState("");
   const [level, setLevel] = useState(1);
-  const [confirmedFor, setConfirmedFor] = useState("");
   const [running, setRunning] = useState(false);
-  const [importing, setImporting] = useState(false);
   const [stopping, setStopping] = useState(false);
   const [notice, setNotice] = useState("");
-  const operation = useRef(false);
-  const stop = useRef(false);
-  const mounted = useRef(true);
-  const busy = running || importing;
-  const locked = disabled || busy;
-  const confirmationKey = JSON.stringify([rights, videos.map((v) => v.id)]);
-  const confirmed = confirmedFor === confirmationKey;
-  const pending = videos.filter((v) =>
-    ["waiting", "failed"].includes((entries[v.id] ?? empty).state),
-  );
-  const missing = pending.filter(
-    (v) => !validSource(entries[v.id]?.text ?? ""),
+  const operation = useRef(false),
+    stop = useRef(false),
+    mounted = useRef(true);
+  const locked = disabled || running;
+  const pending = videos.filter(
+    (v) =>
+      !entries[v.id] ||
+      entries[v.id].state === "failed" ||
+      entries[v.id].state === "running",
   );
   const completed = videos.filter(
-    (v) => entries[v.id]?.state === "created",
+    (v) => ["created", "review"].includes(entries[v.id]?.state),
   ).length;
-  const uncertain = videos.filter(
-    (v) => entries[v.id]?.state === "unknown",
+  const reviewCount = videos.filter((v) => entries[v.id]?.state === "review").length;
+  const skipped = videos.filter(
+    (v) => entries[v.id]?.state === "skipped",
   ).length;
-  const settings: MaterialSettings | null =
-    isStudyLanguage(language) && curriculum.scenes.some((s) => s.id === scene)
-      ? { language, scene, level }
-      : null;
   const ready =
-    settings !== null &&
+    isStudyLanguage(language) &&
+    !!scene &&
     pending.length > 0 &&
-    missing.length === 0 &&
-    rights.trim().length >= 10 &&
-    confirmed;
-
+    videos.length <= VIDEO_SELECTION_LIMIT;
   useEffect(() => {
     mounted.current = true;
     return () => {
@@ -109,154 +85,104 @@ export function VideoPreparationQueue({
     window.addEventListener("beforeunload", leave);
     return () => window.removeEventListener("beforeunload", leave);
   }, [running]);
-
-  function source(id: string, text: string) {
-    setEntries((previous) => ({
-      ...previous,
-      [id]: { text, state: "waiting" },
-    }));
-    setConfirmedFor("");
-  }
-  async function importFiles(files: File[], target?: string) {
-    if (operation.current || locked || !files.length) return;
-    operation.current = true;
-    setImporting(true);
-    onBusyChange(true);
-    setNotice("");
-    let count = 0;
-    const failed: string[] = [];
-    const used = new Set<string>();
-    try {
-      for (const file of files) {
-        const id = target ?? file.name.replace(/\.(txt|srt|vtt)$/i, "");
-        if (
-          !/\.(txt|srt|vtt)$/i.test(file.name) ||
-          file.size > 64000 ||
-          used.has(id) ||
-          !pending.some((v) => v.id === id)
-        ) {
-          failed.push(file.name);
-          continue;
-        }
-        used.add(id);
-        try {
-          const text = await file.text();
-          if (!mounted.current) return;
-          if (!validSource(text)) {
-            failed.push(file.name);
-            continue;
-          }
-          source(id, text);
-          count++;
-        } catch {
-          failed.push(file.name);
-        }
-      }
-      setNotice(
-        `원문 ${count}개를 연결했어요.${failed.length ? ` 연결하지 못한 파일 ${failed.length}개: ${failed.slice(0, 4).join(", ")}${failed.length > 4 ? " 외" : ""}. 파일 이름·형식·길이를 확인해 주세요.` : ""}`,
-      );
-    } finally {
-      operation.current = false;
-      if (mounted.current) {
-        setImporting(false);
-        onBusyChange(false);
-      }
-    }
+  const update = (id: string, entry: VideoResult) => {
+    if (mounted.current)
+      setEntries((previous) => ({ ...previous, [id]: entry }));
+  };
+  async function post(body: object) {
+    const response = await fetch("/api/study/admin/videos", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(140000),
+    });
+    const data = await response.json();
+    if ([401, 403, 429].includes(response.status)) stop.current = true;
+    if (!response.ok)
+      throw new Error(data.error || "분석 요청을 완료하지 못했어요.");
+    return data;
   }
   async function generateAll() {
-    if (operation.current || locked || !ready || !settings) return;
+    if (operation.current || locked || !ready) return;
     operation.current = true;
     stop.current = false;
-    setStopping(false);
     setRunning(true);
-    onBusyChange(true);
+    setStopping(false);
     setNotice("");
-    let succeeded = 0,
-      failed = 0,
-      unknown = 0;
+    onBusyChange(true);
     try {
-      for (const video of pending) {
-        if (stop.current || !mounted.current) break;
-        const entry = entries[video.id] ?? empty;
-        setEntries((previous) => ({
-          ...previous,
-          [video.id]: {
-            ...entry,
-            settings,
+      const { batchId } = await post({
+        action: "prepare",
+        ids: pending.map((v) => v.id),
+        language,
+        scene,
+        level,
+      });
+      const queue = [...pending];
+      async function worker() {
+        while (!stop.current && mounted.current) {
+          const video = queue.shift();
+          if (!video) return;
+          update(video.id, {
             state: "running",
-            message: undefined,
-          },
-        }));
-        try {
-          const response = await fetch("/api/study/admin", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              action: "generate",
-              ...settings,
-              title: video.title.slice(0, 100),
-              sourceUrl: video.url,
-              rights: rights.trim(),
-              rightsConfirmed: true,
-              transcript: entry.text,
-            }),
-            signal: AbortSignal.timeout(60000),
+            message: "영상 내용 분석 → JEV 학습 가치 평가 → 통과한 표현 저장",
           });
-          const data = await response.json();
-          if (!mounted.current) return;
-          if (!response.ok) {
-            // Server/network ambiguity never becomes an automatic retry that could duplicate a saved draft.
-            if (response.status >= 500) throw new Error("uncertain response");
-            failed++;
-            setEntries((previous) => ({
-              ...previous,
-              [video.id]: {
-                ...entry,
+          try {
+            let result: VideoResult = {
+              state: "running",
+              message: "분석 중이에요.",
+            };
+            for (let tries = 0; tries < 60; tries++) {
+              result = await post({
+                action: "process",
+                batchId,
+                videoId: video.id,
+              });
+              if (!mounted.current) return;
+              if (
+                !["created", "review", "skipped", "failed", "running"].includes(
+                  result.state,
+                )
+              )
+                throw new Error("결과 확인 필요");
+              update(video.id, result);
+              if (result.state !== "running" || stop.current) break;
+              await new Promise((r) => setTimeout(r, 2000));
+            }
+            if (result.state === "running")
+              update(video.id, {
                 state: "failed",
                 message:
-                  data.error ||
-                  "자료를 만들지 못했어요. 입력 내용을 확인해 주세요.",
-              },
-            }));
-            if ([401, 403, 429].includes(response.status)) {
-              stop.current = true;
-              break;
-            }
-            continue;
-          }
-          if (
-            !data.draft?.id ||
-            data.draft.sourceUrl !== video.url ||
-            data.draft.status !== "draft"
-          )
-            throw new Error("unconfirmed saved draft");
-          succeeded++;
-          setEntries((previous) => ({
-            ...previous,
-            [video.id]: { text: "", state: "created", draft: data.draft },
-          }));
-          onCreated(data.draft);
-        } catch {
-          if (!mounted.current) return;
-          unknown++;
-          setEntries((previous) => ({
-            ...previous,
-            [video.id]: {
-              ...entry,
-              settings,
-              state: "unknown",
+                  "처리 중인 결과가 있어요. 다시 시도하면 기존 결과부터 확인해요.",
+              });
+            if (result.draft) onCreated(result.draft);
+          } catch (e) {
+            update(video.id, {
+              state: "failed",
               message:
-                "응답을 확인하지 못했어요. 중복 생성을 막기 위해 재실행하지 않아요. 콘텐츠 목록에서 저장 여부를 확인해 주세요.",
-            },
-          }));
-          stop.current = true;
-          break;
+                e instanceof Error &&
+                !["TypeError", "TimeoutError", "SyntaxError"].includes(e.name)
+                  ? e.message
+                  : "응답을 확인하지 못했어요. 다시 시도하면 저장 결과를 확인하고 이어서 처리해요.",
+            });
+          }
         }
       }
+      await Promise.all(
+        Array.from(
+          { length: Math.min(VIDEO_CONCURRENCY, queue.length) },
+          worker,
+        ),
+      );
       if (mounted.current)
         setNotice(
-          `${stop.current ? "일괄 생성을 중지했어요." : "일괄 생성을 마쳤어요."} 이번 실행: 초안 ${succeeded}개 완료${failed ? ` · 실패 ${failed}개` : ""}${unknown ? ` · 확인 필요 ${unknown}개` : ""}. 완료한 자료는 다시 만들지 않아요.`,
+          stop.current
+            ? "중지했어요. 완료한 자료는 유지되고 남은 영상은 이어서 처리할 수 있어요."
+            : "일괄 처리를 마쳤어요. 영상별 결과를 확인해 주세요.",
         );
+    } catch (e) {
+      if (mounted.current)
+        setNotice(e instanceof Error ? e.message : "분석을 시작하지 못했어요.");
     } finally {
       operation.current = false;
       if (mounted.current) {
@@ -266,7 +192,6 @@ export function VideoPreparationQueue({
       }
     }
   }
-
   return (
     <aside
       className="vs-tray"
@@ -276,7 +201,10 @@ export function VideoPreparationQueue({
     >
       <div className="vs-tray-heading">
         <h2>
-          자료 준비 목록 <span>{videos.length}</span>
+          자료 준비 목록{" "}
+          <span>
+            {videos.length}/{VIDEO_SELECTION_LIMIT}
+          </span>
         </h2>
         <button
           type="button"
@@ -287,10 +215,14 @@ export function VideoPreparationQueue({
         </button>
       </div>
       <p className="vs-tray-help">
-        저장할 자료의 학습 언어·상황·레벨을 정하고 영상별 원문을 연결해 주세요.
-        영상마다 별도 초안으로 저장돼요. 준비 중인 목록·설정·원문은 새로고침하면
-        비워져요.
+        영상만 고르면 내용을 분석하고, 기존 자료와 비교해 학습 가치가 있는
+        표현을 초안으로 만들어요. 확신이 낮은 후보는 검토 대기로 보관해요.
       </p>
+      <div className="vs-analysis-steps" aria-label="자료 생성 과정">
+        <span>1 영상 분석</span>
+        <span>2 JEV 평가</span>
+        <span>3 초안 저장</span>
+      </div>
       {notice && (
         <p className="vs-batch-notice" role="status">
           {notice}
@@ -299,11 +231,11 @@ export function VideoPreparationQueue({
       {!videos.length ? (
         <div className="vs-tray-empty">
           <span aria-hidden="true">＋</span>
-          <p>함께 만들 영상을 선택해 주세요.</p>
+          <p>함께 분석할 영상을 선택해 주세요.</p>
           <small>
-            ‘모든 페이지 전체 선택’으로
+            한 번에 최대 10개 · 동시에 3개 분석
             <br />
-            검색 결과를 한 번에 담을 수 있어요.
+            공개된 15분 이하 영상
           </small>
         </div>
       ) : (
@@ -311,8 +243,7 @@ export function VideoPreparationQueue({
           <div className="vs-batch-settings">
             <h3>저장할 자료 설정</h3>
             <small>
-              아직 만들지 않은 자료에 공통으로 적용돼요. 완료한 초안은 바뀌지
-              않아요.
+              학습자에게 필요한 언어·상황·난이도를 기준으로 평가해요.
             </small>
             <label>
               학습 언어
@@ -361,121 +292,76 @@ export function VideoPreparationQueue({
                 onChange={(e) => setLevel(Number(e.target.value))}
               >
                 {curriculum.levels.map((l) => (
-                  <option key={l.id} value={l.id}>
+                  <option value={l.id} key={l.id}>
                     {l.id} · {l.title}
                   </option>
                 ))}
               </select>
             </label>
-            <label>
-              목록 전체의 원문 사용권 근거
-              <textarea
-                value={rights}
-                maxLength={500}
-                disabled={locked}
-                onChange={(e) => setRights(e.target.value)}
-                placeholder="예: 직접 제작한 모든 영상의 원문. AI 처리와 수업 재사용 권한 보유."
-              />
-            </label>
-            <label className="vs-file-input">
-              원문 파일 여러 개 연결
-              <input
-                type="file"
-                multiple
-                accept=".txt,.srt,.vtt"
-                disabled={locked}
-                onChange={(e) => {
-                  const files = Array.from(e.target.files ?? []);
-                  e.target.value = "";
-                  void importFiles(files);
-                }}
-              />
-            </label>
-            <small>
-              영상 ID.txt / .srt / .vtt로 이름을 맞추면 자동 연결돼요. 원문은
-              영상별로 20~12,000자이며, 아래에서 직접 입력할 수도 있어요.
-            </small>
           </div>
           <ol className="vs-queue vs-batch-queue">
             {videos.map((video) => {
-              const entry = entries[video.id] ?? empty;
-              const editable = ["waiting", "failed"].includes(entry.state);
-              const savedSettings =
-                entry.draft ?? (editable ? settings : entry.settings);
+              const entry = entries[video.id];
               return (
                 <li key={video.id} data-video-id={video.id}>
                   <div className="vs-batch-item-heading">
                     <strong>{video.title}</strong>
-                    <span className={`vs-job-status vs-job-${entry.state}`}>
-                      {entry.state === "waiting" && validSource(entry.text)
-                        ? "원문 준비됨"
-                        : labels[entry.state]}
+                    <span
+                      className={`vs-job-status vs-job-${entry?.state ?? "waiting"}`}
+                    >
+                      {labels[entry?.state ?? "waiting"]}
                     </span>
                   </div>
-                  <small>
-                    {savedSettings
-                      ? `${studyLanguages[savedSettings.language].name} · ${curriculum.scenes.find((s) => s.id === savedSettings.scene)?.title} · 레벨 ${savedSettings.level}`
-                      : "학습 언어·상황 설정 전"}
-                    {" · "}영상 ID {video.id}
-                  </small>
-                  {editable && (
-                    <details className="vs-source-input">
-                      <summary>
-                        {validSource(entry.text)
-                          ? `원문 ${entry.text.length.toLocaleString("ko-KR")}자 확인·수정`
-                          : "이 영상의 원문 연결"}
-                      </summary>
-                      <label>
-                        사용권이 있는 원문
-                        <textarea
-                          id={`video-source-${video.id}`}
-                          aria-label={`${video.title} 원문`}
-                          value={entry.text}
-                          maxLength={12000}
-                          disabled={locked}
-                          onChange={(e) => source(video.id, e.target.value)}
-                          placeholder="이 영상에 해당하는 텍스트·자막 원문을 붙여 넣으세요."
-                        />
-                      </label>
-                      <label className="vs-file-input">
-                        이 영상의 원문 파일
-                        <input
-                          type="file"
-                          accept=".txt,.srt,.vtt"
-                          aria-label={`${video.title} 원문 파일`}
-                          disabled={locked}
-                          onChange={(e) => {
-                            const files = Array.from(e.target.files ?? []);
-                            e.target.value = "";
-                            void importFiles(files, video.id);
-                          }}
-                        />
-                      </label>
-                    </details>
-                  )}
-                  {entry.message && (
-                    <p className="vs-item-error" role="status">
+                  {entry?.message && (
+                    <p className="vs-item-result" role="status">
                       {entry.message}
                     </p>
                   )}
+                  {entry?.judgments && (
+                    <small>
+                      통과 {entry.judgments.filter((j) => j.accepted).length}개
+                      · 검토 대기 {entry.judgments.filter((j) => j.choice === "useful" && !j.accepted).length}개
+                      · 제외 {entry.judgments.filter((j) => j.choice !== "useful").length}개
+                    </small>
+                  )}
+                  {entry?.draft?.videoReview && (
+                    <details className="vs-video-evidence">
+                      <summary>분석 구간·평가 근거</summary>
+                      <p>
+                        JEV는 분석된 표현과 요약 근거를 평가하며, 원본 영상을
+                        직접 확인하지 않아요. 게시 전 연결된 구간과 뜻·발음을
+                        확인해 주세요.
+                      </p>
+                      <p>
+                        기본 교재와 기존 자료{" "}
+                        {entry.draft.videoReview.referenceCount}개 중 관련 표현{" "}
+                        {entry.draft.videoReview.comparedCount}개 비교. 정확히
+                        같은 표현은 전체 자료에서 검사해요.
+                      </p>
+                      {entry.draft.videoReview.evidence.map((e, i) => (
+                        <p key={i}>
+                          <a
+                            href={`${video.url}&t=${Math.floor(e.at)}s`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            {Math.floor(e.at / 60)}:
+                            {String(Math.floor(e.at % 60)).padStart(2, "0")}
+                          </a>{" "}
+                          {e.evidence} ·{" "}
+                          {entry.judgments?.[i]?.accepted ? "통과" : entry.judgments?.[i]?.choice === "useful" ? "검토 대기" : "제외"}
+                        </p>
+                      ))}
+                    </details>
+                  )}
                   <div className="vs-queue-actions">
-                    {entry.draft && (
+                    {entry?.draft && (
                       <button
                         type="button"
                         disabled={locked}
                         onClick={() => onReview(entry.draft!)}
-                        aria-label={`${video.title} 초안 검수`}
                       >
                         초안 검수
-                      </button>
-                    )}
-                    {entry.state === "unknown" && (
-                      <button
-                        type="button"
-                        disabled={locked}
-                        onClick={onOpenLibrary}
-                      >
-                        콘텐츠 목록에서 확인
                       </button>
                     )}
                     <button
@@ -493,32 +379,12 @@ export function VideoPreparationQueue({
           </ol>
           <div className="vs-batch-footer">
             <p className="vs-batch-count" role="status">
-              초안 완료 {completed}개 · 만들 자료 {pending.length}개
-              {uncertain ? ` · 확인 필요 ${uncertain}개` : ""}
+              초안 보관 {completed}개 (검토 대기 {reviewCount}개) · 제외 {skipped}개 · 남은 영상{" "}
+              {pending.length}개
             </p>
-            {pending.length > 0 && !settings && (
+            {!language || !scene ? (
               <p>저장할 자료의 학습 언어와 상황을 선택해 주세요.</p>
-            )}
-            {missing.length > 0 && (
-              <p>
-                원문 {missing.length}개를 먼저 연결해 주세요. 원문 없는 영상은
-                자동으로 건너뛰지 않아요.
-              </p>
-            )}
-            {pending.length > 0 && (
-              <label className="vs-batch-confirm">
-                <input
-                  type="checkbox"
-                  checked={confirmed}
-                  disabled={locked}
-                  onChange={(e) =>
-                    setConfirmedFor(e.target.checked ? confirmationKey : "")
-                  }
-                />
-                목록의 모든 원문을 AI로 처리하고 수업에 재사용할 권한을
-                확인했어요.
-              </label>
-            )}
+            ) : null}
             {running ? (
               <button
                 type="button"
@@ -529,8 +395,8 @@ export function VideoPreparationQueue({
                 }}
               >
                 {stopping
-                  ? "현재 영상 완료 후 중지할게요…"
-                  : "현재 영상까지만 만들기"}
+                  ? "진행 중인 영상 완료 후 중지할게요…"
+                  : "진행 중인 영상까지만 분석"}
               </button>
             ) : (
               <button
@@ -539,23 +405,30 @@ export function VideoPreparationQueue({
                 disabled={locked || !ready}
                 onClick={() => void generateAll()}
               >
-                {completed || uncertain
-                  ? `남은 자료 만들기 (${pending.length}개)`
-                  : `전체 자료 만들기 (${pending.length}개)`}
+                {completed || skipped
+                  ? "남은 영상 분석"
+                  : "전체 분석·자료 만들기"}{" "}
+                ({pending.length}개)
               </button>
             )}
             <small>
-              영상마다 별도 초안을 순서대로 만들어요. 검수 후 게시하기 전에는
-              학습 앱에 반영되지 않아요.
+              공개 영상의 소리·화면을 분석해요. 평가 실패·부적합·중복은 제외하고,
+              확신이 낮은 유용 후보는 검수·게시 전까지 학습에 사용하지 않아요.
             </small>
+            {completed > 0 && (
+              <button type="button" disabled={locked} onClick={onOpenLibrary}>
+                완료한 자료 모아보기
+              </button>
+            )}
           </div>
         </>
       )}
       <div className="vs-rights-note">
-        <strong>원문 연결 안내</strong>
+        <strong>분석 후 검수해서 반영해요</strong>
         <p>
-          검색으로는 영상 정보만 가져와요. 영상·자막은 자동 수집하지 않으며,
-          사용권이 있는 원문을 연결해야 초안을 만들 수 있어요.
+          원문 파일은 필요 없어요. 분석 결과와 출처를 검수한 뒤 게시하면 앱
+          학습과 AI 대화에 활용돼요. 모델 자체의 유료 파인튜닝은 별도
+          작업이에요.
         </p>
       </div>
     </aside>

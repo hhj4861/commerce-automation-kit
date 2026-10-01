@@ -13,7 +13,8 @@ export function adminPath(
   if (
     pathname === "/study/admin" ||
     pathname === "/api/study/admin" ||
-    pathname === "/api/study/admin/learning"
+    pathname === "/api/study/admin/learning" ||
+    pathname === "/api/study/admin/videos"
   )
     return "owner";
   return "closed";

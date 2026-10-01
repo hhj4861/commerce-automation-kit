@@ -50,3 +50,27 @@ test("browsing may prepare at most two unheard phrases, released by listening", 
   assert.equal(calls, 3);
   cache.clear(); await cache.load("0", "ja"); assert.equal(calls, 4);
 });
+
+test("a click during prefetch receives earlier and future chunks before completion", async () => {
+  let stream!: ReadableStreamDefaultController<Uint8Array>, calls=0;
+  const response=new Response(new ReadableStream<Uint8Array>({start(c){stream=c}}),{headers:{"Content-Type":"audio/mpeg"}});
+  const cache=createStudyAudioCache(async()=>{calls++;return response});
+  const prepared=cache.prepare("sentence","en");stream.enqueue(new Uint8Array([1]));
+  await new Promise(resolve=>setTimeout(resolve,0));
+  const chunks:number[]=[];let done=false;
+  const clicked=cache.load("sentence","en",chunk=>chunks.push(...chunk)).then(blob=>{done=true;return blob});
+  assert.deepEqual(chunks,[1]);assert.equal(done,false);
+  stream.enqueue(new Uint8Array([2]));await new Promise(resolve=>setTimeout(resolve,0));
+  assert.deepEqual(chunks,[1,2]);assert.equal(done,false);
+  stream.close();assert.equal((await clicked).size,2);await prepared;assert.equal(calls,1);
+});
+
+test("truncated streaming audio is never cached; the next click retries", async () => {
+  let calls=0;
+  const cache=createStudyAudioCache(async()=>{
+    if(++calls>1)return audio();
+    return new Response(new ReadableStream({start(c){c.enqueue(new Uint8Array([1]));setTimeout(()=>c.error(new Error("network lost")),0)}}),{headers:{"Content-Type":"audio/mpeg"}});
+  });
+  await assert.rejects(cache.load("sentence","en"),/network lost/);
+  assert.equal((await cache.load("sentence","en")).size,3);assert.equal(calls,2);
+});

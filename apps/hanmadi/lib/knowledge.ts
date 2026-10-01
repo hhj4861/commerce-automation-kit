@@ -15,6 +15,16 @@ export type ContentDraft = {
   updatedAt: number;
   contributionId?: string;
   sourceHash?: string;
+  videoReview?: {
+    requiresHumanReview?: boolean;
+    rubric: string;
+    model: string;
+    analyzedAt: number;
+    comparedCount: number;
+    referenceCount: number;
+    judgments: import("./video-policy").VideoJudgment[];
+    evidence: { at: number; evidence: string }[];
+  };
 };
 export type Contribution = {
   id: string;

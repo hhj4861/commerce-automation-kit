@@ -378,7 +378,7 @@ export function V2Admin({ appHref = "/study" }: { appHref?: string }) {
                     <strong>{d.title}</strong>
                     <small>
                       {studyLanguages[d.language].name} · L{d.level} ·{" "}
-                      {d.status === "published" ? "게시됨" : "초안"}
+                      {d.status === "published" ? "게시됨" : d.videoReview?.requiresHumanReview ? "검토 대기" : "초안"}
                     </small>
                   </button>
                 ))}
@@ -579,6 +579,12 @@ export function V2Admin({ appHref = "/study" }: { appHref?: string }) {
                         </button>
                       </fieldset>
                     ))}
+                    {current?.status === "draft" && current.videoReview?.requiresHumanReview && (
+                      <p className="hm-muted" role="status">
+                        JEV 확신이 낮아 검토 대기 중이에요. 영상 구간·뜻·발음·새로운 학습 가치를 직접 확인하고,
+                        적합하지 않은 표현은 제외해 주세요. 검수·게시 전에는 학습에 사용하지 않아요.
+                      </p>
+                    )}
                     <label className="hm-check">
                       <input
                         type="checkbox"
@@ -622,7 +628,7 @@ export function V2Admin({ appHref = "/study" }: { appHref?: string }) {
                   {current?.status === "published"
                     ? `게시됨 / 버전 ${current.revision}`
                     : current
-                      ? `초안 / 버전 ${current.revision}`
+                      ? `${current.videoReview?.requiresHumanReview ? "검토 대기" : "초안"} / 버전 ${current.revision}`
                       : "아직 저장하지 않음"}
                 </dd>
               </dl>
