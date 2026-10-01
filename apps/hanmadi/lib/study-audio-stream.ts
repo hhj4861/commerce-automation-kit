@@ -3,6 +3,8 @@ import type { AudioChunk } from "./study-audio-client";
 /** MP3 MSE where supported; the same completed response is the fallback (no second TTS call). */
 export function createStudyPlayback(rate: number, onError: (error: Error) => void) {
   const audio = new Audio();
+  // Loading a source resets playbackRate to defaultPlaybackRate in browsers.
+  audio.defaultPlaybackRate = rate;
   audio.playbackRate = rate;
   let disposed = false, streamed = false, audible = false, fallback = false, url = "";
   let source: MediaSource | undefined, buffer: SourceBuffer | undefined;

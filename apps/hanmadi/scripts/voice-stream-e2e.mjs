@@ -13,10 +13,10 @@ const generated=spawnSync('ffmpeg',['-v','error','-f','lavfi','-i','sine=frequen
 assert.equal(generated.status,0,generated.stderr.toString());const mp3=generated.stdout;
 const sources=await Promise.all(['study-audio-client','study-audio-stream'].map(n=>readFile(resolve('lib',n+'.ts'),'utf8')));
 const js=sources.map(s=>ts.transpileModule(s,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ES2022}}).outputText).join('\n')+`
-window.cache=createStudyAudioCache();window.__voiceState={};window.mode='public';window.noMse=false;
+window.cache=createStudyAudioCache();window.__voiceState={};window.mode='public';window.rate=0.85;window.noMse=false;
 document.querySelector('button').onclick=()=>{
  window.player?.dispose();window.__voiceState={click:performance.now(),started:null,done:null,error:null};
- const p=createStudyPlayback(1,e=>window.__voiceState.error=e.message);window.player=p;
+ const p=createStudyPlayback(window.rate,e=>window.__voiceState.error=e.message);window.player=p;
  p.audio.addEventListener('playing',()=>window.__voiceState.started=performance.now(),{once:true});
  window.cache.load(window.mode,'en',p.append).then(b=>{window.__voiceState.done=performance.now();return p.finish(b)}).catch(p.fail);
  p.started.catch(()=>{});
@@ -52,14 +52,15 @@ try{
  await page.goto('http://127.0.0.1:'+server.address().port);await page.waitForFunction(()=>window.ready);
  assert(await page.evaluate(()=>MediaSource.isTypeSupported('audio/mpeg')),'Chrome MP3 MSE support required');
  await page.getByRole('button',{name:'Listen'}).click();await page.waitForFunction(()=>window.__voiceState.started!==null&&window.player.audio.currentTime>0.05);
- evidence.streaming=await page.evaluate(()=>({...window.__voiceState,currentTime:window.player.audio.currentTime}));assert.equal(evidence.streaming.done,null,'must start before final bytes');
+ evidence.streaming=await page.evaluate(()=>({...window.__voiceState,currentTime:window.player.audio.currentTime,rate:window.player.audio.playbackRate}));assert.equal(evidence.streaming.done,null,'must start before final bytes');assert.equal(evidence.streaming.rate,0.85,'study speed must survive MediaSource initialization');
  await page.waitForFunction(()=>window.__voiceState.done!==null);evidence.streaming.completeMs=await page.evaluate(()=>window.__voiceState.done-window.__voiceState.click);
  evidence.streaming.startMs=Math.round(evidence.streaming.started-evidence.streaming.click);
- const before=clientCalls;await page.getByRole('button',{name:'Listen'}).click();await page.waitForFunction(()=>window.__voiceState.started!==null);assert.equal(clientCalls,before);evidence.replayMs=await page.evaluate(()=>Math.round(window.__voiceState.started-window.__voiceState.click));
+ const before=clientCalls;await page.getByRole('button',{name:'Listen'}).click();await page.waitForFunction(()=>window.__voiceState.started!==null);assert.equal(clientCalls,before);assert.equal(await page.evaluate(()=>window.player.audio.playbackRate),0.85,'study speed must survive cached blob playback');evidence.replayMs=await page.evaluate(()=>Math.round(window.__voiceState.started-window.__voiceState.click));
  await page.evaluate(()=>window.cache.clear());const upstreamBefore=upstreamCalls;await page.getByRole('button',{name:'Listen'}).click();await page.waitForFunction(()=>window.__voiceState.started!==null);assert.equal(upstreamCalls,upstreamBefore);evidence.publicCacheMs=await page.evaluate(()=>Math.round(window.__voiceState.started-window.__voiceState.click));
  await page.evaluate(()=>{window.player.dispose();window.cache.clear();window.mode='fallback';window.savedMse=window.MediaSource;window.MediaSource=undefined;});
- await page.getByRole('button',{name:'Listen'}).click();await page.waitForFunction(()=>window.__voiceState.started!==null&&window.player.audio.currentTime>0.05);evidence.fallback=await page.evaluate(()=>({...window.__voiceState}));assert(evidence.fallback.started>=evidence.fallback.done);
- await page.evaluate(()=>{window.MediaSource=window.savedMse;window.mode='broken';});await page.getByRole('button',{name:'Listen'}).click();await page.waitForFunction(()=>window.__voiceState.error!==null);assert.equal(await page.evaluate(()=>window.__voiceState.done),null);
+ await page.getByRole('button',{name:'Listen'}).click();await page.waitForFunction(()=>window.__voiceState.started!==null&&window.player.audio.currentTime>0.05);evidence.fallback=await page.evaluate(()=>({...window.__voiceState,rate:window.player.audio.playbackRate}));assert.equal(evidence.fallback.rate,0.85);assert(evidence.fallback.started>=evidence.fallback.done);
+ await page.evaluate(()=>{window.MediaSource=window.savedMse;window.mode='translation';window.rate=1;});await page.getByRole('button',{name:'Listen'}).click();await page.waitForFunction(()=>window.__voiceState.started!==null);assert.equal(await page.evaluate(()=>window.player.audio.playbackRate),1);evidence.translationRate=1;
+ await page.evaluate(()=>{window.mode='broken';});await page.getByRole('button',{name:'Listen'}).click();await page.waitForFunction(()=>window.__voiceState.error!==null);assert.equal(await page.evaluate(()=>window.__voiceState.done),null);
  const failedCalls=upstreamCalls;await page.getByRole('button',{name:'Listen'}).click();await page.waitForFunction(()=>window.__voiceState.error!==null);assert.equal(upstreamCalls,failedCalls+1);evidence.failedStreamRetried=true;
  await page.evaluate(()=>window.mode='cancel');await page.getByRole('button',{name:'Listen'}).click();await page.evaluate(()=>{window.player.dispose();window.cache.clear()});await page.waitForTimeout(600);assert(await page.evaluate(()=>window.player.audio.paused));evidence.cancelled=true;
  assert.deepEqual(errors,[]);evidence.browserErrors=errors;evidence.upstreamCalls=upstreamCalls;evidence.clientCalls=clientCalls;
