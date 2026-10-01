@@ -1,14 +1,29 @@
 {
-  "file": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20260930-yeosu-realistic/yeosu-visual-preview.mp4",
-  "seconds": 48.0,
+  "file": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20260930-yeosu-realistic/yeosu-realistic.mp4",
+  "seconds": 63.4,
   "resolution": [
     1080,
     1920
   ],
   "fullDecode": "passed",
-  "sha256": "17696d7be3f68eba7fe120194b79afec28da6299a9cb6ba3cb5c0693e49e6038",
-  "voiceId": null,
+  "sha256": "728678ef1f50a94703c1141bb6e54d5b16d901989a742eba29c71402eea3c883",
+  "voiceId": "RU7aSi6lT4uQBXMLgDxK",
   "speed": 1.0,
-  "status": "visual-preview-awaiting-voice",
-  "captions": "Sentence-weight timing, not forced alignment"
+  "status": "complete",
+  "captions": "Sentence-weight timing, not forced alignment",
+  "voiceName": "Kyle - Friendly, Natural and Guttural",
+  "ttsWorkflowRun": "https://github.com/hhj4861/commerce-automation-kit/actions/runs/36811778013",
+  "ttsMetadataMatches": 6,
+  "audio": {
+    "codec": "aac",
+    "durationSeconds": 63.4,
+    "meanVolumeDbfs": -17.6,
+    "maxVolumeDbfs": -1.1,
+    "silenceThresholdDb": -45,
+    "silenceMinimumSeconds": 0.8,
+    "detectedSilenceSegments": 0
+  },
+  "visualSpotCheckSeconds": [4, 24, 49],
+  "speechTranscriptionChecked": false,
+  "fullListeningReviewPerformed": false
 }
