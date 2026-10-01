@@ -26,6 +26,9 @@ jobs:
       - run: npx playwright install --with-deps chromium
       - run: npm run test:v2
       - run: npm run test:admin-deployment
+      - run: npm run test:diagnostics
+        env:
+          HANMADI_E2E_SCREENSHOTS: ${{ runner.temp }}/hanmadi-diagnostics
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -33,4 +36,6 @@ jobs:
           path: |
             docs/hanmadi-v2-e2e/*.png
             apps/hanmadi/.next/admin-deployment-evidence/*.png
+            ${{ runner.temp }}/hanmadi-diagnostics/*.png
+            ${{ runner.temp }}/hanmadi-diagnostics/result.json
           retention-days: 7
