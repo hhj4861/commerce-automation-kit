@@ -1926,6 +1926,7 @@ export function V2App() {
                           )}
                           <Speaker
                             key={translation.translated}
+                            rate={1}
                             text={translation.translated}
                             language={translation.from === "ko" ? language : "ko"}
                             label={
