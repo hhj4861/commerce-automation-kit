@@ -1,0 +1,41 @@
+[Script Info]
+; Playback speed: 1.1; source captions from original 1.0x timeline
+ScriptType: v4.00+
+PlayResX: 1080
+PlayResY: 1920
+WrapStyle: 2
+ScaledBorderAndShadow: yes
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+Style: Caption,Pretendard SemiBold,66,&H00FAFAF8,&H00FAFAF8,&H30201C18,&H70000000,0,0,0,0,100,100,0,0,1,1.2,2,5,85,85,0,1
+Style: Note,Apple SD Gothic Neo,27,&H00FFFFFF,&H00FFFFFF,&H00101010,&H70000000,0,0,0,0,100,100,0,0,1,1.5,0,2,60,60,170,1
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+Dialogue: 2,0:00:00.00,0:00:02.55,Caption,,0,0,0,,{\pos(540,1110)\blur(0.35)\fad(80,80)}건물 벽이 물고기\N아가미처럼 움직입니다.
+Dialogue: 2,0:00:02.55,0:00:05.10,Caption,,0,0,0,,{\pos(540,1110)\blur(0.35)\fad(80,80)}컴퓨터 그래픽으로만\N가능한 모습 같지만,
+Dialogue: 2,0:00:05.10,0:00:07.94,Caption,,0,0,0,,{\pos(540,1110)\blur(0.35)\fad(80,80)}여수엑스포를 위해 실제로\N구현한 외벽입니다.
+Dialogue: 1,0:00:00.00,0:00:08.09,Note,,0,0,0,,설계 원리 AI 재현 · 실제 외관과 차이 있음
+Dialogue: 2,0:00:08.09,0:00:11.25,Caption,,0,0,0,,{\pos(540,1110)\blur(0.35)\fad(80,80)}이천십이 년 완공된\N주제관, 원오션입니다.
+Dialogue: 2,0:00:11.25,0:00:14.55,Caption,,0,0,0,,{\pos(540,1110)\blur(0.35)\fad(80,80)}외벽에는 백 개가 넘는 긴\N패널이 달렸고, 가장 긴
+Dialogue: 2,0:00:14.55,0:00:17.21,Caption,,0,0,0,,{\pos(540,1110)\blur(0.35)\fad(80,80)}것은 높이가 약 십사\N미터에 이릅니다.
+Dialogue: 1,0:00:08.09,0:00:17.36,Note,,0,0,0,,설계 원리 AI 재현 · 실제 외관과 차이 있음
+Dialogue: 2,0:00:17.36,0:00:20.30,Caption,,0,0,0,,{\pos(540,1110)\blur(0.35)\fad(80,80)}비밀은 무거운 콘크리트\N벽이 아니라, 유리섬유로
+Dialogue: 2,0:00:20.30,0:00:22.12,Caption,,0,0,0,,{\pos(540,1110)\blur(0.35)\fad(80,80)}강화한 플라스틱 패널입니다.
+Dialogue: 2,0:00:22.12,0:00:25.05,Caption,,0,0,0,,{\pos(540,1110)\blur(0.35)\fad(80,80)}단단하면서도 설계한 방향으로\N휘어질 수 있게 만든
+Dialogue: 2,0:00:25.05,0:00:25.62,Caption,,0,0,0,,{\pos(540,1110)\blur(0.35)\fad(80,80)}겁니다.
+Dialogue: 1,0:00:17.36,0:00:25.79,Note,,0,0,0,,작동을 단순화한 3D · 실제 상세·변형량과 다름
+Dialogue: 2,0:00:25.79,0:00:29.14,Caption,,0,0,0,,{\pos(540,1110)\blur(0.35)\fad(80,80)}위아래의 구동장치가 패널을\N변형시키면 옆으로 틈이
+Dialogue: 2,0:00:29.14,0:00:29.90,Caption,,0,0,0,,{\pos(540,1110)\blur(0.35)\fad(80,80)}열립니다.
+Dialogue: 2,0:00:29.90,0:00:33.09,Caption,,0,0,0,,{\pos(540,1110)\blur(0.35)\fad(80,80)}여러 패널의 움직임을\N순서대로 제어하면서, 외벽
+Dialogue: 2,0:00:33.09,0:00:36.14,Caption,,0,0,0,,{\pos(540,1110)\blur(0.35)\fad(80,80)}전체에 파도가 흐르는\N듯한 모습을 만드는 거죠.
+Dialogue: 1,0:00:25.79,0:00:36.30,Note,,0,0,0,,작동을 단순화한 3D · 실제 상세·변형량과 다름
+Dialogue: 2,0:00:36.30,0:00:38.84,Caption,,0,0,0,,{\pos(540,1110)\blur(0.35)\fad(80,80)}이 움직임은 볼거리로\N끝나지 않습니다.
+Dialogue: 2,0:00:38.84,0:00:42.12,Caption,,0,0,0,,{\pos(540,1110)\blur(0.35)\fad(80,80)}낮에는 패널이 열리는 정도에\N따라, 안으로 들어오는
+Dialogue: 2,0:00:42.12,0:00:44.66,Caption,,0,0,0,,{\pos(540,1110)\blur(0.35)\fad(80,80)}빛의 상태도 달라지도록\N설계했습니다.
+Dialogue: 1,0:00:36.30,0:00:44.82,Note,,0,0,0,,설계 원리 AI 재현 · 실제 외관과 차이 있음
+Dialogue: 2,0:00:44.82,0:00:48.17,Caption,,0,0,0,,{\pos(540,1110)\blur(0.35)\fad(80,80)}해가 지면 움직이는 패널에\N엘이디 빛이 더해집니다.
+Dialogue: 2,0:00:48.17,0:00:51.22,Caption,,0,0,0,,{\pos(540,1110)\blur(0.35)\fad(80,80)}여수의 이 건물은 바다를\N그림으로 붙이는 대신,
+Dialogue: 2,0:00:51.22,0:00:53.65,Caption,,0,0,0,,{\pos(540,1110)\blur(0.35)\fad(80,80)}외벽 자체가 움직이게\N만들었습니다.
+Dialogue: 2,0:00:53.65,0:00:56.55,Caption,,0,0,0,,{\pos(540,1110)\blur(0.35)\fad(80,80)}건축은 모양뿐 아니라,\N움직임까지 설계하는
+Dialogue: 2,0:00:56.55,0:00:57.46,Caption,,0,0,0,,{\pos(540,1110)\blur(0.35)\fad(80,80)}일이니까요.
+Dialogue: 1,0:00:44.82,0:00:57.64,Note,,0,0,0,,설계 원리 AI 재현 · 실제 외관과 차이 있음

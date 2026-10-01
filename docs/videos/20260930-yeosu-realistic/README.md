@@ -4,6 +4,16 @@
 
 ## 현재 상태
 
+최신 전달본은 `/Users/admin/Downloads/vedio/yeosu-realistic-refined-110x.mp4`다. 사용자의 후속 요청에 따라 **Pretendard SemiBold 66px**, 얇은 외곽선(1.2px)과 그림자(2px)를 적용하고 자막 중심을 (540,970)에서 **(540,1110)**으로 140px 내렸다. Kyle 목소리는 **1.1배속**, 영상과 자막도 함께 조정해 **57.633초**로 완성했다. 기존 1.0배 영상은 보존한다.
+
+- `captions-refined.ass`: 1.1배속 타임라인과 새 자막 디자인 원본.
+- `captions-refined-verification.json`: 최종 로컬 파일, SHA-256, 실제 폰트 선택, 전체 디코딩, 음성 길이와 음량 검증.
+- 기존 작업 자산 `silent.mp4`와 `narration.wav`를 재사용했으며 TTS·영상 생성 API 재호출은 없다. 영상은 `setpts=PTS/1.1,fps=30`, 음성은 `atempo=1.1`, ASS 이벤트 시간은 원래 시간/1.1이다.
+- [Pretendard 공식 배포](https://github.com/orioncactus/pretendard)의 SemiBold OTF와 SIL OFL 1.1 라이선스를 작업 자산 `fonts/`에 보관했다. `ass=captions-refined.ass:fontsdir=fonts`로 폰트 fallback 없이 적용되는지 확인했다.
+- 변경 전 타임라인 4·24·49초에 해당하는 장면에서 자막 가독성·위치를 검수했고 최종 영상 프레임도 확인했다. 오디오·비디오 길이 차이 0.02초 미만, 전체 디코딩 통과, -45dB 기준 0.8초 이상 무음 없음. 자막은 문장별 비례 타이밍이며 강제 전사 정렬은 아니다.
+
+### 이전 1.0배 전달본
+
 2026-10-01 최종 `yeosu-realistic.mp4` 제작 완료. **63.4초, 1080×1920, 30fps, H.264/AAC**이며 실사풍 AI 4컷과 원본 3D 2컷에 Kyle 한국어 내레이션과 중앙 자막을 합쳤다. 이전 `yeosu-visual-preview.mp4`는 48초 무음 화면 검토본으로 별도 보존한다.
 
 2026-10-01 사용자가 ElevenLabs **Kyle - Friendly, Natural and Guttural** 및 Voice ID `RU7aSi6lT4uQBXMLgDxK`를 직접 지정했다. 기존 유튜브 참고 영상과 동일한 목소리일 필요는 없으며, 진중하고 호기심을 유도하면서 듣기 편한 한국어 설명을 원한다. **1.0배** 내레이션을 기존 [tts-remote 실행 36811778013](https://github.com/hhj4861/commerce-automation-kit/actions/runs/36811778013)으로 생성했다. 6개 음성의 메타데이터에서 지정 ID와 대본 일치를 확인하고, 실측 길이에 영상과 중앙 자막을 맞췄다. 영상 클립은 재생성하지 않았다.
