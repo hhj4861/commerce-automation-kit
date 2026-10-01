@@ -210,6 +210,51 @@ test("video response requires observation, valid timestamp and actual target-lan
       parseVideoAnalysis(JSON.stringify(change), settings, analysis),
     );
 });
+test("video JSON accepts whitespace around a complete object or code fence", () => {
+  const json = JSON.stringify({ observed: true, units: analysis.units });
+  for (const raw of [`\n ${json} \n`, `\n \`\`\`json\n${json}\n\`\`\` \n`]) {
+    assert.equal(parseVideoAnalysis(raw, settings, analysis).units.length, 1);
+  }
+});
+test("video format diagnostics distinguish invalid JSON without recording its content", () => {
+  const logs: string[] = [];
+  const original = console.warn;
+  console.warn = (line: string) => logs.push(line);
+  try {
+    const cases = [
+      ['[{"secret":"private-video-value"}]', "array"],
+      ['"private-video-value"', "string"],
+      ["null", "null"],
+      ["true", "boolean"],
+      ["42", "number"],
+      ['Here is private-video-value: {"observed":true}', "invalid"],
+      ['\n```json\n{"private-video-value":\n```', "invalid"],
+    ];
+    for (const [raw, jsonType] of cases) {
+      assert.throws(() => parseVideoAnalysis(raw, settings, analysis), /영상 분석 답변의 JSON 형식/);
+      assert.deepEqual(JSON.parse(logs.at(-1)!), {
+        event: "hanmadi_video_output_invalid", outputChars: raw.length,
+        jsonType, codeFence: raw.trim().startsWith("```"),
+      });
+    }
+    assert.equal(logs.some((line) => line.includes("private-video-value")), false);
+  } finally { console.warn = original; }
+});
+test("invalid video JSON stops before JEV and never saves a draft", async () => {
+  const f = fixture();
+  const original = console.warn;
+  console.warn = () => {};
+  let judgments = 0;
+  f.deps.analyze = async () => parseVideoAnalysis("[]", settings, analysis);
+  f.deps.judge = async () => { judgments++; return judged; };
+  try {
+    const result = await processVideo("abcdefghijk", settings, f.deps);
+    assert.equal(result.state, "failed");
+    assert.equal(judgments, 0);
+    assert.equal(f.stats().saves, 0);
+    assert.equal(f.state.drafts.length, 0);
+  } finally { console.warn = original; }
+});
 test("native adapter preserves video URI and rejects ineligible videos before inference", async () => {
   process.env.YOUTUBE_API_KEY = "test-youtube";
   process.env.LITELLM_BASE_URL = "https://gateway.example/llm/v1";
@@ -237,6 +282,15 @@ test("native adapter preserves video URI and rejects ineligible videos before in
     assert.equal(b.contents[0].parts[0].fileData.mimeType, "video/mp4");
     assert.equal(b.generationConfig.responseMimeType, "application/json");
     assert.equal(b.generationConfig.maxOutputTokens, 2400);
+    const schema = b.generationConfig.responseSchema;
+    assert.equal(schema.type, "OBJECT");
+    assert.deepEqual(schema.required, ["observed", "units"]);
+    assert.equal(schema.properties.observed.type, "BOOLEAN");
+    assert.equal(schema.properties.units.type, "ARRAY");
+    assert.equal(schema.properties.units.maxItems, 6);
+    assert.deepEqual(schema.properties.units.items.required, ["text", "meaning", "reading", "at", "evidence"]);
+    assert.equal(schema.properties.units.items.properties.at.type, "NUMBER");
+    assert.equal(schema.properties.units.items.properties.evidence.type, "STRING");
     assert.match(b.systemInstruction.parts[0].text, /untrusted/);
     assert.equal(b.messages, undefined);
     assert.equal(new Headers(init?.headers).get("authorization"), "Bearer test-gateway");
