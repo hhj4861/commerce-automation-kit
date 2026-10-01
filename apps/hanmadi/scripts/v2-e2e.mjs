@@ -149,6 +149,11 @@ const mock = createServer(async (req, res) => {
   if (input === "곤니치와, 현종데스요" && !system.includes("REPAIR:"))
     result = { ...result, text: "안녕하세요! 저는 하나예요." };
   if (b.response_format?.json_schema?.name === "hanmadi_learner_turn") {
+    if (language === "th" && input === "얼음 없이 커피 한 잔 주세요.") {
+      return res.end(JSON.stringify({choices:[{message:{content:JSON.stringify({
+        phrase:{text:"ขอแฟหนึ่งแก้วไม่เอาหวาน",reading:"커 핝 깨우 마이 아우 완",meaning:input},reusable:true,
+      })}}]}));
+    }
     if (input.includes("변환실패")) {
       res.statusCode = 503;
       return res.end(
@@ -458,6 +463,15 @@ try {
   assert.equal(speechInputs.filter(text => text === firstAudioText).length, 1,
     "repeated listening must not request speech twice");
   console.log(`PASS real browser audio playback; replay without upstream request (${replayMs}ms including automation)`);
+  const speechCount = speechInputs.filter(text => text === firstAudioText).length;
+  const serverCacheHit = await context.request.post(base + "/api/study/audio", {
+    headers:{Origin:base}, data:{text:firstAudioText,language:"ja"},
+  });
+  assert.equal(serverCacheHit.status(),200);
+  assert.equal(serverCacheHit.headers()["x-hanmadi-audio"],"lesson-cache");
+  assert((await serverCacheHit.body()).length > 0);
+  assert.equal(speechInputs.filter(text => text === firstAudioText).length,speechCount);
+  console.log("PASS authenticated lesson audio API reuses server cache without another TTS request");
 
   assert.equal(
     await lesson
@@ -2202,6 +2216,14 @@ try {
   await post({ action: "settings", autoSaveChat: true }, learnerContext);
   const personal = await post(chatBody("현종이에요"), learnerContext);
   assert.equal(personal.data.learning, "not-reusable");
+  const beforeThaiFailure = (await state(learnerContext)).state.expressions.length;
+  const thaiMeaningFailure = await post(chatBody("얼음 없이 커피 한 잔 주세요.", "th"), learnerContext);
+  assert.equal(thaiMeaningFailure.status,200);
+  assert.equal(thaiMeaningFailure.data.learning,"unavailable");
+  assert.equal(thaiMeaningFailure.data.learnerPhrase,null);
+  assert(thaiMeaningFailure.data.reply.text);
+  assert.equal((await state(learnerContext)).state.expressions.length,beforeThaiFailure);
+  console.log("PASS incorrect Thai no-ice recast is withheld after repair failure; no bad study item is saved");
   const failure = await post(chatBody("변환실패"), learnerContext);
   assert.equal(failure.status, 200);
   assert.equal(failure.data.learning, "unavailable");

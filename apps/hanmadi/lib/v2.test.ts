@@ -289,3 +289,17 @@ test("club levels have forty different speaking expressions per language, with d
   assert(averageWords[3] > averageWords[2]);
   assert.equal(lessonPlan({ ...units[3], source: "admin" }), undefined);
 });
+
+test("Japanese lessons retain the corrected native sounds rather than translated Korean words", async () => {
+  const {lessonPhrases}=await import("./v2-lesson");
+  const units=starterUnits("ja");
+  const rows=units.flatMap(unit=>lessonPhrases(unit));
+  const find=(text:string)=>rows.find(row=>row.text===text)!.reading;
+  assert.match(find("韓国から旅行に来ました。"),/캉코쿠카라/);
+  assert.match(find("ここで三日間滞在します。"),/코코데 밋카칸/);
+  assert.match(find("週末はたいてい何をしますか。"),/슈우마츠와/);
+  assert.match(find("ラウンジでお会いできて嬉しかったです。"),/우레시캇타데스/);
+  assert.match(find("昨日、古い市場を撮りました。"),/이치바/);
+  assert.match(find("どのレストランで会いたいですか？"),/레스토란/);
+  for(const p of rows)assert(!/한국까라|여기데|소-스는|야사이는|칸코오를|기노이|마가캅푸|쥬니지난/.test(p.reading),p.text);
+});

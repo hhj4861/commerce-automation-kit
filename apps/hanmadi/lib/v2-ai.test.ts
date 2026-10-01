@@ -576,3 +576,63 @@ test("valid Spanish reading variants and quoted/name meanings remain usable with
     assert.equal(result.translated, phrase.meaning);
   }
 });
+
+test("observed Thai learner mistranslation is repaired and never returned after two failures", async () => {
+  const {learnerTurn} = await import("./v2-ai");
+  const messages = [{role:"user" as const, content:"얼음 없이 커피 한 잔 주세요."}];
+  const wrong = {phrase:{text:"ขอแฟหนึ่งแก้วไม่เอาหวาน",reading:"커 핝 깨우 마이 아우 완",meaning:messages[0].content},reusable:true};
+  const correct = {phrase:{text:"ขอกาแฟหนึ่งแก้ว ไม่ใส่น้ำแข็ง",reading:"커 까패 능 깨우 마이 싸이 남캥",meaning:messages[0].content},reusable:true};
+  let calls = 0;
+  const result = await learnerTurn("th", messages, "my-model", async (prompt, history, selection) => {
+    assert.equal(selection,"my-model"); assert.deepEqual(history,messages);
+    if (++calls === 2) assert.match(prompt,/Preserve coffee AND no ice/);
+    return JSON.stringify(calls === 1 ? wrong : correct);
+  });
+  assert.deepEqual(result.phrase, correct.phrase);assert.equal(calls,2);
+  calls=0;await assert.rejects(learnerTurn("th",messages,"my-model",async()=>{calls++;return JSON.stringify(wrong)}),/내 말의 번역/);assert.equal(calls,2);
+});
+
+test("no-ice learner conversion preserves number and rejects invented sweetness/temperature", async () => {
+  const {learnerMeaningIssue} = await import("./study-quality");
+  const input="얼음 없이 커피 한 잔 주세요.";
+  for(const [language,text] of Object.entries({ja:"氷なしでコーヒーを一杯ください。",th:"ขอกาแฟหนึ่งแก้ว ไม่ใส่น้ำแข็ง",en:"One coffee without ice, please.",es:"Un café sin hielo, por favor."})) {
+    assert.equal(learnerMeaningIssue(input,{text,reading:"발음",meaning:input},language as "ja"),null);
+  }
+  for(const [language,text] of [
+    ["ja","氷を抜いてコーヒーを一杯ください。"],
+    ["en","A cup of coffee without any ice, please."],
+    ["es","Un café sin nada de hielo, por favor."],
+    ["th","ขอกาแฟแก้วหนึ่ง ไม่ใส่น้ำแข็ง"],
+  ] as const) assert.equal(learnerMeaningIssue(input,{text,reading:"발음",meaning:"얼음을 빼고 커피 한 잔 주세요."},language),null);
+  for(const text of ["ขอกาแฟสองแก้ว ไม่ใส่น้ำแข็ง","ขอกาแฟหนึ่งแก้ว ไม่ใส่น้ำแข็ง ไม่หวาน","ขอกาแฟเย็นหนึ่งแก้ว ไม่ใส่น้ำแข็ง"]) {
+    assert(learnerMeaningIssue(input,{text,reading:"발음",meaning:input},"th"));
+  }
+  assert.equal(learnerMeaningIssue("아이스 커피 한 잔 얼음 빼고 달지 않게 주세요.",{text:"ขอกาแฟเย็นหนึ่งแก้ว ไม่ใส่น้ำแข็ง ไม่หวาน",reading:"발음",meaning:"아이스 커피 한 잔 얼음 없이 달지 않게 주세요."},"th"),null);
+});
+
+test("cafe partner repairs repeated conditions or customer voice, retaining the selected model", async () => {
+  for (const [language, text, meaning] of [
+    ["en","One iced coffee with no ice, got it! Would you like that hot or iced?","얼음 없는 아이스 커피군요. 뜨거운 것으로 드릴까요, 차가운 것으로 드릴까요?"],
+    ["ja","アイスコーヒーですね。氷なしでお作りしますか？","아이스 커피군요. 얼음 없이 만들어 드릴까요?"],
+    ["es","Un café sin hielo, por favor. ¿Algo más?","얼음 없는 커피 한 잔 주세요. 더 필요하신가요?"],
+  ] as const) {
+    let calls=0;
+    const good={en:"One coffee without ice. Got it!",ja:"氷なしのコーヒーですね。かしこまりました。",es:"De acuerdo, un café sin hielo."}[language];
+    const result=await roleplayReply(language,1,"cafe",[{role:"user",content:"얼음 없이 커피 한 잔 주세요."}],"personal",async(prompt,_,selection)=>{
+      assert.equal(selection,"personal");calls++;if(calls===2)assert.match(prompt,/REPAIR/);
+      return JSON.stringify({text:calls===1?text:good,reading:"올바른 발음",meaning:calls===1?meaning:"얼음 없는 커피 한 잔, 알겠습니다."});
+    });
+    assert.equal(calls,2);assert.equal(result.text,good);
+  }
+});
+
+test("known dynamic pronunciation errors are rejected while valid pronunciations remain accepted", () => {
+  for(const [language,text,bad,good] of [
+    ["ja","乾杯！","칸바이!","간파이!"],
+    ["ja","韓国から来ました。","한국까라 키마시타.","캉코쿠카라 키마시타."],
+    ["es","¿Algo más?","알골 마스?","알고 마스?"],
+  ] as const){
+    assert.throws(()=>parseRoleplay(JSON.stringify({text,reading:bad,meaning:"뜻입니다."}),language));
+    assert.equal(parseRoleplay(JSON.stringify({text,reading:good,meaning:"뜻입니다."}),language).reading,good);
+  }
+});
