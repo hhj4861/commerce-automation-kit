@@ -50,7 +50,9 @@
 
 후속 [PR #110](https://github.com/hhj4861/commerce-automation-kit/pull/110), `fix/hanmadi-video-json`의 `b90532b`: responseSchema로 최상위 객체와 필수 필드를 지정하고, 완전한 JSON/코드 펜스 앞뒤 공백만 정리하며, 실패 로그에는 문자 수·JSON 타입·펜스 여부만 남긴다. 기존 잘못된 응답 차단과 JEV·저장 전 중단은 유지한다. 실제 실패 원인 확정이나 운영 성공을 주장하지 않는 계약 강화·진단 수정이다.
 
-로컬 테스트 145개·TypeScript·변경 파일 ESLint·diff 검사를 통과했고 본인 3개 파일을 커밋·upstream push했다. 추가 모델 호출은 하지 않았다. CI와 설치된 변환기의 네트워크 없는 스키마 보존 확인을 진행하며, PR #110의 main 머지·최소 운영 승격·같은 영상 재검증 승인을 별도로 요청했다. 아직 운영 미반영이다.
+로컬 테스트 145개·TypeScript·변경 파일 ESLint·diff 검사를 통과했고 본인 3개 파일을 커밋·upstream push했다. 추가 모델 호출은 하지 않았다. PR #110의 5종 CI(study·connection·connections·native-runtime·Platform GitOps verification)가 모두 통과했다. [study](https://github.com/hhj4861/commerce-automation-kit/actions/runs/36837745682)는 테스트·빌드·브라우저 흐름, [connection](https://github.com/hhj4861/commerce-automation-kit/actions/runs/36837745640)은 실제 Dify 연결을 포함한다. main 머지·최소 운영 승격·같은 영상 재검증 승인을 별도로 요청했으며 PR은 OPEN, 운영 미반영이다.
+
+JEV 담당이 운영에 설치된 변환기에 이 커밋의 실제 generationConfig를 메모리로 입력해 외부 네트워크 시도 0인 검증을 수행했다. 첫 완전 일치 assertion은 정규화 때문에 실패했다. 후속 비교에서 OBJECT→object와 propertyOrdering 추가만 확인했고, observed/units와 표현 5개 필수 필드·maxItems 6·minimum 0·MIME·maxTokens 2400·systemInstruction·contents가 보존됐다. 두 검증을 구분하며, 이 오프라인 계약 확인을 실제 Google 응답이나 이전 실패 원인의 증명으로 취급하지 않는다.
 
 ## 확인된 원인과 후속 수정 PR
 
