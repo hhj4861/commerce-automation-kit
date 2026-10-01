@@ -71,6 +71,7 @@ export function videoJobKey(id: string, settings: VideoSettings) {
     settings,
     rubric: VIDEO_RUBRIC,
     model: process.env.HANMADI_VIDEO_MODEL || process.env.LITELLM_MODEL,
+    reviewModel: process.env.HANMADI_VIDEO_REVIEW_MODEL?.trim() || process.env.LITELLM_MODEL?.trim(),
   });
 }
 const defaults = () => ({
@@ -147,7 +148,7 @@ export async function processVideo(
       judgeToken = randomUUID();
     let claimed = false;
     for (let i = 0; i < 50; i++) {
-      claimed = await store.claim(judgeLock, judgeToken, 45);
+      claimed = await store.claim(judgeLock, judgeToken, 60);
       if (claimed) break;
       await new Promise((r) => setTimeout(r, 300));
     }
@@ -215,7 +216,7 @@ export async function processVideo(
           judgments: judged.judgments,
           message: requiresHumanReview
             ? `${units.length}개 표현을 검토 대기로 보관했어요. 낮은 확신의 후보가 있어 검수·게시 전에는 학습과 중복 판정에 사용하지 않아요.`
-            : `JEV 평가 통과 ${units.length}개 표현을 초안으로 저장했어요.`,
+            : `학습 가치·내용 검수 통과 ${units.length}개 표현을 초안으로 저장했어요.`,
         };
       }
       await store.set(resultKey, JSON.stringify(result), TTL);
