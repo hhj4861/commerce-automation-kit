@@ -19,13 +19,14 @@ test("admin deployment is opt-in and does not change the learner app", () => {
   );
 });
 test("admin deployment exposes only login, release identity and owner endpoints", () => {
-  for (const path of ["/admin-login", "/api/auth", "/api/deployment"])
+  for (const path of ["/admin-login", "/api/auth", "/api/deployment", "/api/study/diagnostics/cron"])
     assert.equal(adminPath(path), "public");
   for (const path of [
     "/study/admin",
     "/api/study/admin",
     "/api/study/admin/learning",
     "/api/study/admin/videos",
+    "/api/study/admin/diagnostics",
   ])
     assert.equal(adminPath(path), "owner");
   for (const path of [

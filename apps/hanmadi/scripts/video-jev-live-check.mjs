@@ -1,16 +1,12 @@
 // Explicit, bounded live check. No video access, user data, or draft writes.
-// Run from apps/hanmadi: node --import tsx scripts/video-jev-live-check.mjs --live
+// Run from apps/hanmadi: node --import tsx scripts/video-jev-live-check.mjs --live --max-requests 4
+import { pathToFileURL } from "node:url";
+import policy from "../lib/video-policy.ts";
 import videoProvider from "../lib/video-provider.ts";
 import v2 from "../lib/v2.ts";
 const { judgeVideo, VideoEvaluationError } = videoProvider;
 const { starterUnits } = v2;
 
-if (process.argv[2] !== "--live") {
-  throw new Error("Explicit --live required; at most two paid Jev requests.");
-}
-if (!process.env.HANMADI_JEV_API_KEY || !process.env.LITELLM_BASE_URL) {
-  throw new Error("Dedicated temporary Jev key and gateway URL required.");
-}
 const settings = { language: "ja", scene: "cafe", level: 1 };
 const existing = starterUnits("ja").find((u) => u.scene === "cafe").phrase;
 const cases = [
@@ -70,53 +66,128 @@ const duplicateCases = [
     evidence: "카페에서 컵을 하나 더 달라고 정중하게 요청하는 표현을 설명한다.",
   },
 ];
-let requests = 0;
-let lastResponse;
-const started = Date.now();
-const observations = [];
-try {
-  for (const batch of [cases, duplicateCases]) {
-    let usage, rawAnswers;
-    const result = await judgeVideo(
-      { title: "합성 검증 예제", seconds: 180, units: batch.map((unit, i) => ({
-        text: unit.text, meaning: unit.meaning, reading: unit.reading,
-        evidence: unit.evidence, at: 10 + i * 10,
-      })) },
-      [], settings,
-      async (url, init) => {
-        if (++requests > 2) throw new Error("Live request budget exceeded");
-        const response = await fetch(url, init);
-        lastResponse = { httpStatus: response.status };
-        if (response.ok) {
-          const data = await response.clone().json();
-          usage = { inputTokens: data.usage?.input_tokens, outputTokens: data.usage?.output_tokens };
-          for (const [key, value] of Object.entries(usage)) {
-            if (Number.isSafeInteger(value) && value >= 0) lastResponse[key] = value;
-          }
-          rawAnswers = data.answers;
-        }
-        return response;
-      },
-    );
-    const results = result.judgments.map((judgment, i) => ({
-      case: batch[i].id, expectedAccepted: batch[i].expectedAccepted,
-      raw: { choice: rawAnswers[`unit${i}`].choice, confidence: rawAnswers[`unit${i}`].confidence,
-        probabilities: rawAnswers[`unit${i}`].probabilities }, ...judgment,
-      matched: judgment.accepted === batch[i].expectedAccepted,
-    }));
-    observations.push({ model: result.model, usage, results,
-      referenceCount: result.referenceCount, comparedCount: result.comparedCount });
+export const liveBatches = [cases, duplicateCases];
+
+// Observe only bounded token counts; never retain provider bodies or credentials.
+async function observeUsage(response, signal) {
+  if (!response.ok || !response.body) return null;
+  const reader = response.clone().body.getReader();
+  const chunks = [];
+  let size = 0;
+  const cancel = () => { void reader.cancel().catch(() => {}); };
+  signal?.addEventListener("abort", cancel, { once: true });
+  try {
+    if (signal?.aborted) return null;
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      size += value.byteLength;
+      if (size > 1048576) return null;
+      chunks.push(value);
+    }
+    if (signal?.aborted) return null;
+    const data = JSON.parse(Buffer.concat(chunks).toString("utf8"));
+    const inputTokens = data.usage?.input_tokens, outputTokens = data.usage?.output_tokens;
+    return [inputTokens, outputTokens].every((v) => Number.isSafeInteger(v) && v >= 0)
+      ? { inputTokens, outputTokens } : null;
+  } catch { return null; }
+  finally {
+    signal?.removeEventListener("abort", cancel);
+    cancel();
+    reader.releaseLock();
   }
-  const passed = observations.every((o) => o.results.every((r) => r.matched));
-  console.log(JSON.stringify({ event: "hanmadi_jev_synthetic_check",
-    requests, elapsedMs: Date.now() - started, passed, observations }));
-  if (!passed) process.exitCode = 1;
-} catch (error) {
-  // Never print the upstream body, exception, URL credentials, or key.
-  console.log(JSON.stringify({ event: "hanmadi_jev_synthetic_check", requests,
-    elapsedMs: Date.now() - started, passed: false,
-    error: error instanceof VideoEvaluationError ? error.code : "evaluation_failed",
-    upstreamStatus: error instanceof VideoEvaluationError ? error.upstreamStatus : null,
-    lastResponse, observations }));
-  process.exitCode = 1;
+}
+
+export function parseLiveOptions(args) {
+  if (args.length !== 3 || args[0] !== "--live" || args[1] !== "--max-requests" || !/^[1-4]$/.test(args[2]))
+    throw new Error("Use --live --max-requests N (1-4); no requests without an explicit cap.");
+  return { maxRequests: Number(args[2]) };
+}
+
+export async function runVideoJevCheck({ maxRequests, fetcher = fetch } = {}) {
+  if (!Number.isInteger(maxRequests) || maxRequests < 1 || maxRequests > 4)
+    throw new Error("Explicit request cap must be between 1 and 4.");
+  if (!process.env.HANMADI_JEV_API_KEY?.trim() || !process.env.LITELLM_BASE_URL?.trim())
+    throw new Error("Dedicated Jev key and gateway URL required.");
+  const started = Date.now();
+  const requests = [], observations = [];
+  let capped = false;
+  for (const [batchIndex, batch] of liveBatches.entries()) {
+    const observation = { batch: batchIndex + 1, caseCount: batch.length, state: "failed", results: [] };
+    observations.push(observation);
+    try {
+      const result = await judgeVideo(
+        { title: "합성 검증 예제", seconds: 180, units: batch.map((unit, i) => ({
+          text: unit.text, meaning: unit.meaning, reading: unit.reading,
+          evidence: unit.evidence, at: 10 + i * 10,
+        })) }, [], settings,
+        async (url, init) => {
+          // Reject BEFORE incrementing or invoking the real transport.
+          if (requests.length >= maxRequests) { capped = true; throw new Error("request_limit"); }
+          const ids = Object.keys(JSON.parse(init.body).questions);
+          const record = { batch: batchIndex + 1,
+            stage: ids.every((id) => /^unit[0-9]+$/.test(id)) ? "quality" : "dedupe",
+            questionCount: ids.length, httpStatus: null, usage: null, elapsedMs: 0 };
+          requests.push(record);
+          const requestStarted = Date.now();
+          try {
+            const response = await fetcher(url, init);
+            record.httpStatus = response.status;
+            record.usage = await observeUsage(response, init.signal);
+            return response;
+          } finally { record.elapsedMs = Date.now() - requestStarted; }
+        },
+      );
+      observation.state = "completed";
+      observation.model = result.model;
+      if (result.comparisonModel) observation.comparisonModel = result.comparisonModel;
+      observation.referenceCount = result.referenceCount;
+      observation.comparedCount = result.comparedCount;
+      observation.results = result.judgments.map((judgment, i) => ({
+        case: batch[i].id, expectedAccepted: batch[i].expectedAccepted,
+        ...judgment,
+        // Read SDK-validated quality answers, never the last (possibly pair) response.
+        raw: judgment.evaluation,
+        disposition: policy.videoDisposition(judgment),
+        matched: judgment.accepted === batch[i].expectedAccepted,
+      }));
+    } catch (error) {
+      observation.error = capped ? "request_limit" : error instanceof VideoEvaluationError ? error.code : "evaluation_failed";
+      observation.upstreamStatus = error instanceof VideoEvaluationError ? error.upstreamStatus : null;
+      break; // No automatic retries or further paid batches after a failure.
+    }
+  }
+  const rows = observations.flatMap((o) => o.results);
+  const complete = observations.length === liveBatches.length && observations.every((o) => o.state === "completed");
+  const usages = requests.filter((r) => r.usage !== null);
+  return { event: "hanmadi_jev_synthetic_check", rubric: policy.VIDEO_RUBRIC,
+    maxRequests, requests: requests.length, elapsedMs: Date.now() - started,
+    complete, passed: complete && rows.every((r) => r.matched),
+    metrics: {
+      totalCases: liveBatches.flat().length, evaluatedCases: rows.length,
+      failedCases: observations.filter((o) => o.state === "failed").reduce((n, o) => n + o.caseCount, 0),
+      unattemptedCases: liveBatches.slice(observations.length).flat().length,
+      accepted: rows.filter((r) => r.disposition === "accepted").length,
+      review: rows.filter((r) => r.disposition === "review").length,
+      excluded: rows.filter((r) => r.disposition === "excluded").length,
+      wrongAcceptances: rows.filter((r) => !r.expectedAccepted && r.accepted).length,
+      expectedAcceptancesNotMet: rows.filter((r) => r.expectedAccepted && !r.accepted).length,
+    },
+    usage: { inputTokens: usages.reduce((n, r) => n + r.usage.inputTokens, 0),
+      outputTokens: usages.reduce((n, r) => n + r.usage.outputTokens, 0),
+      observedRequests: usages.length, unknownRequests: requests.length - usages.length },
+    requestObservations: requests, observations,
+  };
+}
+
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  try {
+    const result = await runVideoJevCheck(parseLiveOptions(process.argv.slice(2)));
+    console.log(JSON.stringify(result));
+    if (!result.passed) process.exitCode = 1;
+  } catch {
+    // Configuration errors are fixed strings; never print exception or environment.
+    console.error("JEV check not started. Require dedicated key, gateway URL and --live --max-requests N (1-4).");
+    process.exitCode = 1;
+  }
 }

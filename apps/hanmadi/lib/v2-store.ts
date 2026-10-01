@@ -48,7 +48,7 @@ export async function saveExpression(
   actor: string,
   language: StudyLanguage,
   phrase: Phrase,
-  source: "translation" | "chat",
+  source: "translation" | "chat" | "vocabulary",
   epoch: number,
   automatic = false,
 ) {
@@ -63,7 +63,9 @@ export async function saveExpression(
     )
       return;
     const id = expressionId(language, phrase);
-    if (state.expressions.some((e) => e.id === id)) {
+    const existing = state.expressions.find((e) => e.id === id);
+    if (existing) {
+      if (source === "vocabulary") existing.inVocabulary = true;
       saved = true;
       return;
     }

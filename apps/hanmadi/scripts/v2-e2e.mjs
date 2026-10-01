@@ -155,6 +155,9 @@ const mock = createServer(async (req, res) => {
   let result = phrases[language];
   if (input === "곤니치와, 현종데스요" && !system.includes("REPAIR:"))
     result = { ...result, text: "안녕하세요! 저는 하나예요." };
+  if (language === "ja" && input === "얼음 없이 커피 한 잔 주세요." && system.includes("speaking coach")) {
+    result = {text: system.includes("REPAIR:") ? "氷抜きのコーヒーですね。" : "氷抜きのアイスコーヒーですね。", reading:"코오리누키노 코오히이데스네.", meaning:"얼음 없는 커피군요."};
+  }
   if (b.response_format?.json_schema?.name === "hanmadi_learner_turn") {
     if (language === "th" && input === "얼음 없이 커피 한 잔 주세요.") {
       return res.end(JSON.stringify({choices:[{message:{content:JSON.stringify({
@@ -168,7 +171,9 @@ const mock = createServer(async (req, res) => {
       );
     }
     result = {
-      phrase: input.includes("예시부터 알려") ? null : phrases[language],
+      phrase: language === "ja" && input === "얼음 없이 커피 한 잔 주세요."
+        ? {text:"氷抜きでコーヒーを一杯ください。",reading:"코오리누키데 코오히이오 잇파이 쿠다사이.",meaning:"얼음 없이 커피 한 잔 주세요."}
+        : input.includes("예시부터 알려") ? null : phrases[language],
       reusable: !input.includes("현종") && !input.includes("예시부터 알려"),
     };
   }
@@ -321,7 +326,7 @@ try {
       headers: { Origin: base },
       data: body,
     });
-    return { status: res.status(), data: await res.json() };
+    return { status: res.status(), data: await res.json(), timing: res.headers()["server-timing"] };
   }
   async function state(ctx = context) {
     const res = await ctx.request.get(base + "/api/study");
@@ -1554,7 +1559,7 @@ try {
       ),
       `overflow ${width}`,
     );
-    assert.equal(await page.locator(".hm-bottom svg").count(), 4);
+    assert.equal(await page.locator(".hm-bottom svg").count(), 5);
     assert.equal(
       await page
         .locator(".hm-course-hero")
@@ -2195,6 +2200,10 @@ try {
     assert.equal(response.status, 200);
     assert.equal(response.data.learnerPhrase.text, phrases[language].text);
     assert.equal(response.data.learning, "saved");
+    assert.match(response.timing, /total;dur=\d+/);
+    assert.match(response.timing, /knowledge;dur=\d+/);
+    assert.match(response.timing, /reply_llm;dur=\d+;desc="calls=1 failures=0 pending=0"/);
+    assert.match(response.timing, /learner_llm;dur=\d+;desc="calls=1 failures=0 pending=0"/);
   }
   assert.equal(
     (await state(learnerContext)).state.expressions.length,
@@ -2224,6 +2233,13 @@ try {
     (await post(chatBody("한국에서 왔어요"), learnerContext)).data.learning,
     "disabled",
   );
+  const coffeeReply = await post(chatBody("얼음 없이 커피 한 잔 주세요."), learnerContext);
+  assert.equal(coffeeReply.status, 200);
+  assert.equal(coffeeReply.data.reply.text, "氷抜きのコーヒーですね。");
+  assert.equal(coffeeReply.data.learning, "disabled");
+  assert.match(coffeeReply.timing, /reply_llm;dur=\d+;desc="calls=2 failures=0 pending=0"/);
+  assert.match(coffeeReply.timing, /learner_llm;dur=\d+;desc="calls=1 failures=0 pending=0"/);
+  console.log("PASS Japanese no-ice reply is repaired without invented temperature; per-branch timing and call counts verified");
   await post({ action: "settings", autoSaveChat: true }, learnerContext);
   const personal = await post(chatBody("현종이에요"), learnerContext);
   assert.equal(personal.data.learning, "not-reusable");
@@ -2232,6 +2248,8 @@ try {
   assert.equal(thaiMeaningFailure.status,200);
   assert.equal(thaiMeaningFailure.data.learning,"unavailable");
   assert.equal(thaiMeaningFailure.data.learnerPhrase,null);
+  assert.match(thaiMeaningFailure.timing, /learner_llm;dur=\d+;desc="calls=2 failures=0 pending=0"/);
+  assert.match(thaiMeaningFailure.timing, /learner;dur=\d+;desc="calls=1 failures=1 pending=0"/);
   assert(thaiMeaningFailure.data.reply.text);
   assert.equal((await state(learnerContext)).state.expressions.length,beforeThaiFailure);
   console.log("PASS incorrect Thai no-ice recast is withheld after repair failure; no bad study item is saved");
