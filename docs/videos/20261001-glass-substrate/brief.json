@@ -1,0 +1,145 @@
+{
+  "id": "glass-substrate-episode-1",
+  "title": "AI칩 아래에 깨지기 쉬운 유리를 넣는다고?",
+  "aspect": "16:9",
+  "voice": "RU7aSi6lT4uQBXMLgDxK",
+  "speed": 1.0,
+  "maxHiggsfieldCredits": 144,
+  "visualStyle": "Photoreal macro materials with original accurate explanatory 3D. Warm off-white seamless background, dark graphite silicon, copper interconnects, clear pale teal glass. No blue background. No text baked into generated footage.",
+  "scenes": [
+    {
+      "id": "hook",
+      "title": "AI칩 밑에, 깨지기 쉬운 유리를?",
+      "visual": "package",
+      "kind": "animation",
+      "narration": "AI에게 사진 한 장으로 영상을 만들어 달라고 해 보세요. 잠시 뒤, 없던 움직임이 생겨납니다. 우리는 이 일을 해내는 칩이 얼마나 똑똑한지 이야기하죠. 그런데 그 칩의 성능을 더 높이기 위해, 반도체 업계가 바꾸려는 것은 의외로 칩 아래의 바닥입니다. 그것도 깨지기 쉬운 유리로 말이죠. 왜 굳이 유리일까요?",
+      "duration": 23.625
+    },
+    {
+      "id": "inside",
+      "title": "칩 하나처럼 보이는 작은 시스템",
+      "visual": "explode",
+      "kind": "animation",
+      "narration": "먼저, 우리가 칩이라고 부르는 물건을 열어 보겠습니다. 이 모형에서 계산하는 칩과 데이터를 공급하는 메모리는 서로 다른 부품입니다. 그 아래에는 부품을 지지하고 신호와 전력을 연결하는 패키지 기판이 있죠. 유리기판은 바로 이 기판의 중심 재료를 유리로 만드는 기술입니다. 계산하는 실리콘 자체를 유리로 바꾼다는 뜻은 아닙니다.",
+      "duration": 22.958
+    },
+    {
+      "id": "traffic",
+      "title": "계산만 빨라지면 충분할까?",
+      "visual": "traffic",
+      "kind": "animation",
+      "narration": "여러 요리사가 함께 일하는 주방을 생각해 보세요. 손이 빨라도 재료가 제때 도착하지 않으면 요리는 멈춥니다. AI 시스템도 계산과 데이터 이동이 함께 이루어져야 합니다. 그래서 여러 기능의 칩을 한 패키지 안에 가깝게 모으는 설계가 중요해졌습니다. 그런데 부품을 더 넣으려면 바닥도 넓어지고, 그 사이를 연결하는 길도 늘어납니다.",
+      "duration": 23.542
+    },
+    {
+      "id": "crowded",
+      "title": "그냥 더 크게 만들면 안 될까?",
+      "visual": "expand",
+      "kind": "animation",
+      "narration": "그렇다면 기판을 그냥 크게 만들면 될까요? 넓은 주차장에 차를 더 세우듯 말입니다. 문제는 반도체의 연결이 주차장보다 훨씬 정밀하다는 데 있습니다. 부품 아래의 작은 접점들이 정해진 위치에 맞아야 하죠. 연결이 촘촘해질수록, 조금의 위치 오차에도 여유가 줄어듭니다. 면적을 키우는 일과 정밀도를 지키는 일을 동시에 해야 합니다.",
+      "duration": 22.042
+    },
+    {
+      "id": "warpage",
+      "title": "눈에 안 보이는 휘어짐",
+      "visual": "warp",
+      "kind": "animation",
+      "narration": "여기 바닥을 조금 휘어 보겠습니다. 이해를 돕기 위해 실제보다 변형을 크게 표현했습니다. 바닥이 휘면 위쪽 부품과 아래쪽 접점의 높이가 고르지 않게 됩니다. 미세한 부품들을 정확하게 조립할 때, 이런 차이를 관리해야 합니다. 단순히 바닥이 단단한가를 넘어서, 필요한 모양과 치수를 얼마나 안정적으로 유지하느냐가 중요해지는 겁니다.",
+      "duration": 23.208
+    },
+    {
+      "id": "thermal",
+      "title": "열을 받으면 연결도 움직인다",
+      "visual": "thermal",
+      "kind": "animation",
+      "narration": "온도도 생각해야 합니다. 재료는 온도가 달라지면 크기가 변하고, 서로 다른 재료는 늘어나는 정도도 다릅니다. 함께 붙어 있는 재료들이 다르게 움직이면 연결부에 부담이 생길 수 있죠. 그래서 반도체 패키지는 조립할 때와 사용할 때의 온도 변화를 고려합니다. 차갑고 뜨거운 순간에도 정밀한 연결을 유지해야 하는 작은 구조물인 셈입니다.",
+      "duration": 25.542
+    },
+    {
+      "id": "glass",
+      "title": "투명함보다 중요한 성질",
+      "visual": "compare",
+      "kind": "animation",
+      "narration": "이 지점에서 유리가 후보로 등장합니다. 중요한 것은 속이 보인다는 점이 아닙니다. 반도체에 맞게 선택한 유리는 평탄도와 치수 안정성, 열에 따른 변형을 관리하는 데 장점이 있습니다. 유리도 종류에 따라 열팽창 특성이 다르기 때문에, 아무 유리나 가져다 쓰는 것은 아닙니다. 창문을 잘라 칩 밑에 넣는다고 생각하면 곤란하겠죠.",
+      "duration": 25.292
+    },
+    {
+      "id": "wiring",
+      "title": "평평한 바닥이 만드는 차이",
+      "visual": "wiring",
+      "kind": "animation",
+      "narration": "평평하고 안정적인 바닥 위에서는 미세한 배선을 정밀하게 만들고, 여러 층의 연결을 맞추는 데 도움을 받을 수 있습니다. 이 모형에서는 구리색 선이 전기가 이동하는 길입니다. 같은 공간 안에 연결을 촘촘하게 배치할 수 있다면, 더 많은 칩이 함께 일하도록 설계할 여지가 생깁니다. 유리가 계산을 대신하는 것이 아니라, 계산하는 부품들을 연결할 기반을 만드는 겁니다.",
+      "duration": 25.167
+    },
+    {
+      "id": "tradeoff",
+      "title": "깨지기 쉬운데 괜찮을까?",
+      "visual": "handling",
+      "kind": "animation",
+      "narration": "그런데 처음의 의문이 남습니다. 유리는 깨지기 쉬운데 괜찮을까요? 충격을 견디는 성질과, 정밀한 치수를 유지하는 성질은 같은 것이 아닙니다. 유리를 쓰려면 제조와 운반, 가공 과정에서 손상을 막아야 합니다. 작은 균열이나 연결 불량도 관리해야 하죠. 좋은 재료를 발견하는 것과, 그 재료로 제품을 안정적으로 만드는 것은 서로 다른 과제입니다.",
+      "duration": 26.208
+    },
+    {
+      "id": "manufacture",
+      "title": "한 장을 만드는 것과 양산하는 것",
+      "visual": "factory",
+      "kind": "animation",
+      "narration": "실험실에서 좋은 샘플 한 장을 만드는 데 성공했다고, 곧바로 공장에서 같은 품질을 반복할 수 있는 것은 아닙니다. 구멍을 가공하고 금속을 채우고, 층을 쌓고, 칩을 연결한 뒤 검사해야 합니다. 여러 공정을 거쳐도 품질이 유지되는지 확인해야 하죠. 이 때문에 유리기판 경쟁에는 소재뿐 아니라 장비와 가공, 검사 기술도 함께 들어갑니다.",
+      "duration": 27.833
+    },
+    {
+      "id": "industry",
+      "title": "이미 시작된 개발 경쟁",
+      "visual": "inspection",
+      "kind": "animation",
+      "narration": "실제로 인텔은 첨단 패키징용 유리기판 기술을 공개했고, 삼성전기는 유리에 미세한 연결 통로를 만들고 금속을 채우는 기술을 소개했습니다. 에스케이씨의 앱솔릭스도 유리기판 개발과 검증을 진행하고 있습니다. 다만 기술 공개, 고객 검증, 대량 생산은 서로 다른 단계입니다. 지금 모든 AI칩 아래에 유리가 깔려 있다고 이해하면 안 됩니다.",
+      "duration": 24.208
+    },
+    {
+      "id": "daily",
+      "title": "내가 쓰는 AI와는 무슨 관계일까?",
+      "visual": "server",
+      "kind": "animation",
+      "narration": "그럼 이 작은 바닥이 우리 일상과 무슨 관계가 있을까요? 우리가 쓰는 AI 뒤에서는 계산 칩과 메모리, 네트워크가 함께 움직입니다. 더 큰 패키지에 부품을 정밀하게 연결하는 기술은 이런 시스템을 설계할 수 있는 선택지를 넓힙니다. 하지만 유리기판 하나만으로 앱이 바로 빨라지거나 구독료가 내려가는 것은 아닙니다. 전체 시스템의 효율과 제조 비용을 함께 봐야 합니다.",
+      "duration": 24.417
+    },
+    {
+      "id": "limits",
+      "title": "좋은 바닥만으로 완성되지는 않는다",
+      "visual": "system",
+      "kind": "animation",
+      "narration": "건물의 기초가 좋아도 엘리베이터와 전기, 냉방이 부족하면 제대로 사용할 수 없겠죠. AI 시스템도 비슷합니다. 연결할 바닥이 좋아져도 메모리가 데이터를 제때 공급해야 하고, 전력과 열도 관리해야 합니다. 유리기판은 여러 문제 가운데 패키지의 연결과 안정성을 개선하려는 선택입니다. 만능 재료라기보다, 더 복잡해지는 시스템을 위한 새로운 기반인 겁니다.",
+      "duration": 28.417
+    },
+    {
+      "id": "reveal",
+      "title": "그래서 바닥까지 바꾸는 것이다",
+      "visual": "hero",
+      "kind": "animation",
+      "narration": "처음 질문으로 돌아가 보겠습니다. 왜 칩이 좋아지는데 바닥까지 바꿔야 할까요? 더 많은 부품을 함께 쓰려면 연결도 늘어나고, 그 연결을 정확하게 유지해야 하기 때문입니다. 우리가 보던 작은 칩은 혼자 일하는 부품 하나가 아니라, 수많은 부품과 연결이 협력하는 시스템이었습니다. 이제 반도체 사진을 보면, 위의 칩뿐 아니라 그 아래의 바닥도 눈에 들어올 겁니다.",
+      "duration": 26.458
+    },
+    {
+      "id": "ending",
+      "title": "다음 이야기: 유리 속의 길",
+      "visual": "vias",
+      "kind": "animation",
+      "narration": "AI를 더 강하게 만드는 경쟁은 칩 안에서만 벌어지지 않습니다. 더 많은 칩을 정밀하게 연결하기 위해, 칩 아래의 바닥까지 바꾸고 있는 겁니다. 유리기판이 주목받는 이유입니다. 그런데 아직 풀지 않은 질문이 하나 있습니다. 유리는 전기가 통하지 않는데, 위와 아래를 어떻게 연결할까요? 다음 편에서는 유리 속을 관통하는 아주 작은 금속 길을 따라가 보겠습니다.",
+      "duration": 25.0
+    }
+  ],
+  "broll": [
+    {
+      "id": "broll-factory",
+      "kind": "video",
+      "duration": 6,
+      "prompt": "Photoreal cinematic semiconductor packaging cleanroom, close view of a precision robotic gripper gently transporting a thin square pale transparent glass panel under inspection lights, immaculate brushed-metal equipment, warm white light, restrained pale teal reflections, no people, no brand, no text or labels, realistic stable rigid geometry, one slow camera dolly, 16:9. Illustrative fictional facility, not a named real factory."
+    },
+    {
+      "id": "broll-server",
+      "kind": "video",
+      "duration": 6,
+      "prompt": "Photoreal cinematic close-up of modern AI data center server racks and cooling pipes, black graphite metal, tiny amber status LEDs, warm neutral white work lighting, no blue or purple glow, one smooth slow lateral camera move, extremely realistic materials, coherent geometry, no people, no brand logos, no readable text, 16:9. Fictional illustrative facility."
+    }
+  ]
+}

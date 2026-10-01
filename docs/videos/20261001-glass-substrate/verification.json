@@ -1,0 +1,49 @@
+{
+  "video": "/Users/admin/Downloads/vedio/glass-substrate-episode-1.mp4",
+  "bytes": 416599365,
+  "sha256": "4abedcaace3714e61f8e353aa07d3e36406b892276b2e65814301e992cc7976c",
+  "durationSeconds": 373.938,
+  "resolution": [
+    1920,
+    1080
+  ],
+  "renderSourceResolution": [
+    1280,
+    720
+  ],
+  "fps": "24/1",
+  "audioCodec": "aac",
+  "voiceId": "RU7aSi6lT4uQBXMLgDxK",
+  "speed": 1.0,
+  "sceneCount": 15,
+  "captionCount": 110,
+  "fullDecode": "passed",
+  "captionTextAndTiming": "passed",
+  "silencesOver1_3Seconds": [],
+  "meanVolumeDb": [
+    "-17.4 dB"
+  ],
+  "maxVolumeDb": [
+    "-0.8 dB"
+  ],
+  "higgsfield": {
+    "factoryGenerationId": "8a63ba30-24d3-4a05-9e58-fbfa531d6b3d",
+    "factoryCreditsQuoted": 54,
+    "server": "rejected: insufficient subscription credits; replaced by original 3D"
+  },
+  "notChecked": "No claim of engineering-scale simulation or actual factory footage.",
+  "visualReview": {
+    "reviewedSceneNumbers": [
+      1,
+      2,
+      5,
+      7,
+      8,
+      10,
+      12,
+      15
+    ],
+    "artifact": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-glass-substrate/final-contact-sheet.jpg",
+    "result": "Checked final-export frames: captions readable, corrected exploded-chip/server framing, fictional facility labeled AI recreation."
+  }
+}
