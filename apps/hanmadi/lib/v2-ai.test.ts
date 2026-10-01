@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { starterUnits } from "./v2";
 import { lessonPlan } from "./v2-lesson";
 import {
+  studyCompletion,
   parseRoleplay,
   roleplayReply,
   roleplayPrompt,
@@ -635,4 +636,59 @@ test("known dynamic pronunciation errors are rejected while valid pronunciations
     assert.throws(()=>parseRoleplay(JSON.stringify({text,reading:bad,meaning:"뜻입니다."}),language));
     assert.equal(parseRoleplay(JSON.stringify({text,reading:good,meaning:"뜻입니다."}),language).reading,good);
   }
+});
+
+const thaiMaleHello = { text: "สวัสดีครับ", reading: "싸왓디 캅", meaning: "안녕하세요." };
+const thaiFemaleHello = { text: "สวัสดีค่ะ", reading: "싸왓디 카", meaning: "안녕하세요." };
+test("outgoing Thai translation repairs female speech and its reading on the default model", async () => {
+  let calls = 0;
+  const result = await translate("안녕하세요.", "th", "ko", async (system, _messages, selection) => {
+    assert.match(system, /male speaker by default/); assert.match(system, /ผม/); assert.equal(selection, "default");
+    const phrase = ++calls === 1 ? thaiFemaleHello : thaiMaleHello;
+    if (calls === 2) assert.match(system, /REPAIR:[\s\S]*male speaker/);
+    return JSON.stringify({ translated: phrase.text, reading: phrase.reading, practice: phrase });
+  });
+  assert.equal(calls, 2); assert.equal(result.translated, thaiMaleHello.text);
+  assert.deepEqual(result.practice, thaiMaleHello);
+});
+test("Thai female incoming speech is translated faithfully and its exact practice excerpt survives", async () => {
+  const result = await translate(thaiFemaleHello.text, "th", "th", async system => {
+    assert.doesNotMatch(system, /male speaker by default/);
+    return JSON.stringify({ translated: "안녕하세요.", reading: thaiFemaleHello.reading, practice: thaiFemaleHello });
+  });
+  assert.equal(result.translated, "안녕하세요."); assert.deepEqual(result.practice, thaiFemaleHello);
+});
+test("Thai dialogue and learner recasts regenerate mismatched gendered endings on the selected model", async () => {
+  for (const mode of ["dialogue", "learner"] as const) {
+    let calls = 0;
+    const complete: typeof studyCompletion = async (system, _messages, selection) => {
+      assert.match(system, /male speaker by default/); assert.equal(selection, "codex-personal");
+      const phrase = ++calls === 1 ? thaiFemaleHello : thaiMaleHello;
+      return JSON.stringify(mode === "learner" ? { phrase, reusable: true } : phrase);
+    };
+    const input = [{ role: "user" as const, content: "안녕하세요." }];
+    const result = mode === "learner"
+      ? (await learnerTurn("th", input, "codex-personal", complete)).phrase
+      : await roleplayReply("th", 1, "smalltalk", input, "codex-personal", complete);
+    assert.equal(calls, 2); assert.deepEqual(result, thaiMaleHello);
+  }
+});
+test("invalid Thai male-particle reading is rejected after two attempts, never returned for saving", async () => {
+  let calls = 0;
+  await assert.rejects(() => learnerTurn("th", [{ role: "user", content: "안녕하세요." }], "default", async () => {
+    calls++; return JSON.stringify({ phrase: { ...thaiMaleHello, reading: "싸왓디 카" }, reusable: true });
+  }), /내 말의 번역을 완성하지 못했어요/);
+  assert.equal(calls, 2);
+});
+test("Thai vocabulary beginning with คะ is not mistaken for a female polite particle", async () => {
+  const phrase = {text: "ขอคะน้าครับ", reading: "커 카나 캅", meaning: "카나 채소 주세요."};
+  const result = await roleplayReply("th", 1, "restaurant", [{role:"user",content:"채소요"}], "default", async () => JSON.stringify(phrase));
+  assert.deepEqual(result, phrase);
+});
+
+
+test("male default preserves explicitly quoted female speech rather than rewriting another speaker", async () => {
+  const phrase = {text: 'เธอพูดว่า “สวัสดีค่ะ”', reading: '터 풋 와 싸왓디 카', meaning: '그녀가 안녕하세요라고 말했어요.'};
+  const result = await translate('그녀가 안녕하세요라고 말했어요.', 'th', 'ko', async () => JSON.stringify({translated:phrase.text,reading:phrase.reading,practice:null}));
+  assert.equal(result.translated, phrase.text);
 });

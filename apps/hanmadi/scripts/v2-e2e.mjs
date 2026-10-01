@@ -17,9 +17,9 @@ const phrases = {
     reading: "캉코쿠카라 키마시타",
   },
   th: {
-    text: "มาจากเกาหลีค่ะ",
+    text: "ผมมาจากเกาหลีครับ",
     meaning: "한국에서 왔어요.",
-    reading: "마 짝 까올리 카",
+    reading: "폼 마 짝 까올리 캅",
   },
   en: {
     text: "I am from Korea.",
@@ -43,8 +43,14 @@ speechClip.writeUInt16LE(1, 20); speechClip.writeUInt16LE(1, 22);
 speechClip.writeUInt32LE(8000, 24); speechClip.writeUInt32LE(16000, 28);
 speechClip.writeUInt16LE(2, 32); speechClip.writeUInt16LE(16, 34);
 speechClip.write("data", 36); speechClip.writeUInt32LE(4000, 40);
-let calls = 0,
-  slowStarted;
+let calls = 0, slowStarted, slowPending, slowRelease;
+function holdSlow() {
+  slowPending = new Promise(resolve => { slowRelease = resolve; });
+  return new Promise(resolve => { slowStarted = resolve; });
+}
+function releaseSlow() {
+  slowRelease?.(); slowPending = undefined; slowStarted = undefined; slowRelease = undefined;
+}
 const connections = new Map();
 let loginFixture = false;
 const claudeState = "s".repeat(43);
@@ -120,8 +126,9 @@ const mock = createServer(async (req, res) => {
   const system = b.messages?.[0]?.content ?? "",
     input = b.messages?.at(-1)?.content ?? "";
   if (input.includes("SLOW")) {
+    const pending = slowPending;
     slowStarted?.();
-    await new Promise((r) => setTimeout(r, 500));
+    await pending;
   }
   if (input === "FAIL") {
     res.statusCode = 503;
@@ -748,6 +755,13 @@ try {
           const native = dialog.locator(".hm-native");
           const text = await native.innerText();
           assert.equal(await native.getAttribute("lang"), language);
+          if (language === "th") {
+            assert.doesNotMatch(text, /ค่ะ|คะ|ฉัน/);
+            assert.match(text, /ครับ/);
+            await dialog.getByText(/기본 예문은 남성 화자 기준/).waitFor();
+            if (sceneId === "smalltalk" && level === 1 && n === 0)
+              await page.screenshot({path:resolve(screenshots,"thai-male-lesson.png"),fullPage:true});
+          }
           assert(!seen.has(text), `${language}:${sceneId}:${level}:${n} duplicate`);
           seen.add(text);
           const row = rows[`${sceneId}:${level}`]?.[n];
@@ -908,9 +922,7 @@ try {
     "PASS one-microphone browser recording → STT auto language → translation; speech API response",
   );
   let barrier;
-  const started = new Promise((r) => {
-    slowStarted = r;
-  });
+  const started = holdSlow();
   const pending = post({
     action: "translate",
     language: "ja",
@@ -921,11 +933,10 @@ try {
   const id = (await state()).state.expressions[0].id;
   barrier = await post({ action: "delete", language: "ja", id });
   assert.equal(barrier.status, 200);
+  releaseSlow();
   assert.equal((await pending).data.saved, false);
   assert.equal((await state()).state.expressions.length, 0);
-  const startedOff = new Promise((r) => {
-    slowStarted = r;
-  });
+  const startedOff = holdSlow();
   const pendingOff = post({
     action: "translate",
     language: "ja",
@@ -934,6 +945,7 @@ try {
   });
   await startedOff;
   await post({ action: "settings", autoSave: false });
+  releaseSlow();
   assert.equal((await pendingOff).data.saved, false);
   console.log(
     "PASS translate, bidirectional, dedupe, ambiguity, failed/invalid AI, private text, delete/disable in-flight barrier",
@@ -1405,9 +1417,7 @@ try {
       .system.includes("Reference examples"),
   );
   assert.equal((await adminSnapshot()).contributions.length, 0);
-  const collectionStarted = new Promise((resolve) => {
-    slowStarted = resolve;
-  });
+  const collectionStarted = holdSlow();
   const lateCollection = post({
     action: "translate",
     language: "ja",
@@ -1417,6 +1427,7 @@ try {
   });
   await collectionStarted;
   await post({ action: "withdraw-contributions" });
+  releaseSlow();
   assert.equal((await lateCollection).data.contribution, "withdrawn");
   slowStarted = undefined;
   assert.equal((await adminSnapshot()).contributions.length, 0);
@@ -2237,27 +2248,25 @@ try {
   );
   assert.equal(control.data.learnerPhrase, null);
   assert.equal(control.data.learning, "not-needed");
-  const offStarted = new Promise((r) => {
-    slowStarted = r;
-  });
+  const offStarted = holdSlow();
   const inFlight = post(chatBody("SLOW 한국에서 왔어요"), learnerContext);
   await offStarted;
   await post({ action: "settings", autoSaveChat: false }, learnerContext);
+  releaseSlow();
   assert.equal(
     (await inFlight).data.learning,
     "disabled",
     "in-flight opt out respected",
   );
   await post({ action: "settings", autoSaveChat: true }, learnerContext);
-  const deletionStarted = new Promise((r) => {
-    slowStarted = r;
-  });
+  const deletionStarted = holdSlow();
   const duringDelete = post(chatBody("SLOW 한국에서 왔어요"), learnerContext);
   await deletionStarted;
   await post(
     { action: "delete", id: learnerState.expressions[0].id },
     learnerContext,
   );
+  releaseSlow();
   assert.equal(
     (await duringDelete).data.learning,
     "not-saved",
@@ -2291,6 +2300,7 @@ try {
   console.error(logs);
   throw e;
 } finally {
+  releaseSlow();
   if (browser) await browser.close();
   app.kill("SIGTERM");
   await Promise.race([
