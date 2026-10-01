@@ -3,7 +3,7 @@ import type { ContentDraft } from "./knowledge";
 export const VIDEO_SELECTION_LIMIT = 10;
 export const VIDEO_CONCURRENCY = 3;
 export const VIDEO_MAX_SECONDS = 15 * 60;
-export const VIDEO_RUBRIC = "hanmadi-video-jev-v5";
+export const VIDEO_RUBRIC = "hanmadi-video-jev-v6";
 export type VideoSettings = {
   language: StudyLanguage;
   scene: string;
@@ -28,6 +28,14 @@ export type VideoPairEvaluation = {
   probabilities: Record<"duplicate" | "distinct", number>;
   used: boolean;
 };
+export const VIDEO_CHECKS = ["meaning", "reading", "evidence", "relevance", "novelty"] as const;
+export type VideoCheck = typeof VIDEO_CHECKS[number];
+export type VideoCheckEvaluation = {
+  choice: "pass" | "fail";
+  confidence: number;
+  probabilities: Record<"pass" | "fail", number>;
+};
+export type VideoChecks = Record<VideoCheck, VideoCheckEvaluation>;
 export type VideoDisposition = "accepted" | "review" | "excluded";
 export type VideoJudgment = {
   index: number;
@@ -39,6 +47,9 @@ export type VideoJudgment = {
   disposition?: VideoDisposition;
   reason?: "qualified" | "low_confidence" | "classified_negative" | "exact_duplicate" | "batch_duplicate" | "uncertain_duplicate";
   evaluation?: VideoEvaluation;
+  // v6 stores atomic model answers, never an invented four-class probability.
+  checks?: VideoChecks;
+  decidingCheck?: VideoCheck;
   comparisons?: VideoPairEvaluation[];
 };
 export function confidentVideoChoice(a: { choice: string; confidence: number; probabilities: Record<string, number> }) {
@@ -53,6 +64,22 @@ export function classifyVideoJudgment(index: number, evaluation: VideoEvaluation
     disposition, evaluation,
     reason: exactDuplicate ? "exact_duplicate" : !certain ? "low_confidence" : evaluation.choice === "useful" ? "qualified" : "classified_negative",
   };
+}
+// Conjunction for acceptance: every check must pass both unchanged thresholds.
+// A confident failing check is sufficient to exclude. Weak/contradictory evidence
+// otherwise remains review; min confidence is a summary, not a joint probability.
+export function classifyVideoChecks(index: number, checks: VideoChecks, exactDuplicate = false): VideoJudgment {
+  const negative = VIDEO_CHECKS.find((k) => checks[k].choice === "fail" && confidentVideoChoice(checks[k]));
+  const uncertain = VIDEO_CHECKS.find((k) => !confidentVideoChoice(checks[k]));
+  const decidingCheck = negative ?? uncertain;
+  const failed = negative ?? VIDEO_CHECKS.find((k) => checks[k].choice === "fail");
+  const choice: VideoChoice = failed === "relevance" ? "irrelevant"
+    : failed === "novelty" ? "duplicate" : failed ? "unreliable" : "useful";
+  const disposition: VideoDisposition = exactDuplicate || negative ? "excluded" : uncertain ? "review" : "accepted";
+  return { index, choice: exactDuplicate ? "duplicate" : choice,
+    confidence: negative ? checks[negative].confidence : Math.min(...VIDEO_CHECKS.map((k) => checks[k].confidence)),
+    accepted: disposition === "accepted", disposition, checks, decidingCheck,
+    reason: exactDuplicate ? "exact_duplicate" : negative ? "classified_negative" : uncertain ? "low_confidence" : "qualified" };
 }
 export function videoDisposition(j: VideoJudgment): VideoDisposition {
   return j.disposition ?? (j.accepted ? "accepted" : j.choice === "useful" ? "review" : "excluded");
@@ -70,7 +97,8 @@ export function videoJudgmentReason(j: VideoJudgment) {
     batch_duplicate: "통과 후보와 학습 내용이 중복",
     uncertain_duplicate: "통과 후보와 중복 여부 확인 필요",
   };
-  return `JEV 분류: ${choice} · ${j.reason ? reasons[j.reason] : videoJudgmentLabel(j)}`;
+  const check = j.decidingCheck && { meaning: "뜻", reading: "발음 도움", evidence: "관찰 근거", relevance: "상황 적합성", novelty: "기존 자료 중복" }[j.decidingCheck];
+  return `JEV 분류: ${choice}${check ? ` (${check})` : ""} · ${j.reason ? reasons[j.reason] : videoJudgmentLabel(j)}`;
 }
 export type VideoResult = {
   state: "created" | "review" | "skipped" | "failed" | "running";

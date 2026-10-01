@@ -126,7 +126,7 @@ export async function runVideoJevCheck({ maxRequests, fetcher = fetch } = {}) {
           if (requests.length >= maxRequests) { capped = true; throw new Error("request_limit"); }
           const ids = Object.keys(JSON.parse(init.body).questions);
           const record = { batch: batchIndex + 1,
-            stage: ids.every((id) => /^unit[0-9]+$/.test(id)) ? "quality" : "dedupe",
+            stage: ids.every((id) => /^unit[0-9]+_(meaning|reading|evidence|relevance|novelty)$/.test(id)) ? "quality" : "dedupe",
             questionCount: ids.length, httpStatus: null, usage: null, elapsedMs: 0 };
           requests.push(record);
           const requestStarted = Date.now();
@@ -147,7 +147,7 @@ export async function runVideoJevCheck({ maxRequests, fetcher = fetch } = {}) {
         case: batch[i].id, expectedAccepted: batch[i].expectedAccepted,
         ...judgment,
         // Read SDK-validated quality answers, never the last (possibly pair) response.
-        raw: judgment.evaluation,
+        raw: judgment.checks ?? judgment.evaluation,
         disposition: policy.videoDisposition(judgment),
         matched: judgment.accepted === batch[i].expectedAccepted,
       }));

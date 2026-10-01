@@ -15,17 +15,20 @@ function transport({ extraPair = false, failPair, lowUseful = false } = {}) {
   return { count: () => calls, fetcher: async (_, init) => {
     calls++;
     const { questions } = JSON.parse(init.body);
-    const quality = Object.hasOwn(questions, "unit0");
+    const quality = Object.hasOwn(questions, "unit0_meaning");
     if (!quality && failPair === "429") return new Response("private upstream payload", { status: 429 });
     if (!quality && failPair === "malformed") return Response.json({ secret: "private upstream payload" });
     if (!quality && failPair === "network") throw new Error("private upstream payload");
-    const first = Object.keys(questions).length === 6;
+    const first = Object.keys(questions).length === 30;
     const choices = first
       ? ["useful", "duplicate", extraPair ? "useful" : "irrelevant", "unreliable", "unreliable", "unreliable"]
       : ["duplicate", "useful", "useful"];
     const answers = Object.fromEntries(Object.entries(questions).map(([id, q]) => {
-      const choice = quality ? choices[Number(id.slice(4))] : id === "pair1_2" ? "duplicate" : "distinct";
-      return [id, answer(q.criteria, choice, lowUseful && choice === "useful" ? 0.4 : 0.97)];
+      const overall = quality ? choices[Number(id.match(/^unit(\d+)_/)[1])] : null;
+      const dimension = id.split("_")[1];
+      const failing = overall === "unreliable" ? "meaning" : overall === "irrelevant" ? "relevance" : overall === "duplicate" ? "novelty" : null;
+      const choice = quality ? dimension === failing ? "fail" : "pass" : id === "pair1_2" ? "duplicate" : "distinct";
+      return [id, answer(q.criteria, choice, lowUseful && overall === "useful" ? 0.4 : 0.97)];
     }));
     return Response.json({ model: quality ? "jev-1.13.0" : "jev-pair-fixture",
       answers, usage: { input_tokens: quality ? 100 : 30, output_tokens: quality ? 10 : 3 } });
@@ -39,7 +42,7 @@ test("CLI requires an explicit bounded live request cap, rejecting extra or ambi
     ["--live", "--max-requests", "4", "--other"]]) assert.throws(() => parseLiveOptions(args));
 });
 
-test("v5 completes two quality batches and one dedupe request without overwriting raw unit answers", async () => {
+test("v6 completes two quality batches and one dedupe request without overwriting raw unit answers", async () => {
   const t = transport();
   const result = await runVideoJevCheck({ maxRequests: 4, fetcher: t.fetcher });
   assert.equal(t.count(), 3);
@@ -48,7 +51,7 @@ test("v5 completes two quality batches and one dedupe request without overwritin
   assert.deepEqual(result.requestObservations.map((r) => r.stage), ["quality", "quality", "dedupe"]);
   assert.deepEqual(result.usage, { inputTokens: 230, outputTokens: 23, observedRequests: 3, unknownRequests: 0 });
   const sibling = result.observations[1].results[2];
-  assert.equal(sibling.raw.choice, "useful");
+  assert.equal(sibling.raw.novelty.choice, "pass");
   assert.equal(sibling.choice, "duplicate");
   assert.equal(sibling.comparisons[0].choice, "duplicate");
   assert.equal(result.observations[1].comparisonModel, "jev-pair-fixture");
