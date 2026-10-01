@@ -109,3 +109,13 @@ PR #103/#105 배포 후 공개·길이 검사를 통과한 영상의 분석이 G
 내부 native endpoint 존재와 외부 ingress 허용은 별개다. 수정 준비 시점에는 외부 native 경로가 404였으며, 게이트웨이 경로 수정·배포와 기존 운영 키의 실제 영상 검증 전까지 연결 완료라고 보고하지 않는다. 새 임시 검증 키 발급 요청은 자동 승인 검토가 명시적 승인 부재로 거절했으며 발급하지 않았다.
 
 수정안은 shared-ai-host와 standalone public Caddy 설정에 POST `/v1beta/models/hanmadi-chat:generateContent` 한 경로만 추가한다(공용 호스트는 `/llm` prefix). 인증 헤더와 요청 본문을 그대로 LiteLLM으로 전달하며 GET·다른 모델·streaming·관리/파일 경로를 공개하지 않는다. 현재 운영 ingress는 독립 edge 릴리스이므로 PR 승인 후 별도 Caddy 적용이 필요하며, `deploy/litellm`이나 관리자 배포만으로 적용됐다고 보지 않는다. 기존 운영 키·모델 허용목록·예산은 유지하고, 임시 키를 새로 만들지 않는다.
+
+## 운영 native 응답의 구조 고정 및 비본문 진단
+
+#107/#109와 독립 edge 반영 후 2026-10-01 08:29 UTC 같은 영상 1건을 호출했다. native HTTP 200으로 기존 연결 오류는 해소됐지만 앱의 `jsonAnswer` 단계에서 실패했고 JEV 평가와 초안 저장에는 도달하지 않았다. 기존 기록에 응답 본문이 없어 당시 JSON의 정확한 타입이나 문법 오류를 재구성할 수 없다. 서버 코드는 generationConfig와 systemInstruction 전달을 지원하므로 설정 누락을 확정 원인으로 주장하지 않는다.
+
+후속 수정은 `responseMimeType`에 더해 `responseSchema`로 observed boolean과 units 배열, 표현·뜻·발음·구간·근거 필드를 요청한다. 문자열·배열도 유효한 JSON이지만 앱 계약에는 맞지 않으므로 최상위 객체와 필수 필드를 명시한다. 공급자 스키마는 기존 앱의 언어·개인정보·구간·길이 검증을 대체하지 않는다.
+
+완전한 JSON 객체 또는 코드 펜스 앞뒤의 공백은 정리한다. 설명문에서 JSON 부분만 임의로 추출하거나 잘못된 답변을 자료로 저장하지 않는다. 형식 실패 시 `hanmadi_video_output_invalid`, 문자 수, JSON 타입(invalid/array/string/null/number/boolean), 코드 펜스 유무만 기록한다. 원문·키·사용자 입력·모델 응답은 기록하지 않는다. 실패는 JEV와 저장 전에 중단한다.
+
+이 변경은 답변 계약을 강화하고 다음 실패를 구분할 수 있게 하는 수정이며, 이전 응답의 정확한 원인을 확인하거나 운영 영상 검증이 성공했다는 뜻이 아니다. 새로운 유료 호출 없이 fixture로 회귀 검증한다. 운영 적용과 같은 영상 재검증은 후속 PR 승인 후 진행한다.
