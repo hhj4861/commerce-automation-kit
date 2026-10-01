@@ -1,3 +1,4 @@
+import { lookupVocabulary } from "@/lib/vocabulary";
 import { lessonPhrases } from "@/lib/v2-lesson";
 import { studyIdentity } from "@/lib/learner-auth";
 import {
@@ -189,6 +190,13 @@ export async function POST(req: Request) {
       });
     }
     const before = await readStudy(actor);
+    if (b.action === "lookup-word") {
+      if (typeof b.text !== "string" || typeof b.sentence !== "string" ||
+          !b.text.trim() || b.text.length > 80 || b.sentence.length > 1000 || !b.sentence.includes(b.text))
+        throw new ConversationError(400, "문장 안의 단어나 짧은 표현을 선택해 주세요.");
+      await reserveRequest(actor, "chat");
+      return conversationJson({ phrase: await lookupVocabulary(b.text.trim(), b.sentence, language) });
+    }
     if (b.action === "translate") {
       if (
         typeof b.text !== "string" ||
@@ -249,6 +257,11 @@ export async function POST(req: Request) {
         }
       }
       return conversationJson({ ...result, from, ...saved, contribution });
+    }
+    if (b.action === "save-word") {
+      const phrase = parsePhrase(b.phrase);
+      if (phrase.text.length > 80) throw new ConversationError(400, "짧은 단어나 표현만 저장할 수 있어요.");
+      return conversationJson(await saveExpression(actor, language, phrase, "vocabulary", before.saveEpoch));
     }
     if (b.action === "save-chat") {
       const phrase = parsePhrase(b.phrase);

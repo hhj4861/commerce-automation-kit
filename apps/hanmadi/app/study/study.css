@@ -2222,3 +2222,27 @@
   display: block;
   margin-top: 8px;
 }
+
+/* Keep the close control reachable while only the modal content scrolls. */
+.hm-dialog { padding: 0; overflow: hidden; background: #fff; }
+.hm-dialog[open] { display: flex; flex-direction: column; }
+.hm-dialog > .hm-dialog-header {
+  flex: 0 0 auto;
+  padding: 20px 24px 14px;
+  border-bottom: 1px solid var(--line);
+  gap: 12px;
+}
+.hm-dialog-header > button { min-width: 44px; min-height: 44px; }
+.hm-dialog-body { min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 18px 24px 24px; }
+.hm-word-sentence { user-select: text; -webkit-user-select: text; }
+.hm-dialog .hm-word {
+  display: inline; padding: 3px 0; margin: 0; min-height: 0; border: 0; border-radius: 3px;
+  background: transparent; color: inherit; font: inherit; letter-spacing: inherit;
+  user-select: text; -webkit-user-select: text;
+  text-decoration: underline dotted #a6b6d4; text-underline-offset: 5px;
+}
+.hm-dialog .hm-word:hover:not(:disabled) { background: #e9efff; transform: none; }
+.hm-selection-action { margin-top: 8px; }
+.hm-word-definition .hm-native { overflow-wrap: anywhere; }
+
+body:has(.hm-dialog[open]) { overflow: hidden; }
