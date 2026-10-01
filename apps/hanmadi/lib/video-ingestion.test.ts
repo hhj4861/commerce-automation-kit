@@ -10,6 +10,7 @@ import {
 } from "./video-ingestion";
 import {
   analyzeVideo,
+  nativeVideoEndpoint,
   judgeVideo,
   parseVideoAnalysis,
   videoDetails,
@@ -209,7 +210,7 @@ test("video response requires observation, valid timestamp and actual target-lan
       parseVideoAnalysis(JSON.stringify(change), settings, analysis),
     );
 });
-test("official adapter passes video as media; rejects long, private and live videos before inference", async () => {
+test("native adapter preserves video URI and rejects ineligible videos before inference", async () => {
   process.env.YOUTUBE_API_KEY = "test-youtube";
   process.env.LITELLM_BASE_URL = "https://gateway.example/llm/v1";
   process.env.LITELLM_API_KEY = "test-gateway";
@@ -226,23 +227,28 @@ test("official adapter passes video as media; rejects long, private and live vid
       return Response.json({ items: [details] });
     assert.equal(
       String(url),
-      "https://gateway.example/llm/v1/chat/completions",
+      "https://gateway.example/llm/v1beta/models/gemini:generateContent",
     );
     const b = JSON.parse(String(init?.body));
     assert.equal(
-      b.messages[1].content[0].file.file_id,
+      b.contents[0].parts[0].fileData.fileUri,
       "https://www.youtube.com/watch?v=abcdefghijk",
     );
-    assert.equal(b.messages[1].content[0].file.format, "video/mp4");
+    assert.equal(b.contents[0].parts[0].fileData.mimeType, "video/mp4");
+    assert.equal(b.generationConfig.responseMimeType, "application/json");
+    assert.equal(b.generationConfig.maxOutputTokens, 2400);
+    assert.match(b.systemInstruction.parts[0].text, /untrusted/);
+    assert.equal(b.messages, undefined);
+    assert.equal(new Headers(init?.headers).get("authorization"), "Bearer test-gateway");
     assert.equal(init?.redirect, "error");
     return Response.json({
-      choices: [
-        {
-          message: {
-            content: JSON.stringify({ observed: true, units: analysis.units }),
-          },
-        },
-      ],
+      candidates: [{
+        finishReason: "STOP",
+        content: { parts: [
+          { thought: true, text: "internal reasoning is not an answer" },
+          { text: JSON.stringify({ observed: true, units: analysis.units }) },
+        ] },
+      }],
     });
   };
   assert.equal(
@@ -262,6 +268,31 @@ test("official adapter passes video as media; rejects long, private and live vid
       videoDetails("abcdefghijk", async () => Response.json({ items: [bad] })),
       /15분/,
     );
+});
+test("native video route preserves the gateway prefix and isolates the configured model path", () => {
+  for (const base of ["https://gateway.example/llm", "https://gateway.example/llm/v1/"])
+    assert.equal(nativeVideoEndpoint(base, "hanmadi-chat"), "https://gateway.example/llm/v1beta/models/hanmadi-chat:generateContent");
+  assert.equal(nativeVideoEndpoint("https://gateway.example/v1", "alias/other?key=x"), "https://gateway.example/v1beta/models/alias%2Fother%3Fkey%3Dx:generateContent");
+});
+test("native analysis rejects truncated, blocked and non-text output without leaking provider errors", async () => {
+  const details = { snippet: { title: "Test", liveBroadcastContent: "none" }, status: { privacyStatus: "public" }, contentDetails: { duration: "PT2M" } };
+  const fetcher = (body: unknown, status = 200): typeof fetch => async (url) =>
+    String(url).includes("youtube/v3/videos") ? Response.json({ items: [details] }) : Response.json(body, { status });
+  for (const body of [
+    { candidates: [{ finishReason: "MAX_TOKENS", content: { parts: [{ text: JSON.stringify({ observed: true, units: analysis.units }) }] } }] },
+    { promptFeedback: { blockReason: "SAFETY" } },
+    { candidates: [{ finishReason: "STOP", content: { parts: [{ thought: true, text: "not final" }] } }] },
+    { candidates: [{ finishReason: "STOP", content: { parts: [{ functionCall: {} }] } }] },
+  ]) await assert.rejects(analyzeVideo("abcdefghijk", settings, fetcher(body)), /분석 결과/);
+  const warn = console.warn, messages: string[] = [];
+  console.warn = (message) => messages.push(String(message));
+  try {
+    await assert.rejects(analyzeVideo("abcdefghijk", settings, fetcher({ error: "secret provider body" }, 400)), /영상 분석 응답/);
+    assert.equal(messages.length, 1);
+    assert.equal(JSON.parse(messages[0]).upstreamStatus, 400);
+    for (const secret of ["secret provider body", "test-gateway", "abcdefghijk"])
+      assert.equal(messages[0].includes(secret), false);
+  } finally { console.warn = warn; }
 });
 test("real Jev SDK contract enforces confidence, exact dedupe and fail-closed behavior", async () => {
   process.env.LITELLM_BASE_URL = "https://gateway.example/llm/v1";

@@ -4,6 +4,14 @@
     handle @inference {
         reverse_proxy gateway:4000
     }
+    # Only Hanmadi video analysis uses native Gemini; other models remain closed.
+    @hanmadiVideo {
+        method POST
+        path /v1beta/models/hanmadi-chat:generateContent
+    }
+    handle @hanmadiVideo {
+        reverse_proxy gateway:4000
+    }
     @jev {
         method POST
         path /typesafe/v1/systemone

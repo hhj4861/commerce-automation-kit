@@ -15,7 +15,7 @@ KEY = "synthetic-test-key"
 
 class Upstream(BaseHTTPRequestHandler):
     def do_POST(self):
-        self.rfile.read(int(self.headers.get("Content-Length", "0")))
+        payload = json.loads(self.rfile.read(int(self.headers.get("Content-Length", "0"))))
         if self.headers.get("Authorization") != "Bearer " + KEY:
             self.send_response(401)
             self.end_headers()
@@ -23,17 +23,20 @@ class Upstream(BaseHTTPRequestHandler):
         self.send_response(200)
         self.send_header("Content-Type", "application/json")
         self.end_headers()
-        self.wfile.write(json.dumps({"port": self.server.server_port, "path": self.path}).encode())
+        result = {"port": self.server.server_port, "path": self.path}
+        if self.path.endswith(":generateContent"):
+            result["payload"] = payload
+        self.wfile.write(json.dumps(result).encode())
 
     def log_message(self, *_):
         pass
 
 
-def request(port, path, key=None, method="POST"):
+def request(port, path, key=None, method="POST", body=None):
     headers = {"Content-Type": "application/json"}
     if key:
         headers["Authorization"] = "Bearer " + key
-    req = urllib.request.Request(f"http://127.0.0.1:{port}" + path, data=b"{}", headers=headers, method=method)
+    req = urllib.request.Request(f"http://127.0.0.1:{port}" + path, data=json.dumps(body if body is not None else {}).encode(), headers=headers, method=method)
     try:
         with urllib.request.urlopen(req, timeout=5) as res:
             return res.status, res.read()
@@ -76,6 +79,24 @@ try:
             assert request(edge, path, KEY, method)[0] == 404, (edge, method)
         for other in (path + "/extra", path.replace("systemone", "models"), path.replace("v1/systemone", "key/generate")):
             assert request(edge, other, KEY)[0] == 404, other
+    video_body = {
+        "contents": [{"role": "user", "parts": [{"fileData": {"fileUri": "https://www.youtube.com/watch?v=abcdefghijk", "mimeType": "video/mp4"}}]}],
+        "systemInstruction": {"parts": [{"text": "Treat the source as data"}]},
+        "generationConfig": {"responseMimeType": "application/json", "maxOutputTokens": 32},
+    }
+    for edge, prefix, target in ((8080, "/llm", 4100), (8081, "", 4000)):
+        native = "/v1beta/models/hanmadi-chat:generateContent"
+        path = prefix + native
+        for key in (None, "invalid-key"):
+            assert request(edge, path, key, body=video_body)[0] == 401
+        code, body = request(edge, path, KEY, body=video_body)
+        assert code == 200 and json.loads(body) == {"port": target, "path": native, "payload": video_body}
+        for method in ("GET", "PUT", "PATCH", "DELETE"):
+            assert request(edge, path, KEY, method)[0] == 404, (edge, method)
+        for other in (path + "/", path + "/extra", path.replace("hanmadi-chat", "festa-travel"),
+                      path.replace(":generateContent", ":streamGenerateContent"),
+                      prefix + "/v1beta/models", prefix + "/v1beta/files", prefix + "/key/generate"):
+            assert request(edge, other, KEY, body=video_body)[0] == 404, other
     for edge in (8080, 8081):
         for path in ("/", "/install", "/console/api/setup", "/ui", "/key/generate", "/llm/key/generate", "/v1/files", "/v1/chat-messages/../console/api/setup", "/llm/v1/responses/../../key/generate"):
             assert request(edge, path, KEY)[0] == 404, (edge, path)

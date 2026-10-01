@@ -10,6 +10,15 @@
             flush_interval -1
         }
     }
+    # Only Hanmadi video analysis uses native Gemini; other models remain closed.
+    @hanmadiVideo {
+        method POST
+        path /llm/v1beta/models/hanmadi-chat:generateContent
+    }
+    handle @hanmadiVideo {
+        uri strip_prefix /llm
+        reverse_proxy 127.0.0.1:4100
+    }
     @jev {
         method POST
         path /llm/typesafe/v1/systemone
