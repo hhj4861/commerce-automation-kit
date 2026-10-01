@@ -1,6 +1,6 @@
 # Hanmadi JEV 검토 대기·중복 비교 v5
 
-상태: 구현·오프라인 검증 완료, PR CI 브라우저 검증 대기. main·운영 미반영. 유료 모델 호출, 키 변경, 자료 게시, 파인튜닝 없음.
+상태: 구현·오프라인·CI 브라우저 검증 완료. [PR #114](https://github.com/hhj4861/commerce-automation-kit/pull/114)에서 검토 중. main·운영 미반영. 유료 모델 호출, 키 변경, 자료 게시, 파인튜닝 없음.
 
 ## 문제와 변경
 
@@ -35,7 +35,8 @@
 - Next 라우트 타입 생성 후 TypeScript 검사 통과.
 - 수정 TypeScript/React 파일 ESLint 통과.
 - 회귀: 낮은 신뢰도/선택 확률의 모든 분류→검토, 확정 부정→제외, 정확 중복 유지, v4 기록 호환, 잘못된 앞 후보 격리, 불확실한 쌍의 뒤 후보 오염 방지, 단일 후보 1호출/최대 6후보 2호출·15쌍, 2차 429·응답 누락·네트워크 오류의 저장 차단과 분석 캐시 재사용, 표현·근거 index 정합성.
-- 로컬 브라우저 검증: Google Fonts의 IBM Plex Sans KR 파일 다운로드 시간 초과로 앱 진입 전 실패. 성공으로 보고하지 않는다. PR CI에서 빌드와 전체 사용자 흐름을 검증한다. 외부 제공자는 fixture이며 운영 실호출 검증과 구분한다.
+- 로컬 브라우저는 Google Fonts 파일 다운로드 시간 초과로 앱 진입 전 실패했다. 별도 [CI 사용자 흐름 실행](https://github.com/hhj4861/commerce-automation-kit/actions/runs/36853595812)은 소스 `9b6c52843bcb95f1783d56edcf3ddd8b9c7800e1`에서 빌드·전체 `test:v2`·`test:admin-deployment` 모두 통과했다. 외부 제공자는 fixture이며 운영 실호출 검증과 구분한다.
+- 브라우저 회귀는 낮은 신뢰도의 `unreliable` 후보에 대해 통과 0/검토 1/제외 0, 자료 준비 목록의 원분류·이유, 초안 검수의 과거 판정 표시와 검수 전 게시 버튼 비활성화를 확인했다.
 - React 점검: 새 네트워크 요청·effect·클라이언트 서버 import 없음. 기존 details/summary와 텍스트 표시를 사용하고, 원평가와 편집된 표현의 의미를 구분했다.
 
 ### 기존 v4 응답의 정책 재생
@@ -56,7 +57,7 @@
 원본 골드 SHA256: `e2bcf32c2231cfdb2b29bd53d17f6c52897a1bffcaa2b9c83d27f96aa26d8945`.
 원본 응답 SHA256: `e5be569e1375df3b952dc9661b951046c12fe3e5fce57b148403347df79388b9`.
 
-JEV 담당 기존 세션은 앱 파일을 편집하지 않고 동일 원응답 정책 재생과 5개 구조 회귀를 독립 확인했다. 최종 고정 변경 검토 결과는 PR 준비 후 기록한다.
+JEV 담당 기존 세션은 앱 파일을 편집하지 않고 동일 원응답 정책 재생과 5개 구조 회귀를 독립 확인했다. 고정 소스 커밋 `9b6c52843bcb95f1783d56edcf3ddd8b9c7800e1`의 9파일 변경을 검토하고 차단 이슈가 없음을 확인했다. 이 문서의 CI 결과 추가 기록은 해당 소스를 변경하지 않는다.
 
 검증 산출물 전체 경로:
 `/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/hanmadi-admin/jev-review-v5-20261001/`
