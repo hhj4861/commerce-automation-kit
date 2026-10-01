@@ -70,3 +70,19 @@ JEV 담당이 독립적으로 해당 시간대(08:28:55–08:29:30 UTC) gateway 
 - 서버 HTTP 연결은 성공했지만 앱의 응답 해석 단계에서 멈춰 영상→Jev→초안 전체 검증은 여전히 미완료다. 현재 후속 작업은 native JSON 응답 설정 전달과 앱 파서의 호환 확인이다. 원문·키 출력이나 추가 유료 요청 없이 진단한다.
 
 운영 중인 LiteLLM 1.102.1 소스를 직접 확인했다. `google_genai/main.py`는 `generationConfig`를 `config`로 전달하며, `llms/gemini/google_genai/transformation.py`는 camelCase/snake_case를 변환해 `generationConfig`와 `systemInstruction`을 요청 객체에 포함한다. 따라서 설정 누락을 원인으로 단정하지 않는다. 날짜를 지정한 `/spend/logs` 응답에는 해당 08:29 시작 행이 없었고, 기존 증적으로 응답 JSON의 최상위 유형·길이·finishReason을 복원하지 못했다. 본문을 저장하지 않는 진단 메타데이터와 회귀 테스트를 통한 원인 구분이 다음 후보이며, 이번 작업에서 앱 수정이나 추가 모델 호출은 하지 않았다.
+
+## #111 후속 검증 — 영상→Jev→검토대기 저장 성공
+
+2026-10-01 후속 운영 버전 `5eb59bcc07dcc77685264ef9971e2cb8c393b372`를 공개 `/api/deployment`에서 독립 확인했다. 아래는 앞선 #109 실패 이후의 별도 승인된 검증이며, 실패 기록을 삭제하거나 성공으로 바꾸지 않는다.
+
+Admin 담당 세션은 동일 영상 `OA6gpD9mP0A`를 09:18:36.065–09:19:41.119 UTC(65,054ms)에 1회 처리했다고 회신했다. 결과는 review, useful 표현 2개, confidence 0.73/0.76, accepted=false. 모델 `jev-1.13.0`, rubric `hanmadi-video-jev-v4`. 초안 1개(2표현)를 저장 후 재조회했고 게시 자료는 0→0이다. 담당자 증적은 [앱 QA](20261001-hanmadi-video-analysis-production.md)에 기록한다.
+
+JEV 담당의 읽기 전용 독립 확인(09:18:30–09:19:50 UTC):
+
+- gateway native POST HTTP **200** 1건과 `/typesafe/v1/systemone` POST HTTP **200** 1건 확인.
+- 전용 `hanmadi-admin-jev` 키의 누적 spend **$0.000131166**(직전 조회 0.0). 모델·경로·$0.50/30d·10 RPM·만료 없음 유지. 이는 LiteLLM 기록이며 공급자 최종 청구서와 구분한다.
+- `hanmadi-server` 키의 누적 spend **$0.4197001**(직전 $0.3895447). 공유 키이므로 차이 $0.0301554를 이 영상 한 건의 확정 비용으로 단정하지 않는다.
+- 코드의 채택 조건은 useful confidence≥0.85 및 useful 확률≥0.90이다. 두 결과는 confidence 기준에 미달하므로 고신뢰 자동 채택 성공이 아니라 의도한 검토대기 경로의 성공이다.
+- 이번 독립 확인은 로그·정책·공개 배포 버전 조회만 수행했다. 새 키, 모델 재호출, 서버 설정 변경, 자료 게시, 파인튜닝은 하지 않았다. 조회 프로세스 exit 0 확인.
+
+현재 남은 검증은 저장된 표현의 사람 검수, 여러 사례의 판단 정확도·오차단·지연·총비용, 고신뢰 채택과 실패 처리의 실제 품질이다. 한 건의 연결 성공을 모든 기능의 운영 검증 완료로 보고하지 않는다.
