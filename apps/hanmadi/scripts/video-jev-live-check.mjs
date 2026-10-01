@@ -1,5 +1,5 @@
 // Explicit, bounded live check. No video access, user data, or draft writes.
-// Run from apps/hanmadi: node --import tsx scripts/video-jev-live-check.mjs --live --max-requests 4
+// Run from apps/hanmadi: node --import tsx scripts/video-jev-live-check.mjs --live --max-requests 6
 import { pathToFileURL } from "node:url";
 import policy from "../lib/video-policy.ts";
 import videoProvider from "../lib/video-provider.ts";
@@ -87,7 +87,7 @@ async function observeUsage(response, signal) {
     }
     if (signal?.aborted) return null;
     const data = JSON.parse(Buffer.concat(chunks).toString("utf8"));
-    const inputTokens = data.usage?.input_tokens, outputTokens = data.usage?.output_tokens;
+    const inputTokens = data.usage?.input_tokens ?? data.usage?.prompt_tokens, outputTokens = data.usage?.output_tokens ?? data.usage?.completion_tokens;
     return [inputTokens, outputTokens].every((v) => Number.isSafeInteger(v) && v >= 0)
       ? { inputTokens, outputTokens } : null;
   } catch { return null; }
@@ -99,14 +99,14 @@ async function observeUsage(response, signal) {
 }
 
 export function parseLiveOptions(args) {
-  if (args.length !== 3 || args[0] !== "--live" || args[1] !== "--max-requests" || !/^[1-4]$/.test(args[2]))
-    throw new Error("Use --live --max-requests N (1-4); no requests without an explicit cap.");
+  if (args.length !== 3 || args[0] !== "--live" || args[1] !== "--max-requests" || !/^[1-6]$/.test(args[2]))
+    throw new Error("Use --live --max-requests N (1-6); no requests without an explicit cap.");
   return { maxRequests: Number(args[2]) };
 }
 
 export async function runVideoJevCheck({ maxRequests, fetcher = fetch } = {}) {
-  if (!Number.isInteger(maxRequests) || maxRequests < 1 || maxRequests > 4)
-    throw new Error("Explicit request cap must be between 1 and 4.");
+  if (!Number.isInteger(maxRequests) || maxRequests < 1 || maxRequests > 6)
+    throw new Error("Explicit request cap must be between 1 and 6.");
   if (!process.env.HANMADI_JEV_API_KEY?.trim() || !process.env.LITELLM_BASE_URL?.trim())
     throw new Error("Dedicated Jev key and gateway URL required.");
   const started = Date.now();
@@ -124,9 +124,10 @@ export async function runVideoJevCheck({ maxRequests, fetcher = fetch } = {}) {
         async (url, init) => {
           // Reject BEFORE incrementing or invoking the real transport.
           if (requests.length >= maxRequests) { capped = true; throw new Error("request_limit"); }
-          const ids = Object.keys(JSON.parse(init.body).questions);
+          const body = JSON.parse(init.body);
+          const ids = Object.keys(body.questions ?? {});
           const record = { batch: batchIndex + 1,
-            stage: ids.every((id) => /^unit[0-9]+_(meaning|reading|evidence|relevance|novelty)$/.test(id)) ? "quality" : "dedupe",
+            stage: body.messages ? "language" : ids.every((id) => /^unit[0-9]+_(meaning|reading|evidence|relevance|novelty)$/.test(id)) ? "quality" : "dedupe",
             questionCount: ids.length, httpStatus: null, usage: null, elapsedMs: 0 };
           requests.push(record);
           const requestStarted = Date.now();
@@ -158,7 +159,7 @@ export async function runVideoJevCheck({ maxRequests, fetcher = fetch } = {}) {
     }
   }
   const rows = observations.flatMap((o) => o.results);
-  const complete = observations.length === liveBatches.length && observations.every((o) => o.state === "completed");
+  const complete = !capped && observations.length === liveBatches.length && observations.every((o) => o.state === "completed");
   const usages = requests.filter((r) => r.usage !== null);
   return { event: "hanmadi_jev_synthetic_check", rubric: policy.VIDEO_RUBRIC,
     maxRequests, requests: requests.length, elapsedMs: Date.now() - started,
@@ -187,7 +188,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     if (!result.passed) process.exitCode = 1;
   } catch {
     // Configuration errors are fixed strings; never print exception or environment.
-    console.error("JEV check not started. Require dedicated key, gateway URL and --live --max-requests N (1-4).");
+    console.error("JEV check not started. Require dedicated key, gateway URL and --live --max-requests N (1-6).");
     process.exitCode = 1;
   }
 }
