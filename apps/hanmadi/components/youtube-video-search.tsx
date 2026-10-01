@@ -2,16 +2,11 @@
 
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
-import { curriculum, studyLanguages, type StudyLanguage } from "@/lib/v2";
 import type { YoutubeSearchPage, YoutubeVideo } from "@/lib/youtube-search";
 import type { ContentDraft } from "@/lib/knowledge";
 import { VideoPreparationQueue } from "./video-preparation-queue";
 
-export type SelectedVideo = YoutubeVideo & {
-  language: StudyLanguage;
-  scene: string;
-};
-type Search = { query: string; language: StudyLanguage; scene: string };
+type Search = { query: string };
 type LoadedPage = YoutubeSearchPage & { search: Search; token?: string };
 
 async function fetchPage(search: Search, signal: AbortSignal, token?: string) {
@@ -54,11 +49,9 @@ export function YoutubeVideoSearch({
   onBusyChange: (busy: boolean) => void;
 }) {
   const [query, setQuery] = useState("");
-  const [language, setLanguage] = useState<StudyLanguage>("ja");
-  const [scene, setScene] = useState("smalltalk");
   const [pages, setPages] = useState<LoadedPage[]>([]);
   const [pageIndex, setPageIndex] = useState(0);
-  const [selected, setSelected] = useState<SelectedVideo[]>([]);
+  const [selected, setSelected] = useState<YoutubeVideo[]>([]);
   const [searchBusy, setBusy] = useState(false);
   const [batchBusy, setBatchBusy] = useState(false);
   const busy = searchBusy || batchBusy;
@@ -148,7 +141,7 @@ export function YoutubeVideoSearch({
       const additions = items.flatMap((p) =>
         p.videos.map((v) => {
           ids.add(v.id);
-          return { ...v, language: p.search.language, scene: p.search.scene };
+          return v;
         }),
       );
       setSelected((previous) => {
@@ -206,16 +199,7 @@ export function YoutubeVideoSearch({
     setSelected((previous) =>
       allHere
         ? previous.filter((v) => !page.videos.some((item) => item.id === v.id))
-        : [
-            ...previous,
-            ...page.videos
-              .filter((v) => !selectedIds.has(v.id))
-              .map((v) => ({
-                ...v,
-                language: page.search.language,
-                scene: page.search.scene,
-              })),
-          ],
+        : [...previous, ...page.videos.filter((v) => !selectedIds.has(v.id))],
     );
   }
   function move(index: number) {
@@ -243,7 +227,7 @@ export function YoutubeVideoSearch({
           className="vs-search"
           onSubmit={(e) => {
             e.preventDefault();
-            void load({ query: query.trim(), language, scene }, 0);
+            void load({ query: query.trim() }, 0);
           }}
         >
           <label className="vs-query">
@@ -265,37 +249,10 @@ export function YoutubeVideoSearch({
           >
             {searchBusy ? "검색 중…" : "영상 검색"}
           </button>
-          <div className="vs-filters">
-            <label>
-              영상 언어
-              <select
-                value={language}
-                onChange={(e) => setLanguage(e.target.value as StudyLanguage)}
-                disabled={busy || disabled}
-              >
-                {Object.entries(studyLanguages).map(([id, l]) => (
-                  <option value={id} key={id}>
-                    {l.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              자료에 사용할 상황
-              <select
-                value={scene}
-                onChange={(e) => setScene(e.target.value)}
-                disabled={busy || disabled}
-              >
-                {curriculum.scenes.map((s) => (
-                  <option value={s.id} key={s.id}>
-                    {s.title}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <span>한 페이지에 최대 5개씩 표시해요.</span>
-          </div>
+          <p className="vs-search-help">
+            한 페이지에 최대 5개씩 표시해요. 학습 언어와 상황은 영상을 담은 뒤
+            자료 준비 목록에서 설정해요.
+          </p>
         </form>
         {!configured && !disabled && (
           <p className="vs-message">
@@ -327,7 +284,6 @@ export function YoutubeVideoSearch({
                 ? `“${page.search.query}” 검색 결과`
                 : "어떤 대화를 가르치고 싶으세요?"}
             </h3>
-            {page && <span>{studyLanguages[page.search.language].name}</span>}
           </div>
           <p className="vs-live" role="status">
             {searchBusy
@@ -443,14 +399,7 @@ export function YoutubeVideoSearch({
                         setSelected((previous) =>
                           checked
                             ? previous.filter((v) => v.id !== video.id)
-                            : [
-                                ...previous,
-                                {
-                                  ...video,
-                                  language: page.search.language,
-                                  scene: page.search.scene,
-                                },
-                              ],
+                            : [...previous, video],
                         );
                       }}
                     />

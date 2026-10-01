@@ -63,6 +63,16 @@ test("requests exactly five videos from the official API, forwarding opaque pagi
   );
 });
 
+test("keyword-only search does not inject a material language or scene", async () => {
+  await searchYoutubeVideos({ query: "카페 회화" }, "key", async (input) => {
+    const url = new URL(String(input));
+    assert.equal(url.searchParams.get("q"), "카페 회화");
+    assert.equal(url.searchParams.has("relevanceLanguage"), false);
+    assert.equal(url.searchParams.has("scene"), false);
+    return Response.json({ items: [] });
+  });
+});
+
 test("rejects invalid input before charging search budget or calling YouTube", () => {
   for (const q of [null, 1, "", "  ", "a".repeat(101)])
     assert.throws(() => validateYoutubeSearch(q, undefined), /검색어/);

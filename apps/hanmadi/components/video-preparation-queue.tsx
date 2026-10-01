@@ -1,12 +1,24 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { curriculum, studyLanguages } from "@/lib/v2";
+import {
+  curriculum,
+  studyLanguages,
+  isStudyLanguage,
+  type StudyLanguage,
+} from "@/lib/v2";
 import type { ContentDraft } from "@/lib/knowledge";
-import type { SelectedVideo } from "./youtube-video-search";
+import type { YoutubeVideo } from "@/lib/youtube-search";
+
+type MaterialSettings = {
+  language: StudyLanguage;
+  scene: string;
+  level: number;
+};
 
 type Entry = {
   text: string;
+  settings?: MaterialSettings;
   state: "waiting" | "running" | "created" | "failed" | "unknown";
   message?: string;
   draft?: ContentDraft;
@@ -32,7 +44,7 @@ export function VideoPreparationQueue({
   onOpenLibrary,
   onBusyChange,
 }: {
-  videos: SelectedVideo[];
+  videos: YoutubeVideo[];
   disabled: boolean;
   onRemove: (id: string) => void;
   onClear: () => void;
@@ -43,6 +55,8 @@ export function VideoPreparationQueue({
 }) {
   const [entries, setEntries] = useState<Record<string, Entry>>({});
   const [rights, setRights] = useState("");
+  const [language, setLanguage] = useState<StudyLanguage | "">("");
+  const [scene, setScene] = useState("");
   const [level, setLevel] = useState(1);
   const [confirmedFor, setConfirmedFor] = useState("");
   const [running, setRunning] = useState(false);
@@ -68,7 +82,12 @@ export function VideoPreparationQueue({
   const uncertain = videos.filter(
     (v) => entries[v.id]?.state === "unknown",
   ).length;
+  const settings: MaterialSettings | null =
+    isStudyLanguage(language) && curriculum.scenes.some((s) => s.id === scene)
+      ? { language, scene, level }
+      : null;
   const ready =
+    settings !== null &&
     pending.length > 0 &&
     missing.length === 0 &&
     rights.trim().length >= 10 &&
@@ -145,7 +164,7 @@ export function VideoPreparationQueue({
     }
   }
   async function generateAll() {
-    if (operation.current || locked || !ready) return;
+    if (operation.current || locked || !ready || !settings) return;
     operation.current = true;
     stop.current = false;
     setStopping(false);
@@ -161,7 +180,12 @@ export function VideoPreparationQueue({
         const entry = entries[video.id] ?? empty;
         setEntries((previous) => ({
           ...previous,
-          [video.id]: { ...entry, state: "running", message: undefined },
+          [video.id]: {
+            ...entry,
+            settings,
+            state: "running",
+            message: undefined,
+          },
         }));
         try {
           const response = await fetch("/api/study/admin", {
@@ -169,9 +193,7 @@ export function VideoPreparationQueue({
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               action: "generate",
-              language: video.language,
-              scene: video.scene,
-              level,
+              ...settings,
               title: video.title.slice(0, 100),
               sourceUrl: video.url,
               rights: rights.trim(),
@@ -221,6 +243,7 @@ export function VideoPreparationQueue({
             ...previous,
             [video.id]: {
               ...entry,
+              settings,
               state: "unknown",
               message:
                 "응답을 확인하지 못했어요. 중복 생성을 막기 위해 재실행하지 않아요. 콘텐츠 목록에서 저장 여부를 확인해 주세요.",
@@ -264,8 +287,9 @@ export function VideoPreparationQueue({
         </button>
       </div>
       <p className="vs-tray-help">
-        영상별 원문을 연결하고 전체 자료를 한 번에 만드세요. 완성한 초안은
-        콘텐츠 목록에 저장돼요. 준비 중인 목록·원문은 새로고침하면 비워져요.
+        저장할 자료의 학습 언어·상황·레벨을 정하고 영상별 원문을 연결해 주세요.
+        영상마다 별도 초안으로 저장돼요. 준비 중인 목록·설정·원문은 새로고침하면
+        비워져요.
       </p>
       {notice && (
         <p className="vs-batch-notice" role="status">
@@ -285,7 +309,49 @@ export function VideoPreparationQueue({
       ) : (
         <>
           <div className="vs-batch-settings">
-            <h3>함께 만들 자료 설정</h3>
+            <h3>저장할 자료 설정</h3>
+            <small>
+              아직 만들지 않은 자료에 공통으로 적용돼요. 완료한 초안은 바뀌지
+              않아요.
+            </small>
+            <label>
+              학습 언어
+              <select
+                aria-label="학습 언어"
+                value={language}
+                disabled={locked}
+                onChange={(e) =>
+                  setLanguage(e.target.value as StudyLanguage | "")
+                }
+              >
+                <option value="" disabled>
+                  학습 언어 선택
+                </option>
+                {Object.entries(studyLanguages).map(([id, l]) => (
+                  <option value={id} key={id}>
+                    {l.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              자료에 사용할 상황
+              <select
+                aria-label="자료에 사용할 상황"
+                value={scene}
+                disabled={locked}
+                onChange={(e) => setScene(e.target.value)}
+              >
+                <option value="" disabled>
+                  상황 선택
+                </option>
+                {curriculum.scenes.map((s) => (
+                  <option value={s.id} key={s.id}>
+                    {s.title}
+                  </option>
+                ))}
+              </select>
+            </label>
             <label>
               공통 연습 레벨
               <select
@@ -334,6 +400,8 @@ export function VideoPreparationQueue({
             {videos.map((video) => {
               const entry = entries[video.id] ?? empty;
               const editable = ["waiting", "failed"].includes(entry.state);
+              const savedSettings =
+                entry.draft ?? (editable ? settings : entry.settings);
               return (
                 <li key={video.id} data-video-id={video.id}>
                   <div className="vs-batch-item-heading">
@@ -345,9 +413,10 @@ export function VideoPreparationQueue({
                     </span>
                   </div>
                   <small>
-                    {studyLanguages[video.language].name} ·{" "}
-                    {curriculum.scenes.find((s) => s.id === video.scene)?.title}{" "}
-                    · 영상 ID {video.id}
+                    {savedSettings
+                      ? `${studyLanguages[savedSettings.language].name} · ${curriculum.scenes.find((s) => s.id === savedSettings.scene)?.title} · 레벨 ${savedSettings.level}`
+                      : "학습 언어·상황 설정 전"}
+                    {" · "}영상 ID {video.id}
                   </small>
                   {editable && (
                     <details className="vs-source-input">
@@ -427,6 +496,9 @@ export function VideoPreparationQueue({
               초안 완료 {completed}개 · 만들 자료 {pending.length}개
               {uncertain ? ` · 확인 필요 ${uncertain}개` : ""}
             </p>
+            {pending.length > 0 && !settings && (
+              <p>저장할 자료의 학습 언어와 상황을 선택해 주세요.</p>
+            )}
             {missing.length > 0 && (
               <p>
                 원문 {missing.length}개를 먼저 연결해 주세요. 원문 없는 영상은

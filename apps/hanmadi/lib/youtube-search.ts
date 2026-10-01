@@ -66,7 +66,7 @@ function titleText(value: unknown): string {
 }
 
 export async function searchYoutubeVideos(
-  input: { query: string; language: string; pageToken?: string },
+  input: { query: string; language?: string; pageToken?: string },
   apiKey: string,
   fetcher: typeof fetch = fetch,
 ): Promise<YoutubeSearchPage> {
@@ -76,7 +76,7 @@ export async function searchYoutubeVideos(
     part: "snippet",
     type: "video",
     maxResults: String(YOUTUBE_PAGE_SIZE),
-    relevanceLanguage: input.language,
+    ...(input.language ? { relevanceLanguage: input.language } : {}),
     q: input.query,
     ...(input.pageToken ? { pageToken: input.pageToken } : {}),
   }).toString();
