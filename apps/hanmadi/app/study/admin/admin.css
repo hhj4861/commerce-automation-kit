@@ -261,26 +261,12 @@
   background: #2546b8;
   border-color: #2546b8;
 }
-.ks .vs-filters {
-  display: flex;
-  align-items: end;
-  flex-wrap: wrap;
-  gap: 12px 20px;
+.ks .vs-search-help {
   grid-column: 1 / -1;
-}
-.ks .vs-filters label {
-  flex: 0 1 170px;
-}
-.ks .vs-filters select {
-  min-height: 40px;
-  font-size: 14px;
-  padding: 8px 30px 8px 12px;
-}
-.ks .vs-filters > span {
+  margin: 0;
   font-size: 12px;
+  line-height: 1.7;
   color: #64748b;
-  padding-bottom: 10px;
-  margin-left: auto;
 }
 .ks .vs-results {
   border-top: 1px solid #e0e7f0;
@@ -694,16 +680,6 @@
   .ks .vs-primary {
     padding: 10px 14px;
     font-size: 14px;
-  }
-  .ks .vs-filters {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    gap: 12px;
-  }
-  .ks .vs-filters > span {
-    grid-column: 1/-1;
-    margin: 0;
-    padding: 0;
   }
   .ks .vs-results-heading {
     padding: 20px 18px 0;
