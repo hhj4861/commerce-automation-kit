@@ -1,0 +1,85 @@
+{
+  "video": "/Users/admin/Downloads/vedio/glass-substrate-episode-1-v2.mp4",
+  "bytes": 363674671,
+  "sha256": "113f5951e7851f0b68d21f299e3d29db50b3c064a2b1fed0c109a1f0598e601e",
+  "durationSeconds": 373.938,
+  "resolution": [
+    1920,
+    1080
+  ],
+  "renderSourceResolution": [
+    1920,
+    1080
+  ],
+  "renderSourceFps": 12,
+  "deliveryInterpolation": "framerate blend to 24fps",
+  "loopedSceneVideo": false,
+  "newPaidRequests": 0,
+  "fps": "24/1",
+  "audioCodec": "aac",
+  "voiceId": "RU7aSi6lT4uQBXMLgDxK",
+  "speed": 1.0,
+  "sceneCount": 15,
+  "captionCount": 110,
+  "fullDecode": "passed",
+  "captionTextAndTiming": "passed",
+  "silencesOver1_3Seconds": [],
+  "meanVolumeDb": [
+    "-17.4 dB"
+  ],
+  "maxVolumeDb": [
+    "-0.8 dB"
+  ],
+  "higgsfield": {
+    "factoryGenerationId": "8a63ba30-24d3-4a05-9e58-fbfa531d6b3d",
+    "previousGenerationCreditsQuoted": 54,
+    "newGenerationRequests": 0,
+    "newCreditsSpent": 0,
+    "reusedAt": [
+      {
+        "start": 0,
+        "end": 6
+      },
+      {
+        "start": 217.58333333333331,
+        "end": 223.58333333333331
+      }
+    ],
+    "openingPictureSSIM": 0.995771
+  },
+  "notChecked": "No claim of engineering-scale simulation or actual factory footage.",
+  "sourceReuse": {
+    "higgsfieldSha256": "76286c8af34c4bc2c2b5b7260debdd315cf3263d1569f071ec935f01cef1228c",
+    "narrationSha256": {
+      "beat-00.mp3": "edb1bae602fe365e312b2038d735c74a583d879b76563d29053c7f77726f05f4",
+      "beat-01.mp3": "a745aa7a0860e800ae5acd28da448a7ea1c3ae776909289ecd7789493696ed29",
+      "beat-02.mp3": "8bd09cbf0f55945a83df2795def9d8db620fab6c1a9202f9ae9aa1d182503d37",
+      "beat-03.mp3": "d7dc7c1d6d2917ee95e8a975909072a7d1725cc5cc3fc8d99bd1b317aaab13cc",
+      "beat-04.mp3": "b828fb20ab2c5d2bf25f54f8e9799f5af3ba0c8741d7552bd4eb9d790310a4b0",
+      "beat-05.mp3": "6f10abe3489a7639477ed3ab480458f1ecca7c0f62d9dc2dd757bebe7bbe20e1",
+      "beat-06.mp3": "5c8e0b32ec478d1087a07a71620904fd00c19fb9b8f3b91ff8006fefaa13ecec",
+      "beat-07.mp3": "b445db71e77b20d840e8a41f998126fd87a8c004cb7f56500152f31d0706d5bf",
+      "beat-08.mp3": "8ac2b60ac1ce89c9e15449a1bfb2f084171190ce911f65629c695f15143f946c",
+      "beat-09.mp3": "4740d3aeedd156cfe084c187304d0ef455678e569dfaf249c295dc0a45cad0e4",
+      "beat-10.mp3": "4586e30654e4c9ad086db4cf5d8e03271165ede5c2fffe737ee00d69dd173a3c",
+      "beat-11.mp3": "d707c245e62766995aed006b11c10aa64d11dcbe510b2313b98fbbd172dde251",
+      "beat-12.mp3": "f8c2d25f19128c20f6c945fc9bef3ccaa3d2c6279f07c430edd6a68acb2d2d3d",
+      "beat-13.mp3": "6bc134e6f5ccecacc0d425bf29dd1665c904c37f1cfddd3d03839edb3eb61cf0",
+      "beat-14.mp3": "8421eb4e33252f1811982e6034cea94a1a0e1fba826ba12560b942cb0b49ea42"
+    }
+  },
+  "visualReview": {
+    "status": "passed",
+    "method": "15 timestamped frames from final MP4 plus earlier mechanism comparisons",
+    "contactSheet": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-glass-substrate-v2/final-contactsheet.jpg",
+    "checks": [
+      "caption readability and frame boundaries",
+      "corrected memory-layer ordering",
+      "warpage contact markers",
+      "thermal material legend",
+      "protected glass handling",
+      "AI recreation label on reused opening"
+    ],
+    "limitation": "Sampled visual inspection, not physical simulation validation."
+  }
+}

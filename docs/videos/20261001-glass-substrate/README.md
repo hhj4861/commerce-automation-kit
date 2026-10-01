@@ -32,3 +32,24 @@
 `produce.mjs`는 `VIDEO_CACHE`, `CAK_ENGINE_ROOT`와 공식 CLI를 가리키는 `SHOPSHORTS_HIGGSFIELD_CLI`를 사용한다. 이번 실행의 인증/다운로드 어댑터는 기존 `shopshorts-release-8596e3b`의 `studio-higgsfield-auth.mjs`, `studio-higgsfield.mjs`, `runner-client.mjs`이다. 비밀은 기존 Cloudflare 브로커에서 읽고 단기 인증 파일은 승인된 로컬 보안 저장소에만 둔다. CLI 버전은 1.1.26. OS 디스크 마운트가 실패해 공식 7-Zip 26.03으로 기존 Blender DMG를 작업 산출물 폴더에 풀어 실행했다.
 
 영상 생성 소스의 작업 브랜치 저장이며 운영 제작실 배포나 YouTube 게시를 뜻하지 않는다.
+
+
+## v2 재제작 — 2026-10-01
+
+사용자 요청: 1탄을 다시 제작하되 이전 Higgsfield 영상을 재사용한다. 기존 완성본을 덮어쓰지 않고 `glass-substrate-episode-1-v2.mp4`로 내보낸다. 재제작 완료: **6분 13.938초 / 1920×1080 / 363,674,671바이트**. 전체 디코딩, 15개 원본 장면 길이, 자막 110개 원문·타이밍 검사 통과. 1.3초 이상 무음은 없으며 최종 영상에서 추출한 15개 장면의 구도·범례·자막을 시각 확인했다. 첫 6초와 기존 Higgsfield 소스의 텍스트 제외 화면 SSIM은 0.995771이다. 완료 증거는 `verification-v2.json`, 타임라인은 `project-v2.json`에 기록한다.
+
+완성본: `/Users/admin/Downloads/vedio/glass-substrate-episode-1-v2.mp4`. 30초 미리보기: `/Users/admin/Downloads/vedio/glass-substrate-episode-1-v2-preview-30s.mp4`.
+
+- 기존 공장 영상(생성 ID `8a63ba30-24d3-4a05-9e58-fbfa531d6b3d`)의 첫 6초를 도입부와 제조 설명 부분에 재사용한다. 새 영상 생성·TTS API 호출은 없다. 이 재제작의 신규 Higgsfield 생성/재생성 횟수는 0회, 신규 사용 크레딧은 0이다. 과거 생성 당시 54크레딧 조회 견적과 현재 계정 잔액을 혼동하지 않는다.
+- 기존 15개 Kyle 음성 파일, 정배속, 대본, 자막 정렬을 유지한다. 반복하던 8초 영상 대신 각 내레이션 길이 전체에 걸친 독립적인 동작을 렌더링한다.
+- 부품 분리, 데이터 경로 증가, 기판 확장, 휘어짐과 접점 높이 차이, 재료별 열팽창, 미세 배선 등장, 보호 운반, 제조·검사, 서버 및 시스템 연결을 장면별로 구분한다. 변형과 치수는 개념 설명용이다.
+- 새 3D 원본은 1920×1080 / 12fps, 납품 영상은 FFmpeg 프레임 혼합 보간으로 24fps다. 원본부터 24fps로 렌더링했다고 표현하지 않는다. 웜 그레이 배경, 구리 배선, 짙은 칩, 유리 코어의 대비를 유지한다.
+- 사용자 레퍼런스: https://www.youtube.com/watch?v=UcAbZwtEfbk . 제작자의 설명·스크립트와 11:58의 Three.js 화면을 브라우저에서 확인했다. 단순 가구·카메라 조건에서는 코드 쪽이 더 좋았다는 제작자 평가(11:13), 인물·완성 에셋·동작을 추가했을 때 차이가 생겼다는 설명(12:30 이후)을 구분한다. 이를 모든 코드 3D의 품질 상한이나 모든 Higgsfield 모델의 성능으로 일반화하지 않는다. 참고 영상·소품은 다운로드하거나 재사용하지 않았다.
+
+재현 순서:
+
+1. `scene-v2.py --cache <v2-cache>/3d --source-cache <v1-cache>`를 기존 Blender에서 실행한다. `--preview --shot inside,warpage,glass,manufacture`로 주요 구도를 먼저 확인한다.
+2. `assemble-v2.py --cache <v2-cache> --source-cache <v1-cache> --font-dir <폰트 폴더> --output <v2 MP4>`로 합성한다. 원본 미디어 길이와 해상도를 검사하며 반복 재생하지 않는다.
+3. `verify-v2.py --cache <v2-cache> --source-cache <v1-cache> --video <v2 MP4>`로 전체 디코딩·자막·음성·모든 3D 장면 길이를 검사하고, 최종 프레임을 별도로 시각 검수한다.
+
+중간 산출물: 사용자 iCloud 작업 루트의 `commerce-automation-kit/20261001-glass-substrate-v2/`. v1 소스 자산은 그대로 보존한다.

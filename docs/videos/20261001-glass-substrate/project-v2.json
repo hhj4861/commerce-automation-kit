@@ -1,0 +1,149 @@
+{
+  "title": "AI칩 아래에 깨지기 쉬운 유리를 넣는다고?",
+  "voice": "RU7aSi6lT4uQBXMLgDxK",
+  "speed": 1.0,
+  "resolution": [
+    1920,
+    1080
+  ],
+  "fps": 24,
+  "captionAlignment": "Reused approved-script Whisper alignment",
+  "renderSourceResolution": [
+    1920,
+    1080
+  ],
+  "renderSourceFps": 12,
+  "deliveryInterpolation": "FFmpeg framerate blend to 24fps",
+  "loopedSceneVideo": false,
+  "newPaidRequests": 0,
+  "higgsfieldReused": {
+    "generationId": "8a63ba30-24d3-4a05-9e58-fbfa531d6b3d",
+    "placements": [
+      "hook 0-6s",
+      "manufacture 0-6s"
+    ]
+  },
+  "scenes": [
+    {
+      "id": "hook",
+      "start": 0,
+      "duration": 23.625,
+      "narration": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-glass-substrate/remote-narration/beat-00.mp3",
+      "visual": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-glass-substrate-v2/3d/hook.mp4",
+      "caption": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-glass-substrate-v2/edit/00.ass"
+    },
+    {
+      "id": "inside",
+      "start": 23.625,
+      "duration": 22.958333333333332,
+      "narration": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-glass-substrate/remote-narration/beat-01.mp3",
+      "visual": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-glass-substrate-v2/3d/inside.mp4",
+      "caption": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-glass-substrate-v2/edit/01.ass"
+    },
+    {
+      "id": "traffic",
+      "start": 46.58333333333333,
+      "duration": 23.541666666666668,
+      "narration": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-glass-substrate/remote-narration/beat-02.mp3",
+      "visual": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-glass-substrate-v2/3d/traffic.mp4",
+      "caption": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-glass-substrate-v2/edit/02.ass"
+    },
+    {
+      "id": "crowded",
+      "start": 70.125,
+      "duration": 22.041666666666668,
+      "narration": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-glass-substrate/remote-narration/beat-03.mp3",
+      "visual": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-glass-substrate-v2/3d/crowded.mp4",
+      "caption": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-glass-substrate-v2/edit/03.ass"
+    },
+    {
+      "id": "warpage",
+      "start": 92.16666666666667,
+      "duration": 23.208333333333332,
+      "narration": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-glass-substrate/remote-narration/beat-04.mp3",
+      "visual": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-glass-substrate-v2/3d/warpage.mp4",
+      "caption": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-glass-substrate-v2/edit/04.ass"
+    },
+    {
+      "id": "thermal",
+      "start": 115.375,
+      "duration": 25.541666666666668,
+      "narration": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-glass-substrate/remote-narration/beat-05.mp3",
+      "visual": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-glass-substrate-v2/3d/thermal.mp4",
+      "caption": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-glass-substrate-v2/edit/05.ass"
+    },
+    {
+      "id": "glass",
+      "start": 140.91666666666666,
+      "duration": 25.291666666666668,
+      "narration": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-glass-substrate/remote-narration/beat-06.mp3",
+      "visual": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-glass-substrate-v2/3d/glass.mp4",
+      "caption": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-glass-substrate-v2/edit/06.ass"
+    },
+    {
+      "id": "wiring",
+      "start": 166.20833333333331,
+      "duration": 25.166666666666668,
+      "narration": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-glass-substrate/remote-narration/beat-07.mp3",
+      "visual": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-glass-substrate-v2/3d/wiring.mp4",
+      "caption": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-glass-substrate-v2/edit/07.ass"
+    },
+    {
+      "id": "tradeoff",
+      "start": 191.37499999999997,
+      "duration": 26.208333333333332,
+      "narration": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-glass-substrate/remote-narration/beat-08.mp3",
+      "visual": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-glass-substrate-v2/3d/tradeoff.mp4",
+      "caption": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-glass-substrate-v2/edit/08.ass"
+    },
+    {
+      "id": "manufacture",
+      "start": 217.58333333333331,
+      "duration": 27.833333333333332,
+      "narration": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-glass-substrate/remote-narration/beat-09.mp3",
+      "visual": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-glass-substrate-v2/3d/manufacture.mp4",
+      "caption": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-glass-substrate-v2/edit/09.ass"
+    },
+    {
+      "id": "industry",
+      "start": 245.41666666666666,
+      "duration": 24.208333333333332,
+      "narration": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-glass-substrate/remote-narration/beat-10.mp3",
+      "visual": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-glass-substrate-v2/3d/industry.mp4",
+      "caption": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-glass-substrate-v2/edit/10.ass"
+    },
+    {
+      "id": "daily",
+      "start": 269.625,
+      "duration": 24.416666666666668,
+      "narration": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-glass-substrate/remote-narration/beat-11.mp3",
+      "visual": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-glass-substrate-v2/3d/daily.mp4",
+      "caption": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-glass-substrate-v2/edit/11.ass"
+    },
+    {
+      "id": "limits",
+      "start": 294.0416666666667,
+      "duration": 28.416666666666668,
+      "narration": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-glass-substrate/remote-narration/beat-12.mp3",
+      "visual": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-glass-substrate-v2/3d/limits.mp4",
+      "caption": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-glass-substrate-v2/edit/12.ass"
+    },
+    {
+      "id": "reveal",
+      "start": 322.45833333333337,
+      "duration": 26.458333333333332,
+      "narration": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-glass-substrate/remote-narration/beat-13.mp3",
+      "visual": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-glass-substrate-v2/3d/reveal.mp4",
+      "caption": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-glass-substrate-v2/edit/13.ass"
+    },
+    {
+      "id": "ending",
+      "start": 348.9166666666667,
+      "duration": 25.0,
+      "narration": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-glass-substrate/remote-narration/beat-14.mp3",
+      "visual": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-glass-substrate-v2/3d/ending.mp4",
+      "caption": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-glass-substrate-v2/edit/14.ass"
+    }
+  ],
+  "duration": 373.9166666666667
+}
