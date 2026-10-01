@@ -1,5 +1,12 @@
 # commerce-automation-kit — 프로젝트 규칙 (새 세션 자동 로드)
 
+## 현재 작업 경로 — 2026-10-01 사용자 지시
+
+- 작업 루트는 `/Users/admin/workSpace/commerce-automation-kit`이다. iCloud checkout 대신 GitHub에서 새로 clone한 로컬 저장소를 사용한다.
+- 기존 iCloud checkout과 `/Users/admin/Developer/commerce-automation-kit` 사본은 보존한다. 미커밋 변경·로컬 설정·연결 worktree를 임의 삭제하거나 덮어쓰지 않는다.
+- 새 clone에 Git 미추적 설정·인증정보·의존성·런타임 데이터가 이전되었다고 가정하지 않는다. 서버와 자동화의 경로 전환은 별도 확인한다.
+- 렌더·임시 산출물은 기존 전역 지침의 iCloud `gpt 작업` 루트를 계속 사용한다. 이번 변경은 소스 저장소의 작업 경로에 한정한다.
+
 이 파일은 Codex가 이 저장소에서 세션을 열 때 자동으로 읽는다. **작업 전 반드시 이 규칙을 따른다.**
 
 ## 이 프로젝트가 무엇인지 (한 문단)
