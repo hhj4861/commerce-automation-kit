@@ -1,6 +1,6 @@
 # Hanmadi Admin 영상 분석 운영 배포 — 2026-10-01
 
-사용자가 PR #103 및 후속 PR #107 머지와 운영 배포를 명시 승인했다. 최신 운영 배포 #109는 성공했고 초기 Gemini HTTP 400 문제는 해소됐지만, 실제 영상 응답의 JSON 해석 실패가 남아 영상 분석→JEV→초안 저장 검증은 아직 완료되지 않았다. 검색·캐시·관리자 접근과 배포 성공을 영상 학습 흐름 성공과 구분한다.
+사용자가 PR #103, #107 및 후속 #110의 머지와 운영 배포를 명시 승인했다. 최신 운영 배포 #111과 같은 영상 1건의 **분석→JEV→검토 대기 초안 저장·재조회 검증을 완료했다**. 표현 2개는 JEV가 유용하다고 분류했지만 신뢰도 기준 미달이므로 검토 대기에 보관했다. 자료 게시와 파인튜닝은 실행하지 않았다. 이전 Gemini HTTP 400·JSON 해석 실패 기록은 아래에 보존한다.
 
 ## 배포
 
@@ -50,9 +50,30 @@
 
 후속 [PR #110](https://github.com/hhj4861/commerce-automation-kit/pull/110), `fix/hanmadi-video-json`의 `b90532b`: responseSchema로 최상위 객체와 필수 필드를 지정하고, 완전한 JSON/코드 펜스 앞뒤 공백만 정리하며, 실패 로그에는 문자 수·JSON 타입·펜스 여부만 남긴다. 기존 잘못된 응답 차단과 JEV·저장 전 중단은 유지한다. 실제 실패 원인 확정이나 운영 성공을 주장하지 않는 계약 강화·진단 수정이다.
 
-로컬 테스트 145개·TypeScript·변경 파일 ESLint·diff 검사를 통과했고 본인 3개 파일을 커밋·upstream push했다. 추가 모델 호출은 하지 않았다. PR #110의 5종 CI(study·connection·connections·native-runtime·Platform GitOps verification)가 모두 통과했다. [study](https://github.com/hhj4861/commerce-automation-kit/actions/runs/36837745682)는 테스트·빌드·브라우저 흐름, [connection](https://github.com/hhj4861/commerce-automation-kit/actions/runs/36837745640)은 실제 Dify 연결을 포함한다. main 머지·최소 운영 승격·같은 영상 재검증 승인을 별도로 요청했으며 PR은 OPEN, 운영 미반영이다.
+로컬 테스트 145개·TypeScript·변경 파일 ESLint·diff 검사를 통과했고 본인 3개 파일을 커밋·upstream push했다. 추가 모델 호출은 하지 않았다. PR #110의 5종 CI(study·connection·connections·native-runtime·Platform GitOps verification)가 모두 통과했다. [study](https://github.com/hhj4861/commerce-automation-kit/actions/runs/36837745682)는 테스트·빌드·브라우저 흐름, [connection](https://github.com/hhj4861/commerce-automation-kit/actions/runs/36837745640)은 실제 Dify 연결을 포함한다. 이후 사용자의 “머지,배포해줘” 승인으로 아래 #110/#111을 머지했다.
 
 JEV 담당이 운영에 설치된 변환기에 이 커밋의 실제 generationConfig를 메모리로 입력해 외부 네트워크 시도 0인 검증을 수행했다. 첫 완전 일치 assertion은 정규화 때문에 실패했다. 후속 비교에서 OBJECT→object와 propertyOrdering 추가만 확인했고, observed/units와 표현 5개 필수 필드·maxItems 6·minimum 0·MIME·maxTokens 2400·systemInstruction·contents가 보존됐다. 두 검증을 구분하며, 이 오프라인 계약 확인을 실제 Google 응답이나 이전 실패 원인의 증명으로 취급하지 않는다.
+
+## #110/#111 승인 후 배포
+
+- [PR #110](https://github.com/hhj4861/commerce-automation-kit/pull/110): main 머지 `bce3c0d7bbbfaab899adb9cbf69b64d834e1257b`, 09:04:29 UTC.
+- [PR #111](https://github.com/hhj4861/commerce-automation-kit/pull/111): `fix/hanmadi-video-json` → `deploy/hanmadi-admin`. 승인된 3개 파일만 포함하는 비교 결과를 확인했다. 09:13:26 UTC 머지 `5eb59bcc07dcc77685264ef9971e2cb8c393b372`.
+- 승격 검증 5종 모두 통과: [study](https://github.com/hhj4861/commerce-automation-kit/actions/runs/36840543308) 3분 45초, [connection](https://github.com/hhj4861/commerce-automation-kit/actions/runs/36840543423) 6분 37초, [connections/native-runtime](https://github.com/hhj4861/commerce-automation-kit/actions/runs/36840543437), [Platform GitOps](https://github.com/hhj4861/commerce-automation-kit/actions/runs/36840543403).
+- 머지 직후 push 배포 실행이 조회되지 않았다. 배포 브랜치 SHA 일치·workflow active·해당 커밋 check suite 없음·건너뛰기 문구 없는 머지 메시지를 확인했다. 이후 **09:16:06 UTC에 push 실행이 생성됨**을 확인했다. 누락이 아니라 늦게 생성된 관측 결과이며, 지연 원인은 확정하지 않았다.
+- 승인된 운영 배포를 이어가기 위해 같은 `platform-deploy.yml`의 기존 `workflow_dispatch`를 `deploy/hanmadi-admin`, target=`hanmadi-admin`으로 실행했다. 보호 조건·자격 경로를 완화하거나 직접 Vercel 배포로 우회하지 않았다. 이번 실행은 자동 push 트리거 성공과 구분한다.
+- [dispatch 36841581923](https://github.com/hhj4861/commerce-automation-kit/actions/runs/36841581923)는 09:15:54 UTC 생성되어 실제 배포 단계로 먼저 진입했다. 뒤늦게 생성된 [push 36841603215](https://github.com/hhj4861/commerce-automation-kit/actions/runs/36841603215)는 동일 SHA의 concurrency 대기 상태여서 중복 배포를 방지하기 위해 취소를 요청했다. 자동 트리거 생성은 확인됐지만 취소한 실행을 배포 성공으로 세지 않는다.
+- dispatch 실행의 plan·Hanmadi Admin 배포 모두 success를 확인했다. 뒤늦은 중복 push 실행은 deploy=cancelled, 전체 cancelled로 끝난 것을 확인했다. 기존 운영 gateway와 다른 앱 배포는 변경하지 않았다.
+
+## #111 실제 영상 분석·JEV·초안 저장 — 통과
+
+- 09:18:33 UTC 검증 시작. 공개 `/api/deployment`가 application=`hanmadi-admin`, revision=`5eb59bcc07dcc77685264ef9971e2cb8c393b372`를 반환하고 기존 owner PIN 로그인이 HTTP 200임을 확인했다.
+- 같은 영상 `OA6gpD9mP0A`, 일본어·스몰토크·레벨 1. `prepare` 후 `process` 요청 **1회**, 09:18:36.065–09:19:41.119 UTC, 65,054ms. 추가 유료 재호출은 하지 않았다.
+- 결과 state=`review`. 2개 표현 모두 JEV choice=`useful`, confidence 각각 0.73/0.76, accepted=false. 모델 `jev-1.13.0`, rubric=`hanmadi-video-jev-v4`. 이 결과를 검수 완료나 고신뢰 승인으로 바꾸지 않는다.
+- 초안 ID `5a2238ae-a725-4616-9415-be20e75b7857`, status=`draft`, unitCount=2, evidenceCount=2, requiresHumanReview=true.
+- 처리 전후 초안 0→1, 게시 자료 0→0. 관리자 API를 다시 조회해 같은 ID·출처 URL·draft 상태가 영구 자료 목록에 있는 것을 확인했다. 검수·게시 전 앱 자료/중복 판단/파인튜닝에 사용하지 않는 현행 경계를 유지했다.
+- 검증은 새 운영 API와 저장 데이터 경로에 대한 실제 호출이다. 브라우저 화면 검사는 앞선 운영 검증과 PR #111의 fixture 기반 CI 결과를 구분해서 사용한다. 추가 운영 브라우저 확인은 Chrome 탭 생성이 사용자 조작 상태로 거절되어 완료하지 못했다. 이 검증에서 모델 원문·PIN·쿠키·키는 로그/파일로 출력하지 않았고, 개수·상태·판정·시간만 기록했다.
+- JEV 담당에게 정확한 처리 UTC와 결과를 전달하고 같은 구간 native/JEV HTTP 및 비용·권한을 읽기 확인했다. SSH exit=0, 09:18:30–09:19:50 UTC native POST 200 1건 + `/typesafe/v1/systemone` POST 200 1건. 추가 모델 호출·키 발급·서버 변경은 없었다.
+- JEV 전용 키 spend는 0.0→0.000131166, 기존 모델/경로/$0.50/30d/10RPM/만료 없음 권한은 유지됐다. Hanmadi 서버 키 누적 spend는 0.3895447→0.4197001(차이 0.0301554)이나 공유 키이므로 영상 1건의 확정 비용으로 표시하지 않는다. 담당 [서버 QA](20261001-hanmadi-native-edge-production.md)에 독립 확인을 기록한다.
 
 ## 확인된 원인과 후속 수정 PR
 
