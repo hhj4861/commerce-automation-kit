@@ -29,18 +29,18 @@
 
 JEV 세션과 main의 공통 모듈을 확인했다. 새 판단 서비스를 만들지 않고 `@cak/litellm-client@0.4.0/jev`의 `createJevClient().evaluate()`를 사용한다. 관리자 단독 소스 배포를 위해 기존 배포 방식대로 0.4.0 tarball을 vendor에 포함했다.
 
-평가 버전은 `hanmadi-video-jev-v1`, 모델은 `jev-1.13.0`이다. 영상에서 제안한 1–6개 표현마다 useful / duplicate / irrelevant / unreliable을 판정한다. useful 확률 0.9 이상이며 confidence 0.85 이상인 표현만 저장한다. 정확히 같은 목표언어 표현은 기본 교재·기존 초안·게시 자료 전체와 정규화 비교해 강제로 제외한다. 확률과 confidence는 정답률 보증이 아니며 초기 운영 기준이다.
+평가 버전은 `hanmadi-video-jev-v2`, 모델은 `jev-1.13.0`이다. 영상에서 제안한 1–6개 표현마다 useful / duplicate / irrelevant / unreliable을 판정한다. useful 확률 0.9 이상이며 confidence 0.85 이상인 표현만 저장한다. 정확히 같은 목표언어 표현은 기본 교재·기존 초안·게시 자료 전체와 정규화 비교해 강제로 제외한다. 확률과 confidence는 정답률 보증이 아니며 초기 운영 기준이다.
 
-의미 비교에는 같은 언어의 기본 교재와 모든 기존 초안·게시 자료 중 문자 유사도·상황으로 찾은 관련 표현 최대 24개, 직렬화 9,000바이트까지 보낸다. 비교 대상 수와 실제 비교 수, 각 표현의 판정·confidence, 영상 구간 근거를 초안에 기록한다. 전체 자료를 모두 의미 비교한다고 주장하지 않는다. 새로운 표현끼리의 정확한 중복도 제외한다. 초기 한국어/목표언어별 실제 평가셋 정확도는 아직 실측하지 않았다.
+의미 비교에는 같은 언어의 기본 교재와 모든 기존 초안·게시 자료 중 문자 유사도·상황으로 찾은 관련 표현 최대 24개, 직렬화 9,000바이트까지 보낸다. 비교 대상 수와 실제 비교 수, 각 표현의 판정·confidence, 영상 구간 근거를 초안에 기록한다. JEV는 Gemini가 반환한 표현과 구간 요약만 읽는다. 원본 영상에 다시 접근하거나 Gemini의 관찰이 사실인지 독립적으로 검증하지 않으며, 게시 전 사람이 연결된 구간과 뜻·발음을 확인한다. 전체 자료를 모두 의미 비교한다고 주장하지 않는다. 새로운 표현끼리의 정확한 중복도 제외하고 의미 중복은 JEV에 앞선 후보와 비교하도록 지시한다. 초기 한국어/목표언어별 실제 평가셋 정확도는 아직 실측하지 않았다.
 
 ## 운영 설정과 현재 확인 범위
 
 기존 production `YOUTUBE_API_KEY`, `LITELLM_BASE_URL`, `LITELLM_API_KEY`, `LITELLM_MODEL`, Redis 설정이 등록된 것을 Vercel API 메타데이터로 확인했다. 비밀 값은 출력하거나 작업 산출물에 저장하지 않았다.
 
 - `HANMADI_VIDEO_MODEL` (선택): 공식 YouTube URL 영상 입력을 지원하는 **Gemini 공급자** 별칭. 생략하면 기존 LITELLM_MODEL을 사용한다. 일반 텍스트 전용 모델은 사용할 수 없다.
-- `HANMADI_JEV_API_KEY` (선택): 같은 LiteLLM 주소의 Hanmadi Admin 전용 JEV virtual key. 생략하면 LITELLM_API_KEY를 사용한다. 어떤 경우에도 해당 키에 모델 `jev-1.13.0`, POST `/typesafe/v1/systemone` 권한과 앱 예산이 있어야 한다. TypeSafe 공급자 원본 키는 앱에 넣지 않는다.
+- `HANMADI_JEV_API_KEY` (필수): 같은 LiteLLM 주소의 Hanmadi Admin 전용 JEV virtual key. 일반 LITELLM_API_KEY로 대체하지 않는다. 해당 키에 모델 `jev-1.13.0`, POST `/typesafe/v1/systemone` 권한과 앱 예산이 있어야 한다. TypeSafe 공급자 원본 키는 앱에 넣지 않는다.
 
-운영에는 별도 HANMADI_JEV_API_KEY가 등록되어 있지 않다. 현재 민감 값은 재조회할 수 없어 기존 관리자 키의 JEV 권한과 영상 모델 연결을 이번 작업에서 실호출 검증하지 못했다. 기존 JEV 공통 연결 문서에 기록된 다른 앱 권한/임시 검증 키를 재사용하지 않았다. 운영 적용 전에 관리자 전용 키·모델 권한을 확인하고 비민감 공개 영상 1건으로 분석→JEV→초안 흐름을 확인해야 한다. 실제 유료 파인튜닝은 실행하지 않았다.
+운영에는 별도 HANMADI_JEV_API_KEY가 등록되어 있지 않다. JEV 담당 세션의 서버 조회에서 기존 hanmadi-server 키에는 JEV 권한이 없음을 확인했다. 영상 모델 후보는 hanmadi-chat → gemini/gemini-flash-lite-latest이며 공식 YouTube media payload 실호환은 별도 실측해야 한다. 기존 JEV 공통 연결 문서에 기록된 다른 앱 권한/임시 검증 키를 재사용하지 않았다. 운영 적용 전에 관리자 전용 키·모델 권한을 확인하고 비민감 공개 영상 1건으로 분석→JEV→초안 흐름을 확인해야 한다. 실제 유료 파인튜닝은 실행하지 않았다.
 
 ## 검증
 
@@ -57,3 +57,13 @@ JEV 세션과 main의 공통 모듈을 확인했다. 새 판단 서비스를 만
 - [YouTube Data API videos.list](https://developers.google.com/youtube/v3/docs/videos/list): 공개 상태·contentDetails·snippet 조회.
 - [YouTube Developer Policies](https://developers.google.com/youtube/terms/developer-policies): 임시 메타데이터 보관·갱신 정책. 본 검색 캐시는 1시간 물리 만료.
 - [TypeSafe API](https://docs.typesafe.ai/api), [Confidence](https://docs.typesafe.ai/confidence), [JEV 공통 계약](20260930-jev-common-client.md).
+
+## JEV 담당 세션과 직접 조율 — 2026-10-01
+
+사용자 승인으로 기존 JEV 세션(`01a0dbe8-c325-7680-ad08-abaab2ef43a2`)에 PR #103과 계약을 전달하고 수신·회신을 확인했다. JEV 담당은 공통 게이트웨이·전용 키·권한·예산, Admin 담당은 앱·환경변수·화면·검증을 맡는다. 단순히 공유 문서를 읽은 상태와 구분한다.
+
+- 공통 주소: `https://shared-ai-d5cy7m6i7q-uc.a.run.app/llm`, 경로 `POST /typesafe/v1/systemone`, 모델 `jev-1.13.0`.
+- 다른 앱 키 재사용과 기존 Hanmadi 키 권한 확대 없이 관리자 전용 키를 사용한다.
+- 우선 임시 키 1시간·10RPM·$0.05 한도로 합성 평가 최대 2요청(표현 6개+3개)을 검증한다. 종료 후 회수·401 확인은 JEV 담당이 수행한다.
+- 실행: 앱 디렉터리에서 `node --import tsx scripts/video-jev-live-check.mjs --live`. 일반 테스트에서는 외부 호출하지 않는다. 키는 프로세스 메모리/env에만 주입하며 출력은 판정·토큰·소요 시간뿐이다. 자료 저장·영상 접근은 없다.
+- 운영 예산은 실제 입력 토큰·spend를 관측해 50영상/일 기준으로 산정한다. 임시 검증을 운영키 발급·운영 환경 변경·PR 머지·배포 승인으로 확대하지 않는다.

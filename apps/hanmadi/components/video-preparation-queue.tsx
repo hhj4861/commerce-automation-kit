@@ -326,6 +326,11 @@ export function VideoPreparationQueue({
                     <details className="vs-video-evidence">
                       <summary>분석 구간·평가 근거</summary>
                       <p>
+                        JEV는 분석된 표현과 요약 근거를 평가하며, 원본 영상을
+                        직접 확인하지 않아요. 게시 전 연결된 구간과 뜻·발음을
+                        확인해 주세요.
+                      </p>
+                      <p>
                         기본 교재와 기존 자료{" "}
                         {entry.draft.videoReview.referenceCount}개 중 관련 표현{" "}
                         {entry.draft.videoReview.comparedCount}개 비교. 정확히

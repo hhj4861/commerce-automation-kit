@@ -265,9 +265,11 @@ test("real Jev SDK contract enforces confidence, exact dedupe and fail-closed be
   process.env.LITELLM_BASE_URL = "https://gateway.example/llm/v1";
   process.env.LITELLM_API_KEY = "test-gateway";
   process.env.LITELLM_MODEL = "gemini";
+  process.env.HANMADI_JEV_API_KEY = "test-admin-jev";
   let confidence = 0.97;
   const fetcher: typeof fetch = async (url, init) => {
     assert.equal(url, "https://gateway.example/llm/typesafe/v1/systemone");
+    assert.equal(new Headers(init?.headers).get("authorization"), "Bearer test-admin-jev");
     const b = JSON.parse(String(init?.body));
     assert(b.state.references.length);
     assert.equal(b.questions.unit0.type, "choice");
@@ -315,4 +317,25 @@ test("real Jev SDK contract enforces confidence, exact dedupe and fail-closed be
     ),
     /JEV/,
   );
+});
+
+test("Jev requires its dedicated key and never sends the general model key", async () => {
+  process.env.LITELLM_BASE_URL = "https://gateway.example/llm/v1";
+  process.env.LITELLM_API_KEY = "general-model-key";
+  const previous = process.env.HANMADI_JEV_API_KEY;
+  delete process.env.HANMADI_JEV_API_KEY;
+  let calls = 0;
+  try {
+    await assert.rejects(
+      judgeVideo(analysis, [], settings, async () => {
+        calls++;
+        throw Error("must not call");
+      }),
+      /관리자 전용 JEV/,
+    );
+    assert.equal(calls, 0);
+  } finally {
+    if (previous === undefined) delete process.env.HANMADI_JEV_API_KEY;
+    else process.env.HANMADI_JEV_API_KEY = previous;
+  }
 });
