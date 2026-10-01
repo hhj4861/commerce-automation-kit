@@ -60,6 +60,29 @@ export async function POST(req: Request) {
       await rejectContribution(b.contributionId);
       return conversationJson({ ok: true });
     }
+    if (b?.action === "search") {
+      if (!process.env.YOUTUBE_API_KEY)
+        throw new ConversationError(
+          503,
+          "서버의 YouTube 공식 API 키를 준비 중이에요. 직접 제공받은 원문으로 초안을 만들 수 있어요.",
+        );
+      const search = validateYoutubeSearch(b.query, b.pageToken);
+      // Older clients may still send a search language; material settings are optional here.
+      if (b.language !== undefined && !isStudyLanguage(b.language))
+        throw new ConversationError(400, "검색 언어가 올바르지 않아요.");
+      if (
+        (await v2Driver().count(
+          `youtube:${new Date().toISOString().slice(0, 10)}`,
+        )) > 20
+      )
+        throw new ConversationError(429, "오늘의 영상 검색 예산을 다 썼어요.");
+      return conversationJson(
+        await searchYoutubeVideos(
+          { ...search, language: b.language },
+          process.env.YOUTUBE_API_KEY,
+        ),
+      );
+    }
     if (
       !b ||
       !isStudyLanguage(b.language) ||
@@ -86,26 +109,6 @@ export async function POST(req: Request) {
           text: b.query,
         }),
       });
-    }
-    if (b.action === "search") {
-      if (!process.env.YOUTUBE_API_KEY)
-        throw new ConversationError(
-          503,
-          "서버의 YouTube 공식 API 키를 준비 중이에요. 직접 제공받은 원문으로 초안을 만들 수 있어요.",
-        );
-      const search = validateYoutubeSearch(b.query, b.pageToken);
-      if (
-        (await v2Driver().count(
-          `youtube:${new Date().toISOString().slice(0, 10)}`,
-        )) > 20
-      )
-        throw new ConversationError(429, "오늘의 영상 검색 예산을 다 썼어요.");
-      return conversationJson(
-        await searchYoutubeVideos(
-          { ...search, language: b.language },
-          process.env.YOUTUBE_API_KEY,
-        ),
-      );
     }
     if (
       !isLevel(b.level) ||

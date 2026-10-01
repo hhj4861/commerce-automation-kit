@@ -12,19 +12,35 @@ export async function verifyYoutubeSearch({
   const searchBody = {
     action: "search",
     query: "카페 회화",
-    language: "ja",
-    scene: "smalltalk",
   };
   assert.equal(
     (await post(searchBody, undefined, "/api/study/admin")).status,
     403,
   );
-  for (const pageToken of [null, {}, "bad token", "a".repeat(1025)])
-    assert.equal(
-      (await post({ ...searchBody, pageToken }, admin, "/api/study/admin"))
-        .status,
-      400,
+  for (const pageToken of [null, {}, "bad token", "a".repeat(1025)]) {
+    const result = await post(
+      { ...searchBody, pageToken },
+      admin,
+      "/api/study/admin",
     );
+    assert.equal(result.status, 400);
+    assert.match(
+      result.data.error,
+      /페이지/,
+      "search reaches its own validation without material settings",
+    );
+  }
+  const missingSettings = await post(
+    { action: "generate" },
+    admin,
+    "/api/study/admin",
+  );
+  assert.equal(missingSettings.status, 400);
+  assert.match(
+    missingSettings.data.error,
+    /언어와 상황/,
+    "material creation still requires classification",
+  );
   assert.equal(
     (await post({ ...searchBody, query: "  " }, admin, "/api/study/admin"))
       .status,
@@ -105,6 +121,12 @@ export async function verifyYoutubeSearch({
       return route.continue();
     }
     if (body.action !== "search") return route.continue();
+    assert.equal(
+      body.language,
+      undefined,
+      "search never sends material language",
+    );
+    assert.equal(body.scene, undefined, "search never sends material scene");
     calls.push(body);
     if (body.pageToken === "SECOND" && holdSearch) {
       holdSearch = false;
@@ -152,6 +174,12 @@ export async function verifyYoutubeSearch({
     const next = page.getByRole("button", { name: "다음", exact: true });
     const previous = page.getByRole("button", { name: "이전", exact: true });
     const queue = page.getByRole("complementary", { name: "자료 준비 목록" });
+    assert.equal(await page.locator(".vs-search select").count(), 0);
+    assert.equal(
+      await queue.locator("select").count(),
+      0,
+      "empty preparation hides material settings",
+    );
     await query.fill("카페 회화");
     await query.press("Enter");
     await status.filter({ hasText: "1페이지 · 영상 5개" }).waitFor();
@@ -362,6 +390,29 @@ export async function verifyYoutubeSearch({
         { exact: true },
       )
       .check();
+    assert(
+      await batchButton().isDisabled(),
+      "source and rights alone cannot save unclassified material",
+    );
+    const language = queue.getByLabel("학습 언어", { exact: true });
+    const scene = queue.getByLabel("자료에 사용할 상황", { exact: true });
+    const beforeSettings = calls.length;
+    await language.selectOption("ja");
+    assert(
+      await batchButton().isDisabled(),
+      "a scene must also be selected before saving",
+    );
+    await scene.selectOption("cafe");
+    assert.equal(
+      calls.length,
+      beforeSettings,
+      "material settings never trigger another search",
+    );
+    assert.equal(
+      await queue.locator("li").count(),
+      8,
+      "classification preserves selected videos",
+    );
     assert(!(await batchButton().isDisabled()));
     await page.setViewportSize({ width: 390, height: 1100 });
     assert(
@@ -412,6 +463,7 @@ export async function verifyYoutubeSearch({
       assert.equal(body.title, names[index]);
       assert.equal(body.level, 2);
       assert.equal(body.language, "ja");
+      assert.equal(body.scene, "cafe");
       assert.equal(body.rights, rights);
       assert.equal(body.rightsConfirmed, true);
       assert.equal(body.status, undefined, "batch does not publish drafts");
@@ -429,6 +481,26 @@ export async function verifyYoutubeSearch({
       "per-video source provenance stays separate",
     );
     assert(created.every((d) => d.status === "draft"));
+    assert(
+      created.every(
+        (d) => d.language === "ja" && d.scene === "cafe" && d.level === 2,
+      ),
+    );
+    const savedSummary = await queue
+      .locator("li")
+      .first()
+      .locator("small")
+      .first()
+      .innerText();
+    await language.selectOption("en");
+    await scene.selectOption("smalltalk");
+    await queue.getByLabel("공통 연습 레벨", { exact: true }).selectOption("3");
+    assert.equal(
+      await queue.locator("li").first().locator("small").first().innerText(),
+      savedSummary,
+      "changing pending defaults never relabels a saved draft",
+    );
+    await language.selectOption("ja");
     await page
       .getByRole("button", { name: "자료 만들기", exact: true })
       .click();
@@ -501,7 +573,7 @@ export async function verifyYoutubeSearch({
     await queue.getByRole("button", { name: "전체 해제", exact: true }).click();
     assert.equal(await queue.locator("li").count(), 0);
     console.log(
-      "PASS search totals, five-item paging, ALL unseen pages, cancel/resume, partial failures, source imports, sequential bulk drafts, stop/retry, response-loss guard, separate provenance and human review",
+      "PASS keyword-only search, save-time classification, saved metadata preservation, search totals, five-item paging, ALL unseen pages, cancel/resume, partial failures, source imports, sequential bulk drafts, stop/retry, response-loss guard, separate provenance and human review",
     );
   } finally {
     await page.unroute("**/api/study/admin", handler);
