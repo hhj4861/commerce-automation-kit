@@ -1,0 +1,40 @@
+{
+  "artifact": "/Users/admin/Downloads/vedio/single-loneliness-kyle-100x.mp4",
+  "durationSeconds": 807.1,
+  "bytes": 43289059,
+  "sha256": "25afc5666f08cb1f929fc0b0a4e6f636f8519d6a5b869fb978f5a30d816c45e5",
+  "video": {
+    "codec_name": "h264",
+    "width": 1920,
+    "height": 1080,
+    "r_frame_rate": "24/1",
+    "nb_frames": "19370",
+    "duration": "807.083008"
+  },
+  "audio": {
+    "codec_name": "aac",
+    "sample_rate": "44100",
+    "channels": 2,
+    "duration": "807.100000"
+  },
+  "voiceId": "RU7aSi6lT4uQBXMLgDxK",
+  "speed": 1,
+  "ttsRun": "https://github.com/hhj4861/commerce-automation-kit/actions/runs/36813750027",
+  "scenes": 26,
+  "captions": 215,
+  "captionIntegrity": "full narration covered; max 27 characters per line; no overlap",
+  "captionTiming": "character-weighted approximation; not forced alignment",
+  "fullDecodeExit": 0,
+  "longSilencesOver1_2SecondsAtMinus45dB": [],
+  "meanVolume": "-19.6 dB",
+  "peakVolume": "-1.1 dB",
+  "frames": [
+    "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-single-loneliness/final-check-0.jpg",
+    "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-single-loneliness/final-check-1.jpg",
+    "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-single-loneliness/final-check-2.jpg"
+  ],
+  "humanListening": false,
+  "speechTranscription": false,
+  "published": false,
+  "visualReview": "26-scene contact sheet plus final frames at 5, 400, 799 seconds inspected; subtitle/art separation confirmed"
+}
