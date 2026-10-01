@@ -53,7 +53,7 @@ JEV 세션과 main의 공통 모듈을 확인했다. 새 판단 서비스를 만
 ## 공식 API 근거
 
 - [Gemini video understanding](https://ai.google.dev/gemini-api/docs/video-understanding): 공개 YouTube URL을 영상 입력으로 전달. preview 기능이므로 모델·과금·한도 변경 가능성을 운영 시 재확인한다.
-- [LiteLLM Gemini](https://docs.litellm.ai/docs/providers/gemini): file content part의 file_id/format을 이용한 영상 입력. 공식 변환 코드의 명시적 https URL+MIME 경로는 Gemini file_uri로 전달한다.
+- [LiteLLM generateContent](https://docs.litellm.ai/docs/generateContent): 게이트웨이의 `/v1beta/models/{alias}:generateContent`에 Gemini native `fileData.fileUri`와 `mimeType`을 전달한다. 설치된 1.102.1의 OpenAI chat 어댑터는 HTTPS file_id를 base64로 변환하므로 YouTube URL 입력에 사용하지 않는다.
 - [YouTube Data API videos.list](https://developers.google.com/youtube/v3/docs/videos/list): 공개 상태·contentDetails·snippet 조회.
 - [YouTube Developer Policies](https://developers.google.com/youtube/terms/developer-policies): 임시 메타데이터 보관·갱신 정책. 본 검색 캐시는 1시간 물리 만료.
 - [TypeSafe API](https://docs.typesafe.ai/api), [Confidence](https://docs.typesafe.ai/confidence), [JEV 공통 계약](20260930-jev-common-client.md).
@@ -99,3 +99,13 @@ JEV 담당이 고정 커밋 `971e01b40e5dfd8cd0c42b9222f47bd2e7b65e4c`를 임시
 이 보관 정책은 자동 판정의 정확도 실패를 해결했다는 뜻이 아니다. 사람이 볼 수 있는 후보를 보존하면서 학습 반영을 차단하는 운영 흐름이다. 실제 Gemini 영상 입력과 운영 전용 키 연결, 추가 언어·영상 품질 검증은 여전히 미수행이다.
 
 사용자는 별도 검토 대기 보관 후 확인하여 사용하는 정책을 명시적으로 선택했다. 최종 로컬 검증은 단위/통합 133개, TypeScript, 변경 파일 ESLint, 관리자 전용 브라우저 E2E와 전체 v2 E2E가 통과했다. 검토 대기 배지·분석 근거·편집 화면 경고, 검수 전 게시 버튼 차단, 저장된 최신 상태 재사용, 기존 레벨별 학습·번역·학습 데이터셋/파인튜닝 관리의 회귀 흐름을 포함한다. 외부 모델 응답은 해당 브라우저 E2E에서 fixture이며, 운영 영상 분석/JEV 품질 검증의 대체 근거가 아니다.
+
+## 운영에서 발견한 영상 URI 변환 오류 수정
+
+PR #103/#105 배포 후 공개·길이 검사를 통과한 영상의 분석이 Gemini HTTP 400 INVALID_ARGUMENT로 실패했다. JEV 담당이 설치된 LiteLLM 1.102.1의 변환 코드와 합성 오프라인 재현에서 HTTPS `file_id`를 가져와 `file_data`로 바꾸는 동작을 확인했다. YouTube watch 페이지가 영상 URI로 전달되지 않는 경로다. 최초 문서의 HTTPS file_id 호환성 판단은 이 전처리를 놓쳤으므로 위 API 근거를 정정했다.
+
+앱은 기존 키·모델·예산을 유지하면서 native `/llm/v1beta/models/hanmadi-chat:generateContent` 요청으로 바꾼다. `systemInstruction`, `contents[].parts[].fileData.fileUri`, `generationConfig.responseMimeType`을 사용하며 영상 파일·자막을 다운로드하지 않는다. 응답은 완료(STOP)된 candidates의 텍스트만 읽고 thought·중단·안전 차단·도구 호출 응답은 학습 자료로 쓰지 않는다. 실패 로그에는 HTTP 상태와 소요 시간만 기록한다.
+
+내부 native endpoint 존재와 외부 ingress 허용은 별개다. 수정 준비 시점에는 외부 native 경로가 404였으며, 게이트웨이 경로 수정·배포와 기존 운영 키의 실제 영상 검증 전까지 연결 완료라고 보고하지 않는다. 새 임시 검증 키 발급 요청은 자동 승인 검토가 명시적 승인 부재로 거절했으며 발급하지 않았다.
+
+수정안은 shared-ai-host와 standalone public Caddy 설정에 POST `/v1beta/models/hanmadi-chat:generateContent` 한 경로만 추가한다(공용 호스트는 `/llm` prefix). 인증 헤더와 요청 본문을 그대로 LiteLLM으로 전달하며 GET·다른 모델·streaming·관리/파일 경로를 공개하지 않는다. 현재 운영 ingress는 독립 edge 릴리스이므로 PR 승인 후 별도 Caddy 적용이 필요하며, `deploy/litellm`이나 관리자 배포만으로 적용됐다고 보지 않는다. 기존 운영 키·모델 허용목록·예산은 유지하고, 임시 키를 새로 만들지 않는다.
