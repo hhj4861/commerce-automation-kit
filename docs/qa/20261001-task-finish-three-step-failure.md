@@ -32,4 +32,12 @@ python3 -B tools/task-finish-three-step-failure.py --apply --expect-sha256 <dry-
 python3 ~/.codex/hooks/task-finish/gate.py reconcile
 ```
 
-전역 설치와 실제 reconcile 결과는 적용 후 이 문서에 기록한다. 이 수정은 Jev 기능·운영 배포 변경이 아니다.
+## 실제 적용 결과
+
+2026-10-01 사용자 승인에 따라 검증된 설치기를 전역 `~/.codex/hooks/task-finish/gate.py`에 적용했다. 원본은 `~/.codex/hooks/task-finish/backups/three-step-failure-20261001T032208481570Z.py`에 보존했다. 원본 SHA-256은 `511b9685c9d6f29c3612c126279bd75daee182f1e4d2ff7371dfeff3d6b49ba8`이다.
+
+공식 `reconcile`에서 대상 `exec-b53f2704-649d-404b-8b10-adea854d114b`가 미확인 목록에서 해소됨을 확인했다. 종료 복구 이후 이전 iCloud 스냅샷과 새 clone의 차이 1,060개가 재관찰됐다. 현재 working/staged/HEAD diff가 없고 각 경로가 이미 tracked(25개) 또는 새 clone에 부재(1,035개)임을 확인한 뒤, 이번 세션의 Jev·훅 작업 밖에 있는 영상 산출물·프로젝트 이동 설정·타 배포문서에 한해 공식 `exclude`로 사유를 기록했다. 실제 파일 수정·삭제는 없다.
+
+설치 후 회귀와 멱등성도 다시 확인한다. 전역 설치 및 현재 세션의 reconcile 실행은 확인했지만 다른 열린 모든 세션의 즉시 로드·수신까지 주장하지 않는다. 이 수정은 Jev 기능·운영 배포 변경이 아니다.
+
+설치된 gate.py SHA-256: `101c4d4da3ffdae56edd0a95f83f510e63bc767df1e7eb7ead1f674e065e577f`.
