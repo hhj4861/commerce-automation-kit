@@ -1163,3 +1163,22 @@
   color: #31564a;
   font-weight: 650;
 }
+
+/* Diagnostic results remain readable without horizontal tables on small screens. */
+.ks .ks-nav { flex-wrap: wrap; column-gap: 24px; row-gap: 0; }
+.dg { display: grid; gap: 20px; }
+.dg-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+.dg-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.dg-heading h3 { margin: 0; }
+.dg p, .dg li { overflow-wrap: anywhere; line-height: 1.65; }
+.dg blockquote { margin: 16px 0; border-left: 3px solid #3157d5; padding: 10px 16px; background: #f5f7fc; }
+.dg-status { border-radius: 16px; padding: 5px 10px; background: #edf0f5; font-size: 13px; }
+.dg-status[data-status="passed"] { color: #1b6543; background: #def4e7; }
+.dg-status[data-status="failed"], .dg-status[data-status="interrupted"] { color: #952e35; background: #fff0f0; }
+.dg-status[data-status="warning"] { color: #795515; background: #fff3d5; }
+.dg-probe { border-top: 1px solid #dbe2ef; margin-top: 18px; padding-top: 12px; }
+.dg-probe h4 { margin: 0; }
+.dg-finding { border-left: 2px solid #d7a440; padding-left: 12px; margin: 12px 0; }
+.dg-finding p { margin: 5px 0; }
+.dg details { margin-top: 18px; }
+@media (max-width: 700px) { .dg-grid { grid-template-columns: minmax(0, 1fr); } }

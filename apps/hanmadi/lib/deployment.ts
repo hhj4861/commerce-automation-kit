@@ -8,13 +8,14 @@ export function adminPath(
   pathname: string,
 ): "public" | "owner" | "redirect" | "closed" {
   if (pathname === "/" || pathname === "/login") return "redirect";
-  if (["/admin-login", "/api/auth", "/api/deployment"].includes(pathname))
+  if (["/admin-login", "/api/auth", "/api/deployment", "/api/study/diagnostics/cron"].includes(pathname))
     return "public";
   if (
     pathname === "/study/admin" ||
     pathname === "/api/study/admin" ||
     pathname === "/api/study/admin/learning" ||
-    pathname === "/api/study/admin/videos"
+    pathname === "/api/study/admin/videos" ||
+    pathname === "/api/study/admin/diagnostics"
   )
     return "owner";
   return "closed";

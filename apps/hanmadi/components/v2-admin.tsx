@@ -3,6 +3,10 @@ import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { YoutubeVideoSearch } from "./youtube-video-search";
 import dynamic from "next/dynamic";
+const DiagnosticsAdmin = dynamic(
+  () => import("./diagnostics-admin").then(m => m.DiagnosticsAdmin),
+  { loading: () => <p role="status">AI 진단을 불러오는 중이에요.</p> },
+);
 const LearningAdmin = dynamic(
   () => import("./learning-admin").then((m) => m.LearningAdmin),
   { loading: () => <p role="status">학습 관리를 불러오는 중이에요.</p> },
@@ -35,7 +39,7 @@ async function api(body?: unknown) {
 }
 export function V2Admin({ appHref = "/study" }: { appHref?: string }) {
   const [tab, setTab] = useState<
-    "videos" | "editor" | "inbox" | "preview" | "learning"
+    "videos" | "editor" | "inbox" | "preview" | "learning" | "diagnostics"
   >("videos");
   const [contributions, setContributions] = useState<PublicContribution[]>([]);
   const [events, setEvents] = useState<KnowledgeEvent[]>([]);
@@ -212,6 +216,7 @@ export function V2Admin({ appHref = "/study" }: { appHref?: string }) {
               ],
               ["preview", "앱 반영 확인"],
               ["learning", "학습 관리"],
+              ["diagnostics", "AI 진단"],
             ] as const
           ).map(([id, label]) => (
             <button
@@ -230,6 +235,7 @@ export function V2Admin({ appHref = "/study" }: { appHref?: string }) {
         </nav>
         {loading && <p role="status">자료를 불러오는 중이에요.</p>}
         {tab === "learning" && <LearningAdmin />}
+        {tab === "diagnostics" && <DiagnosticsAdmin />}
         {error && (
           <p className="hm-alert" role="alert">
             {error}

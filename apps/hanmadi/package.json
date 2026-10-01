@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "node --import tsx --test lib/conversation.test.ts lib/conversation-provider.test.ts scripts/litellm.test.mjs scripts/video-jev-live-check.test.mjs lib/learning-language.test.ts lib/adaptive-learning.test.ts lib/v2.test.ts lib/v2-ai.test.ts lib/model-connections.test.ts lib/knowledge.test.ts lib/youtube-search.test.ts lib/youtube-cache.test.ts lib/video-ingestion.test.ts lib/video-language-review.test.ts lib/learning-pipeline.test.ts lib/learning-provider.test.ts lib/deployment.test.ts lib/study-audio-client.test.ts lib/study-audio-response.test.ts lib/vocabulary.test.ts",
+    "test": "node --import tsx --test lib/conversation.test.ts lib/conversation-provider.test.ts scripts/litellm.test.mjs scripts/video-jev-live-check.test.mjs lib/learning-language.test.ts lib/adaptive-learning.test.ts lib/v2.test.ts lib/v2-ai.test.ts lib/model-connections.test.ts lib/knowledge.test.ts lib/youtube-search.test.ts lib/youtube-cache.test.ts lib/video-ingestion.test.ts lib/video-language-review.test.ts lib/learning-pipeline.test.ts lib/learning-provider.test.ts lib/deployment.test.ts lib/study-audio-client.test.ts lib/study-audio-response.test.ts lib/vocabulary.test.ts lib/llm-diagnostics.test.ts",
     "test:dify": "node scripts/dify-smoke.mjs",
     "test:conversation": "node scripts/conversation-smoke.mjs",
     "ai:setup": "node scripts/litellm.mjs setup",
@@ -17,7 +17,8 @@
     "test:voice": "node --import tsx scripts/voice-stream-e2e.mjs",
     "test:v2": "node scripts/v2-e2e.mjs",
     "test:admin-deployment": "node scripts/admin-deployment-e2e.mjs",
-    "test:dialog-vocabulary": "node scripts/dialog-vocabulary-e2e.mjs"
+    "test:dialog-vocabulary": "node scripts/dialog-vocabulary-e2e.mjs",
+    "test:diagnostics": "node scripts/diagnostics-e2e.mjs"
   },
   "dependencies": {
     "@cak/litellm-client": "file:vendor/cak-litellm-client-0.4.0.tgz",
