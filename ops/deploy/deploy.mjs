@@ -25,15 +25,24 @@ export function commands(name, target, env) {
   if (target.driver === 'vercel') {
     if (!env[target.credential || 'DEPLOY_VERCEL_TOKEN']) throw new Error('Cloudflare Vercel deployment credential is missing');
     const vercel = ['--yes', 'vercel@60.1.3'];
+    const admin = target.deploymentMode === 'admin';
+    const releaseEnv = [`HANMADI_RELEASE_SHA=${env.GITHUB_SHA}`,
+      ...(admin ? ['HANMADI_DEPLOYMENT=admin', `HANMADI_APP_URL=${target.learningAppUrl}`] : [])];
     return [
       { command: 'npm', cwd, args: ['ci', '--workspaces=false'] },
       { command: 'npm', cwd, args: ['test'] },
-      { command: 'npx', cwd, args: [...vercel, 'pull', '--yes', '--environment=production'] },
-      { command: 'npx', cwd, args: [...vercel, 'build', '--prod'] },
-      { command: 'npx', cwd, args: [...vercel, 'deploy', '--prebuilt', '--prod', '--yes',
+      // pull requires team metadata access that project-scoped tokens do not have.
+      // deploy supports these tokens and builds the admin source on Vercel instead.
+      // https://github.com/vercel/vercel/issues/17506
+      ...(!admin ? [
+        { command: 'npx', cwd, args: [...vercel, 'pull', '--yes', '--environment=production'] },
+        { command: 'npx', cwd, args: [...vercel, 'build', '--prod'] },
+      ] : []),
+      { command: 'npx', cwd, args: [...vercel, 'deploy', ...(!admin ? ['--prebuilt'] : []), '--prod', '--yes',
+        ...(admin ? ['--project', target.project] : []),
         '--meta', `githubCommitSha=${env.GITHUB_SHA}`, '--meta', `githubCommitRef=${target.branch}`,
-        '--meta', `hanmadiApplication=${name}`, '--env', `HANMADI_RELEASE_SHA=${env.GITHUB_SHA}`,
-        ...(target.deploymentMode === 'admin' ? ['--env', 'HANMADI_DEPLOYMENT=admin', '--env', `HANMADI_APP_URL=${target.learningAppUrl}`] : [])] },
+        '--meta', `hanmadiApplication=${name}`, ...releaseEnv.flatMap(value => ['--env', value]),
+        ...(admin ? releaseEnv.flatMap(value => ['--build-env', value]) : [])] },
     ];
   }
   const archive = `/tmp/cak-litellm-${env.GITHUB_SHA}.tar`;

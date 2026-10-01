@@ -94,6 +94,25 @@ test('admin deploy is isolated from the learner project and does not expose toke
   assert.doesNotMatch(JSON.stringify(steps), /admin-fixture-secret|--token/);
   for (const arg of ['HANMADI_DEPLOYMENT=admin', `HANMADI_RELEASE_SHA=${sha}`, `githubCommitSha=${sha}`, 'githubCommitRef=deploy/hanmadi-admin']) assert.ok(steps.at(-1).args.includes(arg));
 });
+test('admin uses a remote production build with the same identity at build and runtime', () => {
+  const target = configuration.targets['hanmadi-admin'];
+  const steps = commands('hanmadi-admin', target, { ...env('hanmadi-admin'), HANMADI_ADMIN_DEPLOY_VERCEL_TOKEN: 'fixture' });
+  assert.deepEqual(steps.slice(0, 2).map(step => [step.command, ...step.args]), [
+    ['npm', 'ci', '--workspaces=false'], ['npm', 'test'],
+  ]);
+  assert.deepEqual(steps.filter(step => step.command === 'npx').map(step => step.args[2]), ['deploy']);
+  assert.ok(steps.every(step => step.cwd === target.directory));
+  const args = steps.at(-1).args;
+  assert.ok(args.includes('--prod'));
+  assert.ok(!args.includes('--prebuilt'));
+  assert.ok(!args.includes('--no-wait')); // The release check must follow a completed build.
+  assert.equal(args[args.indexOf('--project') + 1], target.project);
+  const values = flag => args.flatMap((arg, index) => arg === flag ? [args[index + 1]] : []);
+  const identity = [`HANMADI_RELEASE_SHA=${sha}`, 'HANMADI_DEPLOYMENT=admin', `HANMADI_APP_URL=${target.learningAppUrl}`];
+  assert.deepEqual(values('--build-env'), identity);
+  assert.deepEqual(values('--env'), identity);
+  assert.deepEqual(values('--meta'), [`githubCommitSha=${sha}`, `githubCommitRef=${target.branch}`, 'hanmadiApplication=hanmadi-admin']);
+});
 test('release validation requires the right surface, revision and access boundary', async () => {
   const target = configuration.targets['hanmadi-admin'];
   function fixture(patch = {}) {
