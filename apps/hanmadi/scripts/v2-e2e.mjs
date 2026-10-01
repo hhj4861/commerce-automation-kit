@@ -1554,7 +1554,7 @@ try {
       ),
       `overflow ${width}`,
     );
-    assert.equal(await page.locator(".hm-bottom svg").count(), 4);
+    assert.equal(await page.locator(".hm-bottom svg").count(), 5);
     assert.equal(
       await page
         .locator(".hm-course-hero")

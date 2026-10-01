@@ -2246,3 +2246,12 @@
 .hm-word-definition .hm-native { overflow-wrap: anywhere; }
 
 body:has(.hm-dialog[open]) { overflow: hidden; }
+
+.hm-app .hm-bottom button { min-width: 0; white-space: nowrap; }
+.hm-word-search { margin: 22px 0 12px; }
+.hm-word-filters { margin-bottom: 16px; }
+.hm-word-filters button[aria-pressed="true"] { background: #e9efff; color: #3157d5; border-color: #bccafa; }
+.hm-app .hm-word-meaning-toggle { padding: 5px 10px; min-height: 36px; font-size: 12px; }
+.hm-word-review { display: flex; flex-wrap: wrap; }
+.hm-word-review button { flex: 1; white-space: nowrap; }
+.hm-app .hm-word-remove { margin-top: 12px; color: #67738b; font-size: 12px; }

@@ -1,6 +1,7 @@
 /* Icons from the approved Hanmadi 2.0 mockup. */
 const paths: Record<string, string> = {
   book: "M4 4h6a3 3 0 0 1 3 3v14a4 4 0 0 0-4-2H4z M13 7a3 3 0 0 1 3-3h5v15h-4a4 4 0 0 0-4 2",
+  dictionary: "M5 3h14v18H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2 M3 17h16 M8 7h7 M8 11h5",
   chat: "M20 11a8 8 0 0 1-8 8H5l-3 3v-11a9 9 0 0 1 18 0Z M7 10h8 M7 14h5",
   translate:
     "M3 5h12 M9 2v3 M5 5c1 5 4 8 8 10 M12 5c-1 5-4 8-9 11 M14 21l4-11 4 11 M16 17h4",

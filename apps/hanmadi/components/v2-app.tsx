@@ -5,6 +5,7 @@ import { V2Icon as Icon } from "./v2-icon";
 import { Speaker } from "./v2-speaker";
 import { studyAudio } from "@/lib/study-audio-client";
 import { Dialog } from "./v2-dialog";
+import { Wordbook } from "./v2-wordbook";
 import { Vocabulary } from "./v2-vocabulary";
 import { V2Lesson } from "./v2-lesson";
 import { lessonPlan } from "@/lib/v2-lesson";
@@ -15,6 +16,7 @@ import {
   isStudyLanguage,
   starterUnits,
   studyQueue,
+  isVocabulary,
   hasLessonProgress,
   emptyStudy,
   type StudyLanguage,
@@ -24,7 +26,7 @@ import {
 } from "@/lib/v2";
 import type { ModelConnection } from "@/lib/model-connections";
 type Identity = { name: string; owner: boolean };
-type Tab = "study" | "chat" | "translate" | "phrases";
+type Tab = "study" | "chat" | "translate" | "phrases" | "words";
 async function request(
   path: string,
   body?: unknown,
@@ -2290,6 +2292,12 @@ export function V2App() {
                   </section>
                 </>
               )}
+              {tab === "words" && (
+                <Wordbook key={language} language={language} words={due.filter(isVocabulary)} busy={busy}
+                  onStudy={() => setTab("study")}
+                  onRemove={id => { void run({ action: "remove-word", id }); }}
+                  onReview={(id, confidence) => { void run({ action: "practice", id, confidence }); }} />
+              )}
               {tab === "phrases" && (
                 <>
                   <div className="hm-page-heading">
@@ -2384,6 +2392,7 @@ export function V2App() {
                 ["chat", "chat", "AI 대화"],
                 ["translate", "translate", "번역"],
                 ["phrases", "heart", "내 표현"],
+                ["words", "dictionary", "단어장"],
               ] as const
             ).map(([id, icon, label]) => (
               <button

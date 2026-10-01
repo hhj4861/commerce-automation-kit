@@ -31,3 +31,12 @@ test("malformed or romanized results retry once, transport errors do not retry",
   await assert.rejects(lookupVocabulary("café", "Un café", "es", async () => { calls++; throw new Error("offline"); }), /offline/);
   assert.equal(calls, 1);
 });
+
+import { isVocabulary, type Expression } from "./v2";
+test("wordbook recognizes earlier saved words and shared expressions without including ordinary chat", () => {
+  const expression = { text: "coffee", reading: "커피", meaning: "커피", source: "chat", id: "one", language: "en", createdAt: 1, dueAt: 1 } as Expression;
+  assert.equal(isVocabulary(expression), false);
+  assert.equal(isVocabulary({ ...expression, source: "vocabulary" }), true);
+  assert.equal(isVocabulary({ ...expression, inVocabulary: true }), true);
+  assert.equal(isVocabulary({ ...expression, inVocabulary: false }), false);
+});

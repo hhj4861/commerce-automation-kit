@@ -24,6 +24,7 @@ export type Expression = Phrase & {
   id: string;
   language: StudyLanguage;
   source: "translation" | "chat" | "vocabulary";
+  inVocabulary?: boolean;
   createdAt: number;
   dueAt: number;
   practicedAt?: number;
@@ -140,4 +141,8 @@ export { curriculum };
 
 export function hasLessonProgress(profile: Profile | undefined, id: string) {
   return Boolean(profile?.practiced[id] || profile?.completedLessons?.[id]);
+}
+
+export function isVocabulary(expression: Expression) {
+  return expression.source === "vocabulary" || expression.inVocabulary === true;
 }
