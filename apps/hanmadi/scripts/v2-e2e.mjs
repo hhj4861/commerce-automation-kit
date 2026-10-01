@@ -172,6 +172,14 @@ const mock = createServer(async (req, res) => {
     if (language === "th" && input === "얼음 없이 커피 한 잔 주세요.") {
       result = {translated: system.includes("REPAIR:") ? "ขอกาแฟหนึ่งแก้ว ไม่ใส่น้ำแข็ง" : "ขอแฟเย็นไม่ใส่น้ำแข็งค่ะ", reading:"커 까패 능 깨우 마이 싸이 남캥", practice:null};
     }
+    if (language === "es" && input === "계산서 주세요.") {
+      result = {translated: "La cuenta, por favor.",
+        reading: system.includes("REPAIR:") ? "라 꾸엔따, 포르 파보르." : "라 꿰운따, 포르 파보르.", practice: null};
+    }
+    if (language === "es" && input === "Un café sin hielo, por favor.") {
+      result = {translated: system.includes("REPAIR:") ? "얼음 없는 커피 한 잔 주세요." : "얼음 없는 커피 한 잔 주세요, 포르 파보르.",
+        reading: "운 까페 신 이에로, 포르 파보르.", practice: null};
+    }
     if (input === "따뜻한 커피 한 잔 주세요." && !system.includes("REPAIR:"))
       result.reading = "kho ka fae";
   }
@@ -758,6 +766,23 @@ try {
       assert.equal(repaired.status,200);
       assert.equal(repaired.data.translated,"ขอกาแฟหนึ่งแก้ว ไม่ใส่น้ำแข็ง");
       console.log("PASS reported Thai coffee meaning drift is repaired before returning to learner");
+    }
+    if (language === "es") {
+      const before = calls;
+      await page.getByLabel("번역할 말").fill("계산서 주세요.");
+      await page.getByRole("button", {name:"번역하기",exact:true}).click();
+      await page.getByText("La cuenta, por favor.", {exact:true}).waitFor();
+      await page.getByText("라 꾸엔따, 포르 파보르.", {exact:true}).waitFor();
+      assert.equal(await page.getByText("라 꿰운따, 포르 파보르.", {exact:true}).count(), 0);
+      assert.equal(calls - before, 2, "Spanish pronunciation has one bounded repair");
+      const reverse = await post({action:"translate", language, from:language, text:"Un café sin hielo, por favor."});
+      assert.equal(reverse.status, 200);
+      assert.equal(reverse.data.translated, "얼음 없는 커피 한 잔 주세요.");
+      assert.equal(calls - before, 4, "reverse meaning has one bounded repair");
+      assert(!(await state()).state.expressions.some(e => /꿰운따|포르 파보르/.test(e.meaning)), "bad meaning never saved");
+      await page.locator(".hm-main").evaluate(el => (el.scrollTop = 0));
+      await page.screenshot({path:resolve(screenshots,"spanish-translation-repair.png"),fullPage:true});
+      console.log("PASS Spanish pronunciation repaired in browser; reverse phonetic leakage repaired before response/save");
     }
     // Restore the screen's collapsed input before the existing Japanese translation journey.
     await details.click();

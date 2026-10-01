@@ -496,3 +496,83 @@ test("explicit iced coffee remains valid and common Thai no-ice wording is accep
     assert.equal(result.translated,phrase);
   }
 });
+
+
+const spanishBill = {
+  text: "La cuenta, por favor.",
+  reading: "라 꾸엔따, 포르 파보르.",
+  meaning: "계산서 주세요.",
+};
+test("reported Spanish bill pronunciation is regenerated once with a targeted instruction", async () => {
+  let calls = 0;
+  const result = await translate("계산서 주세요.", "es", "ko", async system => {
+    calls++;
+    assert.match(system, /Spanish pronunciation and meaning/);
+    if (calls === 2) assert.match(system, /REPAIR:[\s\S]*preserving ue/);
+    return JSON.stringify({ translated: spanishBill.text,
+      reading: calls === 1 ? "라 꿰운따, 포르 파보르." : spanishBill.reading, practice: spanishBill });
+  });
+  assert.equal(calls, 2);
+  assert.equal(result.reading, spanishBill.reading);
+  assert.deepEqual(result.practice, spanishBill);
+});
+test("reverse Spanish translation repairs phonetic leakage and persistent failures never return practice", async () => {
+  for (const persistent of [false, true]) {
+    let calls = 0;
+    const run = translate("Un café sin hielo, por favor.", "es", "es", async system => {
+      calls++;
+      if (calls === 2) assert.match(system, /REPAIR:[\s\S]*do not copy its sounds/);
+      return JSON.stringify({ translated: calls === 1 || persistent
+        ? "얼음 없는 커피 한 잔 주세요, 포르 파보르." : "얼음 없는 커피 한 잔 주세요.",
+        reading: "운 까페 신 이에로, 포르 파보르.", practice: null });
+    });
+    if (persistent) await assert.rejects(run, /번역/);
+    else assert.equal((await run).translated, "얼음 없는 커피 한 잔 주세요.");
+    assert.equal(calls, 2);
+  }
+});
+test("Spanish reply and learner recast share pronunciation guidance and retain the selected model on repair", async () => {
+  for (const learner of [false, true]) {
+    let calls = 0;
+    const complete = async (system: string, _messages: unknown, selection?: string) => {
+      calls++;
+      assert.match(system, /Spanish pronunciation and meaning/);
+      assert.equal(selection, "own-model");
+      const phrase = calls === 1 ? { ...spanishBill, reading: "라 꾸엔따, 뽀르 바뽀르." } : spanishBill;
+      return JSON.stringify(learner ? { phrase, reusable: true } : phrase);
+    };
+    const result = learner
+      ? (await learnerTurn("es", messages, "own-model", complete)).phrase
+      : await roleplayReply("es", 1, "cafe", messages, "own-model", complete);
+    assert.equal(calls, 2);
+    assert.deepEqual(result, spanishBill);
+  }
+});
+test("Spanish practice with leaked phonetics is excluded without retrying a valid translation", async () => {
+  let calls = 0;
+  const result = await translate("계산서 주세요.", "es", "ko", async () => {
+    calls++;
+    return JSON.stringify({translated: spanishBill.text, reading: spanishBill.reading,
+      practice: {...spanishBill, meaning: "계산서 주세요, 포르 파보르."}});
+  });
+  assert.equal(calls, 1);
+  assert.equal(result.practice, null);
+});
+test("valid Spanish reading variants and quoted/name meanings remain usable without regeneration", async () => {
+  for (const phrase of [
+    spanishBill,
+    {...spanishBill, reading: "라 쿠엔타, 뽀르 파보르."},
+    {text: 'El restaurante se llama Por Favor.', reading: "엘 레스타우란테 세 야마 포르 파보르.", meaning: "식당 이름은 포르 파보르예요."},
+    {text: 'La expresión «por favor» significa una petición cortés.', reading: "라 엑스프레시온 포르 파보르 시그니피카 우나 페티시온 코르테스.", meaning: "포르 파보르는 정중한 부탁을 뜻해요."},
+    {text: 'Se encuentra aquí.', reading: "세 엔쿠엔트라 아키.", meaning: "여기에 있어요."},
+  ]) {
+    assert.deepEqual(parseRoleplay(JSON.stringify(phrase), "es"), phrase);
+    let calls = 0;
+    const result = await translate(phrase.text, "es", "es", async () => {
+      calls++;
+      return JSON.stringify({translated: phrase.meaning, reading: phrase.reading, practice: null});
+    });
+    assert.equal(calls, 1);
+    assert.equal(result.translated, phrase.meaning);
+  }
+});
