@@ -303,3 +303,20 @@ test("Japanese lessons retain the corrected native sounds rather than translated
   assert.match(find("どのレストランで会いたいですか？"),/레스토란/);
   for(const p of rows)assert(!/한국까라|여기데|소-스는|야사이는|칸코오를|기노이|마가캅푸|쥬니지난/.test(p.reading),p.text);
 });
+
+
+test("all 320 Thai starter sentences use male speech with matching particle and pronoun readings", async () => {
+  const { lessonPhrases } = await import("./v2-lesson");
+  const rows = starterUnits("th").flatMap(unit => lessonPhrases(unit));
+  assert.equal(rows.length, 320);
+  for (const row of rows) {
+    assert.doesNotMatch(row.text, /ค่ะ|คะ|ฉัน/, row.text);
+    assert.match(row.text, /ครับ/, row.text);
+    if (/ครับ[.?!\s]*$/.test(row.text)) assert.match(row.reading, /캅[.?!\s]*$/, row.reading);
+    if (row.text.includes("ผม")) assert.match(row.reading, /폼/, row.reading);
+  }
+  const fee = rows.find(row => row.text === "จ่ายค่าเครื่องดื่มด้วยบัตรครับ")!;
+  assert.equal(fee.reading, "짜이 카 크르앙 드름 두어이 밧 캅"); // ค่า is a fee, not a polite particle.
+  const floor = rows.find(row => row.text === "ห้องของผมอยู่ชั้นไหนครับ")!;
+  assert.equal(floor.reading, "헝 콥 폼 유 찬 나이 캅"); // ชั้น (floor) must not become ผม (I).
+});

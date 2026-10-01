@@ -40,3 +40,17 @@ export function dialogueIssue(input: string, reply: Phrase, language: StudyLangu
   if (language === "es" && /^Un caf[eé][^.!?]*por favor[.!]/i.test(reply.text)) return "You are the cafe staff, not the customer. Confirm the order; do not repeat the customer's request ending in por favor.";
   return null;
 }
+
+/** Default for newly generated Thai speaking practice, not inbound quoted speech. */
+export const thaiMaleSpeechGuidance = `Thai speaker style: use a male speaker by default. Use ผม (폼) for first-person singular when needed, and ครับ (캅; careful pronunciation 크랍) for polite statements AND questions. Do not use female polite particles ค่ะ/คะ or the female self-reference ดิฉัน for the speaking learner or AI partner. Keep particles natural, not after every word; short fragments need no forced particle. When text ends in ครับ, its Hangul reading must end in 캅 or 크랍. This is a speaking-style default, not a claim about the user's identity; preserve the meaning and gender of people mentioned or quoted.`;
+
+export function thaiMaleSpeechIssue(text: string, reading: string, language: StudyLanguage): string | null {
+  if (language !== "th") return null;
+  // Boundaries avoid matching words such as คะน้า (Chinese kale) or คะแนน (score).
+  const ownSpeech = text.replace(/"[^"]*"|“[^”]*”|‘[^’]*’|「[^」]*」/g, "");
+  if (/(?:ค่ะ|คะ)(?=$|[\s\p{P}])/u.test(ownSpeech))
+    return "Use the default male speaker's polite particle ครับ, not ค่ะ/คะ; update the Hangul reading to match (캅).";
+  if (/ครับ[\s\p{P}]*$/u.test(text) && !/(?:캅|크랍)[\s\p{P}]*$/u.test(reading))
+    return "Pronounce the final ครับ as 캅 or 크랍, not 카. Keep text and reading aligned.";
+  return null;
+}
