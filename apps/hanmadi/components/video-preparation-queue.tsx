@@ -10,6 +10,9 @@ import type { ContentDraft } from "@/lib/knowledge";
 import type { YoutubeVideo } from "@/lib/youtube-search";
 import {
   VIDEO_CONCURRENCY,
+  videoDisposition,
+  videoJudgmentLabel,
+  videoJudgmentReason,
   VIDEO_SELECTION_LIMIT,
   type VideoResult,
 } from "@/lib/video-policy";
@@ -320,8 +323,8 @@ export function VideoPreparationQueue({
                   {entry?.judgments && (
                     <small>
                       통과 {entry.judgments.filter((j) => j.accepted).length}개
-                      · 검토 대기 {entry.judgments.filter((j) => j.choice === "useful" && !j.accepted).length}개
-                      · 제외 {entry.judgments.filter((j) => j.choice !== "useful").length}개
+                      · 검토 대기 {entry.judgments.filter((j) => videoDisposition(j) === "review").length}개
+                      · 제외 {entry.judgments.filter((j) => videoDisposition(j) === "excluded").length}개
                     </small>
                   )}
                   {entry?.draft?.videoReview && (
@@ -349,7 +352,10 @@ export function VideoPreparationQueue({
                             {String(Math.floor(e.at % 60)).padStart(2, "0")}
                           </a>{" "}
                           {e.evidence} ·{" "}
-                          {entry.judgments?.[i]?.accepted ? "통과" : entry.judgments?.[i]?.choice === "useful" ? "검토 대기" : "제외"}
+                          {(() => {
+                            const judgment = entry.draft!.videoReview!.judgments.find((j) => j.index === i);
+                            return judgment ? `${videoJudgmentLabel(judgment)} · ${videoJudgmentReason(judgment)}` : "평가 기록 없음";
+                          })()}
                         </p>
                       ))}
                     </details>

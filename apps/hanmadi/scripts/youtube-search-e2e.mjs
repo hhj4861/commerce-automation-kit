@@ -137,7 +137,7 @@ export async function verifyYoutubeSearch({
       status: "draft",
       ...(index === 3 ? { videoReview: { requiresHumanReview: true, rubric: "fixture", model: "fixture",
         analyzedAt: Date.now(), comparedCount: 1, referenceCount: 1,
-        judgments: [{ index: 0, choice: "useful", confidence: 0.66, accepted: false }],
+        judgments: [{ index: 0, choice: "unreliable", confidence: 0.41, accepted: false, disposition: "review", reason: "low_confidence" }],
         evidence: [{ at: 10, evidence: "창가 자리를 묻는 표현을 설명하는 합성 근거" }] } } : {}),
       units: [
         {
@@ -153,7 +153,7 @@ export async function verifyYoutubeSearch({
         draft,
         message: index === 3 ? "확신이 낮은 표현을 검토 대기로 보관했어요." : "JEV 통과 표현을 저장했어요.",
         judgments: [
-          { index: 0, choice: "useful", confidence: index === 3 ? 0.66 : 0.97, accepted: index !== 3 },
+          { index: 0, choice: index === 3 ? "unreliable" : "useful", confidence: index === 3 ? 0.41 : 0.97, accepted: index !== 3, disposition: index === 3 ? "review" : "accepted", reason: index === 3 ? "low_confidence" : "qualified" },
         ],
       },
     });
@@ -253,9 +253,15 @@ export async function verifyYoutubeSearch({
     });
     const pendingReview = queue.locator(`li[data-video-id="${videos[3].id}"]`);
     await pendingReview.scrollIntoViewIfNeeded();
+    assert.match(await pendingReview.innerText(), /통과 0개.*검토 대기 1개.*제외 0개/);
+    await pendingReview.getByText("분석 구간·평가 근거", { exact: true }).click();
+    assert.match(await pendingReview.innerText(), /JEV 분류: 근거·내용 불확실/);
+    assert.match(await pendingReview.innerText(), /판정 확신이 낮아 직접 확인 필요/);
     await page.screenshot({ path: resolve(screenshots, "video-analysis-review-390.png"), fullPage: false });
     await pendingReview.getByRole("button", { name: "초안 검수", exact: true }).click();
     await page.getByText(/JEV 확신이 낮아 검토 대기 중이에요/).waitFor();
+    await page.getByText("저장 당시 JEV 판정 보기", { exact: true }).click();
+    assert.match(await page.locator("details").filter({ hasText: "저장 당시 JEV 판정 보기" }).innerText(), /JEV 분류: 근거·내용 불확실/);
     assert(await page.getByRole("button", { name: "검수 완료 · 학습에 게시", exact: true }).isDisabled());
     await page.getByRole("button", { name: "새 초안", exact: true }).click();
     await page.getByRole("navigation", { name: "관리자 메뉴" }).getByRole("button", { name: "영상 찾기", exact: true }).click();
