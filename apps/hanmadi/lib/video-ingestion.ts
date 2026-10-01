@@ -9,6 +9,7 @@ import {
   VIDEO_SELECTION_LIMIT,
   VIDEO_CONCURRENCY,
   VIDEO_RUBRIC,
+  videoDisposition,
   type VideoSettings,
   type VideoResult,
   type VideoAnalysis,
@@ -146,7 +147,7 @@ export async function processVideo(
       judgeToken = randomUUID();
     let claimed = false;
     for (let i = 0; i < 50; i++) {
-      claimed = await store.claim(judgeLock, judgeToken, 25);
+      claimed = await store.claim(judgeLock, judgeToken, 45);
       if (claimed) break;
       await new Promise((r) => setTimeout(r, 300));
     }
@@ -165,9 +166,10 @@ export async function processVideo(
           message: "이미 저장한 자료를 불러왔어요.",
         };
       const judged = await deps.judge(analysis, before.drafts, settings);
-      const requiresHumanReview = judged.judgments.some((j) => j.choice === "useful" && !j.accepted);
-      const units = analysis.units
-        .filter((_, i) => judged.judgments[i]?.choice === "useful")
+      const requiresHumanReview = judged.judgments.some((j) => videoDisposition(j) === "review");
+      const unitEvidenceIndices = analysis.units.flatMap((_, i) =>
+        judged.judgments[i] && videoDisposition(judged.judgments[i]) !== "excluded" ? [i] : []);
+      const units = unitEvidenceIndices.map((i) => analysis.units[i])
         .map(({ text, meaning, reading }) => ({ text, meaning, reading }));
       let result: VideoResult;
       if (!units.length)
@@ -192,7 +194,9 @@ export async function processVideo(
               requiresHumanReview,
               rubric: VIDEO_RUBRIC,
               model: judged.model,
+              ...(judged.comparisonModel ? { comparisonModel: judged.comparisonModel } : {}),
               judgments: judged.judgments,
+              unitEvidenceIndices,
               comparedCount: judged.comparedCount,
               referenceCount: judged.referenceCount,
               evidence: analysis.units.map(({ at, evidence }) => ({
