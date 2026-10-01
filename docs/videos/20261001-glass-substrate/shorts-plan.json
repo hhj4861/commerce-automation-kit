@@ -1,0 +1,411 @@
+{
+  "title": "AI칩 아래에 깨지기 쉬운 유리를 넣는다고?",
+  "voiceId": "RU7aSi6lT4uQBXMLgDxK",
+  "speed": 1.0,
+  "resolution": [
+    1080,
+    1920
+  ],
+  "fps": 24,
+  "newHiggsfieldRequests": 0,
+  "newTtsRequests": 0,
+  "new3dRenders": 0,
+  "source": "existing longform v2 clean visual masters + original Kyle narration",
+  "segments": [
+    {
+      "scene": "tradeoff",
+      "sourceSentenceIndices": [
+        1,
+        1
+      ],
+      "start": 0,
+      "duration": 2.75,
+      "audioStart": 2.72,
+      "audioEnd": 5.36,
+      "visualStart": 0,
+      "visual": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-glass-substrate/broll-factory.mp4",
+      "audio": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-glass-substrate/remote-narration/beat-08.mp3",
+      "heading": "깨지기 쉬운 유리를?",
+      "narration": "유리는 깨지기 쉬운데 괜찮을까요?"
+    },
+    {
+      "scene": "inside",
+      "sourceSentenceIndices": [
+        3,
+        4
+      ],
+      "start": 2.75,
+      "duration": 8.041666666666666,
+      "audioStart": 14.84,
+      "audioEnd": 22.78,
+      "visualStart": 14.84,
+      "visual": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-glass-substrate-v2/edit/01-visual.mp4",
+      "audio": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-glass-substrate/remote-narration/beat-01.mp3",
+      "heading": "칩이 아닌, 칩 아래",
+      "narration": "유리기판은 바로 이 기판의 중심 재료를 유리로 만드는 기술입니다. 계산하는 실리콘 자체를 유리로 바꾼다는 뜻은 아닙니다."
+    },
+    {
+      "scene": "traffic",
+      "sourceSentenceIndices": [
+        3,
+        4
+      ],
+      "start": 10.791666666666666,
+      "duration": 11.5,
+      "audioStart": 11.98,
+      "audioEnd": 23.38,
+      "visualStart": 11.98,
+      "visual": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-glass-substrate-v2/edit/02-visual.mp4",
+      "audio": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-glass-substrate/remote-narration/beat-02.mp3",
+      "heading": "칩이 늘면 연결도 늘어난다",
+      "narration": "그래서 여러 기능의 칩을 한 패키지 안에 가깝게 모으는 설계가 중요해졌습니다. 그런데 부품을 더 넣으려면 바닥도 넓어지고, 그 사이를 연결하는 길도 늘어납니다."
+    },
+    {
+      "scene": "warpage",
+      "sourceSentenceIndices": [
+        2,
+        2
+      ],
+      "start": 22.291666666666664,
+      "duration": 5.125,
+      "audioStart": 6.54,
+      "audioEnd": 11.56,
+      "visualStart": 6.54,
+      "visual": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-glass-substrate-v2/edit/04-visual.mp4",
+      "audio": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-glass-substrate/remote-narration/beat-04.mp3",
+      "heading": "작은 휘어짐, 큰 연결 문제",
+      "narration": "바닥이 휘면 위쪽 부품과 아래쪽 접점의 높이가 고르지 않게 됩니다."
+    },
+    {
+      "scene": "glass",
+      "sourceSentenceIndices": [
+        0,
+        2
+      ],
+      "start": 27.416666666666664,
+      "duration": 13.791666666666666,
+      "audioStart": 0.0,
+      "audioEnd": 13.68,
+      "visualStart": 0.0,
+      "visual": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-glass-substrate-v2/edit/06-visual.mp4",
+      "audio": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-glass-substrate/remote-narration/beat-06.mp3",
+      "heading": "핵심은 투명함이 아니다",
+      "narration": "이 지점에서 유리가 후보로 등장합니다. 중요한 것은 속이 보인다는 점이 아닙니다. 반도체에 맞게 선택한 유리는 평탄도와 치수 안정성, 열에 따른 변형을 관리하는 데 장점이 있습니다."
+    },
+    {
+      "scene": "wiring",
+      "sourceSentenceIndices": [
+        2,
+        2
+      ],
+      "start": 41.20833333333333,
+      "duration": 6.875,
+      "audioStart": 12.64,
+      "audioEnd": 19.42,
+      "visualStart": 12.64,
+      "visual": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-glass-substrate-v2/edit/07-visual.mp4",
+      "audio": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-glass-substrate/remote-narration/beat-07.mp3",
+      "heading": "더 촘촘하게 연결하기",
+      "narration": "같은 공간 안에 연결을 촘촘하게 배치할 수 있다면, 더 많은 칩이 함께 일하도록 설계할 여지가 생깁니다."
+    },
+    {
+      "scene": "tradeoff",
+      "sourceSentenceIndices": [
+        3,
+        3
+      ],
+      "start": 48.08333333333333,
+      "duration": 5.708333333333333,
+      "audioStart": 10.9,
+      "audioEnd": 16.52,
+      "visualStart": 10.9,
+      "visual": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-glass-substrate-v2/edit/08-visual.mp4",
+      "audio": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-glass-substrate/remote-narration/beat-08.mp3",
+      "heading": "깨지지 않게 만드는 기술",
+      "narration": "유리를 쓰려면 제조와 운반, 가공 과정에서 손상을 막아야 합니다."
+    },
+    {
+      "scene": "industry",
+      "sourceSentenceIndices": [
+        0,
+        0
+      ],
+      "start": 53.791666666666664,
+      "duration": 10.25,
+      "audioStart": 0.0,
+      "audioEnd": 10.14,
+      "visualStart": 0.0,
+      "visual": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-glass-substrate-v2/edit/10-visual.mp4",
+      "audio": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-glass-substrate/remote-narration/beat-10.mp3",
+      "heading": "이미 시작된 기술 경쟁",
+      "narration": "실제로 인텔은 첨단 패키징용 유리기판 기술을 공개했고, 삼성전기는 유리에 미세한 연결 통로를 만들고 금속을 채우는 기술을 소개했습니다."
+    },
+    {
+      "scene": "industry",
+      "sourceSentenceIndices": [
+        2,
+        3
+      ],
+      "start": 64.04166666666666,
+      "duration": 9.208333333333334,
+      "audioStart": 14.92,
+      "audioEnd": 24.02,
+      "visualStart": 14.92,
+      "visual": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-glass-substrate-v2/edit/10-visual.mp4",
+      "audio": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-glass-substrate/remote-narration/beat-10.mp3",
+      "heading": "기술 공개 ≠ 전면 도입",
+      "narration": "다만 기술 공개, 고객 검증, 대량 생산은 서로 다른 단계입니다. 지금 모든 AI칩 아래에 유리가 깔려 있다고 이해하면 안 됩니다."
+    },
+    {
+      "scene": "daily",
+      "sourceSentenceIndices": [
+        3,
+        3
+      ],
+      "start": 73.24999999999999,
+      "duration": 5.125,
+      "audioStart": 15.66,
+      "audioEnd": 20.68,
+      "visualStart": 15.66,
+      "visual": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-glass-substrate-v2/edit/11-visual.mp4",
+      "audio": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-glass-substrate/remote-narration/beat-11.mp3",
+      "heading": "앱이 당장 빨라질까?",
+      "narration": "하지만 유리기판 하나만으로 앱이 바로 빨라지거나 구독료가 내려가는 것은 아닙니다."
+    },
+    {
+      "scene": "ending",
+      "sourceSentenceIndices": [
+        0,
+        2
+      ],
+      "start": 78.37499999999999,
+      "duration": 12.291666666666666,
+      "audioStart": 0.0,
+      "audioEnd": 12.18,
+      "visualStart": 0.0,
+      "visual": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-glass-substrate-v2/edit/14-visual.mp4",
+      "audio": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-glass-substrate/remote-narration/beat-14.mp3",
+      "heading": "AI 경쟁은 바닥까지",
+      "narration": "AI를 더 강하게 만드는 경쟁은 칩 안에서만 벌어지지 않습니다. 더 많은 칩을 정밀하게 연결하기 위해, 칩 아래의 바닥까지 바꾸고 있는 겁니다. 유리기판이 주목받는 이유입니다."
+    },
+    {
+      "scene": "ending",
+      "sourceSentenceIndices": [
+        4,
+        4
+      ],
+      "start": 90.66666666666666,
+      "duration": 4.166666666666667,
+      "audioStart": 15.1,
+      "audioEnd": 19.18,
+      "visualStart": 15.1,
+      "visual": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-glass-substrate-v2/edit/14-visual.mp4",
+      "audio": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261001-glass-substrate/remote-narration/beat-14.mp3",
+      "heading": "다음 질문: 전기는 어떻게?",
+      "narration": "유리는 전기가 통하지 않는데, 위와 아래를 어떻게 연결할까요?"
+    }
+  ],
+  "duration": 94.83333333333333,
+  "captions": [
+    {
+      "start": 0,
+      "end": 2.68,
+      "text": "유리는 깨지기 쉬운데 괜찮을까요?"
+    },
+    {
+      "start": 2.75,
+      "end": 5.41,
+      "text": "유리기판은 바로 이\\N기판의 중심 재료를"
+    },
+    {
+      "start": 5.41,
+      "end": 7.210000000000001,
+      "text": "유리로 만드는 기술입니다."
+    },
+    {
+      "start": 7.210000000000001,
+      "end": 9.670000000000002,
+      "text": "계산하는 실리콘\\N자체를 유리로 바꾼다는"
+    },
+    {
+      "start": 9.670000000000002,
+      "end": 10.73,
+      "text": "뜻은 아닙니다."
+    },
+    {
+      "start": 10.791666666666666,
+      "end": 13.331666666666665,
+      "text": "그래서 여러 기능의\\N칩을 한 패키지 안에"
+    },
+    {
+      "start": 13.331666666666665,
+      "end": 15.911666666666667,
+      "text": "가깝게 모으는 설계가\\N중요해졌습니다."
+    },
+    {
+      "start": 15.911666666666667,
+      "end": 18.711666666666666,
+      "text": "그런데 부품을 더 넣으려면 바닥도"
+    },
+    {
+      "start": 18.711666666666666,
+      "end": 21.27166666666667,
+      "text": "넓어지고, 그 사이를 연결하는 길도"
+    },
+    {
+      "start": 21.27166666666667,
+      "end": 22.231666666666662,
+      "text": "늘어납니다."
+    },
+    {
+      "start": 22.291666666666664,
+      "end": 24.931666666666665,
+      "text": "바닥이 휘면 위쪽 부품과 아래쪽"
+    },
+    {
+      "start": 24.931666666666665,
+      "end": 27.351666666666667,
+      "text": "접점의 높이가 고르지 않게 됩니다."
+    },
+    {
+      "start": 27.416666666666664,
+      "end": 29.736666666666665,
+      "text": "이 지점에서 유리가 후보로"
+    },
+    {
+      "start": 29.736666666666665,
+      "end": 30.616666666666664,
+      "text": "등장합니다."
+    },
+    {
+      "start": 30.616666666666664,
+      "end": 33.57666666666667,
+      "text": "중요한 것은 속이\\N보인다는 점이 아닙니다."
+    },
+    {
+      "start": 33.57666666666667,
+      "end": 36.25666666666666,
+      "text": "반도체에 맞게 선택한\\N유리는 평탄도와"
+    },
+    {
+      "start": 36.25666666666666,
+      "end": 38.95666666666666,
+      "text": "치수 안정성, 열에 따른 변형을"
+    },
+    {
+      "start": 38.95666666666666,
+      "end": 41.13666666666666,
+      "text": "관리하는 데 장점이 있습니다."
+    },
+    {
+      "start": 41.20833333333333,
+      "end": 43.78833333333333,
+      "text": "같은 공간 안에 연결을\\N촘촘하게 배치할 수"
+    },
+    {
+      "start": 43.78833333333333,
+      "end": 46.38833333333333,
+      "text": "있다면, 더 많은 칩이 함께 일하도록"
+    },
+    {
+      "start": 46.38833333333333,
+      "end": 48.02833333333333,
+      "text": "설계할 여지가 생깁니다."
+    },
+    {
+      "start": 48.08333333333333,
+      "end": 50.92333333333333,
+      "text": "유리를 쓰려면 제조와 운반,"
+    },
+    {
+      "start": 50.92333333333333,
+      "end": 53.743333333333325,
+      "text": "가공 과정에서 손상을\\N막아야 합니다."
+    },
+    {
+      "start": 53.791666666666664,
+      "end": 56.291666666666664,
+      "text": "실제로 인텔은 첨단 패키징용"
+    },
+    {
+      "start": 56.291666666666664,
+      "end": 58.891666666666666,
+      "text": "유리기판 기술을\\N공개했고, 삼성전기는"
+    },
+    {
+      "start": 58.891666666666666,
+      "end": 61.391666666666666,
+      "text": "유리에 미세한 연결 통로를 만들고"
+    },
+    {
+      "start": 61.391666666666666,
+      "end": 63.971666666666664,
+      "text": "금속을 채우는 기술을 소개했습니다."
+    },
+    {
+      "start": 64.04166666666666,
+      "end": 66.62166666666666,
+      "text": "다만 기술 공개, 고객 검증, 대량"
+    },
+    {
+      "start": 66.62166666666666,
+      "end": 68.72166666666666,
+      "text": "생산은 서로 다른 단계입니다."
+    },
+    {
+      "start": 68.72166666666666,
+      "end": 71.36166666666665,
+      "text": "지금 모든 AI칩 아래에 유리가 깔려"
+    },
+    {
+      "start": 71.36166666666665,
+      "end": 73.18166666666666,
+      "text": "있다고 이해하면 안 됩니다."
+    },
+    {
+      "start": 73.24999999999999,
+      "end": 75.32999999999998,
+      "text": "하지만 유리기판\\N하나만으로 앱이 바로"
+    },
+    {
+      "start": 75.32999999999998,
+      "end": 78.30999999999999,
+      "text": "빨라지거나 구독료가\\N내려가는 것은 아닙니다."
+    },
+    {
+      "start": 78.37499999999999,
+      "end": 80.85499999999999,
+      "text": "AI를 더 강하게 만드는 경쟁은"
+    },
+    {
+      "start": 80.85499999999999,
+      "end": 83.05499999999998,
+      "text": "칩 안에서만 벌어지지 않습니다."
+    },
+    {
+      "start": 83.05499999999998,
+      "end": 85.81499999999998,
+      "text": "더 많은 칩을 정밀하게\\N연결하기 위해, 칩"
+    },
+    {
+      "start": 85.81499999999998,
+      "end": 88.43499999999999,
+      "text": "아래의 바닥까지\\N바꾸고 있는 겁니다."
+    },
+    {
+      "start": 88.43499999999999,
+      "end": 90.59499999999998,
+      "text": "유리기판이 주목받는 이유입니다."
+    },
+    {
+      "start": 90.66666666666666,
+      "end": 93.40666666666665,
+      "text": "유리는 전기가 통하지\\N않는데, 위와 아래를"
+    },
+    {
+      "start": 93.40666666666665,
+      "end": 94.78666666666666,
+      "text": "어떻게 연결할까요?"
+    }
+  ]
+}

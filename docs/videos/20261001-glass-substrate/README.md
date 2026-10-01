@@ -53,3 +53,15 @@
 3. `verify-v2.py --cache <v2-cache> --source-cache <v1-cache> --video <v2 MP4>`로 전체 디코딩·자막·음성·모든 3D 장면 길이를 검사하고, 최종 프레임을 별도로 시각 검수한다.
 
 중간 산출물: 사용자 iCloud 작업 루트의 `commerce-automation-kit/20261001-glass-substrate-v2/`. v1 소스 자산은 그대로 보존한다.
+
+
+## 롱폼 재사용 숏폼 — 2026-10-01
+
+완성본: `/Users/admin/Downloads/vedio/glass-substrate-episode-1-short.mp4`.
+**1분 34.833초, 1080×1920, 24fps, Kyle 정배속**. 기존 자막 없는 v2 시각 마스터와 기존 Kyle 음성을 문장 단위로 재편집했다. 첫 장면에는 기존 Higgsfield 공장 클립을 재사용한다. 신규 Higgsfield·TTS API 호출 및 신규 Blender 장면 렌더는 모두 0회다. 최종 세로 MP4 편집 인코딩만 실행했다.
+
+깨지는 유리에 대한 질문 → 패키지 기판의 의미 → 연결 증가와 휘어짐 → 유리의 장점 → 제조 한계 → 기업 기술 공개와 도입 단계 구분 → 일상 영향의 한계 → TGV 질문 순서의 12개 구간이다. 비교 대상이 함께 보여야 하는 장면은 전체 폭을 유지하고, 나머지는 가벼운 중앙 크롭으로 재배치했다. Pretendard 60px 자막 40개를 하단 중앙보다 조금 위의 안전 영역에 배치했다.
+
+`shorts.py` 실행 시 `--source-cache <v1> --long-cache <v2> --cache <short-cache> --font-dir <fonts> --output <MP4>`를 지정한다. 편집 규칙 수정 후에는 `--force`를 사용한다. 기존 원본의 음성 ID·대본 일치, 선택 구간 길이, 자막 폭을 검사한다. 각 클립 타임스탬프를 초기화해 합성한 뒤 영상·음성 각각의 길이와 차이, 전체 디코딩, 1초 이상 무음을 확인한다. 이번 최종본은 영상 94.833333초·음성 94.833초로 일치하며 1초 이상 무음은 없다. 최종 12개 구간 프레임을 추출해 자막·부품 잘림과 끝 장면을 검수했다.
+
+편집 문장·원본 참조·타임라인은 `shorts-plan.json`, 실제 파일 해시·원본 해시·수정한 검증 실패 이력은 `shorts-verification.json`에 기록한다. 산출물은 사용자 iCloud 작업 루트의 `commerce-automation-kit/20261001-glass-substrate-short/`에 보관한다. 로컬 완성본 제작이며 YouTube 업로드나 운영 제작실 배포는 하지 않았다.
