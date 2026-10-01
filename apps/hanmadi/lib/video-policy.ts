@@ -3,7 +3,7 @@ import type { ContentDraft } from "./knowledge";
 export const VIDEO_SELECTION_LIMIT = 10;
 export const VIDEO_CONCURRENCY = 3;
 export const VIDEO_MAX_SECONDS = 15 * 60;
-export const VIDEO_RUBRIC = "hanmadi-video-jev-v2";
+export const VIDEO_RUBRIC = "hanmadi-video-jev-v3";
 export type VideoSettings = {
   language: StudyLanguage;
   scene: string;

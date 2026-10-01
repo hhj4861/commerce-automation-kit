@@ -273,6 +273,10 @@ test("real Jev SDK contract enforces confidence, exact dedupe and fail-closed be
     const b = JSON.parse(String(init?.body));
     assert(b.state.references.length);
     assert.equal(b.questions.unit0.type, "choice");
+    assert.equal(b.state.candidates, undefined, "shared state must not include the candidate batch");
+    assert.equal(b.state.settings.practiceLevel.id, 1);
+    assert.deepEqual(b.questions.unit0.instructions.earlierCandidates, []);
+    assert.equal(b.questions.unit0.instructions.candidate.text, phrase.text);
     return Response.json({
       model: "jev-1.13.0",
       answers: {
