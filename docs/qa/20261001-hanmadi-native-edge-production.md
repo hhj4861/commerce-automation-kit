@@ -56,3 +56,17 @@ docker compose -p shared-ai-edge \
 ```
 
 Admin 담당 세션 `01a0ed48-a0ae-7b00-8fe5-fec7b0a5b3de`에 실제 적용 및 12개 검증 결과를 전달했다. 담당 세션은 승인된 영상 변경만 포함하는 배포 승격 PR #109와 Admin 재배포·실영상 1건을 담당한다. 다른 기능이 섞인 승격 PR #108은 배포 없이 닫았다는 담당자 회신을 받았다.
+
+## 후속 앱 검증 — HTTP 연결 성공, 전체 기능 미완료
+
+Admin 담당 세션 회신: 배포 승격 PR #109는 `b6c079ad1be14c7f801829c8b46b895b34a4c840`으로 머지됐고, GitOps 실행 `36836273654`가 성공했다. 동일 영상 `OA6gpD9mP0A`를 2026-10-01 08:29:00.453–08:29:22.968 UTC에 1회 실행했지만 앱에서 “AI 답변 형식을 확인하지 못했어요”로 실패했다. 초안·게시 자료는 각각 0→0이었다. 재호출하지 않았다.
+
+JEV 담당이 독립적으로 해당 시간대(08:28:55–08:29:30 UTC) gateway 로그와 키 정책을 읽어 확인했다.
+
+- native POST `/v1beta/models/hanmadi-chat%3AgenerateContent` HTTP **200** 1건. 기존의 HTTP 400 연결 오류와 구분한다.
+- 해당 로그에 `BadRequestError`, `GeminiException`, `INVALID_ARGUMENT`, `typesafe`, `systemone` 기록 없음. 응답 본문·finishReason은 로그에 없으므로 내용 형식은 확인하지 못했다.
+- `hanmadi-admin-jev`: 누적 spend **0.0**, 모델 `jev-1.13.0`, 경로 `/typesafe/v1/systemone`, $0.50/30d, 10 RPM, 만료 없음으로 유지.
+- `hanmadi-server`: 조회 시 누적 spend **$0.3895447**, 기존 3개 모델·$5/30d·30 RPM 유지. 누적값은 이번 영상 1건 비용이 아니다.
+- 서버 HTTP 연결은 성공했지만 앱의 응답 해석 단계에서 멈춰 영상→Jev→초안 전체 검증은 여전히 미완료다. 현재 후속 작업은 native JSON 응답 설정 전달과 앱 파서의 호환 확인이다. 원문·키 출력이나 추가 유료 요청 없이 진단한다.
+
+운영 중인 LiteLLM 1.102.1 소스를 직접 확인했다. `google_genai/main.py`는 `generationConfig`를 `config`로 전달하며, `llms/gemini/google_genai/transformation.py`는 camelCase/snake_case를 변환해 `generationConfig`와 `systemInstruction`을 요청 객체에 포함한다. 따라서 설정 누락을 원인으로 단정하지 않는다. 날짜를 지정한 `/spend/logs` 응답에는 해당 08:29 시작 행이 없었고, 기존 증적으로 응답 JSON의 최상위 유형·길이·finishReason을 복원하지 못했다. 본문을 저장하지 않는 진단 메타데이터와 회귀 테스트를 통한 원인 구분이 다음 후보이며, 이번 작업에서 앱 수정이나 추가 모델 호출은 하지 않았다.
