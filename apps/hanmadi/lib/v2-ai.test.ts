@@ -692,3 +692,70 @@ test("male default preserves explicitly quoted female speech rather than rewriti
   const result = await translate('그녀가 안녕하세요라고 말했어요.', 'th', 'ko', async () => JSON.stringify({translated:phrase.text,reading:phrase.reading,practice:null}));
   assert.equal(result.translated, phrase.text);
 });
+
+
+test("Japanese cafe reply repairs the observed unrequested iced temperature without changing models", async () => {
+  const incorrect = { text: "かしこまりました。氷抜きのアイスコーヒーですね。サイズはいかがなさいますか？", reading: "카시코마리마시타. 코오리누키노 아이스 코오히이데스네. 사이즈와 이카가나사이마스카?", meaning: "알겠습니다. 얼음을 뺀 아이스 커피군요. 사이즈는 어떻게 하시겠습니까?" };
+  const corrected = { text: "氷抜きのコーヒーですね。かしこまりました。", reading: "코오리누키노 코오히이데스네. 카시코마리마시타.", meaning: "얼음 없는 커피군요. 알겠습니다." };
+  for (const persistent of [false, true]) {
+    let calls = 0;
+    const run = roleplayReply("ja", 1, "cafe", [{role:"user",content:"얼음 없이 커피 한 잔 주세요."}], "personal", async (prompt, _messages, selection) => {
+      assert.equal(selection, "personal");
+      if (++calls === 2) assert.match(prompt, /Do not invent a drink temperature/);
+      return JSON.stringify(persistent || calls === 1 ? incorrect : corrected);
+    });
+    if (persistent) await assert.rejects(run, /답변을 완성하지/);
+    else assert.deepEqual(await run, corrected);
+    assert.equal(calls, 2);
+  }
+});
+
+test("temperature guard permits a real user choice and neutral question, not an assistant's invented choice", async () => {
+  const { dialogueIssue } = await import("./study-quality");
+  const phrase = { text:"氷抜きのアイスコーヒーですね。", reading:"코오리누키노 아이스 코오히이데스네.", meaning:"얼음 없는 아이스 커피군요." };
+  assert.equal(dialogueIssue("아이스 커피 한 잔 얼음 없이 주세요.", phrase, "ja", "cafe"), null);
+  assert.equal(dialogueIssue("얼음 없이 커피 한 잔 주세요.", phrase, "ja", "cafe", [{role:"user",content:"アイスコーヒーをください。"}]), null);
+  assert.match(dialogueIssue("얼음 없이 커피 한 잔 주세요.", phrase, "ja", "cafe", [{role:"assistant",content:JSON.stringify(phrase)}])!, /temperature/);
+  assert.equal(dialogueIssue("얼음 없이 커피 한 잔 주세요.", {...phrase,text:"ホットコーヒーですか、アイスコーヒーですか？",meaning:"뜨거운 커피로 드릴까요, 차가운 커피로 드릴까요?"}, "ja", "cafe"), null);
+});
+
+test("chat timing separates parallel work and repair calls without logging conversation content", async () => {
+  const { StudyTiming } = await import("./study-timing");
+  let now = 0; const logs: object[] = [];
+  const trace = new StudyTiming("th", 0, () => now, value => logs.push(value));
+  let release!: () => void;
+  const reply = trace.measure("reply", () => trace.measure("reply_llm", () => new Promise<void>(resolve => { release = resolve; })));
+  await trace.measure("learner", async () => {
+    await trace.measure("learner_llm", async () => { now = 4000; });
+    await trace.measure("learner_llm", async () => { now = 9000; });
+  });
+  release(); await reply;
+  const response = trace.finish(Response.json({reply:"private output"}, {headers:{"Cache-Control":"no-store"}}));
+  assert.equal(response.headers.get("Cache-Control"), "no-store");
+  assert.match(response.headers.get("Server-Timing")!, /total;dur=9000/);
+  assert.match(response.headers.get("Server-Timing")!, /learner_llm;dur=9000;desc="calls=2 failures=0 pending=0"/);
+  assert.equal(logs.length, 1);
+  assert.deepEqual(Object.keys(logs[0]), ["event", "language", "status", "totalMs", "stages"]);
+  assert(!JSON.stringify(logs).includes("private"));
+  assert.equal((await response.json()).reply, "private output");
+});
+
+test("timing keeps errors intact, marks pending parallel work, and does not log fast successful requests", async () => {
+  const { StudyTiming } = await import("./study-timing");
+  const logs: object[] = [];
+  const fast = new StudyTiming("ja", 0, () => 10, value => logs.push(value));
+  fast.finish(Response.json({ok:true})); assert.equal(logs.length, 0);
+  const trace = new StudyTiming("en", 0, () => 100, value => logs.push(value));
+  let release!: () => void;
+  const pending = trace.measure("learner", () => new Promise<void>(resolve => {release=resolve}));
+  const error = new Error("secret upstream prompt");
+  await assert.rejects(trace.measure("reply_llm", async () => {throw error}), e => e === error);
+  const response = trace.finish(Response.json({error:"failed"}, {status:502}));
+  assert.equal(response.status, 502);
+  assert.match(response.headers.get("Server-Timing")!, /learner;dur=0;desc="calls=1 failures=0 pending=1"/);
+  assert.match(response.headers.get("Server-Timing")!, /reply_llm;dur=0;desc="calls=1 failures=1 pending=0"/);
+  assert(!JSON.stringify(logs).includes("secret"));
+  release(); await pending;
+  const brokenLog = new StudyTiming("ja", 0, () => 9000, () => {throw Error("sink unavailable")});
+  assert.equal(brokenLog.finish(Response.json({ok:true})).status, 200);
+});

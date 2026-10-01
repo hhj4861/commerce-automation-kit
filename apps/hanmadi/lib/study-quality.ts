@@ -33,8 +33,15 @@ export function learnerMeaningIssue(input: string, phrase: Phrase, language: Stu
   return null;
 }
 
-export function dialogueIssue(input: string, reply: Phrase, language: StudyLanguage, scene: string): string | null {
+export function dialogueIssue(input: string, reply: Phrase, language: StudyLanguage, scene: string, history: { role: string; content: string }[] = []): string | null {
   if (scene !== "cafe" || !/커피/.test(input) || !/얼음(?:은|을)?\s*(없이|빼|넣지|제외)/.test(input)) return null;
+  // Observed first-order error: no ice was turned into an iced coffee assertion.
+  // Prior USER choices can establish temperature; an assistant's invented choice cannot.
+  const temperatureChosen = [input, ...history.filter(m => m.role === "user").map(m => m.content)]
+    .some(value => /아이스|차가|차갑|차게|시원|뜨거|따뜻|핫|アイス|ホット|冷たい|温かい|\b(?:iced|hot|cold)\b/i.test(value));
+  if (language === "ja" && !temperatureChosen &&
+      /(?:アイス|ホット|冷たい|温かい)コーヒーですね/.test(reply.text))
+    return "Do not invent a drink temperature. No ice does not mean iced or hot. Acknowledge 氷抜きのコーヒー without adding アイス or ホット.";
   if (/얼음(?:은|을)?\s*(없이|빼|안).*?(?:까요|겠어요\?)/.test(reply.meaning)) return "The learner already requested no ice. Acknowledge it; do not ask them to request it again.";
   if (language === "en" && /\biced\s+coffee\b/i.test(reply.text) && /hot\s+or\s+iced/i.test(reply.text)) return "Do not assert iced coffee and then ask hot or iced. Acknowledge coffee without ice.";
   if (language === "es" && /^Un caf[eé][^.!?]*por favor[.!]/i.test(reply.text)) return "You are the cafe staff, not the customer. Confirm the order; do not repeat the customer's request ending in por favor.";

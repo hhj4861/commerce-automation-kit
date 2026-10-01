@@ -1,3 +1,4 @@
+import { StudyTiming } from "@/lib/study-timing";
 import { lookupVocabulary } from "@/lib/vocabulary";
 import { lessonPhrases } from "@/lib/v2-lesson";
 import { studyIdentity } from "@/lib/learner-auth";
@@ -31,6 +32,7 @@ import {
   curriculum,
 } from "@/lib/v2";
 import {
+  studyCompletion,
   learnerTurn,
   roleplayReply,
   translate,
@@ -51,6 +53,8 @@ export async function GET() {
   }
 }
 export async function POST(req: Request) {
+  const started = performance.now();
+  let timing: StudyTiming | undefined;
   try {
     assertConversationOrigin(req);
     const { actor } = await studyIdentity();
@@ -323,25 +327,28 @@ export async function POST(req: Request) {
           !/^[a-f0-9]{32}:[a-zA-Z0-9.-]{1,100}$/.test(selection))
       )
         throw new ConversationError(400, "AI 모델을 선택해 주세요.");
-      await reserveRequest(actor, "chat");
-      const references = await searchKnowledge({
+      const trace = timing = new StudyTiming(language, started);
+      await trace.measure("quota", () => reserveRequest(actor, "chat"));
+      const references = await trace.measure("knowledge", () => searchKnowledge({
         language,
         mode: "chat",
         level: profile.level,
         scene: String(b.scene),
         text: messages.at(-1)?.content ?? "",
-      });
+      }));
       const [reply, learner] = await Promise.all([
-        roleplayReply(
+        trace.measure("reply", () => roleplayReply(
           language,
           profile.level,
           String(b.scene),
           messages,
           selection,
-          undefined,
+          (...args) => trace.measure("reply_llm", () => studyCompletion(...args)),
           references,
-        ),
-        learnerTurn(language, messages, selection).then(
+        )),
+        trace.measure("learner", () => learnerTurn(language, messages, selection,
+          (...args) => trace.measure("learner_llm", () => studyCompletion(...args)),
+        )).then(
           (value) => ({ ...value, failed: false }),
           () => ({ phrase: null, reusable: false, failed: true }),
         ),
@@ -354,14 +361,15 @@ export async function POST(req: Request) {
       let state = before;
       if (learner.reusable && learner.phrase) {
         try {
-          const saved = await saveExpression(
+          const phrase = learner.phrase;
+          const saved = await trace.measure("save", () => saveExpression(
             actor,
             language,
-            learner.phrase,
+            phrase,
             "chat",
             before.saveEpoch,
             true,
-          );
+          ));
           state = saved.state;
           learning = saved.saved
             ? "saved"
@@ -372,15 +380,16 @@ export async function POST(req: Request) {
           learning = "not-saved";
         }
       }
-      return conversationJson({
+      return trace.finish(conversationJson({
         reply,
         learnerPhrase: learner.phrase,
         learning,
         state,
-      });
+      }));
     }
     throw new ConversationError(400, "지원하지 않는 요청이에요.");
   } catch (e) {
-    return conversationFailure(e);
+    const response = conversationFailure(e);
+    return timing ? timing.finish(response) : response;
   }
 }
