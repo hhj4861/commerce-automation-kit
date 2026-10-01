@@ -41,7 +41,8 @@ Festa는 `feature/agent-test`였다. Vercel Git 연결 상태는 API 접근 제�
 
 Hanmadi의 `vercel.json`은 Vercel 자체 Git 배포를 끄므로 Actions와 중복 배포되지 않는다.
 **이 설정이 머지된 뒤에는 기존 native Git 배포에 의존하지 말고 인증/브랜치 준비 후 첫 Actions 배포까지 확인한다.**
-Vercel CLI는 production 환경 pull → production build → prebuilt production deploy 순서다.
+학습 앱은 Vercel CLI production 환경 pull → production build → prebuilt production deploy 순서다.
+관리자는 프로젝트 전용 토큰을 유지하기 위해 테스트 → 소스 업로드 → Vercel production 원격 빌드·배포를 사용한다. [차이와 검증 상태](hanmadi-admin.md)를 참고한다.
 
 ## 인증정보
 
