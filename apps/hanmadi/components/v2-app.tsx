@@ -1,9 +1,11 @@
 "use client";
-import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { V2Icon as Icon } from "./v2-icon";
 import { Speaker } from "./v2-speaker";
 import { studyAudio } from "@/lib/study-audio-client";
+import { Dialog } from "./v2-dialog";
+import { Vocabulary } from "./v2-vocabulary";
 import { V2Lesson } from "./v2-lesson";
 import { lessonPlan } from "@/lib/v2-lesson";
 import { V2Settings } from "./v2-settings";
@@ -39,39 +41,6 @@ async function request(
   const data = await res.json();
   if (!res.ok) throw new Error(data.error || "잠시 후 다시 시도해 주세요.");
   return data;
-}
-function Dialog({
-  title,
-  onClose,
-  children,
-}: {
-  title: string;
-  onClose: () => void;
-  children: React.ReactNode;
-}) {
-  const ref = useRef<HTMLDialogElement>(null);
-  const titleId = useId();
-  useEffect(() => {
-    const el = ref.current;
-    el?.showModal();
-    return () => el?.close();
-  }, []);
-  return (
-    <dialog
-      className="hm-dialog"
-      ref={ref}
-      onCancel={onClose}
-      aria-labelledby={titleId}
-    >
-      <div className="hm-row">
-        <h2 id={titleId}>{title}</h2>
-        <button onClick={onClose} aria-label="닫기">
-          ×
-        </button>
-      </div>
-      {children}
-    </dialog>
-  );
 }
 function Microphone({
   language,
@@ -223,16 +192,20 @@ function PhraseCard({
   phrase,
   language,
   children,
+  vocabulary = false,
+  onVocabularySaved,
 }: {
   phrase: Phrase;
   language: StudyLanguage;
+  vocabulary?: boolean;
+  onVocabularySaved?: (state: StudyState) => void;
   children?: React.ReactNode;
 }) {
   return (
     <article className="hm-expression">
-      <p className="hm-native" lang={language}>
-        {phrase.text}
-      </p>
+      {vocabulary ? <Vocabulary phrase={phrase} language={language} onSaved={onVocabularySaved} /> : (
+        <p className="hm-native" lang={language}>{phrase.text}</p>
+      )}
       <p className="hm-reading">{phrase.reading}</p>
       <p>{phrase.meaning}</p>
       <Speaker key={language + phrase.text} text={phrase.text} language={language} />
@@ -1593,7 +1566,7 @@ export function V2App() {
                               <span className="hm-badge">
                                 {e.source === "translation"
                                   ? "번역에서"
-                                  : "AI 대화에서"}
+                                  : e.source === "vocabulary" ? "단어장에서" : "AI 대화에서"}
                               </span>
                               <div className="hm-row">
                                 <button
@@ -2351,7 +2324,7 @@ export function V2App() {
                             <span className="hm-badge">
                               {e.source === "translation"
                                 ? "번역에서"
-                                : "AI 대화에서"}
+                                : e.source === "vocabulary" ? "단어장에서" : "AI 대화에서"}
                             </span>
                             <button
                               disabled={busy}
@@ -2476,7 +2449,7 @@ export function V2App() {
             unit={activeUnit}
             busy={busy}
             renderPhrase={(phrase) => (
-              <PhraseCard language={language} phrase={phrase} />
+              <PhraseCard language={language} phrase={phrase} vocabulary onVocabularySaved={apply} />
             )}
             onComplete={() =>
               void run({ action: "completeLesson", id: activeUnit.id }).then(

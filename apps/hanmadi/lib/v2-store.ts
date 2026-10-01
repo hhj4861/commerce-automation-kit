@@ -48,7 +48,7 @@ export async function saveExpression(
   actor: string,
   language: StudyLanguage,
   phrase: Phrase,
-  source: "translation" | "chat",
+  source: "translation" | "chat" | "vocabulary",
   epoch: number,
   automatic = false,
 ) {
