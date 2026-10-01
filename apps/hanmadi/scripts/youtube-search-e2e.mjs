@@ -255,13 +255,13 @@ export async function verifyYoutubeSearch({
     await pendingReview.scrollIntoViewIfNeeded();
     assert.match(await pendingReview.innerText(), /통과 0개.*검토 대기 1개.*제외 0개/);
     await pendingReview.getByText("분석 구간·평가 근거", { exact: true }).click();
-    assert.match(await pendingReview.innerText(), /JEV 분류: 근거·내용 불확실/);
+    assert.match(await pendingReview.innerText(), /평가 분류: 근거·내용 불확실/);
     assert.match(await pendingReview.innerText(), /판정 확신이 낮아 직접 확인 필요/);
     await page.screenshot({ path: resolve(screenshots, "video-analysis-review-390.png"), fullPage: false });
     await pendingReview.getByRole("button", { name: "초안 검수", exact: true }).click();
-    await page.getByText(/JEV 확신이 낮아 검토 대기 중이에요/).waitFor();
-    await page.getByText("저장 당시 JEV 판정 보기", { exact: true }).click();
-    assert.match(await page.locator("details").filter({ hasText: "저장 당시 JEV 판정 보기" }).innerText(), /JEV 분류: 근거·내용 불확실/);
+    await page.getByText(/자동 검수로 확정하지 못한 표현이 있어 검토 대기 중이에요/).waitFor();
+    await page.getByText("저장 당시 JEV·언어 검수 보기", { exact: true }).click();
+    assert.match(await page.locator("details").filter({ hasText: "저장 당시 JEV·언어 검수 보기" }).innerText(), /평가 분류: 근거·내용 불확실/);
     assert(await page.getByRole("button", { name: "검수 완료 · 학습에 게시", exact: true }).isDisabled());
     await page.getByRole("button", { name: "새 초안", exact: true }).click();
     await page.getByRole("navigation", { name: "관리자 메뉴" }).getByRole("button", { name: "영상 찾기", exact: true }).click();
