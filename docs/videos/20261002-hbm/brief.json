@@ -1,0 +1,154 @@
+{
+  "id": "hbm-episode-3",
+  "title": "비싼 AI칩이 계산도 못 하고 기다리는 이유",
+  "voice": "RU7aSi6lT4uQBXMLgDxK",
+  "speed": 1.0,
+  "aspect": "16:9",
+  "maxHiggsfieldCredits": 54,
+  "broll": [
+    {
+      "id": "opening",
+      "kind": "video",
+      "duration": 6,
+      "prompt": "Six second continuous cinematic macro tracking shot inside a real-scale high-end AI accelerator server, 16:9 landscape. Start close to dark graphite cooling fins and machined aluminum chassis, glide toward an exposed square compute die surrounded by several tiny stacked memory packages on a green PCB. Fine copper traces, hundreds of tiny surface-mounted capacitors, realistic brushed metal and glassy silicon, precise industrial geometry. Warm copper highlights and cool neutral white overhead light, restrained contrast, shallow optical depth of field, physically plausible reflections. Visual curiosity: the camera discovers miniature stacked memory beside the processor. Keep critical die and memory grouped in the middle third for vertical reframing. No text, no logos, no glowing sci-fi holograms, no cartoon, no floating components, no exploded parts, no people. An illustrative fictional server, not a specific branded product."
+    }
+  ],
+  "scenes": [
+    {
+      "id": "hook",
+      "title": "비싼 칩이 기다리는 것",
+      "narration": "비싼 인공지능 칩을 샀는데, 계산할 준비만 해 놓고 기다리는 순간이 있습니다. 고장 난 걸까요? 칩이 느린 게 아니라, 계산에 쓸 데이터가 제때 도착하지 못하는 겁니다. 오늘은 인공지능의 머리 옆에 작은 아파트를 짓는 이유를 따라가 보겠습니다.",
+      "kind": "server",
+      "duration": 24,
+      "prompt": "Original cinematic 3D HBM explanation: server; realistic server environment, detailed materials and motivated camera motion."
+    },
+    {
+      "id": "kitchen",
+      "title": "요리사만 늘리면 될까?",
+      "narration": "주문이 밀린 식당을 떠올려 보세요. 요리사는 수십 명인데 식재료를 나르는 문이 하나라면, 사람을 더 뽑아도 주방은 빨라지지 않습니다. 인공지능 칩에도 비슷한 순간이 생깁니다. 계산기는 많아도 메모리에서 필요한 값을 가져오는 통로가 충분하지 않으면 기다려야 하죠.",
+      "kind": "queue",
+      "duration": 24,
+      "prompt": "Original cinematic 3D HBM explanation: queue; realistic server environment, detailed materials and motivated camera motion."
+    },
+    {
+      "id": "weights",
+      "title": "대답 한 조각에도 데이터가 필요하다",
+      "narration": "인공지능이 다음 말을 만들 때는 학습으로 얻은 수많은 숫자와 지금까지의 대화 정보를 사용합니다. 그 숫자들이 모두 계산기 바로 옆에 들어 있는 건 아닙니다. 작은 캐시에 없는 데이터는 더 큰 메모리에서 읽어 와야 합니다. 계산과 데이터 이동이 함께 돌아가는 셈입니다.",
+      "kind": "package",
+      "duration": 24,
+      "prompt": "Original cinematic 3D HBM explanation: package; realistic server environment, detailed materials and motivated camera motion."
+    },
+    {
+      "id": "decode",
+      "title": "왜 특히 대화에서 중요할까?",
+      "narration": "특히 적은 수의 요청에 빠르게 대답하는 상황에서는, 다음 토큰을 만드는 과정이 메모리 접근에 제한될 수 있습니다. 토큰은 글자를 나누어 처리하는 단위입니다. 다만 모든 인공지능 작업이 항상 그런 건 아닙니다. 큰 묶음을 계산할 때는 연산 성능이 더 중요한 구간도 있습니다.",
+      "kind": "decode",
+      "duration": 24,
+      "prompt": "Original cinematic 3D HBM explanation: decode; realistic server environment, detailed materials and motivated camera motion."
+    },
+    {
+      "id": "capacity",
+      "title": "많이 담는 것과 빨리 꺼내는 것",
+      "narration": "여기서 용량과 대역폭을 구분해야 합니다. 용량은 창고에 얼마나 담을 수 있는가, 대역폭은 일정 시간에 얼마나 꺼내 보낼 수 있는가입니다. 창고를 두 배로 늘려도 출입문이 그대로면 운반 속도는 그대로일 수 있죠. 메모리 용량이 크다는 말만으로 빠르다고 할 수 없는 이유입니다.",
+      "kind": "warehouse",
+      "duration": 24,
+      "prompt": "Original cinematic 3D HBM explanation: warehouse; realistic server environment, detailed materials and motivated camera motion."
+    },
+    {
+      "id": "wide",
+      "title": "자동차를 더 빠르게? 도로를 더 넓게!",
+      "narration": "방법은 하나가 아닙니다. 통로 하나에서 신호를 더 빠르게 보내거나, 동시에 보내는 통로를 늘릴 수 있습니다. 하지만 신호 속도를 계속 올리면 전력과 신호 품질을 다루기가 까다로워집니다. 그래서 에이치비엠은 짧고 넓은 연결로 많은 데이터를 병렬로 옮기는 방향을 택합니다.",
+      "kind": "wide",
+      "duration": 24,
+      "prompt": "Original cinematic 3D HBM explanation: wide; realistic server environment, detailed materials and motivated camera motion."
+    },
+    {
+      "id": "stack",
+      "title": "칩 옆에 세운 작은 아파트",
+      "narration": "에이치비엠은 고대역폭 메모리라는 뜻입니다. 얇은 디램 칩 여러 장을 위로 쌓고, 계산을 맡는 칩 가까이에 배치합니다. 여기서 중요한 건 높이 자체가 아닙니다. 좁은 면적에 메모리를 모으면서도, 여러 연결을 통해 데이터를 함께 주고받도록 만드는 구조입니다.",
+      "kind": "stack",
+      "duration": 24,
+      "prompt": "Original cinematic 3D HBM explanation: stack; realistic server environment, detailed materials and motivated camera motion."
+    },
+    {
+      "id": "tsv",
+      "title": "층을 연결하는 아주 작은 기둥",
+      "narration": "칩을 쌓아 놓기만 하면 위층과 아래층은 통신할 수 없습니다. 실리콘을 관통하는 미세 연결, 티에스브이가 층 사이를 이어 줍니다. 앞 편의 티지브이가 유리를 통과했다면, 이번에는 실리콘을 통과합니다. 이름이 비슷해도 통과하는 재료와 맡는 위치가 다릅니다.",
+      "kind": "tsv",
+      "duration": 24,
+      "prompt": "Original cinematic 3D HBM explanation: tsv; realistic server environment, detailed materials and motivated camera motion."
+    },
+    {
+      "id": "interposer",
+      "title": "메모리와 계산칩 사이의 광장",
+      "narration": "이 메모리 탑은 대표적인 구성에서 계산칩 바로 위가 아니라 옆에 놓입니다. 아래의 정밀한 배선층이 둘 사이를 연결하죠. 인터포저를 이용하는 방식이 그 예입니다. 층 사이의 수직 연결과, 칩 사이의 짧고 넓은 수평 연결이 함께 있어야 데이터가 계산기로 도착합니다.",
+      "kind": "interposer",
+      "duration": 24,
+      "prompt": "Original cinematic 3D HBM explanation: interposer; realistic server environment, detailed materials and motivated camera motion."
+    },
+    {
+      "id": "numbers",
+      "title": "숫자 두 개를 따로 읽어야 한다",
+      "narration": "실제 제품으로 감을 잡아 보겠습니다. 엔비디아 에이치이백은 메모리 용량 백사십일 기가바이트와 초당 사점팔 테라바이트의 메모리 대역폭을 제시합니다. 앞 숫자는 담는 양, 뒤 숫자는 옮기는 양입니다. 이 대역폭은 인터넷 다운로드 속도가 아니라 칩이 메모리와 주고받는 사양입니다.",
+      "kind": "numbers",
+      "duration": 24,
+      "prompt": "Original cinematic 3D HBM explanation: numbers; realistic server environment, detailed materials and motivated camera motion."
+    },
+    {
+      "id": "daily",
+      "title": "내가 기다리는 답변과 무슨 관계일까?",
+      "narration": "그러면 우리가 쓰는 서비스에는 무엇이 달라질까요? 데이터 공급이 병목인 구간에서는 답변을 만드는 시간을 줄이거나 같은 장비로 더 많은 요청을 처리하는 데 도움이 됩니다. 하지만 메모리를 바꿨다고 답변이 자동으로 더 정확해지거나, 이용료가 반드시 내려가는 것은 아닙니다.",
+      "kind": "daily",
+      "duration": 24,
+      "prompt": "Original cinematic 3D HBM explanation: daily; realistic server environment, detailed materials and motivated camera motion."
+    },
+    {
+      "id": "context",
+      "title": "긴 대화는 기억할 것도 늘린다",
+      "narration": "긴 문서를 읽히고 대화를 오래 이어 가면, 처리 중에 보관해야 할 정보도 늘어납니다. 여러 사람이 동시에 쓰면 메모리 부담은 더 커집니다. 그래서 용량도 여전히 중요합니다. 에이치비엠의 가치는 빠른 통로와 충분한 공간을, 실제 서비스가 요구하는 조건에 맞추는 데 있습니다.",
+      "kind": "context",
+      "duration": 24,
+      "prompt": "Original cinematic 3D HBM explanation: context; realistic server environment, detailed materials and motivated camera motion."
+    },
+    {
+      "id": "cost",
+      "title": "그런데 왜 모든 컴퓨터에 안 넣을까?",
+      "narration": "이렇게 좋다면 집에 있는 컴퓨터도 전부 에이치비엠을 쓰면 되지 않을까요? 문제는 만들기와 조립이 어렵다는 겁니다. 얇은 칩들을 정밀하게 연결하고, 쌓기 전후로 불량을 검사해야 합니다. 메모리뿐 아니라 주변의 고급 패키징까지 맞춰야 하니 비용과 생산 난도가 올라갑니다.",
+      "kind": "inspection",
+      "duration": 24,
+      "prompt": "Original cinematic 3D HBM explanation: inspection; realistic server environment, detailed materials and motivated camera motion."
+    },
+    {
+      "id": "heat",
+      "title": "가까워질수록 어려워지는 숙제",
+      "narration": "공간을 줄이고 연결을 촘촘하게 만들면 열을 빼내는 일도 중요해집니다. 연결 하나당 효율이 좋아져도, 시스템 전체가 더 많은 일을 하면 소비 전력과 열은 커질 수 있죠. 그래서 칩을 높이 쌓는 경쟁에는 접합 기술, 냉각, 안정성까지 따라붙습니다. 다음 편에서 이어질 이야기입니다.",
+      "kind": "heat",
+      "duration": 24,
+      "prompt": "Original cinematic 3D HBM explanation: heat; realistic server environment, detailed materials and motivated camera motion."
+    },
+    {
+      "id": "makers",
+      "title": "작은 메모리 뒤의 큰 협업",
+      "narration": "이 분야에는 에스케이하이닉스와 마이크론 같은 메모리 제조사가 있고, 계산칩과 패키징을 만드는 기업들도 함께 움직입니다. 한 회사가 빠른 메모리만 만들면 끝나는 일이 아닙니다. 칩 설계, 연결 방식, 전력과 냉각 조건을 함께 맞춰야 시스템에서 제 성능이 나옵니다.",
+      "kind": "makers",
+      "duration": 24,
+      "prompt": "Original cinematic 3D HBM explanation: makers; realistic server environment, detailed materials and motivated camera motion."
+    },
+    {
+      "id": "limits",
+      "title": "문이 넓어져도 모든 문제가 풀리진 않는다",
+      "narration": "주방의 문을 넓혔다고 모든 주문이 즉시 나오는 건 아니겠죠. 이제 요리사의 손이 느릴 수도 있고, 다른 지점과 연락하는 길이 막힐 수도 있습니다. 인공지능도 같습니다. 메모리 병목을 줄인 뒤에는 연산이나 서버 사이 통신이 새로운 제한이 될 수 있습니다.",
+      "kind": "limits",
+      "duration": 24,
+      "prompt": "Original cinematic 3D HBM explanation: limits; realistic server environment, detailed materials and motivated camera motion."
+    },
+    {
+      "id": "ending",
+      "title": "빠른 두뇌에는 빠른 공급이 필요하다",
+      "narration": "에이치비엠은 인공지능 대신 생각하는 칩이 아닙니다. 비싼 계산칩이 제 일을 하도록 데이터를 공급하는 기반입니다. 인공지능 경쟁은 더 빠른 두뇌를 만드는 것과, 그 두뇌를 덜 기다리게 만드는 일이 함께 가는 겁니다. 그런데 칩을 더 높이 쌓으면 어디까지 좋아질까요? 다음 편에서 살펴보겠습니다.",
+      "kind": "ending",
+      "duration": 24,
+      "prompt": "Original cinematic 3D HBM explanation: ending; realistic server environment, detailed materials and motivated camera motion."
+    }
+  ]
+}

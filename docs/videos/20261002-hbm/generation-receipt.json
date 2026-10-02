@@ -1,0 +1,19 @@
+{
+  "generationId": "01603a68-fd02-451f-b492-ab9fc22e2cf9",
+  "status": "downloaded",
+  "model": "seedance_2_0",
+  "durationSeconds": 6,
+  "resolution": "1080p",
+  "mode": "std",
+  "generateAudio": false,
+  "quotedCredits": 54,
+  "balanceBefore": 1200.1,
+  "balanceAfter": 1146.1,
+  "balanceDifference": 54,
+  "attempts": 1,
+  "regenerations": 0,
+  "additionalShortGenerations": 0,
+  "ttsWorkflowRun": 36972343577,
+  "sourceVoice": "RU7aSi6lT4uQBXMLgDxK",
+  "speed": 1.0
+}
