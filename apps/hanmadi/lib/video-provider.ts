@@ -20,6 +20,12 @@ import {
   type VideoPairEvaluation,
 } from "./video-policy";
 
+export class VideoEligibilityError extends ConversationError {
+  constructor(readonly reason: "too_long" | "not_public" | "live" | "unavailable", message: string) {
+    super(400, message);
+  }
+}
+
 export async function videoDetails(id: string, fetcher: typeof fetch = fetch) {
   if (!process.env.YOUTUBE_API_KEY)
     throw new ConversationError(503, "YouTube 검색 연결을 먼저 설정해 주세요.");
@@ -48,17 +54,16 @@ export async function videoDetails(id: string, fetcher: typeof fetch = fetch) {
       Number(duration[2] || 0) * 60 +
       Number(duration[3] || 0)
     : 0;
-  if (
-    !item ||
-    item.status?.privacyStatus !== "public" ||
-    item.snippet?.liveBroadcastContent !== "none" ||
-    !seconds ||
-    seconds > VIDEO_MAX_SECONDS
-  )
-    throw new ConversationError(
-      400,
-      "공개된 15분 이하의 일반 영상만 분석할 수 있어요. 비공개·라이브 영상은 제외해 주세요.",
-    );
+  if (!item)
+    throw new VideoEligibilityError("unavailable", "영상을 찾을 수 없어요. 삭제되었거나 공개되지 않은 영상일 수 있어요. 다른 공개 영상을 선택해 주세요.");
+  if (item.status?.privacyStatus && item.status.privacyStatus !== "public")
+    throw new VideoEligibilityError("not_public", "공개 상태가 아닌 영상이에요. 공개된 영상을 선택해 주세요.");
+  if (["live", "upcoming"].includes(item.snippet?.liveBroadcastContent))
+    throw new VideoEligibilityError("live", "진행 중이거나 예정된 라이브 영상이에요. 방송이 끝난 일반 영상을 선택해 주세요.");
+  if (item.status?.privacyStatus !== "public" || item.snippet?.liveBroadcastContent !== "none" || !seconds)
+    throw new ConversationError(502, "영상 정보가 충분하지 않아 분석을 시작하지 않았어요. 잠시 후 다시 확인해 주세요.");
+  if (seconds > VIDEO_MAX_SECONDS)
+    throw new VideoEligibilityError("too_long", `영상 길이가 ${Math.floor(seconds / 60)}분 ${seconds % 60}초예요. 최대 ${VIDEO_MAX_SECONDS / 60}분까지 분석할 수 있어요. 더 짧은 영상을 선택해 주세요.`);
   return {
     title: String(item.snippet.title || "영상 학습 자료").slice(0, 100),
     seconds,
@@ -76,8 +81,9 @@ export async function analyzeVideo(
   id: string,
   settings: VideoSettings,
   fetcher: typeof fetch = fetch,
+  checkedDetails?: Awaited<ReturnType<typeof videoDetails>>,
 ): Promise<VideoAnalysis> {
-  const details = await videoDetails(id, fetcher);
+  const details = checkedDetails ?? await videoDetails(id, fetcher);
   const config = getLiteLLMConfig();
   const model = process.env.HANMADI_VIDEO_MODEL?.trim() || config.model;
   const started = Date.now();

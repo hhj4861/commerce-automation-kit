@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import {
   processVideo,
+  getVideoProgress,
   validateVideoBatch,
   createVideoBatch,
   getVideoBatch,
@@ -14,6 +15,7 @@ import {
   judgeVideo,
   parseVideoAnalysis,
   videoDetails,
+  VideoEligibilityError,
   VideoEvaluationError,
   comparisonCorpus,
 } from "./video-provider";
@@ -62,7 +64,9 @@ function fixture() {
     saves = 0;
   const deps = {
     store: memoryTransientStore(),
-    analyze: async () => {
+    details: async (_id: string) => { void _id; return { title: analysis.title, seconds: analysis.seconds }; },
+    analyze: async (_id?: string, _settings?: VideoSettings, _details?: { title: string; seconds: number }) => {
+      void _id; void _settings; void _details;
       analyses++;
       return analysis;
     },
@@ -323,7 +327,7 @@ test("native adapter preserves video URI and rejects ineligible videos before in
   ])
     await assert.rejects(
       videoDetails("abcdefghijk", async () => Response.json({ items: [bad] })),
-      /15분/,
+      (e: unknown) => e instanceof VideoEligibilityError,
     );
 });
 test("native video route preserves the gateway prefix and isolates the configured model path", () => {
@@ -684,4 +688,73 @@ test("a missing atomic response fails the whole evaluation instead of silently p
     delete response.answers.unit0_evidence;
     return Response.json(response);
   }), (error: unknown) => error instanceof VideoEvaluationError && error.code === "invalid_response");
+});
+
+
+test("28:38 and other ineligible videos stop before model calls, quota and saving", async () => {
+  process.env.YOUTUBE_API_KEY = "test-youtube";
+  const base = { snippet: { title: "스몰토크", liveBroadcastContent: "none" }, status: { privacyStatus: "public" }, contentDetails: { duration: "PT28M38S" } };
+  for (const [item, reason] of [
+    [base, "too_long"],
+    [{ ...base, status: { privacyStatus: "private" } }, "not_public"],
+    [{ ...base, snippet: { liveBroadcastContent: "live" } }, "live"],
+    [undefined, "unavailable"],
+  ] as const) {
+    const f = fixture(); let counted = 0, judged = 0;
+    f.deps.details = (id) => videoDetails(id, async () => Response.json({ items: item ? [item] : [] }));
+    f.deps.count = async () => ++counted;
+    f.deps.judge = async () => { judged++; throw Error("must not evaluate"); };
+    const result = await processVideo("71gMyqGhDCk", settings, f.deps);
+    assert.equal(result.state, "blocked");
+    assert.equal(result.stage, "checking");
+    assert.equal(result.issue, reason);
+    assert.equal(result.retryable, false);
+    if (reason === "too_long") assert.match(result.message, /28분 38초.*15분/);
+    assert.deepEqual(f.stats(), { analyses: 0, saves: 0 });
+    assert.equal(counted, 0); assert.equal(judged, 0);
+  }
+});
+
+test("metadata outages and incomplete metadata remain retryable without consuming analysis quota", async () => {
+  for (const response of [new Response("unavailable", { status: 503 }), Response.json({ items: [{ status: { privacyStatus: "public" }, contentDetails: { duration: "PT2M" } }] })]) {
+    const f = fixture(); let counted = 0;
+    f.deps.details = (id) => videoDetails(id, async () => response);
+    f.deps.count = async () => ++counted;
+    const result = await processVideo("abcdefghijk", settings, f.deps);
+    assert.equal(result.state, "failed"); assert.equal(result.stage, "checking");
+    assert.equal(result.retryable, true); assert.equal(counted, 0);
+    assert.deepEqual(f.stats(), { analyses: 0, saves: 0 });
+  }
+});
+
+test("15-minute boundary is eligible and metadata is fetched only once before inference", async () => {
+  const f = fixture(); let checked = 0, counted = 0;
+  const details = { title: "15분", seconds: 900 };
+  f.deps.details = async () => { checked++; return details; };
+  const analyze = f.deps.analyze;
+  f.deps.analyze = async (_id, _settings, received) => { assert.deepEqual(received, details); return analyze(); };
+  f.deps.count = async () => ++counted;
+  assert.equal((await processVideo("abcdefghijk", settings, f.deps)).state, "created");
+  assert.equal(checked, 1); assert.equal(counted, 1);
+  assert.equal((await videoDetails("abcdefghijk", async () => Response.json({ items: [{ snippet: { title: "15분", liveBroadcastContent: "none" }, status: { privacyStatus: "public" }, contentDetails: { duration: "PT15M" } }] }))).seconds, 900);
+});
+
+test("progress reports actual active stages and a lost save response reconciles safely", async () => {
+  const f = fixture();
+  const observed: string[] = [];
+  const check = async () => {
+    const progress = await getVideoProgress(["abcdefghijk"], settings, f.deps.store);
+    observed.push(progress.abcdefghijk!.stage!);
+  };
+  const details = f.deps.details, analyze = f.deps.analyze, judge = f.deps.judge, save = f.deps.save;
+  f.deps.details = async () => { await check(); return details("abcdefghijk"); };
+  f.deps.analyze = async () => { await check(); return analyze(); };
+  f.deps.judge = async () => { await check(); return judge(); };
+  f.deps.save = async (input) => { await check(); await save(input); throw Error("response lost"); };
+  const first = await processVideo("abcdefghijk", settings, f.deps);
+  assert.equal(first.state, "failed"); assert.equal(first.stage, "saving");
+  assert.deepEqual(observed, ["checking", "analyzing", "evaluating", "saving"]);
+  assert.equal((await getVideoProgress(["abcdefghijk"], settings, f.deps.store)).abcdefghijk, null);
+  assert.equal((await processVideo("abcdefghijk", settings, f.deps)).state, "created");
+  assert.deepEqual(f.stats(), { analyses: 1, saves: 1 });
 });

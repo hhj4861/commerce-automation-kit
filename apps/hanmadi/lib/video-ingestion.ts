@@ -3,13 +3,15 @@ import { ConversationError } from "./conversation";
 import { curriculum, isLevel, isStudyLanguage } from "./v2";
 import { readKnowledge, saveKnowledgeDraft } from "./knowledge-store";
 import { claimSlot, transientStore } from "./transient-store";
-import { analyzeVideo, judgeVideo } from "./video-provider";
+import { analyzeVideo, judgeVideo, videoDetails, VideoEligibilityError } from "./video-provider";
 import { v2Driver } from "./store";
 import {
   VIDEO_SELECTION_LIMIT,
   VIDEO_CONCURRENCY,
   VIDEO_RUBRIC,
   videoDisposition,
+  type VideoStage,
+  VIDEO_STAGE_LABELS,
   type VideoSettings,
   type VideoResult,
   type VideoAnalysis,
@@ -76,13 +78,24 @@ export function videoJobKey(id: string, settings: VideoSettings) {
 }
 const defaults = () => ({
   store: transientStore(),
-  analyze: analyzeVideo,
+  details: videoDetails,
+  analyze: (id: string, settings: VideoSettings, details: Awaited<ReturnType<typeof videoDetails>>) => analyzeVideo(id, settings, fetch, details),
   judge: judgeVideo,
   read: readKnowledge,
   save: saveKnowledgeDraft,
   count: () =>
     v2Driver().count(`video-analysis:${new Date().toISOString().slice(0, 10)}`),
 });
+// Only active jobs expose progress. A crashed/expired job is never shown as completed.
+export async function getVideoProgress(ids: string[], settings: VideoSettings, store = transientStore()) {
+  return Object.fromEntries(await Promise.all(ids.map(async (id) => {
+    const key = videoJobKey(id, settings);
+    if (!await store.get("video-lock:" + key)) return [id, null];
+    const raw = await store.get("progress:" + key);
+    return [id, raw ? JSON.parse(raw) as VideoResult : null];
+  })));
+}
+
 export async function processVideo(
   id: string,
   settings: VideoSettings,
@@ -111,7 +124,14 @@ export async function processVideo(
   if (!(await store.claim(lock, token, 150)))
     return { state: "running", message: "이미 이 영상을 처리하고 있어요." };
   let release: (() => Promise<void>) | null = null;
+  let stage: VideoStage = "checking";
+  async function progress(next: VideoStage) {
+    stage = next;
+    // Observability must not turn a successful save into an apparent failure.
+    try { await store.set("progress:" + key, JSON.stringify({ state: "running", stage, message: `${VIDEO_STAGE_LABELS[stage]} 중이에요.` }), 150); } catch { /* processing still reports its terminal result */ }
+  }
   try {
+    await progress("checking");
     const done = await cachedResult(await store.get(resultKey));
     if (done) return done;
     // sourceHash is durable idempotency, even after cache expiry or a lost save response.
@@ -135,14 +155,17 @@ export async function processVideo(
     let analysis: VideoAnalysis;
     if (raw) analysis = JSON.parse(raw);
     else {
+      const details = await deps.details(id);
       if ((await deps.count()) > 50)
         throw new ConversationError(
           429,
           "오늘의 새 영상 분석 한도(50개)에 도달했어요.",
         );
-      analysis = await deps.analyze(id, settings);
+      await progress("analyzing");
+      analysis = await deps.analyze(id, settings, details);
       await store.set(analysisKey, JSON.stringify(analysis), TTL);
     }
+    await progress("evaluating");
     // Serialize judgment+save across instances so each video sees preceding accepted drafts.
     const judgeLock = "video-judge",
       judgeToken = randomUUID();
@@ -155,6 +178,7 @@ export async function processVideo(
     if (!claimed)
       return {
         state: "running",
+        stage: "evaluating",
         message: "분석은 완료됐어요. 앞선 자료의 JEV 평가를 기다리고 있어요.",
       };
     try {
@@ -176,11 +200,13 @@ export async function processVideo(
       if (!units.length)
         result = {
           state: "skipped",
+          stage: "evaluating",
           message:
             "중복·학습 적합성·근거 또는 확신 기준을 통과한 표현이 없어 저장하지 않았어요.",
           judgments: judged.judgments,
         };
       else {
+        await progress("saving");
         const draft = await deps.save(
           {
             ...settings,
@@ -225,8 +251,12 @@ export async function processVideo(
       await store.release(judgeLock, judgeToken);
     }
   } catch (e) {
+    if (e instanceof VideoEligibilityError)
+      return { state: "blocked", stage: "checking", retryable: false, issue: e.reason, message: e.message };
     return {
       state: "failed",
+      stage,
+      retryable: true,
       message:
         e instanceof ConversationError
           ? e.message
