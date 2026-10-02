@@ -531,16 +531,17 @@ test("bad earlier meaning/evidence and review candidates never enter dedupe refe
       a.units[0].text = a.units[1].text;
       a.units[0].meaning = "잘못된 뜻";
       a.units[0].evidence = "원본 영상 내용을 관찰하지 못한 후보";
-      let calls = 0;
+      const stages: string[] = [];
       const result = await judgeVideo(a, [], settings, async (_, init) => {
-        calls++;
         const body = JSON.parse(String(init?.body));
+        if (body.messages) { stages.push("context"); return new Response("unavailable", { status: 503 }); }
+        stages.push("quality");
         assert.equal(body.state.candidates, undefined);
         assert.equal(body.questions.unit1_meaning.instructions.earlierCandidates, undefined);
         assert(!JSON.stringify(body.questions.unit1_meaning).includes("잘못된 뜻"));
         return jevResponse({ unit0: evaluation(previousChoice, confidence), unit1: evaluation("useful") });
       });
-      assert.equal(calls, 1);
+      assert.deepEqual(stages, confidence < .85 ? ["quality", "context"] : ["quality"]);
       assert.equal(result.judgments[1].accepted, true);
       assert.equal(result.judgments[0].disposition, confidence < 0.85 ? "review" : "excluded");
     }
@@ -568,15 +569,17 @@ test("pair decisions only use accepted references; uncertain earlier pairs canno
   assert.equal(result.judgments[3].checks?.novelty.choice, "pass");
 });
 
-test("same-batch exact duplicates need no extra call and retain original answers", async () => {
+test("same-batch exact duplicates need no semantic dedupe call and retain original answers", async () => {
   const a = { ...analysis, units: [analysis.units[0], { ...analysis.units[0], at: 20 }] };
   for (const next of [evaluation("useful"), evaluation("unreliable", 0.4)]) {
-    let calls = 0;
-    const result = await judgeVideo(a, [], settings, async () => {
-      calls++;
+    const stages: string[] = [];
+    const result = await judgeVideo(a, [], settings, async (_, init) => {
+      const body = JSON.parse(String(init?.body));
+      if (body.messages) { stages.push("context"); return new Response("unavailable", { status: 503 }); }
+      stages.push("quality");
       return jevResponse({ unit0: evaluation("useful"), unit1: next });
     });
-    assert.equal(calls, 1);
+    assert.deepEqual(stages, next.confidence < .85 ? ["quality", "context"] : ["quality"]);
     assert.equal(result.judgments[0].accepted, true);
     assert.equal(result.judgments[1].reason, "exact_duplicate");
     assert.equal(result.judgments[1].disposition, "excluded");

@@ -50,7 +50,11 @@
 
 - 구현: `/Users/admin/workSpace/commerce-automation-kit-worktrees/hanmadi-video-outcomes`
 - 브랜치: `fix/hanmadi-video-outcomes`
-- 기준 main: `16d1e27` (기존 미승인 PR #124의 내용은 포함하지 않음)
+- 최초 기준 main: `16d1e27`. 이후 승인된 PR #124가 main에 머지되어 `e5f902a`를 작업 브랜치에 통합했다. 충돌은 처리 시작 안내 문구 한 곳이며, 서버 실제 진행 상태를 보여 주는 UX와 #124의 JEV 문맥 검토를 모두 유지했다. #125의 main 머지 승인은 별도로 대기한다.
 - 로그·캡처: `/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/hanmadi-admin/video-outcomes-20261002/`
 
 운영 배포 미반영. PR 머지 및 `deploy/hanmadi-admin` 승격은 각 PR의 명시적 승인 후 진행한다.
+
+## PR #124 통합 후 재검증
+
+기존 검증은 `7d97ae3` 기준이다. 최신 main 통합 후 단위 **205개**, TypeScript, lint(기존 경고 4개·오류 0개), 전체 브라우저 사용자 흐름이 다시 통과했다. `checks/unit-main-integration.log`, `checks/lint-main-integration.log`, `checks/browser-main-integration.log`와 `screenshots-main-integration/`에 기록했다. 원격 CI는 통합 커밋 push 후 다시 확인한다.

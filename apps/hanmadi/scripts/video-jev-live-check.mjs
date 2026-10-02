@@ -127,7 +127,7 @@ export async function runVideoJevCheck({ maxRequests, fetcher = fetch } = {}) {
           const body = JSON.parse(init.body);
           const ids = Object.keys(body.questions ?? {});
           const record = { batch: batchIndex + 1,
-            stage: body.messages ? "language" : ids.every((id) => /^unit[0-9]+_(meaning|reading|evidence|relevance|novelty)$/.test(id)) ? "quality" : "dedupe",
+            stage: body.messages ? "context" : ids.every((id) => /^unit[0-9]+_(meaning|reading|evidence|relevance|novelty)$/.test(id)) ? "quality" : "dedupe",
             questionCount: ids.length, httpStatus: null, usage: null, elapsedMs: 0 };
           requests.push(record);
           const requestStarted = Date.now();
