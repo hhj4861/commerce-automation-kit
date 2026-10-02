@@ -1,4 +1,4 @@
-import { reviewVideoLanguage } from "./video-language-review";
+import { reviewVideoContext } from "./video-language-review";
 import { createJevClient, JevError } from "@cak/litellm-client/jev";
 import { ConversationError, getLiteLLMConfig } from "./conversation";
 import { readLimitedBody } from "./conversation-http";
@@ -8,8 +8,8 @@ import type { ContentDraft } from "./knowledge";
 import {
   normalizedExpression,
   classifyVideoChecks,
-  needsLanguageReview,
-  applyLanguageReview,
+  needsContextReview,
+  applyContextReview,
   VIDEO_CHECKS,
   type VideoChecks,
   confidentVideoChoice,
@@ -363,12 +363,12 @@ export async function judgeVideo(
       })) as VideoChecks;
       return classifyVideoChecks(index, checks, existing.has(normalizedExpression(u.text)));
     });
-    const languageCandidates = judgments.filter(needsLanguageReview);
-    if (languageCandidates.length) {
-      const reviews = await reviewVideoLanguage(
-        languageCandidates.map((j) => ({ index: j.index, ...analysis.units[j.index] })), settings, fetcher,
+    const reviewCandidates = judgments.filter(needsContextReview);
+    if (reviewCandidates.length) {
+      const reviews = await reviewVideoContext(
+        reviewCandidates.map((j) => ({ index: j.index, ...analysis.units[j.index] })), state, fetcher,
       );
-      judgments = judgments.map((j) => reviews.has(j.index) ? applyLanguageReview(j, reviews.get(j.index)!) : j);
+      judgments = judgments.map((j) => reviews.has(j.index) ? applyContextReview(j, reviews.get(j.index)!) : j);
     }
     const qualified = judgments.filter((j) => j.accepted);
     // A single extra request contains at most 15 forward pairs (six candidates).
@@ -420,10 +420,10 @@ export async function judgeVideo(
     }
     console.info(JSON.stringify({ event: "hanmadi_video_judge", rubric: VIDEO_RUBRIC,
       outcome: "evaluated", upstreamStatus: upstreamStatus ?? qualityStatus, elapsedMs: Date.now() - startedAt,
-      jevRequests: dedupe ? 2 : 1, languageCandidates: languageCandidates.length, pairs: pairs.length,
+      jevRequests: dedupe ? 2 : 1, reviewCandidates: reviewCandidates.length, pairs: pairs.length,
       jevInputTokens: quality.usage.input_tokens + (dedupe?.usage.input_tokens ?? 0),
       jevOutputTokens: quality.usage.output_tokens + (dedupe?.usage.output_tokens ?? 0),
-      languageReviewErrors: judgments.filter((j) => j.languageReview?.outcome === "error").length,
+      contextReviewErrors: judgments.filter((j) => j.contextReview?.outcome === "error").length,
       candidates: analysis.units.length }));
     return { judgments, comparedCount: state.comparedCount,
       referenceCount: state.referenceCount, model: quality.model,

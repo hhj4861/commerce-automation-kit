@@ -260,8 +260,8 @@ export async function verifyYoutubeSearch({
     await page.screenshot({ path: resolve(screenshots, "video-analysis-review-390.png"), fullPage: false });
     await pendingReview.getByRole("button", { name: "초안 검수", exact: true }).click();
     await page.getByText(/자동 검수로 확정하지 못한 표현이 있어 검토 대기 중이에요/).waitFor();
-    await page.getByText("저장 당시 JEV·언어 검수 보기", { exact: true }).click();
-    assert.match(await page.locator("details").filter({ hasText: "저장 당시 JEV·언어 검수 보기" }).innerText(), /평가 분류: 근거·내용 불확실/);
+    await page.getByText("저장 당시 JEV·교차 검수 보기", { exact: true }).click();
+    assert.match(await page.locator("details").filter({ hasText: "저장 당시 JEV·교차 검수 보기" }).innerText(), /평가 분류: 근거·내용 불확실/);
     assert(await page.getByRole("button", { name: "검수 완료 · 학습에 게시", exact: true }).isDisabled());
     await page.getByRole("button", { name: "새 초안", exact: true }).click();
     await page.getByRole("navigation", { name: "관리자 메뉴" }).getByRole("button", { name: "영상 찾기", exact: true }).click();

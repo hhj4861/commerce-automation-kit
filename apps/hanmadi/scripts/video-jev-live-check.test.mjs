@@ -19,7 +19,7 @@ function transport({ extraPair = false, failPair, lowUseful = false, languageUnc
     const body = JSON.parse(init.body);
     if (body.messages) {
       const { candidates } = JSON.parse(body.messages[1].content);
-      return Response.json({ usage: { prompt_tokens: 50, completion_tokens: 20 }, choices: [{ finish_reason: "stop", message: { content: JSON.stringify({ reviews: candidates.map(({ index }) => ({ index, checks: Object.fromEntries(["meaning", "reading", "evidence"].map((key) => [key, { verdict: "pass", reason: "합성 검수 근거" }])) })) }) } }] });
+      return Response.json({ usage: { prompt_tokens: 50, completion_tokens: 20 }, choices: [{ finish_reason: "stop", message: { content: JSON.stringify({ reviews: candidates.map(({ index }) => ({ index, detectedLanguage: "ja", checks: Object.fromEntries(["meaning", "reading", "evidence", "relevance", "novelty"].map((key) => [key, { verdict: lowUseful ? "uncertain" : "pass", reason: "합성 검수 근거", ...(key === "novelty" ? { referenceIndex: null } : {}) }])) })) }) } }] });
     }
     const { questions } = body;
     const quality = Object.hasOwn(questions, "unit0_meaning");
@@ -112,7 +112,8 @@ test("second-stage failures preserve first-stage usage and stop further calls wi
 test("low-confidence useful cases remain review and are not mistaken for successful acceptance", async () => {
   const t = transport({ lowUseful: true });
   const result = await runVideoJevCheck({ maxRequests: 4, fetcher: t.fetcher });
-  assert.equal(result.requests, 2);
+  assert.equal(result.requests, 4);
+  assert.deepEqual(result.requestObservations.map((r) => r.stage), ["quality", "context", "quality", "context"]);
   assert.equal(result.complete, true);
   assert.equal(result.passed, false);
   assert.equal(result.metrics.expectedAcceptancesNotMet, 2);
@@ -133,12 +134,12 @@ test("invalid budgets and absent credentials fail before any transport call", as
 });
 
 
-test("live checker counts language calls and OpenAI-style token usage within the same explicit cap", async () => {
+test("live checker counts context calls and OpenAI-style token usage within the same explicit cap", async () => {
   const t = transport({ languageUncertain: true });
   const r = await runVideoJevCheck({ maxRequests: 6, fetcher: t.fetcher });
   assert.equal(r.passed, true);
   assert.equal(r.requests, 5);
-  assert.deepEqual(r.requestObservations.map((x) => x.stage), ["quality", "language", "quality", "language", "dedupe"]);
+  assert.deepEqual(r.requestObservations.map((x) => x.stage), ["quality", "context", "quality", "context", "dedupe"]);
   assert.deepEqual(r.usage, { inputTokens: 330, outputTokens: 63, observedRequests: 5, unknownRequests: 0 });
   const capped = transport({ languageUncertain: true });
   const partial = await runVideoJevCheck({ maxRequests: 1, fetcher: capped.fetcher });

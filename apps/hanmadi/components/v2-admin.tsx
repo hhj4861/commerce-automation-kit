@@ -594,7 +594,7 @@ export function V2Admin({ appHref = "/study" }: { appHref?: string }) {
                     )}
                     {current?.videoReview && (
                       <details className="hm-muted">
-                        <summary>저장 당시 JEV·언어 검수 보기</summary>
+                        <summary>저장 당시 JEV·교차 검수 보기</summary>
                         <p>영상 분석 당시 후보의 기록이에요. 아래 번호는 현재 편집한 표현 순서와 다를 수 있고, 표현 수정 후 자동으로 재평가되지는 않아요.</p>
                         <ul>
                           {current.videoReview.judgments.map((j) => (

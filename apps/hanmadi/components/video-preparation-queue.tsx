@@ -128,7 +128,7 @@ export function VideoPreparationQueue({
           if (!video) return;
           update(video.id, {
             state: "running",
-            message: "영상 분석 → 학습 가치·언어 검수 → 통과한 표현 저장",
+            message: "영상 분석 → 학습 가치·문맥 검수 → 통과한 표현 저장",
           });
           try {
             let result: VideoResult = {
