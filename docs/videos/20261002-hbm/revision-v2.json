@@ -1,0 +1,149 @@
+{
+  "revision": 2,
+  "voice": "Kyle",
+  "voiceId": "RU7aSi6lT4uQBXMLgDxK",
+  "speed": 1.0,
+  "newPaidGenerations": 0,
+  "causalChecks": {
+    "samePerLaneTransitTime": true,
+    "capacityOnlyKeepsSameArrivals": true,
+    "noComputeBeforeFirstArrival": true,
+    "gpuResponseUsesSharedFunction": true
+  },
+  "preservedOriginals": [
+    {
+      "path": "/Users/admin/Downloads/vedio/hbm-episode-3-long.mp4",
+      "unchangedSha256": "33341e1f9ebef9d4bcfe4530e007542bf7b1d9b3167e7ea4220670ec32c0e6b7"
+    },
+    {
+      "path": "/Users/admin/Downloads/vedio/hbm-episode-3-short.mp4",
+      "unchangedSha256": "57bf9119cf06039dfcb78b73796b7ff734d4affceca68584025304de054e8d03"
+    }
+  ],
+  "renderExitEvidence": [
+    {
+      "group": "a",
+      "shots": "wide,stack,tsv",
+      "short": false,
+      "exitCode": 0
+    },
+    {
+      "group": "b",
+      "shots": "interposer,ending",
+      "short": false,
+      "exitCode": 0
+    },
+    {
+      "group": "c",
+      "shots": "hook,capacity,wide",
+      "short": true,
+      "exitCode": 0
+    },
+    {
+      "group": "d",
+      "shots": "stack,tsv,interposer,ending",
+      "short": true,
+      "exitCode": 0
+    },
+    {
+      "group": "daily-native-portrait",
+      "shots": "daily",
+      "short": true,
+      "exitCode": 0
+    }
+  ],
+  "outputs": [
+    {
+      "path": "/Users/admin/Downloads/vedio/hbm-episode-3-long-v2.mp4",
+      "duration": 327.333,
+      "resolution": [
+        1920,
+        1080
+      ],
+      "fps": "24/1",
+      "audioVideoDurationDifference": 0.0,
+      "fullDecode": "passed",
+      "silenceOver1_3s": false,
+      "blackOver0_3s": false,
+      "integratedLoudnessLUFS": -17.6,
+      "truePeakDbFS": -0.7,
+      "captionCount": 105,
+      "layoutWarnings": [],
+      "sampledFrames": 51,
+      "contactSheetFolder": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261002-hbm/v2/qa-long",
+      "sha256": "a7e628abe1448dbfea8723d03e35e5e4ff7cb9515573350aec5ab6f0befd55dd",
+      "bytes": 143794531
+    },
+    {
+      "path": "/Users/admin/Downloads/vedio/hbm-episode-3-short-v2.mp4",
+      "duration": 96.541667,
+      "resolution": [
+        1080,
+        1920
+      ],
+      "fps": "24/1",
+      "audioVideoDurationDifference": 0.0006670000000070786,
+      "fullDecode": "passed",
+      "silenceOver1_3s": false,
+      "blackOver0_3s": false,
+      "integratedLoudnessLUFS": -17.6,
+      "truePeakDbFS": -0.9,
+      "captionCount": 42,
+      "layoutWarnings": [],
+      "sampledFrames": 24,
+      "contactSheetFolder": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261002-hbm/v2/qa-short",
+      "sha256": "31c3911c0f080ff2aa6988c3899672b0f5026976121cc2f11f7b7ae18e909658",
+      "bytes": 15098655
+    }
+  ],
+  "visualReview": {
+    "result": "passed sampled review",
+    "longFrames": 51,
+    "shortFrames": 24,
+    "additionalChecks": [
+      "capacity prototype before/after",
+      "native portrait hook and stack",
+      "TSV labels and cutaway",
+      "interposer horizontal connection",
+      "final native portrait AI response scene"
+    ],
+    "method": "Three frames per edited segment plus targeted previews and GPU activation pixel check. Not full human frame-by-frame playback or listening, and not a measured viewer-comprehension test."
+  },
+  "renderedGpuActivation": {
+    "sampleSeconds": [
+      1.2,
+      2.6
+    ],
+    "greenMinusRed": [
+      7.672792207792213,
+      29.547207792207786
+    ],
+    "afterFirstArrivalVisible": true
+  },
+  "production": {
+    "replacedLongScenes": [
+      "hook",
+      "capacity",
+      "wide",
+      "stack",
+      "tsv",
+      "interposer",
+      "ending"
+    ],
+    "nativePortraitScenes": [
+      "hook",
+      "capacity",
+      "wide",
+      "stack",
+      "tsv",
+      "interposer",
+      "daily",
+      "ending"
+    ],
+    "higgsfieldOpeningReused": true,
+    "higgsfieldOpeningSeconds": 6,
+    "narrationReused": true,
+    "paidGenerations": 0,
+    "coreDiagramNotProductBenchmark": true
+  }
+}
