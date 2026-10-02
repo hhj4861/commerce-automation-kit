@@ -1,0 +1,59 @@
+{
+  "reviews": [
+    {
+      "index": 0,
+      "detectedLanguage": "en",
+      "checks": {
+        "meaning": {
+          "verdict": "pass",
+          "reason": "수건 추가 요청 뜻이 정확합니다."
+        },
+        "reading": {
+          "verdict": "pass",
+          "reason": "자연스러운 한글 독음입니다."
+        },
+        "evidence": {
+          "verdict": "pass",
+          "reason": "수건 요청 표현에 대한 설명이 기록되어 있습니다."
+        },
+        "relevance": {
+          "verdict": "pass",
+          "reason": "호텔 투숙 중 추가 물품 요청에 적합합니다."
+        },
+        "novelty": {
+          "verdict": "pass",
+          "reason": "참조에 동일한 요청이 없습니다.",
+          "referenceIndex": null
+        }
+      }
+    },
+    {
+      "index": 1,
+      "text": "Could you bring me another towel?",
+      "detectedLanguage": "en",
+      "checks": {
+        "meaning": {
+          "verdict": "pass",
+          "reason": "수건 추가 요청 뜻이 정확합니다."
+        },
+        "reading": {
+          "verdict": "pass",
+          "reason": "자연스러운 한글 독음입니다."
+        },
+        "evidence": {
+          "verdict": "pass",
+          "reason": "호텔 객실 수건 부탁 표현이 관찰되었습니다."
+        },
+        "relevance": {
+          "verdict": "pass",
+          "reason": "호텔 숙박 시 필요한 수건 요청입니다."
+        },
+        "novelty": {
+          "verdict": "fail",
+          "reason": "참조 5번 등 호텔 객실 요청과 중복됩니다.",
+          "referenceIndex": 5
+        }
+      }
+    }
+  ]
+}

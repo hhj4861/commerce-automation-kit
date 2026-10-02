@@ -76,38 +76,53 @@ function referenceScope(context: VideoReviewContext): ContextReview["referenceSc
     digest: createHash("sha256").update(JSON.stringify(context)).digest("hex") };
 }
 
+// Validate batch identity before parsing any row. Missing/duplicate/unknown indices
+// make the mapping ambiguous and still reject the entire response.
 export function parseContextReviews(content: string, indices: number[], model: string, context: VideoReviewContext): Map<number, ContextReview> {
   const data: unknown = JSON.parse(content);
-  if (!object(data) || !keys(data, ["reviews"]) || !Array.isArray(data.reviews) || data.reviews.length !== indices.length)
+  if (new Set(indices).size !== indices.length || indices.some((i) => !Number.isSafeInteger(i) || i < 0 || i >= 6) ||
+    !object(data) || !keys(data, ["reviews"]) || !Array.isArray(data.reviews) || data.reviews.length !== indices.length)
     throw new Error("invalid_review");
-  const result = new Map<number, ContextReview>();
+  const rows = new Map<number, Record<string, unknown>>();
   for (const row of data.reviews) {
-    if (!object(row) || !keys(row, ["index", "detectedLanguage", "checks"]) || !Number.isSafeInteger(row.index) ||
-      !["ja", "en", "th", "es", "other", "uncertain"].includes(row.detectedLanguage as string) ||
-      !indices.includes(row.index as number) || result.has(row.index as number) ||
-      !object(row.checks) || !keys(row.checks, VIDEO_CHECKS)) throw new Error("invalid_review");
-    for (const k of VIDEO_CHECKS) {
-      const c = row.checks[k];
-      if (!object(c) || !keys(c, k === "novelty" ? ["verdict", "reason", "referenceIndex"] : ["verdict", "reason"]) ||
-        !["pass", "fail", "uncertain"].includes(c.verdict as string) ||
-        typeof c.reason !== "string" || !c.reason.trim() || c.reason.length > 160)
-        throw new Error("invalid_review");
-      if (k === "novelty" && (c.verdict === "fail"
-        ? !Number.isSafeInteger(c.referenceIndex) || (c.referenceIndex as number) < 0 || (c.referenceIndex as number) >= context.references.length
-        : c.referenceIndex !== null)) throw new Error("invalid_reference");
-    }
-    const checks = row.checks as NonNullable<ContextReview["checks"]>;
-    // Semantic disagreement quarantines this row only; a foreign expression
-    // must not force valid siblings into review. Structural errors still reject
-    // the whole response. Keep the original review checks for the audit trail.
-    const languageIssue = row.detectedLanguage === "uncertain" ? "uncertain" as const
-      : row.detectedLanguage !== context.settings.language ? "mismatch" as const : undefined;
-    const outcome = languageIssue ? "uncertain" : VIDEO_CHECKS.some((k) => checks[k].verdict === "fail") ? "fail"
-      : VIDEO_CHECKS.some((k) => checks[k].verdict === "uncertain") ? "uncertain" : "pass";
-    result.set(row.index as number, { model, detectedLanguage: row.detectedLanguage as string, ...(languageIssue ? { languageIssue } : {}), outcome, checks, referenceScope: referenceScope(context),
-      ...(checks.novelty.referenceIndex !== null ? { matchedReference: { ...context.references[checks.novelty.referenceIndex] } } : {}) });
+    if (!object(row) || !Number.isSafeInteger(row.index) ||
+      !indices.includes(row.index as number) || rows.has(row.index as number)) throw new Error("invalid_review");
+    rows.set(row.index as number, row);
   }
-  return result;
+  return new Map([...rows].map(([index, row]) => {
+    try {
+      return [index, parseContextRow(row, model, context)];
+    } catch (error) {
+      if (!(error instanceof Error) || !["invalid_review", "invalid_reference"].includes(error.message)) throw error;
+      // Do not strip extra fields, repair answers or retain unvalidated content.
+      // Only the identified malformed row is held; valid siblings remain usable.
+      return [index, { model, outcome: "error", responseIssue: error.message === "invalid_reference" ? "invalid_reference" : "invalid_row",
+        referenceScope: referenceScope(context) } satisfies ContextReview];
+    }
+  }));
+}
+
+function parseContextRow(row: Record<string, unknown>, model: string, context: VideoReviewContext): ContextReview {
+  if (!keys(row, ["index", "detectedLanguage", "checks"]) ||
+    !["ja", "en", "th", "es", "other", "uncertain"].includes(row.detectedLanguage as string) ||
+    !object(row.checks) || !keys(row.checks, VIDEO_CHECKS)) throw new Error("invalid_review");
+  for (const k of VIDEO_CHECKS) {
+    const c = row.checks[k];
+    if (!object(c) || !keys(c, k === "novelty" ? ["verdict", "reason", "referenceIndex"] : ["verdict", "reason"]) ||
+      !["pass", "fail", "uncertain"].includes(c.verdict as string) ||
+      typeof c.reason !== "string" || !c.reason.trim() || c.reason.length > 160)
+      throw new Error("invalid_review");
+    if (k === "novelty" && (c.verdict === "fail"
+      ? !Number.isSafeInteger(c.referenceIndex) || (c.referenceIndex as number) < 0 || (c.referenceIndex as number) >= context.references.length
+      : c.referenceIndex !== null)) throw new Error("invalid_reference");
+  }
+  const checks = row.checks as NonNullable<ContextReview["checks"]>;
+  const languageIssue = row.detectedLanguage === "uncertain" ? "uncertain" as const
+    : row.detectedLanguage !== context.settings.language ? "mismatch" as const : undefined;
+  const outcome = languageIssue ? "uncertain" : VIDEO_CHECKS.some((k) => checks[k].verdict === "fail") ? "fail"
+    : VIDEO_CHECKS.some((k) => checks[k].verdict === "uncertain") ? "uncertain" : "pass";
+  return { model, detectedLanguage: row.detectedLanguage as string, ...(languageIssue ? { languageIssue } : {}), outcome, checks, referenceScope: referenceScope(context),
+    ...(checks.novelty.referenceIndex !== null ? { matchedReference: { ...context.references[checks.novelty.referenceIndex] } } : {}) };
 }
 
 // One request for all uncertain candidates, including both linguistic and scene
