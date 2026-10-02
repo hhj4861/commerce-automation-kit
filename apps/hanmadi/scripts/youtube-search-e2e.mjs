@@ -39,6 +39,10 @@ export async function verifyYoutubeSearch({
     endpoint,
   );
   assert.equal(prepared.status, 200);
+  assert.equal((await post({ action: "status", batchId: prepared.data.batchId }, undefined, endpoint)).status, 403);
+  const status = await post({ action: "status", batchId: prepared.data.batchId }, admin, endpoint);
+  assert.equal(status.status, 200);
+  assert.deepEqual(status.data.entries, { video000000: null });
   assert.equal(
     (
       await post(
@@ -71,7 +75,9 @@ export async function verifyYoutubeSearch({
   let searchCalls = 0,
     active = 0,
     maxActive = 0,
-    fail = true;
+    fail = true,
+    unknown = false,
+    statusCalls = 0;
   const attempts = new Map();
   const errors = [];
   const pageError = (e) => errors.push(e.message);
@@ -96,6 +102,14 @@ export async function verifyYoutubeSearch({
   const analysisHandler = async (route) => {
     const b = route.request().postDataJSON();
     if (b.action === "prepare") return route.continue();
+    if (b.action === "status") {
+      statusCalls++;
+      return route.fulfill({ json: { entries: unknown ? { [videos[0].id]: { state: "running", stage: "evaluating", message: "학습 가치 평가 중이에요." } } : {} } });
+    }
+    if (unknown) {
+      await new Promise((r) => setTimeout(r, 3200));
+      return route.abort("failed");
+    }
     attempts.set(b.videoId, (attempts.get(b.videoId) || 0) + 1);
     active++;
     maxActive = Math.max(maxActive, active);
@@ -106,11 +120,14 @@ export async function verifyYoutubeSearch({
       fail = false;
       return route.fulfill({
         json: {
-          state: "failed",
+          state: "failed", stage: "evaluating", retryable: true,
           message: "JEV 평가를 완료하지 못했어요. 분석 결과를 재사용해요.",
         },
       });
     }
+    if (index === 4)
+      return route.fulfill({ json: { state: "blocked", stage: "checking", retryable: false, issue: "too_long",
+        message: "영상 길이가 28분 38초예요. 최대 15분까지 분석할 수 있어요. 더 짧은 영상을 선택해 주세요." } });
     if (index === 2)
       return route.fulfill({
         json: {
@@ -227,23 +244,28 @@ export async function verifyYoutubeSearch({
       })
       .click();
     await queue
-      .getByText("일괄 처리를 마쳤어요. 영상별 결과를 확인해 주세요.", {
+      .getByText("초안 7개를 보관했어요", {
         exact: true,
       })
       .waitFor();
     assert.equal(maxActive, 3);
-    assert.equal(await queue.locator(".vs-job-created").count(), 7);
+    assert.equal(await queue.locator(".vs-job-created").count(), 6);
     assert.equal(await queue.locator(".vs-job-review").count(), 1);
     assert.equal(await queue.locator(".vs-job-skipped").count(), 1);
     assert.equal(await queue.locator(".vs-job-failed").count(), 1);
+    assert.equal(await queue.locator(".vs-job-blocked").count(), 1);
+    const blockedRow = queue.locator(`li[data-video-id="${videos[4].id}"]`);
+    assert.match(await blockedRow.innerText(), /내용 분석 미실행.*JEV 평가 미실행.*초안 저장 안 됨/s);
+    assert.match(await blockedRow.innerText(), /28분 38초/);
     await queue
-      .getByRole("button", { name: "남은 영상 분석 (1개)", exact: true })
+      .getByRole("button", { name: "결과 확인·다시 시도 (1개)", exact: true })
       .click();
     await page.waitForFunction(
-      () => document.querySelectorAll(".vs-job-created").length === 8,
+      () => document.querySelectorAll(".vs-job-created").length === 7,
     );
     assert.equal(attempts.get(videos[0].id), 1);
     assert.equal(attempts.get(videos[1].id), 2);
+    assert.equal(attempts.get(videos[4].id), 1, "ineligible videos are not retried");
     await page.setViewportSize({ width: 390, height: 900 });
     await queue.scrollIntoViewIfNeeded();
     await page.waitForTimeout(250);
@@ -266,6 +288,41 @@ export async function verifyYoutubeSearch({
     await page.getByRole("button", { name: "새 초안", exact: true }).click();
     await page.getByRole("navigation", { name: "관리자 메뉴" }).getByRole("button", { name: "영상 찾기", exact: true }).click();
     assert.deepEqual(errors, []);
+    await queue.getByRole("button", { name: "전체 해제", exact: true }).click();
+    // Reproduce the user's single unsupported video, then a network-unknown outcome.
+    await query.fill("카페 회화"); await query.press("Enter");
+    await page.locator(`.vs-video input`).nth(4).check();
+    await queue.getByRole("button", { name: "전체 분석·자료 만들기 (1개)", exact: true }).click();
+    await queue.getByText("저장된 초안이 없어요", { exact: true }).waitFor();
+    assert.equal(await queue.getByRole("button", { name: /전체 분석|다시 시도|남은 영상 분석/ }).count(), 0);
+    assert.match(await queue.innerText(), /내용 분석 미실행.*초안 저장 안 됨/s);
+    for (const width of [320, 390, 768, 1440]) {
+      await page.setViewportSize({ width, height: 960 });
+      assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), `result overflow ${width}`);
+    }
+    await queue.screenshot({ path: resolve(screenshots, "video-blocked-result-1440.png") });
+    await page.setViewportSize({ width: 390, height: 900 });
+    await queue.screenshot({ path: resolve(screenshots, "video-blocked-result-390.png") });
+    await queue.getByRole("button", { name: "분석 불가 영상 빼기 (1개)", exact: true }).click();
+    assert.equal(await queue.locator("li").count(), 0);
+    await page.locator(".vs-video input").first().check();
+    unknown = true;
+    await queue.getByRole("button", { name: "전체 분석·자료 만들기 (1개)", exact: true }).click();
+    await queue.getByText("학습 가치 평가 중", { exact: true }).waitFor();
+    assert.match(await queue.innerText(), /내용 분석 완료.*평가 결과를 기다리고/s);
+    await queue.getByText("결과 확인 필요", { exact: true }).waitFor();
+    assert.match(await queue.innerText(), /응답이 끊겨 결과를 확인하지 못했어요/);
+    assert.doesNotMatch(await queue.innerText(), /초안 저장 안 됨/);
+    assert(statusCalls > 0);
+    unknown = false;
+    await queue.getByRole("button", { name: "결과 확인·다시 시도 (1개)", exact: true }).click();
+    await queue.getByText("초안 1개를 보관했어요", { exact: true }).waitFor();
+    const pollsAtEnd = statusCalls;
+    await new Promise((r) => setTimeout(r, 5200));
+    assert.equal(statusCalls, pollsAtEnd, "status polling stops after batch completion");
+    await queue.getByRole("button", { name: "저장할 자료 설정", exact: false }).click();
+    await queue.getByLabel("공통 연습 레벨", { exact: true }).selectOption("3");
+    assert.equal(await queue.locator(".vs-job-created").count(), 0, "new settings reset the old result");
     await queue.getByRole("button", { name: "전체 해제", exact: true }).click();
     await page.setViewportSize({ width: 1440, height: 1000 });
   } finally {

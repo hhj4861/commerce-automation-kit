@@ -133,9 +133,17 @@ export function videoJudgmentReason(j: VideoJudgment) {
     : "";
   return `평가 분류: ${choice}${check ? ` (${check})` : ""} · ${j.reason ? reasons[j.reason] : videoJudgmentLabel(j)}${language}`;
 }
+export type VideoStage = "checking" | "analyzing" | "evaluating" | "saving";
+export const VIDEO_STAGE_LABELS: Record<VideoStage, string> = {
+  checking: "영상 정보 확인", analyzing: "영상 내용 분석",
+  evaluating: "학습 가치 평가", saving: "초안 저장",
+};
 export type VideoResult = {
-  state: "created" | "review" | "skipped" | "failed" | "running";
+  state: "created" | "review" | "skipped" | "failed" | "running" | "blocked";
   message: string;
+  stage?: VideoStage;
+  retryable?: boolean;
+  issue?: "too_long" | "not_public" | "live" | "unavailable";
   draft?: ContentDraft;
   judgments?: VideoJudgment[];
 };

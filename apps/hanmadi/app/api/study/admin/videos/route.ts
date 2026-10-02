@@ -9,6 +9,7 @@ import {
 import {
   createVideoBatch,
   getVideoBatch,
+  getVideoProgress,
   processVideo,
 } from "@/lib/video-ingestion";
 export const runtime = "nodejs";
@@ -21,6 +22,10 @@ export async function POST(req: Request) {
     const b = (await readConversationJson(req)) as Record<string, unknown>;
     if (b?.action === "prepare")
       return conversationJson(await createVideoBatch(b));
+    if (b?.action === "status") {
+      const batch = await getVideoBatch(b.batchId);
+      return conversationJson({ entries: await getVideoProgress(batch.ids, batch.settings) });
+    }
     if (b?.action !== "process" || typeof b.videoId !== "string")
       throw new ConversationError(400, "영상 분석 작업을 확인해 주세요.");
     const batch = await getVideoBatch(b.batchId);
