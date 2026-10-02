@@ -3,7 +3,7 @@ import type { ContentDraft } from "./knowledge";
 export const VIDEO_SELECTION_LIMIT = 10;
 export const VIDEO_CONCURRENCY = 3;
 export const VIDEO_MAX_SECONDS = 15 * 60;
-export const VIDEO_RUBRIC = "hanmadi-video-jev-v8";
+export const VIDEO_RUBRIC = "hanmadi-video-jev-v9";
 export type VideoSettings = {
   language: StudyLanguage;
   scene: string;
@@ -56,6 +56,7 @@ export type VideoReviewContext = {
 };
 export type ContextReview = {
   model: string;
+  responseIssue?: "invalid_row" | "invalid_reference";
   detectedLanguage?: string;
   languageIssue?: "mismatch" | "uncertain";
   outcome: "pass" | "fail" | "uncertain" | "error";
@@ -184,7 +185,7 @@ export function videoJudgmentReason(j: VideoJudgment) {
     ? ` · 언어 검수(${j.languageReview.model}): ${ { pass: "통과", fail: "오류", uncertain: "불확실", error: "연결·응답 확인 필요" }[j.languageReview.outcome]}${j.languageReview.checks ? ` · ${LANGUAGE_CHECKS.map((k) => j.languageReview!.checks![k].reason).join(" / ")}` : ""}`
     : "";
   const context = j.contextReview
-    ? ` · 문맥 교차 검수(${j.contextReview.model}): ${{ pass: "통과", fail: "오류·이견 발견", uncertain: "불확실", error: "연결·응답 확인 필요" }[j.contextReview.outcome]}${j.contextReview.checks ? ` · ${VIDEO_CHECKS.map((k) => j.contextReview!.checks![k].reason).join(" / ")}` : ""} · 비교 자료 ${j.contextReview.referenceScope.compared}/${j.contextReview.referenceScope.total}개${j.contextReview.matchedReference ? ` · 중복 대상: ${j.contextReview.matchedReference.text}` : ""}`
+    ? ` · 문맥 교차 검수(${j.contextReview.model}): ${{ pass: "통과", fail: "오류·이견 발견", uncertain: "불확실", error: j.contextReview.responseIssue === "invalid_reference" ? "중복 참조 형식 확인 필요" : j.contextReview.responseIssue ? "후보 응답 형식 확인 필요" : "연결·응답 확인 필요" }[j.contextReview.outcome]}${j.contextReview.checks ? ` · ${VIDEO_CHECKS.map((k) => j.contextReview!.checks![k].reason).join(" / ")}` : ""} · 비교 자료 ${j.contextReview.referenceScope.compared}/${j.contextReview.referenceScope.total}개${j.contextReview.matchedReference ? ` · 중복 대상: ${j.contextReview.matchedReference.text}` : ""}`
     : "";
   return `평가 분류: ${choice}${check ? ` (${check})` : ""} · ${j.reason ? reasons[j.reason] : videoJudgmentLabel(j)}${language}${context}`;
 }

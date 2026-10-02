@@ -1,7 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { parseContextReviews, reviewVideoContext } from "./video-language-review";
-import { applyContextReview, classifyVideoChecks, needsContextReview, VIDEO_CHECKS, type VideoChecks, type VideoReviewContext } from "./video-policy";
+import { applyContextReview, classifyVideoChecks, needsContextReview, VIDEO_CHECKS, videoJudgmentReason, type VideoChecks, type VideoReviewContext } from "./video-policy";
 import { judgmentState, judgeVideo } from "./video-provider";
 
 const unit = { text: "ナプキンをください。", meaning: "냅킨을 주세요.", reading: "나푸킨오 쿠다사이", at: 12, evidence: "카페에서 냅킨을 요청하는 일본어 표현을 설명한다." };
@@ -41,16 +42,16 @@ test("all 4^5 JEV combinations preserve confident vetoes, raw answers and exact 
 
 test("strict five-check schema rejects omitted, extra, duplicated or fabricated decisions", () => {
   const ctx = context(), validate = (v: unknown) => parseContextReviews(JSON.stringify(v), [0], "fixture", ctx);
-  for (const value of [payload([]), payload([0, 0]), payload([1]), { ...payload(), extra: true }, { reviews: [{ ...payload().reviews[0], text: "rewrite" }] }]) assert.throws(() => validate(value));
+  for (const value of [payload([]), payload([0, 0]), payload([1]), { ...payload(), extra: true }]) assert.throws(() => validate(value));
   for (const k of VIDEO_CHECKS) {
-    const missing = payload(); delete missing.reviews[0].checks[k]; assert.throws(() => validate(missing));
-    for (const v of ["unknown", ""]) { const bad = payload(); bad.reviews[0].checks[k].verdict = v; assert.throws(() => validate(bad)); }
-    for (const reason of [" ", "x".repeat(161)]) { const bad = payload(); bad.reviews[0].checks[k].reason = reason; assert.throws(() => validate(bad)); }
+    const missing = payload(); delete missing.reviews[0].checks[k]; assert.equal(validate(missing).get(0)?.outcome, "error");
+    for (const v of ["unknown", ""]) { const bad = payload(); bad.reviews[0].checks[k].verdict = v; assert.equal(validate(bad).get(0)?.outcome, "error"); }
+    for (const reason of [" ", "x".repeat(161)]) { const bad = payload(); bad.reviews[0].checks[k].reason = reason; assert.equal(validate(bad).get(0)?.outcome, "error"); }
     const uncertain = payload(); uncertain.reviews[0].checks[k].verdict = "uncertain";
     assert.equal(applyContextReview(classifyVideoChecks(0, checks()), validate(uncertain).get(0)!).disposition, "review");
   }
   for (const referenceIndex of [null, -1, 1.5, ctx.references.length, "0"]) {
-    const bad = payload(); bad.reviews[0].checks.novelty = { verdict: "fail", reason: "중복", referenceIndex }; assert.throws(() => validate(bad));
+    const bad = payload(); bad.reviews[0].checks.novelty = { verdict: "fail", reason: "중복", referenceIndex }; assert.equal(validate(bad).get(0)?.outcome, "error");
   }
   const duplicate = payload(); duplicate.reviews[0].checks.novelty = { verdict: "fail", reason: "같은 요청", referenceIndex: 0 };
   const parsed = validate(duplicate).get(0)!;
@@ -128,10 +129,85 @@ test("language mismatch quarantines only that row and preserves original review 
   }
   for (const detectedLanguage of ["invalid", ""]) {
     const bad = payload(); bad.reviews[0].detectedLanguage = detectedLanguage;
-    assert.throws(() => parseContextReviews(JSON.stringify(bad), [0], "fixture", ctx));
+    assert.equal(parseContextReviews(JSON.stringify(bad), [0], "fixture", ctx).get(0)?.outcome, "error");
   }
   for (const k of ["meaning", "reading", "evidence"]) {
     const bad = payload(); bad.reviews[0].checks[k].verdict = "fail";
     assert.equal(applyContextReview(classifyVideoChecks(0, checks()), parseContextReviews(JSON.stringify(bad), [0], "fixture", ctx).get(0)!).disposition, "excluded");
   }
+});
+
+
+test("malformed rows stay held without poisoning valid siblings or retaining unvalidated fields", () => {
+  const mutations = [
+    (r: Record<string, unknown>) => { r.text = "untrusted rewrite"; },
+    (r: Record<string, unknown>) => { delete r.detectedLanguage; },
+    (r: Record<string, unknown>) => { r.detectedLanguage = "xx"; },
+    (r: Record<string, unknown>) => { r.checks = null; },
+    ...VIDEO_CHECKS.flatMap((k) => [
+      (r: Record<string, unknown>) => { delete (r.checks as Record<string, unknown>)[k]; },
+      (r: Record<string, unknown>) => { (r.checks as Record<string, unknown>)[k] = { verdict: "pass", reason: "ok", extra: true }; },
+      (r: Record<string, unknown>) => { (r.checks as Record<string, unknown>)[k] = { verdict: "bogus", reason: "ok" }; },
+    ]),
+    (r: Record<string, unknown>) => { (r.checks as Record<string, unknown>).novelty = { verdict: "fail", reason: "duplicate", referenceIndex: 999 }; },
+  ];
+  const ctx = context();
+  for (const mutate of mutations) for (const reverse of [false, true]) {
+    const data = payload([2, 5]); mutate(data.reviews[1]);
+    if (reverse) data.reviews.reverse();
+    const before = JSON.stringify(data);
+    const reviews = parseContextReviews(before, [2, 5], "fixture", ctx);
+    const good = applyContextReview(classifyVideoChecks(2, checks()), reviews.get(2)!);
+    const bad = applyContextReview(classifyVideoChecks(5, checks()), reviews.get(5)!);
+    assert.equal(good.accepted, true);
+    assert.equal(bad.accepted, false); assert.equal(bad.disposition, "review");
+    assert.equal(bad.contextReview?.outcome, "error");
+    assert.equal(bad.contextReview?.checks, undefined);
+    assert.equal(bad.contextReview?.matchedReference, undefined);
+    assert.match(videoJudgmentReason(bad), /형식 확인 필요/);
+    assert.equal(JSON.stringify(reviews.get(5)).includes("untrusted"), false);
+    assert.equal(JSON.stringify(data), before);
+  }
+});
+
+test("ambiguous batch identity never salvages even otherwise valid rows", async () => {
+  env();
+  const invalid = [payload([0]), payload([0, 0]), payload([0, 2]),
+    { reviews: [payload().reviews[0], null] },
+    { reviews: [payload().reviews[0], { ...payload([1]).reviews[0], index: "1" }] },
+    { reviews: [payload().reviews[0], { checks: {} }] },
+    { ...payload([0, 1]), extra: true }];
+  for (const value of invalid) {
+    assert.throws(() => parseContextReviews(JSON.stringify(value), [0, 1], "fixture", context()));
+    let calls = 0;
+    const reviews = await reviewVideoContext([{ index: 0, ...unit }, { index: 1, ...unit }], context(), async () => { calls++; return response(value); });
+    assert.equal(calls, 1); assert.equal(reviews.size, 2);
+    for (const [index, review] of reviews) {
+      assert.equal(review.outcome, "error");
+      assert.equal(applyContextReview(classifyVideoChecks(index, checks()), review).accepted, false);
+    }
+  }
+});
+
+test("recorded towel response recovers only the valid candidate through the full judge pipeline", async () => {
+  env();
+  const recorded = JSON.parse(readFileSync(new URL("../../../docs/qa/fixtures/20261002-jev-context-invalid-row.json", import.meta.url), "utf8"));
+  const units = [
+    { text: "Could I get an extra towel, please?", meaning: "수건을 하나 더 받을 수 있을까요?", reading: "쿠드 아이 겟 언 엑스트라 타월 플리즈", at: 10, evidence: "호텔에서 추가 수건을 요청하는 영어 표현을 설명한다." },
+    { text: "Could you bring me another towel?", meaning: "수건을 하나 더 가져다주시겠어요?", reading: "쿠드 유 브링 미 어나더 타월", at: 20, evidence: "호텔 객실에서 수건을 하나 더 부탁하는 영어 표현을 설명한다." },
+  ];
+  const stages: string[] = [];
+  const judged = await judgeVideo({ title: "recorded response regression", seconds: 60, units }, [], { language: "en", scene: "hotel", level: 1 }, async (_, init) => {
+    const b = JSON.parse(String(init?.body));
+    if (b.messages) { stages.push("context"); return response(recorded); }
+    stages.push("quality"); assert(Object.keys(b.questions).every((id) => id.startsWith("unit")));
+    return Response.json({ model: "jev-1.13.0", usage: { input_tokens: 10, output_tokens: 5 },
+      answers: Object.fromEntries(Object.keys(b.questions).map((id) => [id, { type: "choice", ...checks()[id.split("_")[1] as keyof VideoChecks] }])) });
+  });
+  assert.deepEqual(stages, ["quality", "context"]);
+  assert.equal(judged.judgments[0].accepted, true);
+  assert.equal(judged.judgments[1].accepted, false);
+  assert.equal(judged.judgments[1].disposition, "review");
+  assert.equal(judged.judgments[1].contextReview?.responseIssue, "invalid_row");
+  assert.equal(judged.judgments[1].contextReview?.checks, undefined);
 });
