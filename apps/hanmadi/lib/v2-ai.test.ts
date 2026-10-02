@@ -759,3 +759,36 @@ test("timing keeps errors intact, marks pending parallel work, and does not log 
   const brokenLog = new StudyTiming("ja", 0, () => 9000, () => {throw Error("sink unavailable")});
   assert.equal(brokenLog.finish(Response.json({ok:true})).status, 200);
 });
+
+import { LiteLLMError } from "@cak/litellm-client";
+import { StudyAIError, studyAIError } from "./study-ai-errors";
+test("safe error categories preserve cause without exposing provider text", () => {
+  for (const [code,status,reason,publicStatus] of [["upstream_error",503,"unavailable",503],["quota_exceeded",429,"rate-limit",429],["authentication_failed",401,"authentication",502],["timeout",504,"timeout",504]] as const) {
+    const error=new LiteLLMError(code,status);error.message="secret-provider-text";
+    const safe=studyAIError(error);assert(safe instanceof StudyAIError);assert.equal(safe.reason,reason);assert.equal(safe.status,publicStatus);assert(!safe.message.includes("secret"));
+  }
+  assert(!(studyAIError(new LiteLLMError("invalid_config",503)) instanceof StudyAIError));
+});
+const temporary=()=>studyAIError(new LiteLLMError("upstream_error",503));
+const ownPhrase={text:"こんにちは。",reading:"곤니치와",meaning:"안녕하세요."};
+const resilientFlows=[
+  {name:"chat",run:(complete:typeof studyCompletion)=>roleplayReply("ja",1,"smalltalk",messages,"personal:model",complete),output:good},
+  {name:"learner",run:(complete:typeof studyCompletion)=>learnerTurn("ja",[{role:"user",content:"안녕하세요"}],"personal:model",complete),output:{phrase:ownPhrase,reusable:true}},
+  {name:"translation",run:(complete:typeof studyCompletion)=>translate("안녕하세요","ja","ko",complete),output:{translated:ownPhrase.text,reading:ownPhrase.reading,practice:ownPhrase}},
+];
+for(const flow of resilientFlows){
+  test(`${flow.name}: 503 retries identical request once within shared validation budget`,async()=>{
+    const requests:Parameters<typeof studyCompletion>[]=[];
+    await flow.run(async(...args)=>{requests.push(args);if(requests.length===1)throw temporary();return JSON.stringify(flow.output);});
+    assert.equal(requests.length,2);assert.deepEqual(requests[0],requests[1]);
+    for(const first of ["503","invalid"]){
+      let calls=0;await assert.rejects(flow.run(async()=>{calls++;if(first==="503"||calls===2)throw temporary();return "invalid";}),/일시적으로/);assert.equal(calls,2);
+    }
+    let calls=0;await assert.rejects(flow.run(async()=>{calls++;if(calls===1)throw temporary();return "invalid";}));assert.equal(calls,2);
+  });
+  test(`${flow.name}: auth, quota, timeout and ambiguous failures never retry`,async()=>{
+    for(const [code,status] of [["authentication_failed",401],["quota_exceeded",429],["timeout",504],["network_error",504],["invalid_config",503]] as const){
+      let calls=0;await assert.rejects(flow.run(async()=>{calls++;throw studyAIError(new LiteLLMError(code,status));}));assert.equal(calls,1,code);
+    }
+  });
+}

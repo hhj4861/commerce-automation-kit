@@ -91,3 +91,20 @@ test("cron authentication fails closed and does not accept prefixes or missing c
   assert(!cronAuthorized('Bearer undefined',undefined));assert(!cronAuthorized('Bearer short','short'));
   assert.equal(diagnosticLanguages.length,4);
 });
+
+import { StudyAIError } from "./study-ai-errors";
+test("temporary recovery remains observable and differs from content repair",async()=>{
+  let calls=0;const r=await diagnoseLanguage("ja",{search,complete:async(...args)=>{if(++calls===1)throw new StudyAIError("unavailable",503,"safe");return good(...args);}});
+  assert.equal(r.status,"warning");assert.equal(r.probes[0].calls,2);assert.equal(r.probes[0].failures,1);assert.deepEqual(r.probes[0].findings,["recovered"]);
+  const failed=await diagnoseLanguage("ja",{search,complete:async()=>{throw new StudyAIError("unavailable",503,"provider-secret");}});
+  assert(failed.probes.every(p=>p.calls===2&&p.failures===2&&p.findings.includes("unavailable")));assert(!JSON.stringify(failed).includes("provider-secret"));
+  for(const reason of ["authentication","rate-limit","timeout"] as const){
+    const report=await diagnoseLanguage("ja",{search,complete:async()=>{throw new StudyAIError(reason,502,"secret");}});
+    assert(report.probes.every(p=>p.calls===1&&p.findings.includes(reason)));
+  }
+});
+
+test("503 followed by invalid output remains a quality failure with failed-call evidence",async()=>{
+  let calls=0;const report=await diagnoseLanguage("ja",{search,complete:async()=>{if(++calls===1)throw new StudyAIError("unavailable",503,"safe");return "invalid";}});
+  assert.deepEqual(report.probes[0].findings,["quality"]);assert.equal(report.probes[0].failures,1);assert.equal(report.probes[0].calls,2);
+});
