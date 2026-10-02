@@ -69,7 +69,7 @@ const duplicateCases = [
 export const liveBatches = [cases, duplicateCases];
 
 // Observe only bounded token counts; never retain provider bodies or credentials.
-async function observeUsage(response, signal) {
+export async function observeUsage(response, signal) {
   if (!response.ok || !response.body) return null;
   const reader = response.clone().body.getReader();
   const chunks = [];
