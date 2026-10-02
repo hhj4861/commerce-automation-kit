@@ -1,0 +1,53 @@
+{
+  "revision": 3,
+  "path": "/Users/admin/Downloads/vedio/hbm-episode-3-short-v3.mp4",
+  "duration": 58.75,
+  "resolution": [
+    1080,
+    1920
+  ],
+  "fps": 24,
+  "voiceId": "RU7aSi6lT4uQBXMLgDxK",
+  "speed": 1.0,
+  "newPaidGenerations": 0,
+  "fullDecode": "passed",
+  "audioVideoDurationDifference": 0.0,
+  "blackOver0_3s": false,
+  "silenceOver1_3s": false,
+  "sentenceBoundaryCuts": "measured silence midpoints",
+  "lastNarration": "인공지능 경쟁은 더 빠른 두뇌를 만드는 것과, 그 두뇌를 덜 기다리게 만드는 일이 함께 가는 겁니다.",
+  "finalHoldSeconds": 1.0351923333333328,
+  "captionCount": 20,
+  "captionLayout": "passed",
+  "sampleFrames": 19,
+  "preservedV2": [
+    {
+      "path": "/Users/admin/Downloads/vedio/hbm-episode-3-long-v2.mp4",
+      "sha256": "a7e628abe1448dbfea8723d03e35e5e4ff7cb9515573350aec5ab6f0befd55dd"
+    },
+    {
+      "path": "/Users/admin/Downloads/vedio/hbm-episode-3-short-v2.mp4",
+      "sha256": "31c3911c0f080ff2aa6988c3899672b0f5026976121cc2f11f7b7ae18e909658"
+    }
+  ],
+  "sha256": "1367d9401951c3ac9d1b3980cabda78b4cf381cc5b85d01dd23d0eea136bc8e0",
+  "visualReview": {
+    "status": "passed",
+    "reviewedFrames": 19,
+    "finalFrameCaptionComplete": true,
+    "fullManualListening": false
+  },
+  "independentAsr": {
+    "model": "Whisper small local",
+    "lastSentenceComplete": true,
+    "nextSentenceLeak": false,
+    "lastSpeechEnd": 57.18,
+    "timeAfterLastRecognizedWord": 1.5700000000000003,
+    "transcript": " 비싼 인공지능 칩을 샀는데 계산할 준비만 해놓고 기다리는 순간이 있습니다 고장난 걸까요? 칩이 느린 게 아니라 계산에 쓸 데이터가 제때 도착하지 못하는 겁니다 용량은 창고에 얼마나 담을 수 있는가 대역폭은 일정 시간에 얼마나 꺼내 보낼 수 있는가입니다 창고를 2배로 늘려도 출입문이 그대로면 운반 속도는 그대로일 수 있죠 HBM은 고대역폭 메모리 라는 뜻입니다 얇은 디렘칩 여러 장을 위로 쌓고 계산을 맞는 칩 가까이에 배치합니다 그래서 HBM은 짧고 넓은 연결로 많은 데이터를 병열로 옮기는 방향을 택합니다 그러면 우리가 쓰는 서비스에는 무엇이 달라질까요? 데이터 공급이 병목인 구간에서는 답변을 만드는 시간을 줄이거나 같은 장비로 더 많은 요청을 처리하는데 도움이 됩니다 인공지능 경쟁은 더 빠른 두뇌를 만드는 것과 그 두뇌를 덜 기다리게 만드는 일이 함께 가는 겁니다"
+  },
+  "processExitEvidence": {
+    "edit": 0,
+    "independentAsr": 0,
+    "playbackAndLayout": 0
+  }
+}
