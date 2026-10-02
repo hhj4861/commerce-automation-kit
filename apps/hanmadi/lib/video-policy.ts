@@ -3,7 +3,7 @@ import type { ContentDraft } from "./knowledge";
 export const VIDEO_SELECTION_LIMIT = 10;
 export const VIDEO_CONCURRENCY = 3;
 export const VIDEO_MAX_SECONDS = 15 * 60;
-export const VIDEO_RUBRIC = "hanmadi-video-jev-v7";
+export const VIDEO_RUBRIC = "hanmadi-video-jev-v8";
 export type VideoSettings = {
   language: StudyLanguage;
   scene: string;
@@ -43,6 +43,28 @@ export type LanguageReview = {
   outcome: "pass" | "fail" | "uncertain" | "error";
   checks?: Record<LanguageCheck, { verdict: "pass" | "fail" | "uncertain"; reason: string }>;
 };
+export type ReviewReference = { text: string; meaning: string; scene: string };
+export type VideoReviewContext = {
+  settings: VideoSettings & {
+    languageName: string;
+    sceneContext: { title: string; purpose: string; counterpart: string } | null;
+    practiceLevel: { id: number; title: string; goal: string; help: string; challenge: string } | null;
+  };
+  references: ReviewReference[];
+  referenceCount: number;
+  comparedCount: number;
+};
+export type ContextReview = {
+  model: string;
+  detectedLanguage?: string;
+  languageIssue?: "mismatch" | "uncertain";
+  outcome: "pass" | "fail" | "uncertain" | "error";
+  checks?: Record<VideoCheck, { verdict: "pass" | "fail" | "uncertain"; reason: string }> & {
+    novelty: { verdict: "pass" | "fail" | "uncertain"; reason: string; referenceIndex: number | null };
+  };
+  referenceScope: { total: number; compared: number; digest: string };
+  matchedReference?: ReviewReference;
+};
 export type VideoDisposition = "accepted" | "review" | "excluded";
 export type VideoJudgment = {
   index: number;
@@ -52,13 +74,14 @@ export type VideoJudgment = {
   // Optional for existing v4 drafts. choice retains the effective classification;
   // evaluation records the original model answer even when exact dedupe overrides it.
   disposition?: VideoDisposition;
-  reason?: "language_review" | "language_review_failed" | "language_review_error" | "qualified" | "low_confidence" | "classified_negative" | "exact_duplicate" | "batch_duplicate" | "uncertain_duplicate";
+  reason?: "context_language_mismatch" | "context_review_attention" | "context_review" | "context_review_failed" | "context_review_error" | "language_review" | "language_review_failed" | "language_review_error" | "qualified" | "low_confidence" | "classified_negative" | "exact_duplicate" | "batch_duplicate" | "uncertain_duplicate";
   evaluation?: VideoEvaluation;
   // v6 stores atomic model answers, never an invented four-class probability.
   checks?: VideoChecks;
   decidingCheck?: VideoCheck;
   comparisons?: VideoPairEvaluation[];
   languageReview?: LanguageReview;
+  contextReview?: ContextReview;
 };
 export function confidentVideoChoice(a: { choice: string; confidence: number; probabilities: Record<string, number> }) {
   return a.confidence >= 0.85 && a.probabilities[a.choice] >= 0.9;
@@ -108,6 +131,30 @@ export function applyLanguageReview(j: VideoJudgment, review: LanguageReview): V
   if (LANGUAGE_CHECKS.some((k) => review.checks![k].verdict !== "pass")) return result;
   return { ...result, accepted: true, disposition: "accepted", choice: "useful", reason: "language_review", decidingCheck: undefined };
 }
+// v8 resolves uncertainty across all five checks with a separate, explained
+// review. It cannot overturn any confident JEV failure or an exact duplicate.
+export function needsContextReview(j: VideoJudgment) {
+  return j.disposition === "review" && j.reason === "low_confidence" && !!j.checks &&
+    !VIDEO_CHECKS.some((k) => j.checks![k].choice === "fail" && confidentVideoChoice(j.checks![k])) &&
+    VIDEO_CHECKS.some((k) => !confidentVideoChoice(j.checks![k]));
+}
+export function applyContextReview(j: VideoJudgment, review: ContextReview): VideoJudgment {
+  if (!needsContextReview(j)) return j;
+  const result = { ...j, contextReview: review };
+  if (review.outcome === "error" || !review.checks || VIDEO_CHECKS.some((k) => !review.checks![k]))
+    return { ...result, reason: "context_review_error" };
+  if (review.languageIssue) return { ...result, accepted: false, disposition: "review", reason: "context_language_mismatch", decidingCheck: "relevance" };
+  const failed = VIDEO_CHECKS.find((k) => review.checks![k].verdict === "fail");
+  // A contextual disagreement alone is not proof that a useful expression is
+  // wrong. Keep scene/semantic-similarity negatives visible for human review.
+  if (failed === "relevance" || failed === "novelty") return { ...result, accepted: false,
+    disposition: "review", reason: "context_review_attention", decidingCheck: failed };
+  if (failed) return { ...result, accepted: false, disposition: "excluded",
+    choice: "unreliable",
+    reason: "context_review_failed", decidingCheck: failed };
+  if (review.outcome !== "pass" || VIDEO_CHECKS.some((k) => review.checks![k].verdict !== "pass")) return result;
+  return { ...result, accepted: true, disposition: "accepted", choice: "useful", reason: "context_review", decidingCheck: undefined };
+}
 export function videoDisposition(j: VideoJudgment): VideoDisposition {
   return j.disposition ?? (j.accepted ? "accepted" : j.choice === "useful" ? "review" : "excluded");
 }
@@ -118,6 +165,11 @@ export function videoJudgmentReason(j: VideoJudgment) {
   const choice = { useful: "학습에 유용", duplicate: "중복", irrelevant: "상황·레벨 부적합", unreliable: "근거·내용 불확실" }[j.evaluation?.choice ?? j.choice];
   const reasons = {
     qualified: "학습 가치 기준 통과",
+    context_language_mismatch: "분석 표현의 언어가 선택한 언어와 일치하는지 직접 확인 필요",
+    context_review_attention: "상황·중복 교차 검수에서 이견이 있어 직접 확인 필요",
+    context_review: "JEV 불확실 항목의 언어·상황·중복 교차 검수 통과",
+    context_review_failed: "교차 검수에서 뜻·발음·근거 오류 확인",
+    context_review_error: "교차 검수를 완료하지 못해 직접 확인 필요",
     language_review: "JEV 학습 가치·중복 기준 및 언어 교차 검수 통과",
     language_review_failed: "언어 교차 검수에서 오류 확인",
     language_review_error: "언어 교차 검수를 완료하지 못해 직접 확인 필요",
@@ -131,7 +183,10 @@ export function videoJudgmentReason(j: VideoJudgment) {
   const language = j.languageReview
     ? ` · 언어 검수(${j.languageReview.model}): ${ { pass: "통과", fail: "오류", uncertain: "불확실", error: "연결·응답 확인 필요" }[j.languageReview.outcome]}${j.languageReview.checks ? ` · ${LANGUAGE_CHECKS.map((k) => j.languageReview!.checks![k].reason).join(" / ")}` : ""}`
     : "";
-  return `평가 분류: ${choice}${check ? ` (${check})` : ""} · ${j.reason ? reasons[j.reason] : videoJudgmentLabel(j)}${language}`;
+  const context = j.contextReview
+    ? ` · 문맥 교차 검수(${j.contextReview.model}): ${{ pass: "통과", fail: "오류·이견 발견", uncertain: "불확실", error: "연결·응답 확인 필요" }[j.contextReview.outcome]}${j.contextReview.checks ? ` · ${VIDEO_CHECKS.map((k) => j.contextReview!.checks![k].reason).join(" / ")}` : ""} · 비교 자료 ${j.contextReview.referenceScope.compared}/${j.contextReview.referenceScope.total}개${j.contextReview.matchedReference ? ` · 중복 대상: ${j.contextReview.matchedReference.text}` : ""}`
+    : "";
+  return `평가 분류: ${choice}${check ? ` (${check})` : ""} · ${j.reason ? reasons[j.reason] : videoJudgmentLabel(j)}${language}${context}`;
 }
 export type VideoResult = {
   state: "created" | "review" | "skipped" | "failed" | "running";
