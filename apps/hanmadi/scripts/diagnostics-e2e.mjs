@@ -33,6 +33,7 @@ const mock = createServer(async (req, res) => {
     const p=phrases[language], name=body.response_format?.json_schema?.name;
     const result=name==='hanmadi_translation' ? { translated:p.text, reading:p.reading, practice:p } : name==='hanmadi_learner_turn' ? { phrase:p, reusable:true } : replies[language];
     res.setHeader('Content-Type','application/json');
+    if(mode==='recover'){mode='good';res.statusCode=503;res.end('{"error":"fixture-only"}');return;}
     if(mode==='offline'){res.statusCode=503;res.end('{"error":"fixture-only"}');return;}
     const repair=mode==='repair' && name==='hanmadi_roleplay' && !body.messages[0].content.includes('REPAIR:');
     res.end(JSON.stringify({choices:[{message:{content:mode==='invalid'||repair ? 'invalid fixture' : JSON.stringify(result)}}]}));
@@ -63,10 +64,10 @@ try{
   async function scheduled(){const r=await fetch(base+cron,{headers:{Authorization:`Bearer ${cronSecret}`}});return {status:r.status,data:await r.json()};}
   mode='repair';await page.getByRole('button',{name:'일본어 지금 진단'}).click();
   const ja=page.getByRole('article',{name:'일본어 진단'});await ja.getByText('재생성 후 통과',{exact:true}).waitFor();assert.equal(calls-before,4);
-  mode='offline';const offline=await manual('th');assert.equal(offline.status,200);assert(offline.data.report.probes.every(p=>p.findings.includes('upstream')));
+  mode='offline';const offline=await manual('th');assert.equal(offline.status,200);assert(offline.data.report.probes.every(p=>p.findings.includes('upstream')&&p.findings.includes('unavailable')&&p.calls===2));
   mode='invalid';const invalid=await manual('es');assert.equal(invalid.data.report.status,'failed');assert(invalid.data.report.probes.every(p=>p.calls===2));
-  mode='good';const good=await manual('en');assert.equal(good.data.report.status,'passed',JSON.stringify(good));
-  await page.getByRole('button',{name:'상태 새로고침'}).click();await page.getByText('AI 호출 실패',{exact:true}).first().waitFor();
+  mode='recover';const good=await manual('en');assert.equal(good.data.report.status,'warning',JSON.stringify(good));assert.deepEqual(good.data.report.probes[0].findings,['recovered']);assert.equal(good.data.report.probes[0].calls,2);assert.equal(good.data.report.probes[0].failures,1);
+  await page.getByRole('button',{name:'상태 새로고침'}).click();await page.getByText('AI 호출 실패',{exact:true}).first().waitFor();await page.getByText('일시 장애 후 재시도 성공',{exact:true}).waitFor();await page.getByText('제공자 일시 이용 불가 (503)',{exact:true}).first().waitFor();
   for(const width of [320,390,1440]){await page.setViewportSize({width,height:900});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);await page.screenshot({path:join(out,`diagnostics-${width}.png`),fullPage:true});}
   const scheduledBefore=calls, daily=await scheduled();assert.equal(daily.status,200);assert(daily.data.results.every(r=>r.status==='passed'),JSON.stringify(daily));assert.equal(calls-scheduledBefore,12);
   const onceCalls=calls;assert((await scheduled()).data.results.every(r=>r.status==='already-run'));assert.equal(calls,onceCalls);
