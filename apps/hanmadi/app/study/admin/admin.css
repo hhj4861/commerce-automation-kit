@@ -1182,3 +1182,21 @@
 .dg-finding p { margin: 5px 0; }
 .dg details { margin-top: 18px; }
 @media (max-width: 700px) { .dg-grid { grid-template-columns: minmax(0, 1fr); } }
+
+/* Video preparation: a factual result receipt, distinct from publication. */
+.ks .vs-analysis-limit { font-size: 12px; line-height: 1.7; color: #536158; margin: 12px 0; }
+.ks .vs-outcome { border-left: 3px solid #31564a; padding: 14px 16px; background: #edf3ef; margin-block: 16px; }
+.ks .vs-outcome strong { display: block; font-size: 16px; line-height: 1.5; color: #214638; }
+.ks .vs-outcome p { font-size: 13px; line-height: 1.7; margin: 6px 0 0; }
+.ks .vs-outcome-attention { border-color: #865012; background: #fff5e8; }
+.ks .vs-outcome-attention strong { color: #74440d; }
+.ks .vs-outcome progress { display: block; width: 100%; height: 8px; margin-top: 12px; accent-color: #31564a; }
+.ks .vs-stage-receipt { font-size: 12px; line-height: 1.7; font-weight: 600; color: #31564a; margin: 10px 0 0; }
+.ks .vs-job-blocked { background: #fbece9; color: #9c392d; }
+.ks .vs-queue-actions a { display: inline-flex; align-items: center; min-height: 40px; color: #31564a; text-decoration: underline; text-underline-offset: 3px; font-size: 12px; }
+
+.ks .vs-settings-fields { display: grid; gap: 14px; }
+.ks .vs-settings-toggle { display: grid; gap: 6px; width: 100%; border: 0; padding: 0; background: transparent; text-align: left; color: #243b31; }
+.ks .vs-settings-toggle strong { font-size: 14px; }
+.ks .vs-settings-toggle span { color: #536158; font-size: 12px; line-height: 1.7; }
+.ks .vs-settings-toggle:focus-visible { outline: 2px solid #3157d5; outline-offset: 4px; }

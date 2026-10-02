@@ -83,13 +83,15 @@ test("language deadline includes a never-ending response body even if transport 
   assert.equal((await pending).get(0)?.outcome, "error");
 });
 
-test("JEV → language review → same-batch duplicate check uses separate keys and preserves final veto", async () => {
+test("JEV → context review → same-batch duplicate check uses separate keys and preserves final veto", async () => {
   env(); const stages: string[] = [];
   const result = await judgeVideo({ title: "fixture", seconds: 100, units: [unit, { ...unit, text: "追加のカップをいただけますか。" }] }, [], settings, async (url, init) => {
     const body = JSON.parse(String(init?.body));
     if (String(url).endsWith("/chat/completions")) {
       stages.push("language"); assert.equal(new Headers(init?.headers).get("authorization"), "Bearer general-fixture");
-      return textResponse(reviews([0, 1]));
+      return textResponse({ reviews: [0, 1].map((index) => ({ index, detectedLanguage: "ja", checks: Object.fromEntries(VIDEO_CHECKS.map((k) => [k, {
+        verdict: "pass", reason: "확인", ...(k === "novelty" ? { referenceIndex: null } : {}),
+      }])) })) });
     }
     assert.equal(new Headers(init?.headers).get("authorization"), "Bearer jev-fixture");
     const pair = Object.keys(body.questions)[0].startsWith("pair"); stages.push(pair ? "pair" : "quality");
@@ -98,7 +100,7 @@ test("JEV → language review → same-batch duplicate check uses separate keys 
   assert.deepEqual(stages, ["quality", "language", "pair"]);
   assert.equal(result.judgments[0].accepted, true);
   assert.equal(result.judgments[1].reason, "batch_duplicate");
-  assert.equal(result.judgments[1].languageReview?.outcome, "pass");
+  assert.equal(result.judgments[1].contextReview?.outcome, "pass");
 });
 
 test("review model changes invalidate video result and durable draft lookup keys", () => {
