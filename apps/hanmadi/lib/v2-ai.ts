@@ -1,3 +1,4 @@
+import { studyAIError, studyAttempt } from "./study-ai-errors";
 import { thaiMaleSpeechGuidance, thaiMaleSpeechIssue, learnerQualityGuidance, learnerMeaningIssue, pronunciationIssue, dialogueIssue } from "./study-quality";
 import { spanishQualityGuidance, spanishQualityIssue } from "./spanish-quality";
 import { sceneLessonPlans } from "./v2-scene-lessons";
@@ -43,11 +44,8 @@ export async function studyCompletion(
       maxChars: 6000,
       responseFormat,
     });
-  } catch {
-    throw new ConversationError(
-      502,
-      "AI 응답을 받지 못했어요. 내용은 저장되지 않았어요. 다시 시도해 주세요.",
-    );
+  } catch (error) {
+    throw studyAIError(error);
   }
 }
 export function jsonAnswer(raw: string): Record<string, unknown> {
@@ -168,17 +166,20 @@ export async function translate(
   const prompt =
     translationPrompt(language, from) + knowledgeContext(references);
   let qualityRepair = "";
+  let needsRepair = false;
   for (let attempt = 0; attempt < 2; attempt++) {
-    // Only invalid generated content is regenerated; transport/auth errors propagate.
-    const raw = await complete(
+    // A 503 retry shares the same two-call budget as content repair.
+    const raw = await studyAttempt(() => complete(
       prompt +
-        (attempt
+        (needsRepair
           ? "\nREPAIR: The previous response failed validation. Follow the exact schema. translated must use the destination language. reading must use ONLY Hangul, never IPA or romanization. Preserve every source constraint; never add temperature to a no-ice request. For Thai coffee include กาแฟ and for no ice use ไม่ใส่น้ำแข็ง." + qualityRepair
           : ""),
       [{ role: "user", content: text }],
       "default",
       translationResponseFormat(language, from),
-    );
+    ), attempt);
+    if (raw === null) continue;
+    needsRepair = true;
     let result: Record<string, unknown>;
     try {
       result = jsonAnswer(raw);
@@ -389,18 +390,21 @@ export async function roleplayReply(
   const prompt =
     roleplayPrompt(language, level, sceneId) + knowledgeContext(references);
   let repair = "";
+  let needsRepair = false;
   for (let attempt = 0; attempt < 2; attempt++) {
-    // Transport/authentication failures propagate immediately; never switch models.
-    const raw = await complete(
+    // Retry only an explicit temporary 503; preserve the selected model and two-call limit.
+    const raw = await studyAttempt(() => complete(
       prompt +
-        (attempt
+        (needsRepair
           ? "\nREPAIR: The previous reply failed format/language validation. Return only the exact JSON fields. text MUST be entirely in the target language's original script; reading MUST transcribe that text in Hangul; meaning MUST translate it into Korean. " + repair
           : ""),
       messages,
       selection,
       roleplayResponseFormat(language),
       { language, level, scene: sceneId },
-    );
+    ), attempt);
+    if (raw === null) continue;
+    needsRepair = true;
     try {
       const reply = parseRoleplay(raw, language);
       const speakerIssue = thaiMaleSpeechIssue(reply.text, reply.reading, language);
@@ -466,16 +470,19 @@ All fields max 1000 characters, study phrases max 300. Example pronunciation not
     },
   };
   let repair = "";
+  let needsRepair = false;
   for (let attempt = 0; attempt < 2; attempt++) {
-    const raw = await complete(
+    const raw = await studyAttempt(() => complete(
       prompt +
-        (attempt
+        (needsRepair
           ? "\nREPAIR: Follow the exact schema and language requirements for the learner's own utterance. " + repair
           : ""),
       messages,
       selection,
       format,
-    );
+    ), attempt);
+    if (raw === null) continue;
+    needsRepair = true;
     try {
       const result = jsonAnswer(raw);
       if (

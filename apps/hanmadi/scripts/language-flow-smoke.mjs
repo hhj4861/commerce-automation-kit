@@ -320,14 +320,20 @@ try {
       await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
       assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `${width} ${colorScheme} overflow`);
       await page.locator('textarea').fill('대비 확인');
-      const contrast = await page.getByRole('button', { name: '보내기', exact: true }).evaluate(el => {
+      // Media emulation can resolve before Chromium updates inherited text and hover colors.
+      // Require the same 4.5 contrast after style propagation; permanent failures still time out.
+      const sendButton = await page.getByRole('button', { name: '보내기', exact: true }).elementHandle();
+      const contrastHandle = await page.waitForFunction(el => {
         const luminance = rgb => {
           const values = rgb.match(/[\d.]+/g).slice(0, 3).map(Number).map(v => v / 255).map(v => v <= .04045 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4);
           return values[0] * .2126 + values[1] * .7152 + values[2] * .0722;
         };
         const style = getComputedStyle(el), a = luminance(style.color), b = luminance(style.backgroundColor);
-        return (Math.max(a, b) + .05) / (Math.min(a, b) + .05);
-      });
+        const ratio = (Math.max(a, b) + .05) / (Math.min(a, b) + .05);
+        return ratio >= 4.5 ? ratio : false;
+      }, sendButton, { timeout: 5000 });
+      const contrast = await contrastHandle.jsonValue();
+      await contrastHandle.dispose(); await sendButton.dispose();
       assert.ok(contrast >= 4.5, `button contrast ${contrast} at ${width} ${colorScheme}: ${await page.getByRole('button', { name: '보내기', exact: true }).evaluate(el => { const s = getComputedStyle(el); return JSON.stringify({ color: s.color, background: s.backgroundColor }); })}`);
     }
   }

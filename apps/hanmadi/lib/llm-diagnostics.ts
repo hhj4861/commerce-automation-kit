@@ -1,3 +1,4 @@
+import { StudyAIError } from "./study-ai-errors";
 import { roleplayReply, learnerTurn, translate, studyCompletion } from "./v2-ai";
 import type { KnowledgeMatch } from "./knowledge";
 import type { StudyLanguage } from "./v2";
@@ -26,11 +27,14 @@ export async function diagnoseLanguage(language: StudyLanguage, deps: {
     }
     const at = now();
     const probe: ProbeResult = { kind, ms: 0, llmMs: 0, calls: 0, failures: 0, findings: [] };
+    let lastCompletionFailed = false;
+    let failureReason: StudyAIError["reason"] | undefined;
     const measured: typeof studyCompletion = async (...args) => {
       probe.calls++;
+      lastCompletionFailed = false;
       const llmAt = now();
       try { return await complete(...args); }
-      catch (error) { probe.failures++; throw error; }
+      catch (error) { lastCompletionFailed = true; probe.failures++; if (error instanceof StudyAIError) failureReason = error.reason; throw error; }
       finally { probe.llmMs += Math.max(0, now() - llmAt); }
     };
     try {
@@ -45,10 +49,11 @@ export async function diagnoseLanguage(language: StudyLanguage, deps: {
         const result = await translate(diagnosticInput, language, "ko", measured, refs);
         if (!result.practice) throw new Error("Missing practice for synthetic input");
       }
-      if (probe.calls > 1) probe.findings.push("repaired");
+      if (probe.calls > 1) probe.findings.push(probe.failures ? "recovered" : "repaired");
     } catch {
       // Never persist exception text or rejected model output; it can contain secrets.
-      probe.findings.push(probe.failures ? "upstream" : "quality");
+      probe.findings.push(lastCompletionFailed ? "upstream" : "quality");
+      if (lastCompletionFailed && failureReason) probe.findings.push(failureReason);
     }
     probe.ms = Math.max(0, now() - at);
     if (probe.ms >= 8000) probe.findings.push("slow");

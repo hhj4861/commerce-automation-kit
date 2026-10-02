@@ -858,13 +858,16 @@ try {
   });
   assert.equal(ambiguous.data.needsConfirmation, true);
   assert.equal(calls, before);
+  const callsBeforeFailure = calls;
   const fail = await post({
     action: "translate",
     language: "ja",
     from: "ko",
     text: "FAIL",
   });
-  assert.equal(fail.status, 502);
+  assert.equal(fail.status, 503);
+  assert.match(fail.data.error, /일시적으로/);
+  assert.equal(calls, callsBeforeFailure + 2, "temporary outage shares the two-call budget");
   assert.equal((await state()).state.expressions.length, 1);
   const invalid = await post({
     action: "translate",
