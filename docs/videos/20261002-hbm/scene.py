@@ -65,7 +65,7 @@ def make(i):
      zz=.64+z*.082;o=box('DRAM silicon die',(x,y,zz),(1.18,1.20,.065),'silicon',.009);layers.append(o)
      # Copper exposed edge contacts are illustrative enlarged detail.
      for k in range(7):
-      edge=box('Edge connection',(x-.48+k*.16,y-.605,zz),(.045,.022,.018),'gold',.003);edge.parent=o;edge.matrix_parent_inverse=o.matrix_world.inverted()
+      edge=box('Edge connection',(x-.48+k*.16,y-.605,zz),(.045,.022,.018),'gold',.003);edge.parent=o;edge.location=(-.48+k*.16,-.605,0)
     stacks.append(layers)
     for j in range(lanes):
      yy=y-.54+j*(1.08/max(1,lanes-1));xx=x*.64;box('Interposer parallel wire',(xx,yy,.382),(.95,.018,.014),'copper',.002)
@@ -109,7 +109,7 @@ def make(i):
    o=box('Delivery tray',(-5+k*.53,-2,1.55),(.42,.8,.18),'gold');move(o,k*.65,k*.65+5,(4.8,-2,1.55))
   # partition makes a narrow service opening visibly constrain the path
   for x in(-3.6,3.6):box('Partition',(x,-.4,1.05),(6.1,.16,2.1),'steel')
-  box('Pass header',(0,-.4,3.4),(1.1,.16,.12),'steel')
+  box('Pass header',(0,-.4,2.16),(1.1,.16,.12),'steel')
   for x in(-4,0,4):rod('Light hanger',(x,3,4.4),(x,3,6),.03,'steel');box('Kitchen light',(x,3,4.3),(2.5,.7,.1),'white')
  # cameras list: (position, focus target, lens). Discrete cuts with small physical motion per shot.
  if kind=='server':
@@ -158,7 +158,7 @@ def make(i):
    box('Inspection arch',(0,2,4.3),(8,.7,.5),'steel')
    for x in(-3.8,3.8):box('Inspection post',(x,2,2),(.5,.7,4.4),'steel')
    head=box('Optical inspector',(-2.5,0,3.3),(.8,.8,.85),'black');move(head,0,duration,(2.5,0,3.3))
-   rod('Lens',(-2.5,0,2.7),(-2.5,0,2.94),.22,'steel');cams=[((7,-9,5),(0,0,1),40),((-5,-3,2.3),(-2.35,0,1),55),((3,-4,4),(0,0,.5),48)]
+   lens=rod('Lens',(-2.5,0,2.7),(-2.5,0,2.94),.22,'steel');lens.parent=head;lens.matrix_parent_inverse=head.matrix_world.inverted();cams=[((7,-9,5),(0,0,1),40),((-5,-3,2.3),(-2.35,0,1),55),((3,-4,4),(0,0,.5),48)]
   if kind=='heat':
    for x in(-2.8,-2.35,-1.9):pulsepath([(x,0,1.1),(x,.2,2.7),(x+.4,.5,3.7)],st=8,period=3.2,count=3,color='amber',radius=.035)
    cams=[((-4.5,-4,3.4),(-2.35,0,1.7),48),((3,-6,4.0),(0,0,1),42),((1,-5,3),(0,0,.7),48)]

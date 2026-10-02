@@ -1,0 +1,6 @@
+{
+  "model": "whisper-medium",
+  "sourceIndex": 9,
+  "transcript": " 실제 제품으로 감을 잡아 보겠습니다. 엔비디아 H200은 메모리 용량 141GB와 초당 4.8TB의 메모리 대역폭을 제시합니다. 앞 숫자는 담는 양, 뒤에 숫자는 옮기는 양입니다. 이 대역폭은 인터넷 다운로드 속도가 아니라 칩이 메모리와 주고받는 사양입니다.",
+  "note": "Independent ASR sample; recognition text is not a substitute for auditory review."
+}

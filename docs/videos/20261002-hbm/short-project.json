@@ -1,0 +1,81 @@
+{
+  "title": "비싼 AI칩이 계산도 못 하고 기다리는 이유",
+  "voiceId": "RU7aSi6lT4uQBXMLgDxK",
+  "speed": 1.0,
+  "resolution": [
+    1080,
+    1920
+  ],
+  "fps": 24,
+  "native3dFps": 24,
+  "layout": "full-frame 9:16",
+  "ttsWorkflowRun": 36972343577,
+  "higgsfieldGenerationId": "01603a68-fd02-451f-b492-ab9fc22e2cf9",
+  "additionalPaidGenerationForShort": false,
+  "segments": [
+    {
+      "id": "hook",
+      "sourceIndex": 0,
+      "sourceStart": 0,
+      "start": 0,
+      "duration": 12.833333333333334,
+      "caption": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261002-hbm/short-edit/00.ass",
+      "captions": 6
+    },
+    {
+      "id": "capacity",
+      "sourceIndex": 4,
+      "sourceStart": 0,
+      "start": 12.833333333333334,
+      "duration": 14.333333333333334,
+      "caption": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261002-hbm/short-edit/01.ass",
+      "captions": 6
+    },
+    {
+      "id": "stack",
+      "sourceIndex": 6,
+      "sourceStart": 0,
+      "start": 27.166666666666668,
+      "duration": 11.0,
+      "caption": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261002-hbm/short-edit/02.ass",
+      "captions": 5
+    },
+    {
+      "id": "tsv",
+      "sourceIndex": 7,
+      "sourceStart": 0,
+      "start": 38.16666666666667,
+      "duration": 8.916666666666666,
+      "caption": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261002-hbm/short-edit/03.ass",
+      "captions": 5
+    },
+    {
+      "id": "interposer",
+      "sourceIndex": 8,
+      "sourceStart": 0,
+      "start": 47.083333333333336,
+      "duration": 9.541666666666666,
+      "caption": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261002-hbm/short-edit/04.ass",
+      "captions": 4
+    },
+    {
+      "id": "daily",
+      "sourceIndex": 10,
+      "sourceStart": 0,
+      "start": 56.625,
+      "duration": 12.0,
+      "caption": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261002-hbm/short-edit/05.ass",
+      "captions": 5
+    },
+    {
+      "id": "ending",
+      "sourceIndex": 16,
+      "sourceStart": 0,
+      "start": 68.625,
+      "duration": 8.5,
+      "caption": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261002-hbm/short-edit/06.ass",
+      "captions": 4
+    }
+  ],
+  "duration": 77.125
+}

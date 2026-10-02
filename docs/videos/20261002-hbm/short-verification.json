@@ -1,0 +1,36 @@
+{
+  "path": "/Users/admin/Downloads/vedio/hbm-episode-3-short.mp4",
+  "duration": 77.125,
+  "audioDuration": 77.125,
+  "resolution": [
+    1080,
+    1920
+  ],
+  "fps": "24/1",
+  "voiceId": "RU7aSi6lT4uQBXMLgDxK",
+  "speed": 1.0,
+  "fullDecode": "passed",
+  "silencesOver1_3s": [],
+  "captionCount": 35,
+  "sha256": "57bf9119cf06039dfcb78b73796b7ff734d4affceca68584025304de054e8d03",
+  "visualReview": {
+    "result": "passed sampled review",
+    "frames": 21,
+    "additionalFinalOpeningChecksSeconds": [
+      8,
+      12.3
+    ],
+    "method": "Three sampled frames per edited segment, with final short opening camera-cut review. Not a frame-by-frame human playback review.",
+    "contactSheetDirectory": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261002-hbm/qa-short"
+  },
+  "blackSegmentsOver0_3s": [],
+  "integratedLoudnessLUFS": -17.6,
+  "truePeakDbFS": -0.9,
+  "fileBytes": 37237536,
+  "finalRenderExitCodes": [
+    0,
+    0,
+    0,
+    0
+  ]
+}

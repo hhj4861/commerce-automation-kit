@@ -9,6 +9,9 @@ def stamp(t):
  n=round(t*100);return f'{n//360000}:{n//6000%60:02}:{n//100%60:02}.{n%100:02}'
 def line(st,en,style,t):return f'Dialogue: 0,{stamp(st)},{stamp(en)},{style},,0,0,0,,{t}\n'
 def clean(t):return t.replace('{','').replace('}','').replace('\\','')
+def caption_terms(t):
+ for spoken,written in [('에이치비엠','HBM'),('티에스브이','TSV'),('티지브이','TGV'),('에이치이백','H200'),('에스케이하이닉스','SK하이닉스')]:t=t.replace(spoken,written)
+ return t
 def wrap(t):
  lim=17 if a.short else 34
  if len(t)<=lim:return t
@@ -55,7 +58,7 @@ for n,(i,offset,d)in enumerate(parts):
  def flush():
   if not group:return
   st=max(0,group[0]['start']-offset-.03);en=min(d,max(group[-1]['end']-offset+.09,st+.35));t=''.join(w['text']for w in group).strip()
-  if t and en>st:cues.append([st,en,wrap(clean(t))])
+  if t and en>st:cues.append([st,en,wrap(caption_terms(clean(t)))])
  for w in al[i]['words']:
   if w['end']<=offset or w['start']>=offset+d:continue
   if group and w['text'].strip() not in '.!?' and(len(''.join(x['text']for x in group))+len(w['text'])>(29 if a.short else 44)or w['end']-group[0]['start']>4.2):flush();group=[]
@@ -75,7 +78,9 @@ for n,(i,offset,d)in enumerate(parts):
  if i==0:
   visual=folder/'opening-joined.mp4';
   run(['ffmpeg','-v','error','-y','-i',str(c/'opening.mp4'),'-i',str(source),'-filter_complex','[0:v]scale=1920:1080,fps=24,trim=duration=6,setpts=PTS-STARTPTS,setsar=1[a];[1:v]trim=start=6,setpts=PTS-STARTPTS,setsar=1[b];[a][b]concat=n=2:v=1:a=0[v]','-map','[v]','-an','-c:v','h264_videotoolbox','-b:v','12M',str(visual)]);source=visual
- vf='crop=608:1080:(iw-608)/2:0,scale=1080:1920:flags=lanczos,setsar=1,'if a.short else'setsar=1,'
+ cut=2/3*math.ceil((al[i]['duration']+.12)*FPS)/FPS
+ cx=f"'if(lt(t,6),(iw-608)/2,if(lt(t,{cut}),1120,(iw-608)/2))'" if sc['id']=='hook' else '(iw-608)/2'
+ vf=f'crop=608:1080:{cx}:0,scale=1080:1920:flags=lanczos,setsar=1,'if a.short else'setsar=1,'
  vf+=f"subtitles=filename='{af}':fontsdir='{a.font_dir}'"
  run(['ffmpeg','-v','error','-y','-ss',str(offset),'-i',str(source),'-ss',str(offset),'-i',str(voice),'-t',str(d),'-vf',vf,'-af',f'apad,atrim=duration={d},loudnorm=I=-16:TP=-1.5:LRA=7','-c:v','h264_videotoolbox','-b:v','12M','-pix_fmt','yuv420p','-r','24','-c:a','aac','-b:a','192k','-ar','48000','-movflags','+faststart',str(out)]);print('EDITED',n,sc['id'],round(d,2),flush=True)
 manifest['duration']=total;(c/('short-project.json'if a.short else'project.json')).write_text(json.dumps(manifest,ensure_ascii=False,indent=2)+'\n')

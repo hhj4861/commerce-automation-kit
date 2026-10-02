@@ -1,0 +1,18 @@
+[
+  {
+    "variant": "edit",
+    "captions": 105,
+    "maxLineWidthPx": 1316.0,
+    "availableWidthPx": 1660,
+    "timing": "passed",
+    "width": "passed"
+  },
+  {
+    "variant": "short-edit",
+    "captions": 35,
+    "maxLineWidthPx": 758.1,
+    "availableWidthPx": 950,
+    "timing": "passed",
+    "width": "passed"
+  }
+]

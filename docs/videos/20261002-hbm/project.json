@@ -1,0 +1,171 @@
+{
+  "title": "비싼 AI칩이 계산도 못 하고 기다리는 이유",
+  "voiceId": "RU7aSi6lT4uQBXMLgDxK",
+  "speed": 1.0,
+  "resolution": [
+    1920,
+    1080
+  ],
+  "fps": 24,
+  "native3dFps": 24,
+  "layout": "cinematic 16:9",
+  "ttsWorkflowRun": 36972343577,
+  "higgsfieldGenerationId": "01603a68-fd02-451f-b492-ab9fc22e2cf9",
+  "additionalPaidGenerationForShort": false,
+  "segments": [
+    {
+      "id": "hook",
+      "sourceIndex": 0,
+      "sourceStart": 0,
+      "start": 0,
+      "duration": 17.75,
+      "caption": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261002-hbm/edit/00.ass",
+      "captions": 7
+    },
+    {
+      "id": "kitchen",
+      "sourceIndex": 1,
+      "sourceStart": 0,
+      "start": 17.75,
+      "duration": 20.791666666666668,
+      "caption": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261002-hbm/edit/01.ass",
+      "captions": 6
+    },
+    {
+      "id": "weights",
+      "sourceIndex": 2,
+      "sourceStart": 0,
+      "start": 38.54166666666667,
+      "duration": 18.208333333333332,
+      "caption": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261002-hbm/edit/02.ass",
+      "captions": 5
+    },
+    {
+      "id": "decode",
+      "sourceIndex": 3,
+      "sourceStart": 0,
+      "start": 56.75,
+      "duration": 18.333333333333332,
+      "caption": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261002-hbm/edit/03.ass",
+      "captions": 5
+    },
+    {
+      "id": "capacity",
+      "sourceIndex": 4,
+      "sourceStart": 0,
+      "start": 75.08333333333333,
+      "duration": 18.291666666666668,
+      "caption": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261002-hbm/edit/04.ass",
+      "captions": 6
+    },
+    {
+      "id": "wide",
+      "sourceIndex": 5,
+      "sourceStart": 0,
+      "start": 93.375,
+      "duration": 19.458333333333332,
+      "caption": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261002-hbm/edit/05.ass",
+      "captions": 7
+    },
+    {
+      "id": "stack",
+      "sourceIndex": 6,
+      "sourceStart": 0,
+      "start": 112.83333333333333,
+      "duration": 18.541666666666668,
+      "caption": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261002-hbm/edit/06.ass",
+      "captions": 6
+    },
+    {
+      "id": "tsv",
+      "sourceIndex": 7,
+      "sourceStart": 0,
+      "start": 131.375,
+      "duration": 17.291666666666668,
+      "caption": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261002-hbm/edit/07.ass",
+      "captions": 6
+    },
+    {
+      "id": "interposer",
+      "sourceIndex": 8,
+      "sourceStart": 0,
+      "start": 148.66666666666666,
+      "duration": 20.125,
+      "caption": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261002-hbm/edit/08.ass",
+      "captions": 6
+    },
+    {
+      "id": "numbers",
+      "sourceIndex": 9,
+      "sourceStart": 0,
+      "start": 168.79166666666666,
+      "duration": 20.541666666666668,
+      "caption": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261002-hbm/edit/09.ass",
+      "captions": 6
+    },
+    {
+      "id": "daily",
+      "sourceIndex": 10,
+      "sourceStart": 0,
+      "start": 189.33333333333331,
+      "duration": 19.625,
+      "caption": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261002-hbm/edit/10.ass",
+      "captions": 6
+    },
+    {
+      "id": "context",
+      "sourceIndex": 11,
+      "sourceStart": 0,
+      "start": 208.95833333333331,
+      "duration": 19.333333333333332,
+      "caption": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261002-hbm/edit/11.ass",
+      "captions": 6
+    },
+    {
+      "id": "cost",
+      "sourceIndex": 12,
+      "sourceStart": 0,
+      "start": 228.29166666666666,
+      "duration": 19.625,
+      "caption": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261002-hbm/edit/12.ass",
+      "captions": 7
+    },
+    {
+      "id": "heat",
+      "sourceIndex": 13,
+      "sourceStart": 0,
+      "start": 247.91666666666666,
+      "duration": 22.166666666666668,
+      "caption": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261002-hbm/edit/13.ass",
+      "captions": 7
+    },
+    {
+      "id": "makers",
+      "sourceIndex": 14,
+      "sourceStart": 0,
+      "start": 270.0833333333333,
+      "duration": 18.958333333333332,
+      "caption": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261002-hbm/edit/14.ass",
+      "captions": 5
+    },
+    {
+      "id": "limits",
+      "sourceIndex": 15,
+      "sourceStart": 0,
+      "start": 289.04166666666663,
+      "duration": 17.291666666666668,
+      "caption": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261002-hbm/edit/15.ass",
+      "captions": 7
+    },
+    {
+      "id": "ending",
+      "sourceIndex": 16,
+      "sourceStart": 0,
+      "start": 306.3333333333333,
+      "duration": 21.0,
+      "caption": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261002-hbm/edit/16.ass",
+      "captions": 7
+    }
+  ],
+  "duration": 327.3333333333333
+}
