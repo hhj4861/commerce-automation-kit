@@ -98,6 +98,17 @@ class Store:
             if data["state"] in ("complete", "held"):
                 db.execute("DELETE FROM active WHERE scope=? AND request_id=?", (scope, rid))
             return data
+    def attempt(self, scope, rid, expected, counter):
+        """Persist attempt before dispatch so late/expired responses cannot erase usage."""
+        if counter not in ("searchCalls", "jevCalls"):
+            raise ValueError("Unsupported attempt counter")
+        with self.db() as db:
+            db.execute("BEGIN IMMEDIATE")
+            current = self._load(db, scope, rid)
+            if current["state"] == expected:
+                current["usage"][counter] += 1
+                db.execute("UPDATE requests SET data=? WHERE id=? AND state=?", (canonical(current), rid, expected))
+            return current
     def begin(self, scope, platform, key, value, per_day=30):
         now = time.time()
         with self.db() as db:
@@ -264,7 +275,9 @@ class Discovery:
         if not new:
             return data
         try:
-            data["usage"]["searchCalls"] += 1
+            data = self.store.attempt(scope, rid, "searching", "searchCalls")
+            if data["state"] != "searching":
+                return data
             data["evidence"] = self.evidence(value["category"] + " " + value["brief"].splitlines()[0][:180], "source-")
             if not data["evidence"]:
                 raise Failure("search_evidence_missing", 422)
@@ -299,14 +312,17 @@ class Discovery:
                     reasons, decision = ["exact_duplicate"], "rejected"
                 else:
                     try:
-                        data["usage"]["searchCalls"] += 1
+                        current = self.store.attempt(scope, rid, "reviewing", "searchCalls")
+                        if current["state"] != "reviewing":
+                            return current
+                        data["usage"] = current["usage"]
                         additional = self.evidence(candidate["entity"] + " " + candidate["keyword"], candidate["id"] + "-source-")
                         data["evidence"].extend(additional)
                         used += additional
-                        current = self.store.get(scope, rid)
+                        current = self.store.attempt(scope, rid, "reviewing", "jevCalls")
                         if current["state"] != "reviewing":
                             return current
-                        data["usage"]["jevCalls"] += 1
+                        data["usage"] = current["usage"]
                         response = self.jev({"state": {"request": {k:v for k,v in data["input"].items() if k != "history"}, "candidate": candidate, "evidence": used, "prior": prior}, "questions": questions(data["input"]["profile"])})
                         answers = response.get("answers", {})
                         if set(answers) != set(questions(data["input"]["profile"])):

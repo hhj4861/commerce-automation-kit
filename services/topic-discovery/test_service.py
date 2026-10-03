@@ -141,6 +141,9 @@ class Tests(unittest.TestCase):
                 self.assertEqual(result[0]['state'],'held')
                 self.assertEqual(result[0]['reasonCodes'],['request_expired'])
                 self.assertFalse(result[0]['candidates'])
+                self.assertEqual(result[0]['usage']['searchCalls'],2)
+                self.assertEqual(result[0]['usage']['jevCalls'],1)
+                self.assertEqual(self.store.get(scope,request['requestId'])['usage'],result[0]['usage'])
                 if concurrent_read:
                     self.assertEqual(self.store.get(scope,newer['requestId'])['state'],'awaiting_generation')
                     with self.assertRaises(Failure): self.start(key='third-key',subject=subject)
