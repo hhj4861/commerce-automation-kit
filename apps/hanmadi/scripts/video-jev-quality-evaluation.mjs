@@ -41,7 +41,8 @@ export function evaluationPlan() {
     humanReviewed: false, liveExecuted: false, productionEligible: false,
     cases: fixture.batches.flatMap((b) => b.cases).length,
     batches: fixture.batches.map((b) => ({ id: b.id, settings: b.settings, cases: b.cases.length })),
-    criteria: fixture.criteria, maximumRequests: 12, maximumRequestsPerBatch: 3,
+    criteria: fixture.criteria, maximumRequests: 12, maximumRequestsPerBatch: 4,
+    requestCapNote: "The 12-request approval cap is unchanged; four batches can now require up to 16 calls and may stop early.",
     models: { jev: "jev-1.13.0", context: "hanmadi-chat" },
     estimatedCostUsd: null, actualCostUsd: null,
     costNote: "Token counts are not billing. Reconcile temporary-key ledger separately; configure a server budget before live calls.",
@@ -58,6 +59,7 @@ function metrics(rows) {
     negativeHolds: rows.filter((r) => !r.expectedAccepted && r.disposition === "review").length,
     normalAcceptanceRate: normals.length ? normalAccepted / normals.length : null,
     normalHoldRate: normals.length ? normalHolds / normals.length : null,
+    unverifiedReferences: rows.filter((r) => r.judgment.contextReview?.claimedReference && r.judgment.contextReview?.referenceVerification?.outcome !== "duplicate").length,
     contextErrors: rows.filter((r) => r.judgment.contextReview?.outcome === "error").length,
     review: rows.filter((r) => r.disposition === "review").length,
     excluded: rows.filter((r) => r.disposition === "excluded").length,
@@ -86,7 +88,7 @@ export async function runQualityEvaluation({ live = false, maxRequests, fetcher 
         if (stopReason) throw new Error("evaluation_stopped");
         if (requests.length >= maxRequests) { stopReason = "request_limit"; throw new Error("request_limit"); }
         const body = JSON.parse(init.body);
-        const stage = body.messages ? "context" : Object.keys(body.questions ?? {}).some((k) => k.startsWith("unit")) ? "quality" : "dedupe";
+        const stage = body.messages ? "context" : Object.keys(body.questions ?? {}).some((k) => k.startsWith("unit")) ? "quality" : Object.keys(body.questions ?? {}).some((k) => k.startsWith("corpus")) ? "reference" : "dedupe";
         const record = { batch: batch.id, stage, model: body.model, status: null, usage: null, elapsedMs: 0 };
         requests.push(record);
         const requestStart = Date.now();
@@ -110,6 +112,7 @@ export async function runQualityEvaluation({ live = false, maxRequests, fetcher 
         rawQualityDisposition: policy.classifyVideoChecks(i, judgment.checks).disposition,
       })));
       if (result.judgments.some((j) => j.contextReview?.outcome === "error")) stopReason ??= "context_error";
+      if (result.judgments.some((j) => j.contextReview?.referenceVerification?.outcome === "error")) stopReason ??= "reference_error";
     } catch { stopReason ??= "evaluation_error"; }
     finally { observed.elapsedMs = Date.now() - start; }
     if (stopReason) break; // No retry and no further paid batches after failure.
@@ -121,6 +124,7 @@ export async function runQualityEvaluation({ live = false, maxRequests, fetcher 
   const times = requests.map((r) => r.elapsedMs).sort((a, b) => a - b);
   return { ...plan, event: "hanmadi_jev_quality_result", liveExecuted: true,
     maxRequests, requestCount: requests.length, complete, qualityCriteriaMet,
+    referenceEvidenceComplete: complete && total.unverifiedReferences === 0,
     // Fresh synthetic tests alone never authorize a production promotion.
     productionEligible: false, stopReason, elapsedMs: Date.now() - started,
     metrics: { ...total, totalCases: plan.cases,

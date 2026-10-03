@@ -1,14 +1,14 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { parseContextReviews, reviewVideoContext } from "./video-language-review";
+import { contextReferences, parseContextReviews, reviewVideoContext } from "./video-language-review";
 import { applyContextReview, classifyVideoChecks, needsContextReview, VIDEO_CHECKS, videoJudgmentReason, type VideoChecks, type VideoReviewContext } from "./video-policy";
 import { judgmentState, judgeVideo } from "./video-provider";
 
 const unit = { text: "ナプキンをください。", meaning: "냅킨을 주세요.", reading: "나푸킨오 쿠다사이", at: 12, evidence: "카페에서 냅킨을 요청하는 일본어 표현을 설명한다." };
 const settings = { language: "ja" as const, scene: "cafe", level: 1 };
 const context = () => judgmentState({ title: "fixture", seconds: 60, units: [unit] }, [], settings);
-type Check = { verdict: string; reason: string; referenceIndex?: unknown };
+type Check = { verdict: string; reason: string; referenceIndex?: unknown; reference?: unknown };
 const payload = (indices = [0]) => ({ reviews: indices.map((index) => ({ index, detectedLanguage: "ja", checks: Object.fromEntries(VIDEO_CHECKS.map((k) => [k, {
   verdict: "pass", reason: `${k} 확인`, ...(k === "novelty" ? { referenceIndex: null } : {}),
 }])) as Record<string, Check> })) });
@@ -53,9 +53,11 @@ test("strict five-check schema rejects omitted, extra, duplicated or fabricated 
   for (const referenceIndex of [null, -1, 1.5, ctx.references.length, "0"]) {
     const bad = payload(); bad.reviews[0].checks.novelty = { verdict: "fail", reason: "중복", referenceIndex }; assert.equal(validate(bad).get(0)?.outcome, "error");
   }
-  const duplicate = payload(); duplicate.reviews[0].checks.novelty = { verdict: "fail", reason: "같은 요청", referenceIndex: 0 };
+  const duplicate = payload(); duplicate.reviews[0].checks.novelty = { verdict: "fail", reason: "같은 요청", reference: contextReferences(ctx)[0] };
   const parsed = validate(duplicate).get(0)!;
-  assert.deepEqual(parsed.matchedReference, ctx.references[0]);
+  assert.deepEqual(parsed.claimedReference, contextReferences(ctx)[0]);
+  assert.equal(parsed.matchedReference, undefined);
+  assert.equal(parsed.referenceVerification?.outcome, "pending");
   const result = applyContextReview(classifyVideoChecks(0, checks()), parsed);
   assert.equal(result.disposition, "review"); assert.equal(result.reason, "context_review_attention");
 });
@@ -68,7 +70,7 @@ test("one batch sends matching scene/references without JEV scores and safely ha
     const b = JSON.parse(String(init?.body)), data = JSON.parse(b.messages[1].content);
     assert.equal(b.model, "hanmadi-chat"); assert.equal(b.max_tokens, 3000);
     assert.deepEqual(data.settings, ctx.settings);
-    assert.deepEqual(data.references, ctx.references.map((ref, referenceIndex) => ({ referenceIndex, ...ref })));
+    assert.deepEqual(data.references, contextReferences(ctx));
     assert.deepEqual(data.candidates, [{ index: 0, ...unit }]);
     assert.equal(data.checks, undefined); assert.equal(data.expected, undefined); return response(payload());
   });
@@ -210,4 +212,95 @@ test("recorded towel response recovers only the valid candidate through the full
   assert.equal(judged.judgments[1].disposition, "review");
   assert.equal(judged.judgments[1].contextReview?.responseIssue, "invalid_row");
   assert.equal(judged.judgments[1].contextReview?.checks, undefined);
+});
+
+test("corpus IDs bind kind and exact content independently of order or candidate indices", () => {
+  const ctx = context(), reference = contextReferences(ctx)[0];
+  const validate = (value: unknown) => {
+    const p = payload([2, 5]);
+    p.reviews[1].checks.novelty = { verdict: "fail", reason: "같은 요청", reference: value };
+    return parseContextReviews(JSON.stringify(p), [2, 5], "fixture", ctx);
+  };
+  for (const bad of [null, { ...reference, kind: "candidate" }, { ...reference, id: "candidate:0" },
+    { ...reference, id: "corpus:0" }, { ...reference, text: unit.text },
+    { ...reference, meaning: unit.meaning }, { ...reference, scene: "hotel" },
+    { ...reference, extra: true }]) {
+    const r = validate(bad);
+    assert.equal(r.get(2)?.outcome, "pass");
+    assert.equal(r.get(5)?.responseIssue, "invalid_reference");
+    assert.equal(r.get(5)?.matchedReference, undefined);
+  }
+  assert.equal(validate(reference).get(5)?.referenceVerification?.outcome, "pending");
+  const reversed = { ...ctx, references: [...ctx.references].reverse() };
+  assert.deepEqual(contextReferences(reversed).at(-1), reference);
+  const p = payload(); p.reviews[0].checks.novelty = { verdict: "pass", reason: "중복 없음", reference: null };
+  assert.equal(parseContextReviews(JSON.stringify(p), [0], "fixture", ctx).get(0)?.outcome, "pass");
+  p.reviews[0].checks.novelty.reference = reference;
+  assert.equal(parseContextReviews(JSON.stringify(p), [0], "fixture", ctx).get(0)?.responseIssue, "invalid_reference");
+});
+
+test("all four recorded numeric reference confusions are quarantined, not rebound to unrelated corpus text", () => {
+  const fixture = JSON.parse(readFileSync(new URL("../../../docs/qa/fixtures/20261003-jev-reference-confusion.json", import.meta.url), "utf8"));
+  assert.equal(fixture.cases.length, 4);
+  for (const c of fixture.cases) {
+    const ctx = judgmentState({ title: "recorded", seconds: 180, units: c.units }, [], c.settings);
+    assert.deepEqual(ctx.references[0], c.wronglyMatchedReference);
+    const good = payload([0]).reviews[0]; good.detectedLanguage = c.settings.language;
+    const reviews = parseContextReviews(JSON.stringify({ reviews: [good, c.review] }), [0, c.review.index], "recorded", ctx);
+    assert.equal(reviews.get(0)?.outcome, "pass");
+    const r = reviews.get(c.review.index)!;
+    assert.equal(r.responseIssue, "invalid_reference");
+    assert.equal(r.matchedReference, undefined);
+    assert.equal(applyContextReview(classifyVideoChecks(c.review.index, checks()), r).disposition, "review");
+  }
+});
+
+test("bound corpus claims need independent JEV agreement; mismatch, uncertainty and transport failures hold only that candidate", async (t) => {
+  env();
+  for (const outcome of ["duplicate", "distinct", "uncertain", "error", "malformed"] as const) {
+    const logs: string[] = [];
+    const log = t.mock.method(console, "info", (line: string) => logs.push(line));
+    const stages: string[] = [];
+    const analysis = { title: "fixture", seconds: 60, units: [unit, { ...unit, text: "ナプキンをいただけますか。" }] };
+    let claimed: ReturnType<typeof contextReferences>[number] | undefined;
+    const judged = await judgeVideo(analysis, [], settings, async (_, init) => {
+      const b = JSON.parse(String(init?.body));
+      if (b.messages) {
+        stages.push("context"); const input = JSON.parse(b.messages[1].content);
+        claimed = input.references[0];
+        const p = payload([0, 1]); p.reviews[1].checks.novelty = { verdict: "fail", reason: "잘못된 모델 중복 주장", reference: claimed };
+        return response(p);
+      }
+      const ids = Object.keys(b.questions), corpus = ids[0].startsWith("corpus");
+      stages.push(corpus ? "reference" : "quality");
+      if (corpus) {
+        assert.deepEqual(ids, ["corpus1"]);
+        assert.deepEqual(b.questions.corpus1.instructions.reference, claimed);
+        assert.deepEqual(b.questions.corpus1.instructions.candidate, analysis.units[1]);
+        assert.equal(JSON.stringify(b).includes("잘못된 모델 중복 주장"), false);
+        if (outcome === "error") return new Response("private error", { status: 503 });
+        if (outcome === "malformed") return Response.json({ answers: {} });
+      }
+      const choice = outcome === "distinct" ? "distinct" : "duplicate";
+      return Response.json({ model: "jev-1.13.0", usage: { input_tokens: 10, output_tokens: 5 },
+        answers: Object.fromEntries(ids.map((id) => [id, corpus
+          ? { type: "choice", choice, confidence: outcome === "uncertain" ? .4 : .97,
+            probabilities: choice === "distinct" ? { duplicate: .01, distinct: .99 } : { duplicate: .99, distinct: .01 } }
+          : { type: "choice", ...checks()[id.split("_")[1] as keyof VideoChecks] }])) });
+    });
+    log.mock.restore();
+    assert.deepEqual(stages, ["quality", "context", "reference"]);
+    assert.equal(judged.judgments[0].accepted, true);
+    const held = judged.judgments[1], r = held.contextReview!;
+    assert.equal(held.disposition, "review");
+    assert.equal(r.referenceVerification?.outcome, outcome === "malformed" ? "error" : outcome);
+    assert.equal(r.checks?.novelty.reason, "잘못된 모델 중복 주장"); // audit retains claim
+    assert.equal(!!r.matchedReference, outcome === "duplicate");
+    assert.equal(videoJudgmentReason(held).includes("중복 대상:"), outcome === "duplicate");
+    assert.equal(videoJudgmentReason(held).includes("잘못된 모델 중복 주장"), outcome === "duplicate");
+    const counters = JSON.parse(logs[0]);
+    assert.equal(counters.jevRequests, 2); assert.equal(counters.referenceRequests, 1);
+    assert.equal(counters.jevInputTokens, ["error", "malformed"].includes(outcome) ? null : 20);
+    assert.equal(JSON.stringify(judged).includes("private error"), false);
+  }
 });
