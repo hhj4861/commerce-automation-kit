@@ -35,3 +35,16 @@ Claude 보고 기준 worktree는 `/Users/admin/workSpace/commerce-automation-kit
 공식 참고: https://code.claude.com/docs/en/channels , https://learn.chatgpt.com/docs/app-server . 실제 성공 경로는 설치된 Codex 네이티브 스레드 메시징 도구와 기존 Claude Monitor다.
 
 JEV 자체는 별도 품질 NO-GO 상태이며 `20261003-jev-integration-verification.md`가 근거다.
+
+## P0 리드 재검증 및 P1 지시 — 2026-10-03 후속
+
+사용자의 “작업하고 있는게 없는거 같은데” 지적 이후 실제 상태를 확인했다. Claude는 P0 수정·검증·push를 끝내고 리드 결정을 기다리고 있었다. 이를 계속 구현 중이라고 뭉뚱그려 보고하면 안 된다.
+
+- 검토 리비전 `636ac9bf11620f39edaf40b55d977803a205fb79`; 초안 PR #138은 main 대상 OPEN/DRAFT, Platform GitOps verification 성공을 GitHub에서 확인했다. 머지는 하지 않았다.
+- 리드가 실제 POC_OUT으로 `node --test .../checks.test.mjs` 재실행: 7/7 통과, 스킵 0.
+- 원본 MP4를 ffmpeg로 직접 디코드하여 chapter 105, countup 150, summary 150, baseline 150프레임이 각각 재렌더본과 전부 동일함을 별도 확인했다.
+- 최종 caption MP4 3종의 1080×1920 / 30fps / 기대 프레임 수를 ffprobe로 직접 확인했다. 최종 자막 비교 시트도 열어 보았다.
+- 이전 finding(불일치인데 실패하지 않던 검사기)은 실제 판정 코드 및 회귀 테스트로 수정됐음을 확인했다. 예시값 배지도 최종 이미지에서 확인했다.
+- **P0 템플릿 기능 검증 합격. 시청 이해도 개선과 전체 영상 품질 향상은 아직 미검증.**
+
+`.git/peer-mailbox/codex-lead-to-claude-35652-005.md`로 P1 로컬 구현·검증·초안 PR 착수를 전달했다. 범위는 제한된 템플릿 ID/변수 검증, 로컬 워커 MP4 생성과 asset 연결, 제작실 선택/미리보기, 기존 image/video 호환 및 격리 E2E다. 첫 Higgsfield 장면은 유지하며 Pages Chromium 실행, 유료 호출, JEV/core 변경, 운영 배포, PR 머지는 포함하지 않는다. 별도 로컬 worktree와 stacked branch를 쓰도록 지시했다. 메시지 저장 시점에는 아직 P1 수신/착수 확인을 기다리고 있다.
