@@ -142,3 +142,39 @@ The discovery-only operating Jev key is limited to `jev-1.13.0` and `/typesafe/v
 - Local tests: 26 Python server/HTTP tests and 11 JS transport/Shopshorts tests passed; 11 existing recommendation tests also passed. Fixtures demonstrate failure handling and boundaries, not live acceptance quality. The existing Jev core/SDK is unchanged; its owning Codex session reviewed the integration boundary.
 
 **Remaining before activation:** approve and deploy the follow-up correction, demonstrate evidence-supported accepted topics with real selected accounts, verify the authenticated Shopshorts flow and revocation, rerun the blog no-publication check, then enable each client. Do not silently fall back or force acceptance to complete a rollout. Existing recommendation paths stay in place until then.
+
+
+## Research-before-draft workflow (v2, explicit opt-in)
+
+The deployed v1.1 release is now `3857765d2028c03ad1d345cb50cc95d01cedd313` (approved #134). Its production generic architecture request `0722c8aa-c216-4350-ae97-72f3ff8d213a` and focused heritage request `ad950b2c-0861-47d8-bb8c-9430bd953238` both ended held/no_grounded_candidates with search 1 / generation claim 1 / Jev 0. Blog run [37113523275](https://github.com/hhj4861/wp-auto-blog/actions/runs/37113523275) also failed no_verified_topics; credential delivery, native auth restoration and cleanup succeeded. This is a research adequacy failure, not a Jev outage. No client activation followed.
+
+V1 asked the generator for a complete mechanism before its entity-specific search. V2 changes the order:
+
+1. Server performs initial official API search and issues a `research` action. The existing subscription runtime selects up to three leads (`entity`, `question`, `keyword`, `evidenceIds`) without inventing an answer. The server validates referenced evidence and requires the entity in a cited title/excerpt.
+2. Server researches each validated entity through the same official API (initial search + at most three additional searches). Failed/empty lead searches appear in `researchFailures`; only eligible leads reach the next action.
+3. The existing runtime receives a `draft` action with the expanded evidence. Candidates must bind to a `leadId`, preserve the entity, and cite only that lead's evidence. Unsubstantiated drafts may still be empty/held.
+4. Server performs the existing Jev rubric review with no extra search. No threshold is lowered. Leads never become accepted history or UI suggestions by themselves.
+
+Set `workflow: research-v2` explicitly in the HTTP input. CLI/Shopshorts additionally accept backend-only `DISCOVERY_WORKFLOW=research-v2`; without it they retain v1.1 and one generation. Unsupported workflow values fail closed. Keep v2 disabled until the server and matching clients are deployed. Blog's vendored transport must match `client.py`; venture uses the matching CLI with its opt-in 660-second outer timeout.
+
+V2 has **at most two subscription generation claims**, versus one for v1. It retains **four search attempts, three Jev attempts and the original 600-second request lifetime**. Attempt/claim counters are committed before dispatch. There is no retry loop, no added API-key fallback, and `costUsd:null` still means unknown. Existing JEV/core/SDK and spending limits are unchanged.
+
+SQLite appends an `action_results` table; no existing table/column/data is removed. Each action stores its completion fingerprint and immutable response snapshot in the same transaction as the state transition. Duplicate completion with changed output conflicts; replaying research returns its original response and cannot consume another claim. Clients validate stage/runtime/action/claim count **before** claiming and validate the claim response again. After a lost first completion response, repeating the same request ID resumes the unclaimed draft, never repeats research generation. Concurrent claimed work reports in-progress; expired work cannot be resurrected. Phase boundaries recheck the current account before claims, before generation and before submission.
+
+Validation so far: Python 36 tests; JS HTTP/transport/Shopshorts and existing recommendation 25 tests. Both JS and Python exercise actual HTTP response loss and resume, alongside duplicate claims/completions, original v1 compatibility, expiry during search, partial research failure, fabricated entity/evidence rejection, cross-lead binding and revocation between phases. JEV's owning session independently reviewed these boundaries without running paid calls or editing the SDK. Fixture success is not live acceptance quality or production activation.
+
+
+### Isolated v2 live QA — not production activation
+
+The temporary loopback-only QA service used a separate SQLite directory and the existing budgeted discovery credentials. Codex used its existing subscription login. The first container startup failed because raw `docker run --env-file` preserves quotes in the Compose-format JSON value; replacing it with Compose env parsing restored health 200 before any model call. No TLS/auth bypass was used.
+
+Both full-flow results are preserved in [`docs/qa/20261003-discovery-v2-live.json`](../../docs/qa/20261003-discovery-v2-live.json):
+
+- `3134dea4-e6e0-4b73-9b6d-0447fa0bd3c5`: 53.4 seconds; search 2 / generation claims 2 / Jev 1; one Anyang Pavilion candidate, **held**. Support probabilities pass .37 / reject .46 / uncertain .17, confidence .18, margin .09.
+- `9b2d20a7-f5cb-4aa1-af04-10b3f3a7b869`: 47.3 seconds; search 2 / generation claims 2 / Jev 1; one candidate, **held**. Support probabilities pass .65 / reject .29 / uncertain .06, confidence .48, margin .36. The draft guidance avoids nonessential dates/street addresses, but search terms/results also changed: this is not evidence that the prompt alone caused a score change.
+
+The JEV owner independently compared the recorded sources. The core library use is supported. The first draft's historical year and the second draft's exhibition-to-library transition rely on secondary evidence rather than an explicit primary excerpt. No direct contradiction was established; provisional support is **uncertain**, not a claim that these details are fabricated. The first response's low-confidence reject remains a calibration example, not a confirmed contradiction. Two URLs of the same article are not independent sources.
+
+Decision: **v2 orchestration and conservative holds are verified; activation is NO-GO** (zero accepted candidates, one architectural subject, no cross-platform/Claude live acceptance). Further evaluation should fix a claim-by-claim reference set and distinguish missing evidence from contradiction before interpreting confidence. No acceptance threshold was weakened and no silent legacy fallback was added. Client activation flags remain off. Code PR readiness and recommendation-quality acceptance are separate.
+
+QA cleanup: both temporary QA image tags, the QA container and its dedicated network were removed; private QA SQLite evidence is retained for audit. The production discovery container remains healthy and the edge is running. The discovery key metadata and scoped spend ledger agree on cumulative **USD 0.00110628** (eight ledger records) after this turn; this is Jev gateway cost, not total subscription/search cost. The operating key remains scoped and budgeted, expiring 2026-11-02; it was not a temporary key and was not revoked. No scheduled client flag was enabled.

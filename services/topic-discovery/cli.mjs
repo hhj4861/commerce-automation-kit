@@ -9,7 +9,7 @@ try {
   const {values}=parseArgs({options:{'request-id':{type:'string'},provider:{type:'string',default:'codex'},model:{type:'string',default:'provider-default'}}});
   if(!values['request-id']||!['codex','claude'].includes(values.provider))throw Error('request-id and valid provider required');
   let raw='';for await(const chunk of process.stdin){raw+=chunk;if(Buffer.byteLength(raw)>262144)throw Error('input_too_large');}
-  const input={...JSON.parse(raw),runtime:{provider:values.provider,model:values.model}};
+  const input={...(process.env.DISCOVERY_WORKFLOW?{workflow:process.env.DISCOVERY_WORKFLOW}:{}),...JSON.parse(raw),runtime:{provider:values.provider,model:values.model}};
   const assertConnection=async()=>{
     if(values.provider==='codex')await exec('codex',['login','status'],{timeout:15000,maxBuffer:10000,env:values.provider==='codex'?codexEnvironment(process.env):claudeEnvironment(process.env)});
     else {const {stdout}=await exec('claude',['auth','status','--json'],{timeout:15000,maxBuffer:10000,env:values.provider==='codex'?codexEnvironment(process.env):claudeEnvironment(process.env)});if(JSON.parse(stdout).loggedIn!==true)throw Error('connection_unavailable');}

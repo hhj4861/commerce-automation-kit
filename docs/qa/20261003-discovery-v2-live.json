@@ -1,0 +1,555 @@
+{
+  "environment": "isolated QA; not production activation",
+  "requestId": "3134dea4-e6e0-4b73-9b6d-0447fa0bd3c5",
+  "rubricVersion": "discovery-v2",
+  "state": "complete",
+  "researchLeads": [
+    {
+      "draftEvidenceIds": [
+        "source-1",
+        "source-7"
+      ],
+      "entity": "안양파빌리온",
+      "evidenceIds": [
+        "source-1",
+        "source-7",
+        "lead-1-source-1",
+        "lead-1-source-2",
+        "lead-1-source-3",
+        "lead-1-source-4",
+        "lead-1-source-5",
+        "lead-1-source-6",
+        "lead-1-source-7",
+        "lead-1-source-8"
+      ],
+      "id": "lead-1",
+      "keyword": "안양파빌리온 공간구성 도면",
+      "question": "조형예술 건축물이자 공공예술도서관인 안양파빌리온에서, 건물의 형태와 실제 독서·예술 감상 공간은 어떻게 연결되는지 도면과 현장 자료로 확인할 수 있을까?"
+    }
+  ],
+  "researchFailures": [],
+  "candidates": [
+    {
+      "answer": "안양파빌리온은 공공예술 전문 도서관입니다. 알바로 시자가 2005년 안양공공예술프로젝트의 작품으로 설계한 건축물로, 책을 읽는 공간이기도 합니다. 의외의 지점은 건축 작품과 일상적인 독서 공간이 한 건물에 함께 있다는 것입니다.",
+      "checks": {
+        "duplicate": {
+          "reason": "no_prior",
+          "status": "not_applicable"
+        },
+        "relevance": {
+          "choice": "pass",
+          "confidence": 1,
+          "margin": 1,
+          "model": "jev-1.13.0",
+          "probabilities": {
+            "pass": 1,
+            "reject": 0,
+            "uncertain": 0
+          },
+          "rubricVersion": "discovery-v2"
+        },
+        "support": {
+          "choice": "reject",
+          "confidence": 0.18,
+          "margin": 0.09000000000000002,
+          "model": "jev-1.13.0",
+          "probabilities": {
+            "pass": 0.37,
+            "reject": 0.46,
+            "uncertain": 0.17
+          },
+          "rubricVersion": "discovery-v2"
+        },
+        "value": {
+          "choice": "pass",
+          "confidence": 0.99,
+          "margin": 0.98,
+          "model": "jev-1.13.0",
+          "probabilities": {
+            "pass": 0.99,
+            "reject": 0.01,
+            "uncertain": 0
+          },
+          "rubricVersion": "discovery-v2"
+        }
+      },
+      "decision": "held",
+      "direction": "한국 시청자용 쇼츠로 구성합니다. 외관을 보여주며 용도를 묻고, 공공예술 전문 도서관이라는 답을 공개합니다. 이어 APAP의 건축 작품이라는 출발점과 독서 공간이라는 쓰임을 연결합니다. 원리는 구조 기술 대신 공공예술과 일상적 이용을 결합하는 공간 운영 방식으로 설명합니다. 형태·채광·동선이 독서에 미치는 효과와 도면 해석은 제공된 근거로 확인되지 않으므로 다루지 않습니다.",
+      "draftEvidenceIds": [
+        "source-1",
+        "source-7",
+        "lead-1-source-1",
+        "lead-1-source-3"
+      ],
+      "entity": "안양파빌리온",
+      "evidenceIds": [
+        "source-1",
+        "source-7",
+        "lead-1-source-1",
+        "lead-1-source-2",
+        "lead-1-source-3",
+        "lead-1-source-4",
+        "lead-1-source-5",
+        "lead-1-source-6",
+        "lead-1-source-7",
+        "lead-1-source-8"
+      ],
+      "expectedAnswer": "건축물을 감상하거나 전시를 둘러보는 곳이라고 생각하기 쉽습니다.",
+      "id": "candidate-1",
+      "keyword": "안양파빌리온 공공예술 도서관 APAP",
+      "leadId": "lead-1",
+      "location": "경기도 안양시 만안구 예술공원로 180, 안양예술공원",
+      "openingVisual": "안양파빌리온 외관 전경에 ‘이 건축 작품 안에서는 무엇을 할까요?’라는 질문을 겹쳐 보여줍니다.",
+      "question": "이 건물 자체가 공공예술 작품이라는데, 안에서는 무엇을 할까요?",
+      "reasonCodes": [
+        "support_uncertain"
+      ],
+      "title": "공원 속 건축 작품, 안에서는 책을 읽는다고?",
+      "whyItMatters": "공공예술을 산책하며 바라보는 경험에 독서와 사색을 더합니다. 쇠락했던 유원지를 예술공원으로 바꾼 사업이 일상에서 이용하는 공간으로 이어진 실제 사례입니다."
+    }
+  ],
+  "evidence": [
+    {
+      "excerpt": "안양 파빌리온 도서관은 한때 쇠락했던 유원지를 예술공원으로 탈바꿈시킨 안양공공예술프로젝트(Anyang Public Art Project, APAP)의 일환으로 탄생한, 국내 최초의 공공예술도서관입니다. 책을 읽는 공간을 넘어 예술과 사색....",
+      "id": "source-1",
+      "kind": "search_excerpt",
+      "retrievedAt": 1791021246.2653115,
+      "title": "[경기 이색 도서관] ⑤ 안양파빌리온",
+      "url": "https://gnews.gg.go.kr/news/news_view.do?number=202510280911419187C049"
+    },
+    {
+      "excerpt": "여기어때 운영사 위드이노베이션(대표 황재웅)이 '국내 이색 숙소... 7대 건축물 중 하나다. 제주의 오름과 초가집을 모티브로 설계해... 투숙객을 위한 '건축예술 가이드' 프로그램을 운영한다. 양평 '생각속의집'은... ",
+      "id": "source-2",
+      "kind": "search_excerpt",
+      "retrievedAt": 1791021246.2653177,
+      "title": "여기어때, 국내 이색숙소 10선 선정",
+      "url": "https://zdnet.co.kr/view/?no=20190820082016"
+    },
+    {
+      "excerpt": "형상의 건축물이 하늘을 향해 솟아오른다. 지상 50m 높이로 설계된 이... 정체성을 건축으로 구현한 공간이다. 이번 전망대는 총사업비... 충청북도 #전망대 #스카이워크 #월류봉 #모노레일 #겨울 여행 #국내여행",
+      "id": "source-3",
+      "kind": "search_excerpt",
+      "retrievedAt": 1791021246.2653224,
+      "title": "\"드디어 이번 주에 개장합니다\"... 무려 90억 들인 입장료 무료 이색 전망대·스....",
+      "url": "https://www.ardentnews.co.kr/news/articleView.html?idxno=11059"
+    },
+    {
+      "excerpt": "“잠만 자는 공간 넘어, 숙소 자체가 여행의 목적으로” 변화 추세 경쟁력 높은 국내 이색 숙소, 제주 7대 건축물부터 400년 역사의 고택까지 다양",
+      "id": "source-4",
+      "kind": "search_excerpt",
+      "retrievedAt": 1791021246.2653263,
+      "title": "여기어때, 호텔부터 적산가옥까지 ‘국내 이색숙소 10선’ 공개",
+      "url": "https://www.wikitree.co.kr/articles/455474"
+    },
+    {
+      "excerpt": "벗겨줄 국내 이색 목욕탕 세 곳을 소개합니다. 부산 허심청 @hotel... 있도록 설계된 침탕, 그리고 철학탕, 영상탕, 샴페인탕 등 이색적인... 이것부터 꼭 체크하세요 TRENDS 새해부터 눈호강, 최신 건축 디자인 뉴스 12",
+      "id": "source-5",
+      "kind": "search_excerpt",
+      "retrievedAt": 1791021246.265331,
+      "title": "작년 묵은 때까지 싹 벗겨 줄 국내 이색 목욕탕 3",
+      "url": "https://www.elle.co.kr/article/1894609"
+    },
+    {
+      "excerpt": "전 세계를 대표하는 커피 프랜차이즈 하면 단연 스타벅스를 가장 먼저 떠올리게 됩니다. 2023년을 기준으로 한국에서만 약 1,800여 개가 넘는 매장이 운영되고 있으며, 전 세계 약 80개국에서 약 35,000개의 매장이 운영되고 ....",
+      "id": "source-6",
+      "kind": "search_excerpt",
+      "retrievedAt": 1791021246.265335,
+      "title": "여긴 꼭 가봐야 해! 세계의 이색적인 스타벅스 건축물",
+      "url": "https://www.midascad.com/cad_archive/awesome-starbucks"
+    },
+    {
+      "excerpt": "탄생한, 국내 최초의 공공예술도서관입니다. 책을 읽는 공간을 넘어 예술과 사색이 공존하는 이곳은... 세계적인 건축가 알바로 시자(Alvaro Siza)가 설계한 조형예술 건축물로, 아시아에서는 최초로 그의 디자인이... ",
+      "id": "source-7",
+      "kind": "search_excerpt",
+      "retrievedAt": 1791021246.265339,
+      "title": "[경기 이색 도서관] ⑤ 안양파빌리온",
+      "url": "https://gnews.gg.go.kr/news/news_detail.do?number=202510280911419187C049&s_code=C049"
+    },
+    {
+      "excerpt": "소리를 듣는 경험 자체를 하나의 전시로 풀어낸 국내 최초의 오디오 전문 뮤지엄으로, 건축과 예술... 세계적인 건축가가 설계한 아름다운 건축물과 100여 년의 오디오 역사, 최고 수준의 음향 감상까지 모두 경험할... ",
+      "id": "source-8",
+      "kind": "search_excerpt",
+      "retrievedAt": 1791021246.2653456,
+      "title": "축음기부터 하이엔드 오디오까지…귀로 즐기는 이색 박물관, 어디? | 서울시",
+      "url": "https://mediahub.seoul.go.kr/archives/2018719"
+    },
+    {
+      "excerpt": "가와종합건축사사무소·건축사사무소 이색·디디건축사사무소 컨소시엄 작품을 선정했다. 예정 공사비는 약 1,568억원, 설계비는 약 93억원 규모로 최근 국내 공공건축 설계공모 가운데 가장 큰 프로젝트 중 하나로... ",
+      "id": "source-9",
+      "kind": "search_excerpt",
+      "retrievedAt": 1791021246.2653499,
+      "title": "서울 대형 체육시설에 목구조 등장…건축시장 변화 신호",
+      "url": "https://www.woodkorea.co.kr/news/articleView.html?idxno=89651"
+    },
+    {
+      "excerpt": "국내 건축상 받은 휴게소 TOP 6 부동산은 처음이라 24.09.13. 읽는시간... 깔린 건축물의 모습이 단아하면서도 주변 자연 경관과 조화롭게... 보면 이색적인 휴게소를 하나 만날 수 있습니다. 바로... ",
+      "id": "source-10",
+      "kind": "search_excerpt",
+      "retrievedAt": 1791021246.265354,
+      "title": "휴게소, 건축 명소가 되다... 국내 건축상 받은 휴게소 TOP 6",
+      "url": "https://kbthink.com/main/real-estate/basic-information/first-time-real-estate/2024/first-time-real-estate-240913.html"
+    },
+    {
+      "excerpt": "1. 개요 ; 안양파빌리온은 경기도 안양시 만안구 예술공원로 180에 위치한 공공예술 전문 도서관이다. 포르투갈 출신의 세계적 건축가 알바로 시자가 설계한 이 건축물은 그의 아시아 최초 작품으로, 건축 자체가 하나의 ....",
+      "id": "lead-1-source-1",
+      "kind": "search_excerpt",
+      "retrievedAt": 1791021265.1708636,
+      "title": "안양 파빌리온 - Unisquads",
+      "url": "https://unisquads.io/w/%EC%95%88%EC%96%91%20%ED%8C%8C%EB%B9%8C%EB%A6%AC%EC%98%A8"
+    },
+    {
+      "excerpt": "객석수 : 1,126석 ※오케스트라피트(OP)는 객석으로 사용할 수 없음 1층 791석, 장애인석 13석, 2층 322석 프로세니움 형식, 객석배치 : 발코니 형식으로 1,2층으로 나누어 구성 각층에서 직접 객석으로 출입가능 2층 최후방열에....",
+      "id": "lead-1-source-2",
+      "kind": "search_excerpt",
+      "retrievedAt": 1791021265.1708686,
+      "title": "안양아트센터 | 시설현황 | 시설/대관",
+      "url": "https://ayac.or.kr/base/contents/view?contentsNo=27&menuLevel=3&menuNo=33"
+    },
+    {
+      "excerpt": "포르투갈 출신의 세계적인 건축가이자 조형예술가인 알바로 시자(Alvaro Siza)가 2005년 제1회 안양공공예술프로젝트(APAP 2005, Anyang Public Art Project)의 작품으로 설계한 '알바로 시자홀'이 명칭을 '안양 파빌리온'(Anyang Pavilion)....",
+      "id": "lead-1-source-3",
+      "kind": "search_excerpt",
+      "retrievedAt": 1791021265.1708732,
+      "title": "알바로시자의 '안양 파빌리온', 원래 명칭 되찾다",
+      "url": "https://www.ohmynews.com/NWS_Web/View/at_pg.aspx?CNTN_CD=A0001918944"
+    },
+    {
+      "excerpt": "지상의 낙원 문주(한국), 2019 안양파빌리온 앞 산책로 녹지공간에 쉼터 기능을 하는 조형물이다. 작품 주제적 측면에서는 극락정토의 의미가 담긴 안양의 지명을 해석했으며, 형태적으로는 유연한 곡선과... ",
+      "id": "lead-1-source-4",
+      "kind": "search_excerpt",
+      "retrievedAt": 1791021265.1708767,
+      "title": "안양 예술 공원 - 안양시청",
+      "url": "https://www.anyang.go.kr/downloadContentsFile.do?key=1881&fileNo=40697"
+    },
+    {
+      "excerpt": "객석수 : 638석 1층 570석(장애인석 7석 포함), 2층 68석, 객석배치 : 각 층에서 직접 객석으로 출입가능 오케스트라, 합창, 실내악, 독주회 등 클래식 공연 전문 홀, 무대시스템 : 무대면적 245㎡, 무대높이 12m, 분장실 4개",
+      "id": "lead-1-source-5",
+      "kind": "search_excerpt",
+      "retrievedAt": 1791021265.1708844,
+      "title": "평촌아트홀 | 시설현황 | 시설/대관",
+      "url": "https://ayac.or.kr/base/contents/view?contentsNo=28&menuLevel=3&menuNo=34"
+    },
+    {
+      "excerpt": "추진위원회를 구성하였다. 2003년 8월 29일 열린 비산조각공원추진위원회에 서는 당초 시 소유지 800평에 조각작품을 설치하기로 했던 계획을 넘어, 안양유원지 전 역으로 공간을 확장해 공공예술화사업을 추진할... ",
+      "id": "lead-1-source-6",
+      "kind": "search_excerpt",
+      "retrievedAt": 1791021265.1708884,
+      "title": "자연과 예술이 만나는 공간, 안양예술공원",
+      "url": "https://www.anyang.go.kr/downloadContentsFile.do?key=5351&fileNo=32936"
+    },
+    {
+      "excerpt": "9 안양파빌리온(알바로시자홀) 10무문관(無門關) 11벙커 M. 바흐친 12나는 당신을 생각합니다 13거기에... 안양시는 APAP 사업을 통해 안양유원지를 단순한 휴식 공간의 차원을 넘어 자연과 사람과 예술이... ",
+      "id": "lead-1-source-7",
+      "kind": "search_excerpt",
+      "retrievedAt": 1791021265.1708918,
+      "title": "안양 예술 공원 - 안양시청",
+      "url": "https://www.anyang.go.kr/downloadContentsFile.do?key=1881&fileNo=1906"
+    },
+    {
+      "excerpt": "알바로 시자의 아시아 첫 미술관 프로젝트로 파주출판도시를 대표하는 미술관이자 북카페입니다. 건축가 특유의 U자형 곡선 구성과 백색 벽, 빛을 조절할 떄 쓰는 탑 라이트가 모두 활용되었어요. 먼저 보이는 건 거대한....",
+      "id": "lead-1-source-8",
+      "kind": "search_excerpt",
+      "retrievedAt": 1791021265.170895,
+      "title": "모더니즘의 마지막 거장, 건축 시인 '알바로 시자'의 국내 건축 7곳",
+      "url": "https://stibee.com/api/v1.0/emails/share/uhG9kG_rumtq48UY5MZeJ3559gUtJ-8"
+    }
+  ],
+  "usage": {
+    "costUsd": null,
+    "generationClaims": 2,
+    "jevCalls": 1,
+    "searchCalls": 2
+  },
+  "input": {
+    "profile": "content",
+    "category": "건축학",
+    "brief": "실제 사례 의외의 원리\n한국 시청자용 건축 쇼츠. 실제 건축물의 의외의 모습이나 용도가 궁금한 주제. 검색 근거로 확인된 내용만 설명하며, 유명한 기본 상식과 근거 없는 수치는 피합니다.",
+    "history": []
+  },
+  "followup": {
+    "environment": "isolated QA; revised drafting guidance; fresh research, not a controlled same-evidence comparison",
+    "requestId": "9b2d20a7-f5cb-4aa1-af04-10b3f3a7b869",
+    "rubricVersion": "discovery-v2",
+    "state": "complete",
+    "reasonCodes": [],
+    "researchLeads": [
+      {
+        "draftEvidenceIds": [
+          "source-1",
+          "source-7"
+        ],
+        "entity": "안양파빌리온",
+        "evidenceIds": [
+          "source-1",
+          "source-7",
+          "lead-1-source-1",
+          "lead-1-source-2",
+          "lead-1-source-3",
+          "lead-1-source-4",
+          "lead-1-source-5",
+          "lead-1-source-6",
+          "lead-1-source-7",
+          "lead-1-source-8",
+          "lead-1-source-9"
+        ],
+        "id": "lead-1",
+        "keyword": "안양파빌리온 알바로시자 도면",
+        "question": "조형예술 건축물이자 공공예술도서관인 안양파빌리온에서, 건물의 형태와 책을 읽는 공간은 어떻게 연결될까? 설계 자료와 현장 사진으로 확인할 수 있는 특징은 무엇일까?"
+      }
+    ],
+    "researchFailures": [],
+    "candidates": [
+      {
+        "answer": "안양파빌리온은 전시공간에서 공공예술 서적과 정보를 갖춘 전문 공간으로 바뀐 사례입니다. 조형예술 건축물이 책을 읽고 공공예술을 알아보는 도서관 역할도 하게 된 것입니다.",
+        "checks": {
+          "duplicate": {
+            "reason": "no_prior",
+            "status": "not_applicable"
+          },
+          "relevance": {
+            "choice": "pass",
+            "confidence": 1,
+            "margin": 1,
+            "model": "jev-1.13.0",
+            "probabilities": {
+              "pass": 1,
+              "reject": 0,
+              "uncertain": 0
+            },
+            "rubricVersion": "discovery-v2"
+          },
+          "support": {
+            "choice": "pass",
+            "confidence": 0.48,
+            "margin": 0.36000000000000004,
+            "model": "jev-1.13.0",
+            "probabilities": {
+              "pass": 0.65,
+              "reject": 0.29,
+              "uncertain": 0.06
+            },
+            "rubricVersion": "discovery-v2"
+          },
+          "value": {
+            "choice": "pass",
+            "confidence": 0.98,
+            "margin": 0.98,
+            "model": "jev-1.13.0",
+            "probabilities": {
+              "pass": 0.99,
+              "reject": 0.01,
+              "uncertain": 0
+            },
+            "rubricVersion": "discovery-v2"
+          }
+        },
+        "decision": "held",
+        "direction": "한국 시청자용 건축 쇼츠로 구성합니다. 반구형 외관을 보여주는 장면을 제안하며 ‘안에서는 작품만 볼까요?’라는 질문으로 시작합니다. 이어 서가와 책 읽는 공간을 확인할 수 있는 자료를 확보해 도서관이라는 용도를 공개합니다. 전시공간에 공공예술 서적과 정보 기능이 더해진 변화를 설명합니다. 건물 형태가 독서 환경에 미치는 효과는 제공된 근거로 확인되지 않으므로 연결해 설명하지 않습니다.",
+        "draftEvidenceIds": [
+          "lead-1-source-1",
+          "lead-1-source-4",
+          "source-1"
+        ],
+        "entity": "안양파빌리온",
+        "evidenceIds": [
+          "source-1",
+          "source-7",
+          "lead-1-source-1",
+          "lead-1-source-2",
+          "lead-1-source-3",
+          "lead-1-source-4",
+          "lead-1-source-5",
+          "lead-1-source-6",
+          "lead-1-source-7",
+          "lead-1-source-8",
+          "lead-1-source-9"
+        ],
+        "expectedAnswer": "외형만 보면 작품을 전시하는 공간이라고 예상할 수 있습니다.",
+        "id": "candidate-1",
+        "keyword": "안양파빌리온 공공예술도서관 반구형",
+        "leadId": "lead-1",
+        "location": "경기도 안양시",
+        "openingVisual": "반구형 외관을 확인할 수 있는 사진이나 영상 위에 ‘전시관일까, 도서관일까?’라는 자막을 얹는 도입을 제안합니다.",
+        "question": "주변 경관과 어울리도록 반구형으로 설계한 건물, 안에서는 작품만 감상할까요?",
+        "reasonCodes": [
+          "support_uncertain"
+        ],
+        "title": "반구형 예술 건축물 안에 도서관이 있다고?",
+        "whyItMatters": "공원의 예술 건축물을 감상하는 데서 나아가, 책을 통해 공공예술을 알아보는 장소로도 이용할 수 있다는 점이 일상과 연결됩니다."
+      }
+    ],
+    "evidence": [
+      {
+        "excerpt": "안양 파빌리온 도서관은 한때 쇠락했던 유원지를 예술공원으로 탈바꿈시킨 안양공공예술프로젝트(Anyang Public Art Project, APAP)의 일환으로 탄생한, 국내 최초의 공공예술도서관입니다. 책을 읽는 공간을 넘어 예술과 사색....",
+        "id": "source-1",
+        "kind": "search_excerpt",
+        "retrievedAt": 1791021685.9133127,
+        "title": "[경기 이색 도서관] ⑤ 안양파빌리온",
+        "url": "https://gnews.gg.go.kr/news/news_view.do?number=202510280911419187C049"
+      },
+      {
+        "excerpt": "여기어때 운영사 위드이노베이션(대표 황재웅)이 '국내 이색 숙소... 7대 건축물 중 하나다. 제주의 오름과 초가집을 모티브로 설계해... 투숙객을 위한 '건축예술 가이드' 프로그램을 운영한다. 양평 '생각속의집'은... ",
+        "id": "source-2",
+        "kind": "search_excerpt",
+        "retrievedAt": 1791021685.9133186,
+        "title": "여기어때, 국내 이색숙소 10선 선정",
+        "url": "https://zdnet.co.kr/view/?no=20190820082016"
+      },
+      {
+        "excerpt": "형상의 건축물이 하늘을 향해 솟아오른다. 지상 50m 높이로 설계된 이... 정체성을 건축으로 구현한 공간이다. 이번 전망대는 총사업비... 충청북도 #전망대 #스카이워크 #월류봉 #모노레일 #겨울 여행 #국내여행",
+        "id": "source-3",
+        "kind": "search_excerpt",
+        "retrievedAt": 1791021685.9133232,
+        "title": "\"드디어 이번 주에 개장합니다\"... 무려 90억 들인 입장료 무료 이색 전망대·스....",
+        "url": "https://www.ardentnews.co.kr/news/articleView.html?idxno=11059"
+      },
+      {
+        "excerpt": "“잠만 자는 공간 넘어, 숙소 자체가 여행의 목적으로” 변화 추세 경쟁력 높은 국내 이색 숙소, 제주 7대 건축물부터 400년 역사의 고택까지 다양",
+        "id": "source-4",
+        "kind": "search_excerpt",
+        "retrievedAt": 1791021685.9133275,
+        "title": "여기어때, 호텔부터 적산가옥까지 ‘국내 이색숙소 10선’ 공개",
+        "url": "https://www.wikitree.co.kr/articles/455474"
+      },
+      {
+        "excerpt": "벗겨줄 국내 이색 목욕탕 세 곳을 소개합니다. 부산 허심청 @hotel... 있도록 설계된 침탕, 그리고 철학탕, 영상탕, 샴페인탕 등 이색적인... 이것부터 꼭 체크하세요 TRENDS 새해부터 눈호강, 최신 건축 디자인 뉴스 12",
+        "id": "source-5",
+        "kind": "search_excerpt",
+        "retrievedAt": 1791021685.913332,
+        "title": "작년 묵은 때까지 싹 벗겨 줄 국내 이색 목욕탕 3",
+        "url": "https://www.elle.co.kr/article/1894609"
+      },
+      {
+        "excerpt": "전 세계를 대표하는 커피 프랜차이즈 하면 단연 스타벅스를 가장 먼저 떠올리게 됩니다. 2023년을 기준으로 한국에서만 약 1,800여 개가 넘는 매장이 운영되고 있으며, 전 세계 약 80개국에서 약 35,000개의 매장이 운영되고 ....",
+        "id": "source-6",
+        "kind": "search_excerpt",
+        "retrievedAt": 1791021685.913336,
+        "title": "여긴 꼭 가봐야 해! 세계의 이색적인 스타벅스 건축물",
+        "url": "https://www.midascad.com/cad_archive/awesome-starbucks"
+      },
+      {
+        "excerpt": "탄생한, 국내 최초의 공공예술도서관입니다. 책을 읽는 공간을 넘어 예술과 사색이 공존하는 이곳은... 세계적인 건축가 알바로 시자(Alvaro Siza)가 설계한 조형예술 건축물로, 아시아에서는 최초로 그의 디자인이... ",
+        "id": "source-7",
+        "kind": "search_excerpt",
+        "retrievedAt": 1791021685.9133399,
+        "title": "[경기 이색 도서관] ⑤ 안양파빌리온",
+        "url": "https://gnews.gg.go.kr/news/news_detail.do?number=202510280911419187C049&s_code=C049"
+      },
+      {
+        "excerpt": "소리를 듣는 경험 자체를 하나의 전시로 풀어낸 국내 최초의 오디오 전문 뮤지엄으로, 건축과 예술... 세계적인 건축가가 설계한 아름다운 건축물과 100여 년의 오디오 역사, 최고 수준의 음향 감상까지 모두 경험할... ",
+        "id": "source-8",
+        "kind": "search_excerpt",
+        "retrievedAt": 1791021685.9133465,
+        "title": "축음기부터 하이엔드 오디오까지…귀로 즐기는 이색 박물관, 어디? | 서울시",
+        "url": "https://mediahub.seoul.go.kr/archives/2018719"
+      },
+      {
+        "excerpt": "가와종합건축사사무소·건축사사무소 이색·디디건축사사무소 컨소시엄 작품을 선정했다. 예정 공사비는 약 1,568억원, 설계비는 약 93억원 규모로 최근 국내 공공건축 설계공모 가운데 가장 큰 프로젝트 중 하나로... ",
+        "id": "source-9",
+        "kind": "search_excerpt",
+        "retrievedAt": 1791021685.9133506,
+        "title": "서울 대형 체육시설에 목구조 등장…건축시장 변화 신호",
+        "url": "https://www.woodkorea.co.kr/news/articleView.html?idxno=89651"
+      },
+      {
+        "excerpt": "국내 건축상 받은 휴게소 TOP 6 부동산은 처음이라 24.09.13. 읽는시간... 깔린 건축물의 모습이 단아하면서도 주변 자연 경관과 조화롭게... 보면 이색적인 휴게소를 하나 만날 수 있습니다. 바로... ",
+        "id": "source-10",
+        "kind": "search_excerpt",
+        "retrievedAt": 1791021685.9133544,
+        "title": "휴게소, 건축 명소가 되다... 국내 건축상 받은 휴게소 TOP 6",
+        "url": "https://kbthink.com/main/real-estate/basic-information/first-time-real-estate/2024/first-time-real-estate-240913.html"
+      },
+      {
+        "excerpt": "규모 : 526.9㎡규모의 현대미술전시관, 특징 : 2005년 안양공공예술프로젝트(APAP)의 일환으로 조성된 조형 예술물 세계적인 건축가 알바로시자가 아시아 최초로 주변경관과 어울리는 반구형으로 설계한 디자인",
+        "id": "lead-1-source-1",
+        "kind": "search_excerpt",
+        "retrievedAt": 1791021705.7486658,
+        "title": "안양파빌리온 | 시설현황 | 시설/대관",
+        "url": "https://ayac.or.kr/base/contents/view?contentsNo=30&menuLevel=3&menuNo=36"
+      },
+      {
+        "excerpt": "알바로 시자의 아시아 첫 미술관 프로젝트로 파주출판도시를 대표하는 미술관이자 북카페입니다. 건축가 특유의 U자형 곡선 구성과 백색 벽, 빛을 조절할 떄 쓰는 탑 라이트가 모두 활용되었어요. 먼저 보이는 건 거대한....",
+        "id": "lead-1-source-2",
+        "kind": "search_excerpt",
+        "retrievedAt": 1791021705.7486722,
+        "title": "모더니즘의 마지막 거장, 건축 시인 '알바로 시자'의 국내 건축 7곳",
+        "url": "https://stibee.com/api/v1.0/emails/share/uhG9kG_rumtq48UY5MZeJ3559gUtJ-8"
+      },
+      {
+        "excerpt": "포르투갈 출신의 세계적인 건축가이자 조형예술가인 알바로 시자(Alvaro Siza)가 2005년 제1회 안양공공예술프로젝트(APAP 2005, Anyang Public Art Project)의 작품으로 설계한 '알바로 시자홀'이 명칭을 '안양 파빌리온'(Anyang Pavilion)....",
+        "id": "lead-1-source-3",
+        "kind": "search_excerpt",
+        "retrievedAt": 1791021705.748676,
+        "title": "알바로시자의 '안양 파빌리온', 원래 명칭 되찾다",
+        "url": "https://www.ohmynews.com/NWS_Web/View/at_pg.aspx?CNTN_CD=A0001918944"
+      },
+      {
+        "excerpt": "포르투갈 출신 유명 건축가 알바로시자(Alvaro Siza)가 설계한 전시공간 알바시로자홀이 공공예술 서적을 갖춘 도서관과 정보집적소를 갖춘 전문 공간으로 탈바꿈했다. 공공예술에 특화된 기관이 생긴 것은 국내 처음이다.....",
+        "id": "lead-1-source-4",
+        "kind": "search_excerpt",
+        "retrievedAt": 1791021705.7486799,
+        "title": "안양 공공예술 전문센터 ‘안양파빌리온’ 개관",
+        "url": "https://www.kyeonggi.com/article/201310210537180"
+      },
+      {
+        "excerpt": "안양파빌리온은 경기도 안양시 만안구 예술공원로 180에 위치한 공공예술 전문 도서관 이다. 포르투갈 출신의 세계적 건축가 알바로 시자 가 설계한 이 건축물은 그의 아시아 최초 작품으로, 건축 자체가 하나의 조형예....",
+        "id": "lead-1-source-5",
+        "kind": "search_excerpt",
+        "retrievedAt": 1791021705.7486844,
+        "title": "안양 파빌리온 - Unisquads",
+        "url": "https://unisquads.io/w/%EC%95%88%EC%96%91%20%ED%8C%8C%EB%B9%8C%EB%A6%AC%EC%98%A8"
+      },
+      {
+        "excerpt": "도심 속 이색 전시부터 트레킹까지 소소하지만 확실한 행복을 누릴 수 있는 안양 여행 코스를 소개해드립니다. 안양예술공원 중심부에서는 독특한 외형의 안양파빌리온을 만날 수 있습니다. 이 건물은 포르투갈 출신의 ....",
+        "id": "lead-1-source-6",
+        "kind": "search_excerpt",
+        "retrievedAt": 1791021705.7486875,
+        "title": "안양 데이트 여행 코스, 서울 근교 당일치기 가볼 만한 곳> 여행기사",
+        "url": "https://korean.visitkorea.or.kr/detail/rem_detail.do?cotid=33ada407-60f4-43ba-9630-1516b181671d"
+      },
+      {
+        "excerpt": "4 1평 타워 5 신기루 6 안양 도로표지판 프로젝트 2005 7 스트리트 퍼니처 8 안양파빌리온(알바로시자홀) 9 무문관(無門關) 10벙커 M. 바흐친 11 반영산수 12나는 당신을 생각합니다 13거기에/거기에서 14지상의... ",
+        "id": "lead-1-source-7",
+        "kind": "search_excerpt",
+        "retrievedAt": 1791021705.748691,
+        "title": "안양 예술 공원 - 안양시청",
+        "url": "https://www.anyang.go.kr/downloadContentsFile.do?key=1881&fileNo=40697"
+      },
+      {
+        "excerpt": "3 안양 메모리타워 4 달-삭망월 5 1평 타워 6 신기루 7 안양 도로표지판 프로젝트 2005 8 스트리트 퍼니처 9 안양파빌리온(알바로시자홀) 10무문관(無門關) 11벙커 M. 바흐친 12나는 당신을 생각합니다 13거기에... ",
+        "id": "lead-1-source-8",
+        "kind": "search_excerpt",
+        "retrievedAt": 1791021705.748694,
+        "title": "안양 예술 공원 - 안양시청",
+        "url": "https://www.anyang.go.kr/downloadContentsFile.do?key=1881&fileNo=1906"
+      },
+      {
+        "excerpt": "공공예술의 메카로 알려진 안얀에 국내 처음으로 공공예술에 대한 이해를 도모하고 시민들이 직접 체험할 수 있는 공간인 '안양파빌리온'이 새롭게 선보인다.(재)안양문화예술재단(이사장 최대호)은 안양예술공원 내에 ....",
+        "id": "lead-1-source-9",
+        "kind": "search_excerpt",
+        "retrievedAt": 1791021705.7486973,
+        "title": "’안양파빌리온’공공예술에 대한 이해 돕고, 시민과의 소통에 나선다",
+        "url": "https://www.cnbizm.com/news/articleView.html?idxno=111967"
+      }
+    ],
+    "usage": {
+      "costUsd": null,
+      "generationClaims": 2,
+      "jevCalls": 1,
+      "searchCalls": 2
+    }
+  },
+  "review": {
+    "status": "activation_no_go",
+    "acceptedCount": 0,
+    "sampleLimit": "Two fresh-research requests concerning one architecture case; not a calibrated evaluation set or controlled prompt comparison.",
+    "firstProvisionalSupport": "uncertain: central library use and architect are supported; 2005 historical detail relies on a secondary report. No direct contradiction was established by human source comparison.",
+    "followupProvisionalSupport": "uncertain: curved form is supported by the operator excerpt and library use by government reporting; exhibition-to-library transition is explicit only in secondary reporting.",
+    "independenceNote": "source-1 and source-7 represent the same government article, not two independent sources.",
+    "draftGuidance": [
+      "initial research-v2 draft guidance",
+      "minimal optional detail guidance; changed research results also contribute"
+    ],
+    "reviewer": "Existing Codex JEV session, read-only evidence comparison; no additional paid calls."
+  }
+}
