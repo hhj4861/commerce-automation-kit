@@ -220,6 +220,130 @@ class Tests(unittest.TestCase):
         with self.store.db() as db:
             self.assertEqual(db.execute('SELECT state FROM requests WHERE id=?',(request['requestId'],)).fetchone()[0],'held')
         self.jev.assert_not_called()
+    def research_start(self,key='research-test'):
+        self.search.return_value=[{**SOURCE,'title':'공식 회전교1 회전교2 회전교3 설명'}]
+        return self.start(key=key,value={**INPUT,'workflow':'research-v2'})
+    def finish_action(self,request,output=None,**extra):
+        self.store.claim(self.d.scope('shopshorts',SUBJECT),request['requestId'],request['action']['id'])
+        body={'actionId':request['action']['id'],'runtime':INPUT['runtime'],'output':output,**extra}
+        return self.d.complete('shopshorts',SUBJECT,request['requestId'],body),body
+    def lead_output(self,n=1):
+        return {'leads':[{'entity':'회전교'+str(i),'question':'왜 회전하는가?','keyword':'구조 원리','evidenceIds':['source-1']} for i in range(1,n+1)]}
+    def draft_output(self,n=1):
+        return {'candidates':[{**candidate('회전교'+str(i)+'의 비밀'),'leadId':'lead-'+str(i),'entity':'회전교'+str(i),'evidenceIds':['lead-'+str(i)+'-source-1']} for i in range(1,n+1)]}
+    def test_research_two_claims_four_searches_and_no_draft_search(self):
+        first=self.research_start();second,_=self.finish_action(first,self.lead_output(3))
+        self.assertEqual(second['action']['stage'],'draft');self.assertEqual(second['candidates'],[])
+        self.assertEqual(second['usage']['searchCalls'],4);self.assertEqual(second['expiresAt'],first['expiresAt'])
+        self.assertEqual(self.store.history(self.d.scope('shopshorts',SUBJECT),'content'),[])
+        result,_=self.finish_action(second,self.draft_output(3))
+        self.assertEqual(result['rubricVersion'],'discovery-v2')
+        self.assertEqual([c['decision'] for c in result['candidates']],['accepted']*3)
+        self.assertEqual(result['usage'],{'searchCalls':4,'generationClaims':2,'jevCalls':3,'costUsd':None})
+        self.assertEqual(self.search.call_count,4);self.assertEqual(self.jev.call_count,3)
+        self.assertTrue(all(c['checks']['support']['rubricVersion']=='discovery-v2' for c in result['candidates']))
+    def test_each_action_replay_has_immutable_response_and_cannot_claim_twice(self):
+        first=self.research_start();second,body1=self.finish_action(first,self.lead_output())
+        scope=self.d.scope('shopshorts',SUBJECT);rid=first['requestId']
+        self.assertEqual(self.d.complete('shopshorts',SUBJECT,rid,body1),second)
+        with self.assertRaises(Failure):self.store.claim(scope,rid,first['action']['id'])
+        result,body2=self.finish_action(second,self.draft_output())
+        self.assertEqual(self.d.complete('shopshorts',SUBJECT,rid,body1),second)
+        self.assertEqual(self.d.complete('shopshorts',SUBJECT,rid,body2),result)
+        self.assertEqual(self.store.get(scope,rid),result)
+        with self.assertRaises(Failure):self.store.claim(scope,rid,second['action']['id'])
+        for body in (body1,body2):
+            with self.assertRaises(Failure) as ctx:self.d.complete('shopshorts',SUBJECT,rid,{**body,'output':{}})
+            self.assertEqual(ctx.exception.code,'completion_conflict')
+        self.assertEqual(self.search.call_count,2);self.assertEqual(self.jev.call_count,1)
+    def test_research_empty_and_fabricated_entities_never_draft(self):
+        for i,output in enumerate([{'leads':[]},{'leads':[{**self.lead_output()['leads'][0],'entity':'존재하지않는성'}]}]):
+            result,_=self.finish_action(self.research_start('research-invalid-'+str(i)),output)
+            self.assertEqual(result['state'],'held');self.assertEqual(result['usage']['searchCalls'],1)
+            self.assertEqual(result['usage']['generationClaims'],1);self.jev.assert_not_called()
+    def test_draft_cannot_change_researched_entity_or_borrow_other_lead_sources(self):
+        for i,mutation in enumerate([{'entity':'다른 다리'},{'evidenceIds':['lead-2-source-1']}]):
+            second,_=self.finish_action(self.research_start('research-bind-'+str(i)),self.lead_output(2))
+            output=self.draft_output();output['candidates'][0].update(mutation)
+            result,_=self.finish_action(second,output)
+            self.assertTrue(result['state']=='held' or result['candidates'][0]['decision']=='held')
+            self.jev.assert_not_called()
+    def test_partial_research_failure_is_visible_and_does_not_block_other_lead(self):
+        first=self.research_start();self.search.side_effect=[TimeoutError(),[SOURCE]]
+        second,_=self.finish_action(first,self.lead_output(2))
+        self.assertEqual(second['state'],'awaiting_generation')
+        self.assertEqual([x['id'] for x in second['researchLeads']],['lead-2'])
+        self.assertEqual(second['researchFailures'],[{'leadId':'lead-1','reason':'research_search_failed'}])
+        self.assertEqual(second['usage']['searchCalls'],3)
+    def test_research_expiry_during_search_never_starts_second_generation(self):
+        first=self.research_start()
+        def expire(query):
+            with self.store.db() as db:db.execute('UPDATE requests SET expires=0 WHERE id=?',(first['requestId'],))
+            return [SOURCE]
+        self.search.side_effect=expire
+        result,_=self.finish_action(first,self.lead_output(3))
+        self.assertEqual(result['state'],'held');self.assertEqual(result['reasonCodes'],['request_expired'])
+        self.assertEqual(result['usage']['generationClaims'],1);self.assertEqual(result['usage']['searchCalls'],2)
+        self.assertIsNone(result['action']);self.jev.assert_not_called()
+    def test_second_generation_failure_and_empty_draft_are_terminal(self):
+        for i,options in enumerate([{'generationError':True},{'output':{'candidates':[]}}]):
+            second,_=self.finish_action(self.research_start('research-draft-error-'+str(i)),self.lead_output())
+            result,_=self.finish_action(second,**options)
+            self.assertEqual(result['state'],'held');self.assertEqual(result['usage']['generationClaims'],2)
+            self.assertIsNone(result['action']);self.jev.assert_not_called()
+    def test_unknown_workflow_and_changed_idempotency_are_rejected(self):
+        with self.assertRaises(Failure):self.start(value={**INPUT,'workflow':'unknown'})
+        self.research_start('same-workflow-key')
+        with self.assertRaises(Failure) as ctx:self.start(key='same-workflow-key')
+        self.assertEqual(ctx.exception.code,'idempotency_conflict')
+    def test_research_python_http_adapter_and_revocation_between_stages(self):
+        self.search.return_value=[{**SOURCE,'title':'회전교1 공식 설명'}]
+        server=make_server(('127.0.0.1',0),self.d,{'shopshorts':KEY})
+        thread=threading.Thread(target=server.serve_forever,daemon=True);thread.start()
+        try:
+            client=DiscoveryClient('http://127.0.0.1:'+str(server.server_port),KEY,SUBJECT,allow_localhost=True)
+            generated=Mock(side_effect=[self.lead_output(),self.draft_output()]);checks=Mock()
+            value={**INPUT,'workflow':'research-v2'}
+            result=client.discover(value,idempotency_key='v2-http-test',generate=generated,assert_connection=checks)
+            self.assertEqual(result['candidates'][0]['decision'],'accepted');self.assertEqual(checks.call_count,7)
+            self.assertEqual(client.discover(value,idempotency_key='v2-http-test',generate=generated,assert_connection=checks),result)
+            self.assertEqual(generated.call_count,2)
+            count=0
+            def revoke(runtime):
+                nonlocal count
+                count+=1
+                if count==5:raise RuntimeError('revoked')
+            generated=Mock(return_value=self.lead_output())
+            with self.assertRaisesRegex(RuntimeError,'revoked'):
+                client.discover(value,idempotency_key='v2-revoked',generate=generated,assert_connection=revoke)
+            self.assertEqual(generated.call_count,1)
+            with self.store.db() as db:
+                data=json.loads(db.execute('SELECT data FROM requests WHERE idem=?',('v2-revoked',)).fetchone()[0])
+            self.assertEqual(data['usage']['generationClaims'],1);self.assertEqual(data['state'],'awaiting_generation')
+        finally:server.shutdown();server.server_close();thread.join()
+    def test_python_resumes_draft_after_research_response_loss(self):
+        self.search.return_value=[{**SOURCE,'title':'회전교1 공식 설명'}]
+        server=make_server(('127.0.0.1',0),self.d,{'shopshorts':KEY})
+        thread=threading.Thread(target=server.serve_forever,daemon=True);thread.start()
+        class LostReply(DiscoveryClient):
+            dropped=False
+            def request(self,path,value=None,key=None):
+                result=super().request(path,value,key)
+                if not self.dropped and path.endswith('/complete'):
+                    self.dropped=True
+                    raise DiscoveryError('lost_response')
+                return result
+        try:
+            client=LostReply('http://127.0.0.1:'+str(server.server_port),KEY,SUBJECT,allow_localhost=True)
+            generated=Mock(side_effect=[self.lead_output(),self.draft_output()]);checks=Mock()
+            value={**INPUT,'workflow':'research-v2'}
+            options=dict(idempotency_key='v2-lost-reply',generate=generated,assert_connection=checks)
+            with self.assertRaisesRegex(DiscoveryError,'lost_response'):client.discover(value,**options)
+            result=client.discover(value,**options)
+            self.assertEqual(result['candidates'][0]['decision'],'accepted')
+            self.assertEqual(result['usage']['generationClaims'],2);self.assertEqual(generated.call_count,2)
+            self.assertEqual(self.search.call_count,2);self.assertEqual(self.jev.call_count,1)
+        finally:server.shutdown();server.server_close();thread.join()
     def test_native_sdk_bridge_with_synthetic_upstream(self):
         from service import Jev
         from http.server import BaseHTTPRequestHandler,ThreadingHTTPServer
@@ -245,7 +369,7 @@ class Tests(unittest.TestCase):
             client=DiscoveryClient(root,KEY,SUBJECT,allow_localhost=True)
             checks=Mock();generate=Mock(return_value={'candidates':[candidate()]})
             result=client.discover(INPUT,idempotency_key='http-test-key',generate=generate,assert_connection=checks)
-            self.assertEqual(result['candidates'][0]['decision'],'accepted');self.assertEqual(checks.call_count,3)
+            self.assertEqual(result['candidates'][0]['decision'],'accepted');self.assertEqual(checks.call_count,4)
             again=client.discover(INPUT,idempotency_key='http-test-key',generate=generate,assert_connection=checks)
             self.assertEqual(result['requestId'],again['requestId']);self.assertEqual(generate.call_count,1)
             wrong=DiscoveryClient(root,'x'*40,SUBJECT,allow_localhost=True)

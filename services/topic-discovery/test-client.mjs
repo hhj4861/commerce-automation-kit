@@ -8,20 +8,23 @@ import {fileURLToPath} from 'node:url';
 import {createDiscoveryClient} from './client.mjs';
 const input={profile:'content',category:'건축학',brief:'실제 회전교의 원리',runtime:{provider:'codex',model:'test-model'}};
 const candidate={title:'다리는 왜 돌아갈까?',entity:'회전교',location:'한국',question:'왜 회전할까?',expectedAnswer:'들어올린다',answer:'배가 지나갈 통로를 연다',whyItMatters:'통행과 물류',direction:'회전 전후 비교',keyword:'회전교',openingVisual:'회전하는 다리',evidenceIds:['source-1']};
-test('real HTTP JavaScript client → Python server → shared review → persistent replay',async()=>{
+for(const {workflow,dropReply} of [{},{workflow:'research-v2'},{workflow:'research-v2',dropReply:true}])test('real HTTP JavaScript client → Python server → shared review → persistent replay '+(workflow||'v1')+(dropReply?' lost-reply':''),async()=>{
+ const request={...input,...(workflow?{workflow}:{})};
  const root=await mkdtemp(join(process.env.DISCOVERY_TEST_DIR,'node-http-'));
- const code="from server import make_server\nfrom service import Discovery,Store\nfrom test_service import SOURCE,pass_result\nimport sys\ns=make_server(('127.0.0.1',0),Discovery(Store(sys.argv[1]),lambda q:[SOURCE],pass_result),{'shopshorts':'k'*40})\nprint(s.server_port,flush=True)\ns.serve_forever()";
+ const code="from server import make_server\nfrom service import Discovery,Store\nfrom test_service import SOURCE,pass_result\nimport sys\ns=make_server(('127.0.0.1',0),Discovery(Store(sys.argv[1]),lambda q:[{**SOURCE,'title':'회전교 공식 설명'}],pass_result),{'shopshorts':'k'*40})\nprint(s.server_port,flush=True)\ns.serve_forever()";
  const child=spawn('python3',['-u','-c',code,join(root,'state.sqlite')],{cwd:fileURLToPath(new URL('.',import.meta.url)),env:{...process.env,PYTHONDONTWRITEBYTECODE:'1'},stdio:['ignore','pipe','pipe']});
  const closed=once(child,'close');let errors='';child.stderr.on('data',d=>errors+=d);
  try {
   const port=await new Promise((resolve,reject)=>{const timer=setTimeout(()=>reject(Error('fixture timeout')),10000);child.once('error',reject);child.once('exit',()=>reject(Error('fixture exit '+errors)));child.stdout.once('data',d=>{clearTimeout(timer);resolve(String(d).trim());});});
-  const client=createDiscoveryClient({baseUrl:'http://127.0.0.1:'+port,apiKey:'k'.repeat(40),subject:'a'.repeat(64),allowLocalhost:true});
+  let dropped=false;
+  const client=createDiscoveryClient({baseUrl:'http://127.0.0.1:'+port,apiKey:'k'.repeat(40),subject:'a'.repeat(64),allowLocalhost:true,fetch:async(url,init)=>{const r=await fetch(url,init);if(dropReply&&!dropped&&url.endsWith('/complete')){dropped=true;await r.text();throw Error('lost response');}return r;}});
   let generated=0,checks=0;
-  const options={idempotencyKey:'node-http-test',assertConnection:async()=>{checks++;},generate:async()=>{generated++;return {candidates:[candidate]};}};
-  const result=await client.discover(input,options);
-  assert.equal(result.candidates[0].decision,'accepted');assert.equal(checks,3);
-  assert.equal(result.factChecked,false);assert.equal(result.rubricVersion,'discovery-v1.1');
-  assert.equal((await client.discover(input,options)).requestId,result.requestId);assert.equal(generated,1);
+  const options={idempotencyKey:'node-http-test',assertConnection:async()=>{checks++;},generate:async()=>{generated++;return workflow&&generated===1?{leads:[{entity:'회전교',question:'회전하는 이유는?',keyword:'원리',evidenceIds:['source-1']}]}:{candidates:[{...candidate,...(workflow?{leadId:'lead-1',evidenceIds:['lead-1-source-1']}:{})}]};}};
+  if(dropReply)await assert.rejects(client.discover(request,options),e=>e.code==='discovery_unavailable');
+  const result=await client.discover(request,options);
+  assert.equal(result.candidates[0].decision,'accepted');assert.equal(checks,dropReply?8:workflow?7:4);
+  assert.equal(result.factChecked,false);assert.equal(result.rubricVersion,workflow?'discovery-v2':'discovery-v1.1');
+  assert.equal((await client.discover(request,options)).requestId,result.requestId);assert.equal(generated,workflow?2:1);
   const wrong=createDiscoveryClient({baseUrl:'http://127.0.0.1:'+port,apiKey:'k'.repeat(40),subject:'b'.repeat(64),allowLocalhost:true});
   await assert.rejects(wrong.get(result.requestId),e=>e.code==='request_not_found');
  } finally {child.kill('SIGTERM');await closed;await rm(root,{recursive:true,force:true});}
@@ -33,10 +36,22 @@ test('connection revocation before completion prevents submission',async()=>{
   if(url.endsWith('/complete'))completed++;
   return Response.json({requestId:'id',state:url.endsWith('/claim')?'generating':'awaiting_generation',candidates:[],evidence:[],action});
  }});
- await assert.rejects(client.discover(input,{idempotencyKey:'test-key-001',generate:async()=>({candidates:[candidate]}),assertConnection:async()=>{if(++checks===3)throw Error('revoked');}}),/revoked/);
+ await assert.rejects(client.discover(input,{idempotencyKey:'test-key-001',generate:async()=>({candidates:[candidate]}),assertConnection:async()=>{if(++checks===4)throw Error('revoked');}}),/revoked/);
  assert.equal(completed,0);
 });
 test('refuses insecure remote endpoints and missing identity',()=>{
  assert.throws(()=>createDiscoveryClient({baseUrl:'http://remote.example',apiKey:'k'.repeat(40),subject:'a'.repeat(64)}));
  assert.throws(()=>createDiscoveryClient({baseUrl:'https://server.example',apiKey:'k'.repeat(40),subject:'browser-user'}));
+});
+
+test('v2 revocation before second claim stops generation and submission',async()=>{
+ let checks=0,claims=0,completions=0,generations=0;
+ const action=stage=>({id:stage,prompt:'Draft',stage,runtime:input.runtime});
+ const client=createDiscoveryClient({baseUrl:'https://server.example',apiKey:'k'.repeat(40),subject:'a'.repeat(64),fetch:async(url)=>{
+  if(url.endsWith('/claim'))claims++;
+  if(url.endsWith('/complete'))completions++;
+  return Response.json({requestId:'id',state:url.endsWith('/claim')?'generating':'awaiting_generation',usage:{generationClaims:claims},candidates:[],evidence:[],action:action(completions?'draft':'research')});
+ }});
+ await assert.rejects(client.discover({...input,workflow:'research-v2'},{idempotencyKey:'revoke-v2',generate:async()=>{generations++;return {leads:[]};},assertConnection:async()=>{if(++checks===5)throw Error('revoked');}}),/revoked/);
+ assert.equal(claims,1);assert.equal(completions,1);assert.equal(generations,1);
 });

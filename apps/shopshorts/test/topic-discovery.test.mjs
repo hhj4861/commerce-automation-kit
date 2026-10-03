@@ -2,18 +2,19 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {recommendBrief} from '../lib/studio-recommendations.js';
 const brief={category:'건축학',format:'short',duration:60,focus:'topic',topic:'국내 건축물',direction:'그림 중심'};
-const env={DISCOVERY_ENABLED:'1',DISCOVERY_URL:'https://discovery.example',DISCOVERY_API_KEY:'k'.repeat(40)};
+const env={DISCOVERY_ENABLED:'1',DISCOVERY_WORKFLOW:'research-v2',DISCOVERY_URL:'https://discovery.example',DISCOVERY_API_KEY:'k'.repeat(40)};
 const c={id:'candidate-1',title:'돌아가는 다리의 비밀',entity:'회전교',location:'한국',question:'다리는 왜 돌아갈까?',expectedAnswer:'들어올릴 것이다',answer:'선박 통과를 위한 회전',whyItMatters:'통행을 함께 유지',direction:'회전 전후를 보여준다',keyword:'회전교',openingVisual:'다리가 돌아간다',evidenceIds:['source-1'],decision:'accepted'};
 test('studio maps only accepted common-server candidates to recommendations',async()=>{
- let generation=0,checks=0;
+ let generation=0,checks=0,stage=0;
  const data=await recommendBrief(brief,env,{subject:'a'.repeat(64),requestId:'studio-job-001',provider:'codex',history:[],assertConnection:async()=>{checks++;},
   generate:async(_prompt,options)=>{assert.equal(options.draftOnly,true);generation++;return {value:{candidates:[c]}};},
   fetch:async(url,init)=>{
    const value=JSON.parse(init.body);
-   if(url.endsWith('/v1/discover')){assert.equal(value.profile,'content');assert.equal(value.category,'건축학');assert.equal(value.brief.split('\n')[0],brief.topic);assert.ok(value.brief.includes('\n'+brief.direction+'\n'));}
-   return Response.json(url.endsWith('/complete')?{requestId:'request',state:'complete',rubricVersion:'discovery-v1',candidates:[c,{...c,id:'held',decision:'held'}],evidence:[{id:'source-1',url:'https://operator.example/bridge',title:'운영기관'}]}:{requestId:'request',state:url.endsWith('/claim')?'generating':'awaiting_generation',candidates:[],evidence:[],action:{id:'action',runtime:{model:'provider-default',provider:'codex'},prompt:'Draft'}});
+   if(url.endsWith('/v1/discover')){assert.equal(value.workflow,'research-v2');assert.equal(value.profile,'content');assert.equal(value.category,'건축학');assert.equal(value.brief.split('\n')[0],brief.topic);assert.ok(value.brief.includes('\n'+brief.direction+'\n'));}
+   if(url.endsWith('/complete')&&stage===0){stage++;return Response.json({requestId:'request',state:'awaiting_generation',usage:{generationClaims:1},candidates:[],evidence:[],action:{id:'draft-action',stage:'draft',runtime:{model:'provider-default',provider:'codex'},prompt:'Draft'}});}
+   return Response.json(url.endsWith('/complete')?{requestId:'request',state:'complete',rubricVersion:'discovery-v1',candidates:[c,{...c,id:'held',decision:'held'}],evidence:[{id:'source-1',url:'https://operator.example/bridge',title:'운영기관'}]}:{requestId:'request',state:url.endsWith('/claim')?'generating':'awaiting_generation',usage:{generationClaims:stage+(url.endsWith('/claim')?1:0)},candidates:[],evidence:[],action:{id:stage?'draft-action':'research-action',stage:stage?'draft':'research',runtime:{model:'provider-default',provider:'codex'},prompt:'Draft'}});
   }});
- assert.equal(generation,1);assert.equal(checks,3);assert.equal(data.suggestions.length,1);
+ assert.equal(generation,2);assert.equal(checks,7);assert.equal(data.suggestions.length,1);
  assert.equal(data.suggestions[0].caseStudy.entity,'회전교');assert.equal(data.verification.held,1);
 });
 test('enabled service failures never run the legacy recommendation fallback',async()=>{

@@ -33,22 +33,35 @@ export function createDiscoveryClient({baseUrl,apiKey,subject,allowLocalhost=fal
       if(typeof assertConnection!=='function'||typeof generate!=='function') throw new DiscoveryError('generation_adapter_required');
       await assertConnection(input.runtime);
       let result=await request('/v1/discover',input,idempotencyKey,signal);
+      const stages=input.workflow==='research-v2'?['research','draft']:[undefined];
+      const seen=new Set();
       if(result.state==='complete'||result.state==='held')return result;
-      if(result.state!=='awaiting_generation') throw new DiscoveryError('discovery_in_progress',409);
-      const path='/v1/discover/'+encodeURIComponent(result.requestId);
-      result=await request(path+'/claim',{actionId:result.action?.id},undefined,signal);
-      const action=result.action;
-      if(!action||typeof action.prompt!=='string'||action.prompt.length>350000||action.runtime?.provider!==input.runtime.provider||action.runtime?.model!==input.runtime.model) throw new DiscoveryError('invalid_generation_action');
-      await assertConnection(input.runtime);
-      let output;
-      try {output=await generate(action.prompt,{signal,model:input.runtime.model});}
-      catch(e){
-        // Do not retry potentially billed generation. Leave a visible terminal failure when reachable.
-        await request(path+'/complete',{actionId:action.id,runtime:input.runtime,generationError:true},undefined,signal).catch(()=>{});
-        throw new DiscoveryError('generation_failed');
+      if(result.state!=='awaiting_generation')throw new DiscoveryError('discovery_in_progress',409);
+      const offset=stages.indexOf(result.action?.stage);
+      if(offset<0)throw new DiscoveryError('invalid_generation_action');
+      for(let index=offset;index<stages.length;index++){
+        const stage=stages[index];
+        if(result.state==='complete'||result.state==='held')return result;
+        if(result.state!=='awaiting_generation') throw new DiscoveryError('discovery_in_progress',409);
+        const path='/v1/discover/'+encodeURIComponent(result.requestId);
+        const action=result.action;
+        if(!action||typeof action.id!=='string'||seen.has(action.id)||action.stage!==stage||typeof action.prompt!=='string'||action.prompt.length>350000||action.runtime?.provider!==input.runtime.provider||action.runtime?.model!==input.runtime.model||(input.workflow==='research-v2'&&result.usage?.generationClaims!==index)) throw new DiscoveryError('invalid_generation_action');
+        await assertConnection(input.runtime);
+        result=await request(path+'/claim',{actionId:action.id},undefined,signal);
+        if(result.state!=='generating'||result.action?.id!==action.id||result.action?.stage!==stage||result.action?.prompt!==action.prompt||result.action?.runtime?.provider!==input.runtime.provider||result.action?.runtime?.model!==input.runtime.model||(input.workflow==='research-v2'&&result.usage?.generationClaims!==index+1))throw new DiscoveryError('invalid_generation_action');
+        seen.add(action.id);
+        await assertConnection(input.runtime);
+        let output;
+        try {output=await generate(action.prompt,{signal,model:input.runtime.model});}
+        catch(e){
+          await request(path+'/complete',{actionId:action.id,runtime:input.runtime,generationError:true},undefined,signal).catch(()=>{});
+          throw new DiscoveryError('generation_failed');
+        }
+        await assertConnection(input.runtime);
+        result=await request(path+'/complete',{actionId:action.id,runtime:input.runtime,output},undefined,signal);
       }
-      await assertConnection(input.runtime);
-      return request(path+'/complete',{actionId:action.id,runtime:input.runtime,output},undefined,signal);
+      if(result.state!=='complete'&&result.state!=='held')throw new DiscoveryError('discovery_step_limit');
+      return result;
     },
     get:(id,{signal}={})=>request('/v1/discover/'+encodeURIComponent(id),undefined,undefined,signal),
   };
