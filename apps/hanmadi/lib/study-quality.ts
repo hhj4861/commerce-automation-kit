@@ -1,11 +1,33 @@
 import type { StudyLanguage, Phrase } from "./v2";
 
+/** Speaking aids preserve vowel length; this is not official Korean loanword spelling.
+ * Source: Japan Foundation Marugoto romanization guidance (コーヒー → koohii).
+ * Keep the list narrow: kanji readings depend on context (かき氷 / 氷水 differ).
+ */
+const japaneseSoundAnchors = [
+  { source: /(?<!かき)(?<![\p{Script=Han}])氷(?=抜き|なし|無し|を|は|が|も|の)|こおり/gu, sound: /[코고](?:오|[-:])리/g, hint: "氷 in this context is こおり → 코오리 (not 고리/코리)." },
+  { source: /コーヒー/gu, sound: /[코고](?:오|[-:])히(?:이|[-:])/g, hint: "コーヒー is コー・ヒー → 코오히이; preserve BOTH long vowels (not 코히/커피)." },
+  { source: /ビール/gu, sound: /비(?:이|[-:])루/g, hint: "ビール is 비이루 (beer), not 비루 (ビル, building)." },
+  { source: /タクシー/gu, sound: /[타다]쿠시(?:이|[-:])/g, hint: "タクシー is 타쿠시이; retain the final long vowel." },
+  { source: /ケーキ/gu, sound: /[케게](?:에|[-:])키/g, hint: "ケーキ is 케에키; retain the long vowel." },
+] as const;
+
+export const japanesePronunciationGuidance = `Japanese speaking aids: pronounce the exact original sentence, including particles, doubled consonants and long vowels. Render long vowels by repeating the vowel in Hangul (not Korean loanword spelling). 氷抜き = こおりぬき = 코오리누키; コーヒー = 코오히이; ビール = 비이루; タクシー = 타쿠시이; ケーキ = 케에키. Do not shorten these to 고리/코히/비루/타쿠시/케키. Read kanji in context: かき氷 = かきごおり, 氷水 = こおりみず, 氷点 = ひょうてん; do not replace every 氷 with the same reading. Particles は/へ/を sound 와/에/오. Copy neither Korean meaning nor a previous sentence's reading.`;
+
 export const learnerQualityGuidance = `Preserve every requested item, number and negative condition in BOTH text and meaning. "얼음 없이" means no ice, NOT less sugar. Do not add hot/iced/sweet preferences. Thai coffee is กาแฟ (커 까패), no ice is ไม่ใส่น้ำแข็ง (마이 싸이 남캥), one cup is หนึ่งแก้ว (능 깨우). Never output ขอแฟ or invent a missing syllable. Japanese 韓国 is 캉코쿠, 週末 is 슈마츠, 乾杯 is 간파이, not 칸바이. Spanish ¿Algo más? is 알고 마스, not 알골 마스.`;
 
 /** Bounded observed regressions, not a general-purpose semantic/phonetic grader. */
 export function pronunciationIssue(text: string, reading: string, language: StudyLanguage): string | null {
   const sounds = reading.replace(/[^가-힣]/g, "");
   if (language === "ja") {
+    const original = text.normalize("NFKC");
+    // Preserve explicit long-vowel marks while ignoring spacing/punctuation.
+    const notation = reading.normalize("NFKC").replace(/[^가-힣:\-]/g, "");
+    for (const anchor of japaneseSoundAnchors) {
+      const expected = [...original.matchAll(anchor.source)].length;
+      if (expected && [...notation.matchAll(anchor.sound)].length < expected)
+        return `Japanese pronunciation mismatch. ${anchor.hint} Include every occurrence in the same order as the original. Regenerate the complete reading without changing the text or meaning.`;
+    }
     if (text.includes("韓国") && sounds.includes("한국")) return "Pronounce 韓国 as 캉코쿠, never the Korean translation 한국.";
     if (text.includes("週末") && /슈마와/.test(sounds)) return "Pronounce 週末は as 슈마츠와; do not omit 츠.";
     if (text.includes("乾杯") && /[간칸]바이/.test(sounds)) return "Pronounce 乾杯 as 간파이/칸파이, not 칸바이.";

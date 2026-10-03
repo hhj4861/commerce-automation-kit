@@ -1,5 +1,5 @@
 import { studyAIError, studyAttempt } from "./study-ai-errors";
-import { thaiMaleSpeechGuidance, thaiMaleSpeechIssue, learnerQualityGuidance, learnerMeaningIssue, pronunciationIssue, dialogueIssue } from "./study-quality";
+import { thaiMaleSpeechGuidance, thaiMaleSpeechIssue, learnerQualityGuidance, japanesePronunciationGuidance, learnerMeaningIssue, pronunciationIssue, dialogueIssue } from "./study-quality";
 import { spanishQualityGuidance, spanishQualityIssue } from "./spanish-quality";
 import { sceneLessonPlans } from "./v2-scene-lessons";
 import { createLiteLLMClient } from "@cak/litellm-client";
@@ -83,6 +83,7 @@ export function translationPrompt(language: StudyLanguage, from: string) {
 Preserve the objects, quantities, negations and requests in the source exactly. Do not infer drink temperature: "without ice" does NOT mean "iced" or "hot". Never add missing preferences. Proofread spelling before returning; reading must pronounce the exact translated sentence, including every syllable. Write pronunciation in complete Hangul syllables, never isolated consonants/vowels (ㄴ, ㄹ, ㅏ). For Spanish "sin hielo, por favor", use "신 이에로, 포르 파보르", not "씨ㄴ 이에로, 뽀ㄹ 바호ㄹ".
 ${language === "th" ? 'Thai spelling: coffee is กาแฟ, not แฟ. For "얼음 없이 커피 한 잔 주세요.", use "ขอกาแฟหนึ่งแก้ว ไม่ใส่น้ำแข็งครับ" (커 까패 능 깨우 마이 싸이 남캥 캅). Do not add เย็น or ร้อน unless the source explicitly requests that temperature. Preserve one cup and the no-ice request. Use the configured male speaking style for Korean-to-Thai output.' : ''}
 ${learnerQualityGuidance}
+${language === "ja" ? japanesePronunciationGuidance : ""}
 ${language === "th" && from === "ko" ? thaiMaleSpeechGuidance : ""}
 ${language === "es" ? spanishQualityGuidance : ""}
 Return exactly one JSON object with translated, reading and practice:
@@ -325,6 +326,7 @@ Return exactly one JSON object with three unique fields, each 1-300 characters, 
 - reading: ONLY the Hangul pronunciation of the SAME complete text, in the SAME order. Transcribe the ${languageNames[language]} sounds; never pronounce a Korean translation. Use complete Hangul syllables, never isolated consonants/vowels. Do not mix in other scripts.
 - meaning: accurate Korean translation of the SAME text. At level 1, only when the reply invites an answer, append one brief, clearly labeled Korean answer hint in parentheses (답변 힌트: ...). For a standalone reaction or farewell, omit the hint. Do not invent a task for the learner. Keep answer hints out of text and reading.
 ${learnerQualityGuidance}
+${language === "ja" ? japanesePronunciationGuidance : ""}
 ${language === "th" ? thaiMaleSpeechGuidance : ""}
 ${language === "es" ? spanishQualityGuidance : ""}
 Format example (adapt the content to the conversation): ${JSON.stringify(examples[language])}
@@ -444,6 +446,7 @@ Return JSON {phrase: {text, reading, meaning} or null, reusable: boolean}.
 - phrase:null for app/lesson control only (start the conversation, change model, explain grammar with no intended utterance). Do not manufacture a study phrase for these requests.
 - reusable:true ONLY for a short general expression suitable for this learner's private practice. Use false if the original input or recast contains personal names, contact/account/payment details, addresses, health or private information; never remove private details and mark the remainder reusable. When unsure use false. Display may preserve these details but practice must not store them.
 ${learnerQualityGuidance}
+${language === "ja" ? japanesePronunciationGuidance : ""}
 ${language === "th" ? thaiMaleSpeechGuidance : ""}
 ${language === "es" ? spanishQualityGuidance : ""}
 All fields max 1000 characters, study phrases max 300. Example pronunciation notation: ${examples[language].reading}`;
