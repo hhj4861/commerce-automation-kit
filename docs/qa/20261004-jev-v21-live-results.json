@@ -1,0 +1,485 @@
+{
+  "revision": "f4ff5c9365cb74d27db9e069062e46c4ae858114",
+  "rubric": "discovery-v2.1",
+  "planSha256": "420fbd532b4a047071b8c033c58e520f170296c0c24d60d98b98fc13c9dca5e2",
+  "originalControlsSha256": "0c5012abcfe8bb89eb22dbea32dbecaaefd4fc007912cb835ab426be24b25966",
+  "model": "jev-1.13.0",
+  "calls": 3,
+  "retries": 0,
+  "scope": "fixed saved evidence; search and generation fixtures; actual JEV responses fed to merged decision code; isolated local SQLite, not production HTTP end-to-end",
+  "labelProvenance": "pre-existing provisional Codex labels, not independent human or blind",
+  "ledger": {
+    "alias": "discovery-production-20261003",
+    "before": {
+      "records": 12,
+      "usd": 0.0015269520000000003
+    },
+    "after": {
+      "records": 15,
+      "usd": 0.0020195280000000005
+    },
+    "costUsd": 0.000492576,
+    "rows": [
+      {
+        "model": "typesafe/jev-1.13.0",
+        "status": "success",
+        "spend": 0.000163968,
+        "inputTokens": 3904,
+        "outputTokens": 433,
+        "startTime": "2026-10-03T23:32:09.717",
+        "endTime": "2026-10-03T23:32:09.987"
+      },
+      {
+        "model": "typesafe/jev-1.13.0",
+        "status": "success",
+        "spend": 0.000164808,
+        "inputTokens": 3924,
+        "outputTokens": 435,
+        "startTime": "2026-10-03T23:32:18.407",
+        "endTime": "2026-10-03T23:32:18.57"
+      },
+      {
+        "model": "typesafe/jev-1.13.0",
+        "status": "success",
+        "spend": 0.0001638,
+        "inputTokens": 3900,
+        "outputTokens": 433,
+        "startTime": "2026-10-03T23:32:25.86",
+        "endTime": "2026-10-03T23:32:26.023"
+      }
+    ]
+  },
+  "outcome": "NO_GO: supported candidate still held; insufficient held; contradicted rejected",
+  "rows": [
+    {
+      "case": "supported",
+      "expectedDecision": "accepted",
+      "actualDecision": "held",
+      "reasonCodes": [
+        "support_answer_uncertain",
+        "support_entity_uncertain",
+        "support_expectedAnswer_uncertain",
+        "support_location_uncertain",
+        "support_openingVisual_uncertain",
+        "support_question_uncertain",
+        "support_title_uncertain",
+        "support_whyItMatters_uncertain"
+      ],
+      "rawResponse": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "relevance": {
+            "type": "choice",
+            "choice": "pass",
+            "probabilities": {
+              "pass": 0.97,
+              "reject": 0.03,
+              "uncertain": 0
+            },
+            "confidence": 0.95
+          },
+          "support_answer": {
+            "type": "choice",
+            "choice": "pass",
+            "probabilities": {
+              "pass": 0.79,
+              "reject": 0.08,
+              "uncertain": 0.13
+            },
+            "confidence": 0.68
+          },
+          "support_direction": {
+            "type": "choice",
+            "choice": "pass",
+            "probabilities": {
+              "pass": 0.87,
+              "reject": 0.04,
+              "uncertain": 0.09
+            },
+            "confidence": 0.8
+          },
+          "support_entity": {
+            "type": "choice",
+            "choice": "pass",
+            "probabilities": {
+              "pass": 0.75,
+              "reject": 0.08,
+              "uncertain": 0.17
+            },
+            "confidence": 0.62
+          },
+          "support_expectedAnswer": {
+            "type": "choice",
+            "choice": "pass",
+            "probabilities": {
+              "pass": 0.77,
+              "reject": 0.07,
+              "uncertain": 0.16
+            },
+            "confidence": 0.65
+          },
+          "support_location": {
+            "type": "choice",
+            "choice": "pass",
+            "probabilities": {
+              "pass": 0.78,
+              "reject": 0.01,
+              "uncertain": 0.21
+            },
+            "confidence": 0.67
+          },
+          "support_openingVisual": {
+            "type": "choice",
+            "choice": "pass",
+            "probabilities": {
+              "pass": 0.83,
+              "reject": 0.03,
+              "uncertain": 0.14
+            },
+            "confidence": 0.74
+          },
+          "support_question": {
+            "type": "choice",
+            "choice": "pass",
+            "probabilities": {
+              "pass": 0.61,
+              "reject": 0.09,
+              "uncertain": 0.3
+            },
+            "confidence": 0.42
+          },
+          "support_title": {
+            "type": "choice",
+            "choice": "pass",
+            "probabilities": {
+              "pass": 0.7,
+              "reject": 0.09,
+              "uncertain": 0.21
+            },
+            "confidence": 0.55
+          },
+          "support_whyItMatters": {
+            "type": "choice",
+            "choice": "pass",
+            "probabilities": {
+              "pass": 0.59,
+              "reject": 0.04,
+              "uncertain": 0.37
+            },
+            "confidence": 0.39
+          },
+          "value": {
+            "type": "choice",
+            "choice": "pass",
+            "probabilities": {
+              "pass": 0.94,
+              "reject": 0.05,
+              "uncertain": 0.01
+            },
+            "confidence": 0.92
+          }
+        },
+        "usage": {
+          "input_tokens": 3904,
+          "output_tokens": 433
+        }
+      },
+      "serverProcessElapsedMs": 3021,
+      "payloadSha256": "3b7a72a9ce81d7a07f1ff5425d112c3cd2404b247380658203c6e03d6e4573e4",
+      "evidenceAliases": {
+        "source-1": "source-1",
+        "lead-1-source-1": "source-1",
+        "lead-1-source-2": "lead-1-source-2"
+      },
+      "idempotentReplayUnchanged": true,
+      "sshExit": 0
+    },
+    {
+      "case": "insufficient",
+      "expectedDecision": "held",
+      "actualDecision": "held",
+      "reasonCodes": [
+        "support_answer_uncertain",
+        "support_direction_uncertain",
+        "support_entity_uncertain",
+        "support_expectedAnswer_uncertain",
+        "support_question_uncertain",
+        "support_title_uncertain",
+        "support_whyItMatters_uncertain"
+      ],
+      "rawResponse": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "relevance": {
+            "type": "choice",
+            "choice": "pass",
+            "probabilities": {
+              "pass": 0.96,
+              "reject": 0.04,
+              "uncertain": 0
+            },
+            "confidence": 0.94
+          },
+          "support_answer": {
+            "type": "choice",
+            "choice": "uncertain",
+            "probabilities": {
+              "pass": 0.01,
+              "reject": 0.18,
+              "uncertain": 0.81
+            },
+            "confidence": 0.72
+          },
+          "support_direction": {
+            "type": "choice",
+            "choice": "pass",
+            "probabilities": {
+              "pass": 0.85,
+              "reject": 0.05,
+              "uncertain": 0.1
+            },
+            "confidence": 0.77
+          },
+          "support_entity": {
+            "type": "choice",
+            "choice": "pass",
+            "probabilities": {
+              "pass": 0.46,
+              "reject": 0.13,
+              "uncertain": 0.41
+            },
+            "confidence": 0.19
+          },
+          "support_expectedAnswer": {
+            "type": "choice",
+            "choice": "pass",
+            "probabilities": {
+              "pass": 0.8,
+              "reject": 0.08,
+              "uncertain": 0.12
+            },
+            "confidence": 0.7
+          },
+          "support_location": {
+            "type": "choice",
+            "choice": "pass",
+            "probabilities": {
+              "pass": 0.88,
+              "reject": 0.01,
+              "uncertain": 0.11
+            },
+            "confidence": 0.82
+          },
+          "support_openingVisual": {
+            "type": "choice",
+            "choice": "pass",
+            "probabilities": {
+              "pass": 0.86,
+              "reject": 0.03,
+              "uncertain": 0.11
+            },
+            "confidence": 0.8
+          },
+          "support_question": {
+            "type": "choice",
+            "choice": "pass",
+            "probabilities": {
+              "pass": 0.73,
+              "reject": 0.05,
+              "uncertain": 0.22
+            },
+            "confidence": 0.59
+          },
+          "support_title": {
+            "type": "choice",
+            "choice": "pass",
+            "probabilities": {
+              "pass": 0.66,
+              "reject": 0.07,
+              "uncertain": 0.27
+            },
+            "confidence": 0.49
+          },
+          "support_whyItMatters": {
+            "type": "choice",
+            "choice": "pass",
+            "probabilities": {
+              "pass": 0.61,
+              "reject": 0.04,
+              "uncertain": 0.35
+            },
+            "confidence": 0.42
+          },
+          "value": {
+            "type": "choice",
+            "choice": "pass",
+            "probabilities": {
+              "pass": 0.94,
+              "reject": 0.05,
+              "uncertain": 0.01
+            },
+            "confidence": 0.92
+          }
+        },
+        "usage": {
+          "input_tokens": 3924,
+          "output_tokens": 435
+        }
+      },
+      "serverProcessElapsedMs": 467,
+      "payloadSha256": "487abd4e47ec646a5671072f63b100fa9adda07abd34d26a24099011a760b8e2",
+      "evidenceAliases": {
+        "source-1": "source-1",
+        "lead-1-source-1": "source-1",
+        "lead-1-source-2": "lead-1-source-2"
+      },
+      "idempotentReplayUnchanged": true,
+      "sshExit": 0
+    },
+    {
+      "case": "contradicted",
+      "expectedDecision": "rejected",
+      "actualDecision": "rejected",
+      "reasonCodes": [
+        "relevance_uncertain",
+        "support_answer_rejected",
+        "support_direction_uncertain",
+        "support_entity_uncertain",
+        "support_expectedAnswer_uncertain",
+        "support_openingVisual_uncertain",
+        "support_question_uncertain",
+        "support_title_uncertain",
+        "support_whyItMatters_uncertain",
+        "value_uncertain"
+      ],
+      "rawResponse": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "relevance": {
+            "type": "choice",
+            "choice": "pass",
+            "probabilities": {
+              "pass": 0.7,
+              "reject": 0.29,
+              "uncertain": 0.01
+            },
+            "confidence": 0.55
+          },
+          "support_answer": {
+            "type": "choice",
+            "choice": "reject",
+            "probabilities": {
+              "pass": 0,
+              "reject": 0.98,
+              "uncertain": 0.02
+            },
+            "confidence": 0.97
+          },
+          "support_direction": {
+            "type": "choice",
+            "choice": "pass",
+            "probabilities": {
+              "pass": 0.72,
+              "reject": 0.21,
+              "uncertain": 0.07
+            },
+            "confidence": 0.57
+          },
+          "support_entity": {
+            "type": "choice",
+            "choice": "reject",
+            "probabilities": {
+              "pass": 0.26,
+              "reject": 0.62,
+              "uncertain": 0.12
+            },
+            "confidence": 0.43
+          },
+          "support_expectedAnswer": {
+            "type": "choice",
+            "choice": "pass",
+            "probabilities": {
+              "pass": 0.75,
+              "reject": 0.13,
+              "uncertain": 0.12
+            },
+            "confidence": 0.63
+          },
+          "support_location": {
+            "type": "choice",
+            "choice": "pass",
+            "probabilities": {
+              "pass": 0.86,
+              "reject": 0.01,
+              "uncertain": 0.13
+            },
+            "confidence": 0.8
+          },
+          "support_openingVisual": {
+            "type": "choice",
+            "choice": "pass",
+            "probabilities": {
+              "pass": 0.58,
+              "reject": 0.25,
+              "uncertain": 0.17
+            },
+            "confidence": 0.37
+          },
+          "support_question": {
+            "type": "choice",
+            "choice": "pass",
+            "probabilities": {
+              "pass": 0.61,
+              "reject": 0.15,
+              "uncertain": 0.24
+            },
+            "confidence": 0.41
+          },
+          "support_title": {
+            "type": "choice",
+            "choice": "pass",
+            "probabilities": {
+              "pass": 0.44,
+              "reject": 0.39,
+              "uncertain": 0.17
+            },
+            "confidence": 0.16
+          },
+          "support_whyItMatters": {
+            "type": "choice",
+            "choice": "pass",
+            "probabilities": {
+              "pass": 0.52,
+              "reject": 0.2,
+              "uncertain": 0.28
+            },
+            "confidence": 0.28
+          },
+          "value": {
+            "type": "choice",
+            "choice": "pass",
+            "probabilities": {
+              "pass": 0.58,
+              "reject": 0.41,
+              "uncertain": 0.01
+            },
+            "confidence": 0.36
+          }
+        },
+        "usage": {
+          "input_tokens": 3900,
+          "output_tokens": 433
+        }
+      },
+      "serverProcessElapsedMs": 450,
+      "payloadSha256": "aab6443e88e58c124ab07836668762e82875b4fb95bd23e30c427f4c02771e1a",
+      "evidenceAliases": {
+        "source-1": "source-1",
+        "lead-1-source-1": "source-1",
+        "lead-1-source-2": "lead-1-source-2"
+      },
+      "idempotentReplayUnchanged": true,
+      "sshExit": 0
+    }
+  ]
+}
