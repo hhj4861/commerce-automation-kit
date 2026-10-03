@@ -21,7 +21,8 @@
     "RUNNER_PUBLIC_JWK": "{\"crv\":\"Ed25519\",\"x\":\"Gdu3rj0RqgHpDNNPdXpPNE7PUxrEiz5YKSltS3tVKDE\",\"kty\":\"OKP\"}",
     "GITHUB_ALLOWED_REFS": "refs/heads/main,refs/heads/feat/common-video-generator",
     "GITHUB_DEPLOY_ALLOWED_REFS": "refs/heads/deploy/hanmadi-admin",
-    "GITHUB_REPLAY_DEPLOY_ENABLED": "true"
+    "GITHUB_REPLAY_DEPLOY_ENABLED": "true",
+    "GITHUB_BLOG_DISCOVERY_ENABLED": "false"
   },
   "secrets_store_secrets": [
     {
@@ -133,6 +134,31 @@
       "binding": "SS_HANMADI_ADMIN_DEPLOY_VERCEL_TOKEN",
       "store_id": "de2c8d7c3e9c4067acc22212522c0fc4",
       "secret_name": "CAK_HANMADI_ADMIN_DEPLOY_VERCEL_TOKEN"
+    },
+    {
+      "binding": "SS_DISCOVERY_SHOPSHORTS_KEY",
+      "store_id": "de2c8d7c3e9c4067acc22212522c0fc4",
+      "secret_name": "CAK_DISCOVERY_SHOPSHORTS_KEY"
+    },
+    {
+      "binding": "SS_DISCOVERY_BLOG_KEY",
+      "store_id": "de2c8d7c3e9c4067acc22212522c0fc4",
+      "secret_name": "CAK_DISCOVERY_BLOG_KEY"
+    },
+    {
+      "binding": "SS_DISCOVERY_VENTURE_KEY",
+      "store_id": "de2c8d7c3e9c4067acc22212522c0fc4",
+      "secret_name": "CAK_DISCOVERY_VENTURE_KEY"
+    },
+    {
+      "binding": "SS_DISCOVERY_CLI_KEY",
+      "store_id": "de2c8d7c3e9c4067acc22212522c0fc4",
+      "secret_name": "CAK_DISCOVERY_CLI_KEY"
+    },
+    {
+      "binding": "SS_DISCOVERY_JEV_API_KEY",
+      "store_id": "de2c8d7c3e9c4067acc22212522c0fc4",
+      "secret_name": "CAK_DISCOVERY_JEV_API_KEY"
     }
   ]
 }

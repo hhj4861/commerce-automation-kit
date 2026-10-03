@@ -18,6 +18,15 @@ export const DEPLOYMENT_REFS = {
   'refs/heads/deploy/hanmadi': ['DEPLOY_VERCEL_TOKEN'],
   'refs/heads/deploy/hanmadi-admin': [HANMADI_ADMIN_DEPLOYMENT_KEY],
 };
+// Separate from static/page/deployment keys: never sent in a generic secrets bundle.
+export const DISCOVERY_PLATFORM_KEYS = Object.freeze({
+  shopshorts: 'DISCOVERY_SHOPSHORTS_KEY',
+  'wp-auto-blog': 'DISCOVERY_BLOG_KEY',
+  'venture-studio': 'DISCOVERY_VENTURE_KEY',
+  cli: 'DISCOVERY_CLI_KEY',
+});
+export const DISCOVERY_KEYS = [...Object.values(DISCOVERY_PLATFORM_KEYS), 'DISCOVERY_JEV_API_KEY'];
+
 export const STATIC_KEYS = [...GITHUB_KEYS,
   'UPLOAD_POST_API_KEY', 'UPLOAD_POST_USER', 'PEXELS_API_KEY', 'GEMINI_API_KEY',
   'YOUTUBE_API_KEY', 'GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET',
@@ -34,6 +43,20 @@ export const WORKFLOW_KEYS = {
 };
 
 export function authorizeGithub(claims, env) {
+  if (claims.repository === 'hhj4861/wp-auto-blog') {
+    const ref = 'refs/heads/main';
+    const files = ['blog-keyword-select.yml', 'shared-discovery-check.yml'];
+    const file = files.find(name => claims.workflow_ref === `hhj4861/wp-auto-blog/.github/workflows/${name}@${ref}`);
+    if (env.GITHUB_BLOG_DISCOVERY_ENABLED !== 'true' || !file ||
+        claims.repository_id !== '1126598753' || claims.repository_owner_id !== '71001056' ||
+        claims.ref !== ref || claims.sub !== `repo:hhj4861/wp-auto-blog:ref:${ref}` ||
+        claims.runner_environment !== 'github-hosted' ||
+        !['schedule', 'workflow_dispatch'].includes(claims.event_name) ||
+        (file === 'shared-discovery-check.yml' && claims.event_name !== 'workflow_dispatch') ||
+        (claims.job_workflow_ref && claims.job_workflow_ref !== claims.workflow_ref)) throw new Error('unauthorized');
+    return { file, keys: [DISCOVERY_PLATFORM_KEYS['wp-auto-blog']] };
+  }
+
   // Separate repository and production environment: never inherit CAK's ref allowlist.
   if (claims.repository === 'hhj4861/replay-live') {
     const ref = 'refs/heads/deploy/replay';

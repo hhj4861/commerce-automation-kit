@@ -4,9 +4,17 @@ import { pathToFileURL } from 'node:url';
 import { runnerRequest } from '../credential-broker/runner-client.mjs';
 import { executeAccountJob } from './studio-account-codex.mjs';
 import { executeClaudeAccountJob } from './studio-account-claude.mjs';
+import { discoveryRuntimeEnv } from '../../services/topic-discovery/runtime-config.mjs';
 import { accountFailureCode, accountFailureMessage } from './lib/llm-account-errors.js';
 
-export const executeProviderJob = (value, context) => (value.job.provider === 'claude' ? executeClaudeAccountJob : executeAccountJob)(value, context);
+export async function executeProviderJob(value, context) {
+  let env = context.env;
+  if (value.job.kind === 'recommend') {
+    try { env = await discoveryRuntimeEnv(env, 'shopshorts'); }
+    catch { throw Object.assign(new Error('Discovery credentials unavailable'), { code: 'DISCOVERY_UNAVAILABLE' }); }
+  }
+  return (value.job.provider === 'claude' ? executeClaudeAccountJob : executeAccountJob)(value, { ...context, env });
+}
 
 export function accountBroker(env = process.env) {
   const base = env.CAK_SECRETS_URL || 'https://cak-credential-broker.guswhd1085.workers.dev';

@@ -1,5 +1,5 @@
 import { createRemoteJWKSet, importJWK, jwtVerify } from 'jose';
-import { AUDIENCE, ISSUER, STATIC_KEYS, PAGE_KEYS, GITHUB_KEYS, DEPLOYMENT_KEYS, authorizeGithub, authorizeMigration } from './policy.mjs';
+import { AUDIENCE, ISSUER, STATIC_KEYS, PAGE_KEYS, GITHUB_KEYS, DEPLOYMENT_KEYS, DISCOVERY_KEYS, DISCOVERY_PLATFORM_KEYS, authorizeGithub, authorizeMigration } from './policy.mjs';
 import { readVault, writeVault } from './vault.mjs';
 import { lease } from './leases.mjs';
 import { accountAction, accountRunner } from './llm-accounts.mjs';
@@ -10,7 +10,7 @@ const response = (value, status = 200) => Response.json(value, { status, headers
 export async function readSecrets(env, keys, required = true) {
   const values = {};
   for (const name of keys) {
-    if (![...STATIC_KEYS, ...DEPLOYMENT_KEYS].includes(name)) throw new Error('unknown key');
+    if (![...STATIC_KEYS, ...DEPLOYMENT_KEYS, ...DISCOVERY_KEYS].includes(name)) throw new Error('unknown key');
     const binding = env[`SS_${name}`];
     if (!binding) {
       if (required) throw new Error('missing binding');
@@ -68,8 +68,12 @@ export async function handleRequest(request, env, verify = { github: verifyGithu
       await writeVault(env, 'migration/github', input.values, 0);
       return response({ ok: true, count: GITHUB_KEYS.length });
     }
-    if (!['/runner/secrets', '/runner/vault', '/runner/lease', '/runner/accounts', '/runner/account-action'].includes(path)) return response({ error: 'not found' }, 404);
+    if (!['/runner/discovery', '/runner/secrets', '/runner/vault', '/runner/lease', '/runner/accounts', '/runner/account-action'].includes(path)) return response({ error: 'not found' }, 404);
     try { await verify.runner(token, env); } catch { return response({ error: 'unauthorized' }, 403); }
+    if (path === '/runner/discovery') {
+      if (!input || Object.keys(input).length !== 1 || !Object.hasOwn(DISCOVERY_PLATFORM_KEYS, input.platform)) return response({ error: 'invalid platform' }, 400);
+      return response({ values: await readSecrets(env, [DISCOVERY_PLATFORM_KEYS[input.platform]]) });
+    }
     if (path === '/runner/accounts') return response(await accountRunner(env, input));
     if (path === '/runner/account-action') return response(await accountAction(env, input.owner, input.operation, input.input));
     if (path === '/runner/lease') return response(await lease(env, input.operation, input.owner));

@@ -1,6 +1,6 @@
 # Shared discovery v1
 
-Status: implementation for review; production is not enabled. No live search/Jev/LLM calls were made by the fixture tests. Default `DISCOVERY_ENABLED=0` preserves deployed clients until the shared service, scoped keys and acceptance checks are ready.
+Status: PR #130 merged on 2026-10-03; production is not enabled. Deployment preflight found a missing Python CA trust store, now fixed in the production-wiring follow-up. No live search/Jev/LLM calls were made by the fixture tests. Default `DISCOVERY_ENABLED=0` preserves deployed clients until the shared service, scoped keys and acceptance checks are ready.
 
 ## Ownership and protocol agreement
 
@@ -92,3 +92,24 @@ node --test services/topic-discovery/test-client.mjs apps/shopshorts/test/topic-
 ```
 
 Tests cover actual JS/Python HTTP adapters, scope isolation, conflicting/idempotent requests, single generation claim, persisted duplicate history, model binding, expiry, evidence ID fabrication, low-confidence/unavailable review, revocation before completion, and no silent legacy fallback. Existing Shopshorts recommendation/Codex/Claude tests also run before commit.
+
+## Production credential delivery (follow-up)
+
+The existing Cloudflare Secrets Store owns `CAK_DISCOVERY_SHOPSHORTS_KEY`, `CAK_DISCOVERY_BLOG_KEY`, `CAK_DISCOVERY_VENTURE_KEY`, `CAK_DISCOVERY_CLI_KEY` and `CAK_DISCOVERY_JEV_API_KEY`. Before deploying the new broker bindings, register distinct high-entropy values with `node apps/credential-broker/admin.mjs register-discovery /absolute/private/credentials.json` (file mode 0600, local approved private runtime path, never iCloud). This command writes only binding metadata to wrangler.json. It does not enable clients. Keep Jev route/model/expiry/budget limits and the private server env lifecycle separate from client keys; Jev credentials are not returned by any client route.
+
+Authenticated `/runner/discovery` accepts exactly one `platform` (`shopshorts`, `wp-auto-blog`, `venture-studio`, `cli`) and returns that one platform key. The existing signed runner JWK is an **operator credential**, not a per-user credential; never distribute it to a browser, customer, or public CI. Generic runner/static secrets and Pages RPC exclude these discovery keys. The operator's ability to select a platform is intentional; the shared discovery API still derives platform from that platform's distinct key and scopes requests by subject.
+
+For the Shopshorts account worker, set `DISCOVERY_ENABLED=1`, `DISCOVERY_URL=https://shared-ai-d5cy7m6i7q-uc.a.run.app/discovery`, and existing private `CAK_RUNNER_KEY_FILE`. Each recommendation fetches its current shopshorts key before executing the existing owner-bound account runtime. Native connection/scenario jobs do not require this new key. Missing central credentials fail closed, including when an old DISCOVERY_API_KEY exists in the environment. No global Codex OAuth lease or token migration is involved.
+
+For a trusted operator CLI use those URL/runner settings plus `DISCOVERY_SUBJECT=<provisioned stable service identity>` and `DISCOVERY_PLATFORM=cli`. For the venture adapter use `DISCOVERY_PLATFORM=venture-studio` and its own subject with `DISCOVERY_CLI` pointing to the reviewed local release. The same CLI enforces the shared transport. A non-operator backend may receive its own DISCOVERY_API_KEY from its private secret injector instead; do not hand it the shared runner JWK. Rotation reads fresh keys per recommendation/CLI invocation, but the discovery server platform map must be rotated in coordination before clients resume.
+
+Blog OIDC is off until `GITHUB_BLOG_DISCOVERY_ENABLED=true`. Only immutable blog repository/owner IDs, main, GitHub-hosted schedule/dispatch and two reviewed workflow paths qualify. The companion blog follow-up adds a single-request, no-publication live check and a default-off category workflow flag. Other direct collector runtimes need their own env injection; merging alone does not turn every client on.
+
+### Observed deployment preflight — 2026-10-03
+
+- Approved commerce #130, blog #78 and venture #43 are merged.
+- VM build `cak-discovery:04988fd48ffb` completed, but an actual Python HTTPS request to Naver failed with `CERTIFICATE_VERIFY_FAILED`; trust paths were absent. TLS verification was not disabled.
+- Follow-up installs `ca-certificates` and checks a populated Python trust store in CI. Existing services were not restarted, public edge not switched, and no new discovery keys or paid model calls were provisioned at this point.
+- Rollout remains pending follow-up PR approval, central secret provisioning, edge/service activation, and real-account quality checks. Passing fixtures or an image build is not production activation.
+
+Follow-up validation: the isolated VM image `cak-discovery:ca-trust-check` built successfully. Python reported 150 trusted CA certificates and reached the official Naver search endpoint with TLS verification enabled, returning expected unauthenticated HTTP 401. No API keys/model calls were used. Broker, account and recommendation fixtures passed (129 JS tests total across the regression run and one added boundary case); Python server tests passed 18/18.
