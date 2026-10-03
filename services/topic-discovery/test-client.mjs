@@ -20,7 +20,7 @@ test('real HTTP JavaScript client → Python server → shared review → persis
   const options={idempotencyKey:'node-http-test',assertConnection:async()=>{checks++;},generate:async()=>{generated++;return {candidates:[candidate]};}};
   const result=await client.discover(input,options);
   assert.equal(result.candidates[0].decision,'accepted');assert.equal(checks,3);
-  assert.equal(result.factChecked,false);assert.equal(result.rubricVersion,'discovery-v1');
+  assert.equal(result.factChecked,false);assert.equal(result.rubricVersion,'discovery-v1.1');
   assert.equal((await client.discover(input,options)).requestId,result.requestId);assert.equal(generated,1);
   const wrong=createDiscoveryClient({baseUrl:'http://127.0.0.1:'+port,apiKey:'k'.repeat(40),subject:'b'.repeat(64),allowLocalhost:true});
   await assert.rejects(wrong.get(result.requestId),e=>e.code==='request_not_found');
