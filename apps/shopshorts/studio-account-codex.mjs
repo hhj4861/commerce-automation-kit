@@ -60,7 +60,13 @@ export async function openAccountServer(env, { signal, spawnProcess = spawn } = 
   } catch (e) { await rpc.close(); throw e; }
 }
 
-export async function executeAccountJob(value, { signal, update, env = process.env, openServer = openAccountServer, generator = createCodexGenerator } = {}) {
+export async function executeAccountJob(value, { signal, update, read, subject, env = process.env, openServer = openAccountServer, generator = createCodexGenerator } = {}) {
+  const assertConnection = async () => {
+    signal?.throwIfAborted();
+    if (!read) throw failure();
+    const fresh = await read();
+    if (fresh.job?.id !== value.job.id || fresh.job.provider !== value.job.provider || !fresh.credential) throw failure();
+  };
   const home = await mkdtemp(join(tmpdir(), 'shopshorts-account-'));
   const codexHome = join(home, '.codex'); let rpc, retainCache = false;
   const persist = async patch => {
@@ -100,7 +106,7 @@ export async function executeAccountJob(value, { signal, update, env = process.e
     await rpc.close(); rpc = null;
     if (value.job.kind === 'connect') { await update({ job: { state: 'done', device: null } }); return; }
     try {
-      const result = await (value.job.kind === 'scenario' ? scenarioBrief : recommendBrief)(value.job.input, env, { history: value.recommendations, onProgress:phase=>update({job:{phase}}), generate: generator({ env: runtime }), signal });
+      const result = await (value.job.kind === 'scenario' ? scenarioBrief : recommendBrief)(value.job.input, env, { history: value.recommendations, subject, requestId:value.job.id, assertConnection, onProgress:phase=>update({job:{phase}}), generate: generator({ env: runtime }), signal });
       await persist({ credential: await credential(), job: { state: 'done', result } });
     } catch (e) {
       // Official CLI may rotate even on a failed generation; persist before cleanup.
