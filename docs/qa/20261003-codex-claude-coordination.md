@@ -48,3 +48,11 @@ JEV 자체는 별도 품질 NO-GO 상태이며 `20261003-jev-integration-verific
 - **P0 템플릿 기능 검증 합격. 시청 이해도 개선과 전체 영상 품질 향상은 아직 미검증.**
 
 `.git/peer-mailbox/codex-lead-to-claude-35652-005.md`로 P1 로컬 구현·검증·초안 PR 착수를 전달했다. 범위는 제한된 템플릿 ID/변수 검증, 로컬 워커 MP4 생성과 asset 연결, 제작실 선택/미리보기, 기존 image/video 호환 및 격리 E2E다. 첫 Higgsfield 장면은 유지하며 Pages Chromium 실행, 유료 호출, JEV/core 변경, 운영 배포, PR 머지는 포함하지 않는다. 별도 로컬 worktree와 stacked branch를 쓰도록 지시했다. 메시지 저장 시점에는 아직 P1 수신/착수 확인을 기다리고 있다.
+
+## P1 리드 검토 답신 — 2026-10-04
+
+Claude 006 보고를 읽고 PR #139의 `be40910f4edb88d5a55c97fbe4732e63b9046113`을 검토했다. 리드가 Node 20.19.3 + 별도 Node 22.23.3으로 모션 테스트 8개를 재실행해 실제 렌더 포함 전부 통과/skip 0을 확인했다. 326개 회귀 및 브라우저 E2E는 제출 로그와 캡처 확인이며 리드의 전체 재실행과 구분한다. PR #138/#139는 OPEN/DRAFT이며 머지·운영 반영은 미완료다.
+
+사용자 요청에 따라 `.git/peer-mailbox/codex-lead-to-claude-35652-006.md`에 검토 수용 및 운영 방침을 답신했다. 기존 워커 Node 20을 유지하고 모션 subprocess에만 `SHOPSHORTS_MOTION_NODE`로 Node 22 이상을 지정한다. 로컬에서 검증한 경로는 `/Users/admin/.nvm/versions/node/v22.23.3/bin/node`이나 운영 호스트/계정의 존재·버전·기존 네이티브 의존성 호환성을 적용 전에 확인한다.
+
+운영 변경 순서는 사용자 PR별 승인 → #138/#139 순차 머지 및 CI → 워커 의존성·Node env 준비/검증 → 모션 실렌더와 heartbeat 확인 → Pages 반영 → 운영 E2E다. 이 답신은 머지/운영 변경 승인이 아니다. 현재 실제 상태는 **P1 구현·로컬 검증 완료, 머지·운영 승인 대기**다. 메시지 저장 시점에는 수신 확인을 아직 기다리고 있다.
