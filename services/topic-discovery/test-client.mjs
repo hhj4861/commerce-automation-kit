@@ -23,7 +23,7 @@ for(const {workflow,dropReply} of [{},{workflow:'research-v2'},{workflow:'resear
   if(dropReply)await assert.rejects(client.discover(request,options),e=>e.code==='discovery_unavailable');
   const result=await client.discover(request,options);
   assert.equal(result.candidates[0].decision,'accepted');assert.equal(checks,dropReply?8:workflow?7:4);
-  assert.equal(result.factChecked,false);assert.equal(result.rubricVersion,workflow?'discovery-v2':'discovery-v1.1');
+  assert.equal(result.factChecked,false);assert.equal(result.rubricVersion,workflow?'discovery-v2.1':'discovery-v1.2');
   assert.equal((await client.discover(request,options)).requestId,result.requestId);assert.equal(generated,workflow?2:1);
   const wrong=createDiscoveryClient({baseUrl:'http://127.0.0.1:'+port,apiKey:'k'.repeat(40),subject:'b'.repeat(64),allowLocalhost:true});
   await assert.rejects(wrong.get(result.requestId),e=>e.code==='request_not_found');

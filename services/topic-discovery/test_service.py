@@ -5,7 +5,7 @@ import threading
 import unittest
 from pathlib import Path
 from unittest.mock import Mock
-from service import Discovery, Store, Failure, questions, search_query, candidate_query, parse_candidates, VERSION
+from service import Discovery, Store, Failure, questions, search_query, candidate_query, parse_candidates, VERSION, RESEARCH_VERSION, SUPPORT_FIELDS, unique_evidence, decision_from_reasons
 from server import make_server
 from client import DiscoveryClient, DiscoveryError
 
@@ -237,11 +237,11 @@ class Tests(unittest.TestCase):
         self.assertEqual(second['usage']['searchCalls'],4);self.assertEqual(second['expiresAt'],first['expiresAt'])
         self.assertEqual(self.store.history(self.d.scope('shopshorts',SUBJECT),'content'),[])
         result,_=self.finish_action(second,self.draft_output(3))
-        self.assertEqual(result['rubricVersion'],'discovery-v2')
+        self.assertEqual(result['rubricVersion'],RESEARCH_VERSION)
         self.assertEqual([c['decision'] for c in result['candidates']],['accepted']*3)
         self.assertEqual(result['usage'],{'searchCalls':4,'generationClaims':2,'jevCalls':3,'costUsd':None})
         self.assertEqual(self.search.call_count,4);self.assertEqual(self.jev.call_count,3)
-        self.assertTrue(all(c['checks']['support']['rubricVersion']=='discovery-v2' for c in result['candidates']))
+        self.assertTrue(all(c['checks']['support_answer']['rubricVersion']==RESEARCH_VERSION for c in result['candidates']))
     def test_each_action_replay_has_immutable_response_and_cannot_claim_twice(self):
         first=self.research_start();second,body1=self.finish_action(first,self.lead_output())
         scope=self.d.scope('shopshorts',SUBJECT);rid=first['requestId']
@@ -344,6 +344,120 @@ class Tests(unittest.TestCase):
             self.assertEqual(result['usage']['generationClaims'],2);self.assertEqual(generated.call_count,2)
             self.assertEqual(self.search.call_count,2);self.assertEqual(self.jev.call_count,1)
         finally:server.shutdown();server.server_close();thread.join()
+    def test_new_policy_reject_wins_all_mixed_outcomes(self):
+        from itertools import product
+        for outcomes in product(('pass', 'rejected', 'uncertain'), repeat=4):
+            reasons = [str(i)+'_'+outcome for i,outcome in enumerate(outcomes) if outcome!='pass']
+            expected = 'rejected' if 'rejected' in outcomes else 'held' if 'uncertain' in outcomes else 'accepted'
+            for rubric in (VERSION, RESEARCH_VERSION):
+                self.assertEqual(decision_from_reasons(reasons,rubric),expected)
+            legacy = 'held' if 'uncertain' in outcomes else 'rejected' if 'rejected' in outcomes else 'accepted'
+            for rubric in ('discovery-v1.1','discovery-v2'):
+                self.assertEqual(decision_from_reasons(reasons,rubric),legacy)
+
+    def test_field_support_covers_all_text_and_keeps_one_call(self):
+        for profile in ('content','business'):
+            q=questions(profile,False,True)
+            self.assertEqual(set(q),{'relevance','value'}|{'support_'+f for f in SUPPORT_FIELDS})
+            self.assertNotIn('support',q)
+            for field in SUPPORT_FIELDS:
+                self.assertIn('`candidate.'+field+'`',q['support_'+field]['instructions'])
+                self.assertIn('Mere absence',q['support_'+field]['criteria']['reject'])
+        second,_=self.finish_action(self.research_start(),self.lead_output())
+        result,_=self.finish_action(second,self.draft_output())
+        row=result['candidates'][0]
+        self.assertEqual(row['decision'],'accepted');self.assertEqual(self.jev.call_count,1)
+        self.assertEqual(result['usage'],{'searchCalls':2,'generationClaims':2,'jevCalls':1,'costUsd':None})
+        payload=self.jev.call_args.args[0]
+        self.assertEqual(len(payload['state']['evidence']),1)
+        self.assertEqual(row['evidenceAliases'],{'source-1':'source-1','lead-1-source-1':'source-1'})
+        self.assertEqual(row['draftEvidenceIds'],['lead-1-source-1'])
+        self.assertEqual(row['evidenceIds'],['source-1','lead-1-source-1'])
+        self.assertEqual(row['checks']['support_answer']['probabilities'],{'pass':.95,'reject':.025,'uncertain':.025})
+
+    def test_unsupported_field_is_held_and_contradiction_wins(self):
+        def results(payload):
+            value=pass_result(payload)
+            value['answers']['support_openingVisual']={'choice':'uncertain','confidence':.99,'probabilities':{'pass':0,'reject':0,'uncertain':1}}
+            if reject[0]:
+                value['answers']['support_answer']={'choice':'reject','confidence':.99,'probabilities':{'pass':0,'reject':1,'uncertain':0}}
+            return value
+        reject=[False];self.jev.side_effect=results
+        for i,expected in enumerate(('held','rejected')):
+            reject[0]=bool(i)
+            second,_=self.finish_action(self.research_start('field-case-'+str(i)),self.lead_output())
+            result,_=self.finish_action(second,self.draft_output())
+            row=result['candidates'][0];self.assertEqual(row['decision'],expected)
+            self.assertIn('support_openingVisual_uncertain',row['reasonCodes'])
+            if i:self.assertIn('support_answer_rejected',row['reasonCodes'])
+            self.assertEqual(self.store.history(self.d.scope('shopshorts',SUBJECT),'content'),[])
+
+    def test_missing_or_malformed_field_answer_is_held_even_after_reject(self):
+        for i,bad in enumerate((None,{'choice':'pass','confidence':.99,'probabilities':[]},'missing')):
+            def invalid(payload):
+                value=pass_result(payload)
+                value['answers']['relevance']={'choice':'reject','confidence':.99,'probabilities':{'pass':0,'reject':1,'uncertain':0}}
+                if bad=='missing':del value['answers']['support_expectedAnswer']
+                else:value['answers']['support_expectedAnswer']=bad
+                return value
+            self.jev.side_effect=invalid
+            second,_=self.finish_action(self.research_start('bad-field-'+str(i)),self.lead_output())
+            result,_=self.finish_action(second,self.draft_output())
+            row=result['candidates'][0]
+            self.assertEqual(row['decision'],'held');self.assertEqual(row['reasonCodes'],['invalid_jev_response'])
+
+    def test_evidence_identity_preserves_source_meaning_and_ids(self):
+        first={'id':'a',**SOURCE,'retrievedAt':1}
+        rows=[first,{**first,'id':'b','url':'https://OPERATOR.example:443/bridge','retrievedAt':2},
+              {**first,'id':'c','excerpt':'상판은 회전하지 않습니다.'},
+              {**first,'id':'d','title':'다른 다리'},
+              {**first,'id':'e','url':SOURCE['url']+'?version=2'},
+              {**first,'id':'f','url':'https://other.example/bridge'}]
+        before=json.loads(json.dumps(rows));unique,aliases=unique_evidence(rows)
+        self.assertEqual(len(unique),5);self.assertEqual(aliases,{'a':'a','b':'a','c':'c','d':'d','e':'e','f':'f'})
+        self.assertEqual(rows,before)
+
+    def test_inflight_legacy_request_keeps_questions_and_reduction(self):
+        first=self.research_start()
+        with self.store.db() as db:
+            data=json.loads(db.execute('SELECT data FROM requests WHERE id=?',(first['requestId'],)).fetchone()[0])
+            data['rubricVersion']='discovery-v2'
+            db.execute('UPDATE requests SET data=? WHERE id=?',(json.dumps(data),first['requestId']))
+        def mixed(payload):
+            self.assertIn('support',payload['questions']);self.assertNotIn('support_answer',payload['questions'])
+            self.assertNotIn('evidenceAliases',payload['state'])
+            self.assertEqual(len(payload['state']['evidence']),2)
+            value=pass_result(payload)
+            value['answers']['support']={'choice':'reject','confidence':.99,'probabilities':{'pass':0,'reject':1,'uncertain':0}}
+            value['answers']['value']={'choice':'uncertain','confidence':.99,'probabilities':{'pass':0,'reject':0,'uncertain':1}}
+            return value
+        self.jev.side_effect=mixed
+        second,_=self.finish_action(first,self.lead_output())
+        self.assertIn('"rubricVersion":"discovery-v2"',second['action']['prompt'])
+        result,body=self.finish_action(second,self.draft_output())
+        self.assertEqual(result['rubricVersion'],'discovery-v2')
+        self.assertEqual(result['candidates'][0]['decision'],'held')
+        self.assertEqual(self.d.complete('shopshorts',SUBJECT,first['requestId'],body),result)
+        self.assertEqual(self.jev.call_count,1)
+
+    def test_captured_support_outcomes_change_only_confirmed_reject_policy(self):
+        # 20261003 fixed live controls: replay judgments, NOT a new model quality test.
+        cases=[('pass',.21,{'pass':.48,'reject':.40,'uncertain':.12},'held'),
+               ('reject',.66,{'pass':.08,'reject':.77,'uncertain':.15},'held'),
+               ('reject',.99,{'pass':0,'reject':1,'uncertain':0},'rejected')]
+        for i,(choice,confidence,probabilities,expected) in enumerate(cases):
+            def captured(payload):
+                value=pass_result(payload)
+                value['answers']['support']={'choice':choice,'confidence':confidence,'probabilities':probabilities}
+                if i==2:
+                    value['answers']['value']={'choice':'uncertain','confidence':.99,'probabilities':{'pass':0,'reject':0,'uncertain':1}}
+                return value
+            self.jev.side_effect=captured
+            result,body=self.complete(self.start(key='captured-outcome-'+str(i)))
+            self.assertEqual(result['candidates'][0]['decision'],expected)
+            self.assertEqual(self.d.complete('shopshorts',SUBJECT,result['requestId'],body),result)
+        self.assertEqual(self.jev.call_count,3)
+
     def test_native_sdk_bridge_with_synthetic_upstream(self):
         from service import Jev
         from http.server import BaseHTTPRequestHandler,ThreadingHTTPServer
@@ -360,6 +474,13 @@ class Tests(unittest.TestCase):
         try:
             self.d.jev=Jev({'PATH':os.environ['PATH'],'JEV_BASE_URL':'http://127.0.0.1:'+str(server.server_port),'JEV_API_KEY':'synthetic-jev-key','JEV_ALLOW_LOCALHOST':'1'})
             result,_=self.complete(self.start());self.assertEqual(result['candidates'][0]['decision'],'accepted')
+            second,_=self.finish_action(self.research_start(),self.lead_output())
+            result,_=self.finish_action(second,self.draft_output())
+            row=result['candidates'][0]
+            self.assertEqual(row['decision'],'accepted')
+            self.assertEqual(len(row['checks']),12) # Nine support fields + relevance/value/duplicate.
+            self.assertEqual(row['checks']['support_answer']['model'],'jev-1.13.0')
+            self.assertEqual(result['usage']['jevCalls'],1)
         finally:server.shutdown();server.server_close();thread.join()
     def test_http_python_adapter_and_auth(self):
         server=make_server(('127.0.0.1',0),self.d,{'shopshorts':KEY,'blog':'b'*40})

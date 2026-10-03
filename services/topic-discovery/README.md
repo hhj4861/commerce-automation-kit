@@ -1,6 +1,16 @@
 # Shared discovery v1
 
-Status: PR #130 merged on 2026-10-03; production is not enabled. Deployment preflight found a missing Python CA trust store, now fixed in the production-wiring follow-up. No live search/Jev/LLM calls were made by the fixture tests. Default `DISCOVERY_ENABLED=0` preserves deployed clients until the shared service, scoped keys and acceptance checks are ready.
+Current change: `discovery-v1.2` (single-stage) and `discovery-v2.1` (opt-in `workflow: research-v2`) add confirmed-rejection precedence and evidence deduplication; v2.1 also splits support by candidate field. This source change is not deployed and does not enable clients. The previously verified production service remains v1.1. Live quality is still NOT accepted: supported candidates were held in the 2026-10-03 evaluation. Historical rollout notes below describe earlier revisions, not this release.
+
+## Evidence and decision correction — 2026-10-03
+
+- New requests pin the new rubric at creation. In-flight `discovery-v1.1` / `discovery-v2` requests keep their previous questions, evidence layout and uncertain-first reduction; even a resumed research draft prompt carries the stored rubric. Terminal/idempotent results are never re-evaluated. Unknown stored rubrics fail closed before JEV dispatch.
+- With a fully valid response, any confident reject wins over uncertainty in another criterion. Otherwise uncertainty holds; only all-pass accepts. Malformed/missing answers and transport errors still hold. Confidence .8, chosen probability .8 and margin .2 are unchanged; no failed/held candidate enters accepted history.
+- Research v2.1 replaces the composite `support` question with nine independently answered `support_<field>` questions: title, question, entity, location, answer, whyItMatters, openingVisual, direction, expectedAnswer. They cover full field text, including embedded factual premises, without relying on a generator-provided partial claim list. This is field-level decomposition, not guaranteed atomic sentence extraction. Hypothetical expectations/proposed shots alone are not facts; their factual premises still need support. Absence of evidence is uncertain; reject requires explicit contradiction.
+- All 11 questions (12 with duplicate history) share one JEV call per candidate. Existing call-count/timeout limits and SDK stay unchanged. Extra question tokens may increase cost; no latency, accuracy or cost improvement is claimed before live evaluation. Returned `checks` keeps each raw field answer/probability/margin; no synthetic aggregate confidence is fabricated. Consumers continue to gate on `decision`, not the presence of a `checks.support` field.
+- Only the JEV evidence payload is deduplicated by normalized HTTPS host/default port + exact path/query/title/excerpt. Different source content is retained, including contradictions. `state.evidenceAliases` and each result's `evidenceAliases` map all original IDs to the first identical source. Original stored evidence, retrieved times, candidate `evidenceIds`, draft citations and cross-lead constraints are preserved. A repeated excerpt is not an independent corroborating source.
+- Official design guidance: [focused questions and explicit state paths](https://docs.typesafe.ai/primitives). No thresholds or primary-source requirements were relaxed. New real-model acceptance tests remain required before client activation.
+
 
 ## Ownership and protocol agreement
 
