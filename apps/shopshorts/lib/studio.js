@@ -3,6 +3,7 @@ import {productionStyle, animationPlan, animated} from './animation-plan.js';
 import {captionExtras} from '../public/caption-style.js';
 import {CAMERAS, SHOTS} from '../public/cinematic-motion.js';
 import {validateMusic} from '../public/music-timeline.js';
+import {validateMotionScene} from '../public/motion-templates.js';
 import { FPS, FONTS, frameCount, assertClipPositions } from '../public/editor-model.js';
 export const CATEGORIES = ['심리학', '건축학', '상품광고', '막장드라마', '역사', '과학', '직접 입력'];
 export const VOICES = [{ id: 'none', name: '내레이션 없음' }, { id: 'n2fbxG88jqAoaVPUy3IG', name: 'Yooni · 밝고 또렷한 한국어', previewUrl: 'https://storage.googleapis.com/eleven-public-prod/database/workspace/dc9d42698272443c82f44e26ea1c9263/voices/n2fbxG88jqAoaVPUy3IG/kVgVODaebcaz7AEHhgDo.mp3' }, { id: 'ZRJMGKt2Okf3o9C38eSq', name: 'Claire · 차분한 한국어', previewUrl: 'https://storage.googleapis.com/eleven-public-prod/database/workspace/87db1f27d31f4bdd85e5e0c1028eae76/voices/ZRJMGKt2Okf3o9C38eSq/V7F37Ap0MTHMEuvlf9be.mp3' }];
@@ -24,7 +25,8 @@ export function validateBrief(input) {
   productionStyle(input.productionStyle);
   return { ...productionOptions(input), category: input.category, topic: input.topic.trim(), format: input.format, duration, direction: String(input.direction || '').slice(0, 2000), aspect: input.format === 'short' ? '9:16' : '16:9', ...(input.productionStyle?{productionStyle:input.productionStyle}:{}) };
 }
-export function validateScenes(scenes) {
+// stripMotion: AI scenario output never selects motion templates; a person picks them in the media step.
+export function validateScenes(scenes, {animationStyle = false, stripMotion = false} = {}) {
   if (!Array.isArray(scenes) || !scenes.length || scenes.length > 100) fail('장면은 1~100개 필요합니다.');
   const ids = new Set();
   return scenes.map((scene, i) => {
@@ -36,7 +38,8 @@ export function validateScenes(scenes) {
     if (!['image', 'video'].includes(scene.kind)) fail('이미지 또는 영상을 선택하세요.');
     if(scene.camera!==undefined&&!CAMERAS.includes(scene.camera))fail('지원하지 않는 카메라 움직임입니다.');
     if(scene.shot!==undefined&&!SHOTS.includes(scene.shot))fail('지원하지 않는 장면 구도입니다.');
-    return { id, narration: scene.narration.trim(), prompt: scene.prompt.trim(), duration: scene.duration, kind: scene.kind, ...(scene.camera?{camera:scene.camera}:{}), ...(scene.shot?{shot:scene.shot}:{}), ...(scene.animation!==undefined?{animation:animationPlan(scene.animation)}:{}) };
+    const motion=stripMotion?undefined:validateMotionScene(scene,i,{animationStyle});
+    return { id, narration: scene.narration.trim(), prompt: scene.prompt.trim(), duration: scene.duration, kind: scene.kind, ...(scene.camera?{camera:scene.camera}:{}), ...(scene.shot?{shot:scene.shot}:{}), ...(scene.animation!==undefined?{animation:animationPlan(scene.animation)}:{}), ...(motion?{motion}:{}) };
   });
 }
 export function validateEdit(input, job) {
@@ -99,11 +102,11 @@ export function changeProject(original, action, body) {
   if (job.upload) fail('업로드가 접수된 프로젝트는 변경할 수 없습니다. 새 프로젝트를 만드세요.', 409);
   const invalidate = () => { job.approved = false; job.render = null; job.task = null; };
   if (action === 'scenes') {
-    const scenes = validateScenes(body.scenes);
+    const scenes = validateScenes(body.scenes,{animationStyle:animated(job.brief)});
     if (scenes.reduce((sum, s) => sum + s.duration, 0) > (job.brief.format === 'short' ? 180 : 600)) fail('장면의 전체 길이가 형식의 최대 길이를 넘었습니다.');
     if(animated(job.brief) && scenes.some(s=>s.kind!=='video'||!s.animation))fail('애니메이션 장면은 영상과 장면별 동작 구성이 필요합니다.');
     const old = Object.fromEntries(job.scenes.map(s => [s.id, s]));
-    for (const s of scenes) if (old[s.id]?.prompt !== s.prompt || old[s.id]?.kind !== s.kind || old[s.id]?.camera !== s.camera || old[s.id]?.shot !== s.shot || JSON.stringify(old[s.id]?.animation)!==JSON.stringify(s.animation) || (animated(job.brief)&&old[s.id]?.duration!==s.duration) || (old[s.id]?.narration !== s.narration && job.assets[s.id]?.source === 'ai')) delete job.assets[s.id];
+    for (const s of scenes) if (old[s.id]?.prompt !== s.prompt || old[s.id]?.kind !== s.kind || old[s.id]?.camera !== s.camera || old[s.id]?.shot !== s.shot || JSON.stringify(old[s.id]?.animation)!==JSON.stringify(s.animation) || JSON.stringify(old[s.id]?.motion)!==JSON.stringify(s.motion) || ((animated(job.brief)||s.motion)&&old[s.id]?.duration!==s.duration) || (old[s.id]?.narration !== s.narration && job.assets[s.id]?.source === 'ai')) delete job.assets[s.id];
     for (const id of Object.keys(old)) if (!scenes.some(s => s.id === id)) delete job.assets[id];
     if(job.edit?.voice!==undefined)job.voicePreference=job.edit.voice;
     job.scenes = scenes; job.title = String(body.title || job.title).slice(0, 100); job.edit = null; invalidate();

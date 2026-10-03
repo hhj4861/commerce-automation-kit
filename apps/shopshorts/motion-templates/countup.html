@@ -1,0 +1,92 @@
+<!doctype html>
+<!-- T2 숫자 비교·카운트업. 지면 아래로 두 깊이 막대가 내려가며 숫자가 오르고, 마지막에 차이를 괄호로 강조한다.
+     기본값은 화면 확인용 예시값이며 사실 주장이 아니다. 실제 제작에서는 검증된 수치만 넣는다. -->
+<html lang="ko" data-resolution="portrait" data-composition-variables='[
+  {"id":"heading","type":"string","label":"제목(14자 이하)","default":"얼마나 깊을까"},
+  {"id":"labelA","type":"string","label":"항목 A(8자 이하)","default":"건물 기초"},
+  {"id":"valueA","type":"number","label":"값 A","default":20},
+  {"id":"labelB","type":"string","label":"항목 B(8자 이하)","default":"지하철 터널"},
+  {"id":"valueB","type":"number","label":"값 B","default":35},
+  {"id":"unit","type":"string","label":"단위","default":"m"},
+  {"id":"note","type":"string","label":"출처·주석(16자 이하, 숫자와 함께 상시 표시)","default":"예시값 · 실제 수치 아님"},
+  {"id":"showSafe","type":"boolean","label":"안전영역 표시","default":false}
+]'>
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=1080, height=1920" />
+<link rel="stylesheet" href="shared.css" />
+<script src="assets/gsap.min.js"></script>
+<style>
+  #heading { position: absolute; left: 70px; width: 940px; top: 240px; text-align: center; font-size: 72px; }
+  .lbl { position: absolute; width: 420px; text-align: center; font-size: 52px; top: 450px; }
+  #lblA { left: 100px; } #lblB { left: 560px; }
+  .num { position: absolute; width: 420px; text-align: center; font-size: 96px; letter-spacing: -0.03em; }
+  #numA { left: 100px; color: #c95d47; } #numB { left: 560px; color: #4f8f7c; }
+  #diff { position: absolute; left: 488px; font-size: 60px; color: var(--ink); transform-origin: 0% 50%; }
+  #note { position: absolute; left: 50%; top: 345px; transform: translateX(-50%); white-space: nowrap; font-size: 40px; padding: 8px 26px; border: 3px solid var(--ink); border-radius: 40px; background: #fffaf0; }
+</style>
+</head>
+<body>
+<div id="root" class="stage" data-composition-id="countup" data-start="0" data-duration="5" data-width="1080" data-height="1920">
+  <svg class="full" viewBox="0 0 1080 1920" aria-hidden="true">
+    <rect x="0" y="560" width="1080" height="820" fill="#e8dfc6" opacity=".55" />
+    <line id="ground" x1="60" y1="560" x2="1020" y2="560" stroke="#3b3932" stroke-width="8" stroke-linecap="round" />
+    <rect id="barA" x="230" y="560" width="160" height="10" rx="14" fill="#e57962" />
+    <rect id="barB" x="690" y="560" width="160" height="10" rx="14" fill="#7fb8a6" />
+    <g id="bracket" fill="none" stroke="#3b3932" stroke-width="6" stroke-linecap="round">
+      <path id="bracketPath" d="" />
+    </g>
+  </svg>
+  <div id="heading"></div>
+  <div id="lblA" class="lbl"></div><div id="lblB" class="lbl"></div>
+  <div id="numA" class="num">0</div><div id="numB" class="num">0</div>
+  <div id="diff"></div>
+  <div id="note"></div>
+  <div class="safe-box"></div><div class="caption-band"></div>
+</div>
+<script>
+  const v = window.__hyperframes.getVariables();
+  const a = Number(v.valueA), b = Number(v.valueB), unit = v.unit;
+  const set = (id, t) => { document.getElementById(id).textContent = t; };
+  set('heading', v.heading); set('lblA', v.labelA); set('lblB', v.labelB); set('note', v.note);
+  if (v.showSafe === true || v.showSafe === 'true') document.body.classList.add('show-safe');
+
+  // Bars share one scale so the visual ratio matches the numbers; the larger value fills 640px.
+  const groundY = 560, maxH = 640, k = maxH / Math.max(a, b, 1);
+  const hA = Math.max(a * k, 12), hB = Math.max(b * k, 12);
+  const numA = document.getElementById('numA'), numB = document.getElementById('numB');
+  numA.style.top = (groundY + hA + 24) + 'px'; numB.style.top = (groundY + hB + 24) + 'px';
+  const lo = Math.min(hA, hB), hi = Math.max(hA, hB);
+  const diff = Math.abs(b - a);
+  set('diff', (b >= a ? '+' : '−') + diff + unit);
+  document.getElementById('diff').style.top = (groundY + (lo + hi) / 2 - 36) + 'px';
+  // vertical bracket between the two bar ends, at the center gap
+  document.getElementById('bracketPath').setAttribute('d', `M470 ${groundY + lo} h-30 M470 ${groundY + lo} V${groundY + hi} M470 ${groundY + hi} h-30`);
+
+  // Counter text is derived from the tween's progress inside onUpdate; the runtime seeks the
+  // paused timeline per frame, so the same frame always shows the same number.
+  const ca = { n: 0 }, cb = { n: 0 };
+  const fmt = n => Math.round(n) + unit;
+  const tl = gsap.timeline({ paused: true, defaults: { ease: 'power3.out' } });
+  tl.fromTo('#ground', { scaleX: 0, transformOrigin: '0% 50%' }, { scaleX: 1, duration: 0.45 }, 0)
+    .fromTo('#heading', { y: 40, opacity: 0 }, { y: 0, opacity: 1, duration: 0.45 }, 0.1)
+    .fromTo(['#lblA', '#lblB'], { y: 30, opacity: 0 }, { y: 0, opacity: 1, duration: 0.4, stagger: 0.12 }, 0.35)
+    .fromTo('#barA', { attr: { height: 10 } }, { attr: { height: hA }, duration: 1.4, ease: 'power2.inOut' }, 0.7)
+    .fromTo(ca, { n: 0 }, { n: a, duration: 1.4, ease: 'power2.inOut', onUpdate: () => { numA.textContent = fmt(ca.n); } }, 0.7)
+    .fromTo('#numA', { opacity: 0 }, { opacity: 1, duration: 0.2 }, 0.7)
+    .fromTo('#barB', { attr: { height: 10 } }, { attr: { height: hB }, duration: 1.4, ease: 'power2.inOut' }, 1.1)
+    .fromTo(cb, { n: 0 }, { n: b, duration: 1.4, ease: 'power2.inOut', onUpdate: () => { numB.textContent = fmt(cb.n); } }, 1.1)
+    .fromTo('#numB', { opacity: 0 }, { opacity: 1, duration: 0.2 }, 1.1)
+    // numbers track the bar ends while they grow
+    .fromTo('#numA', { y: -(hA - 12) }, { y: 0, duration: 1.4, ease: 'power2.inOut' }, 0.7)
+    .fromTo('#numB', { y: -(hB - 12) }, { y: 0, duration: 1.4, ease: 'power2.inOut' }, 1.1)
+    .fromTo('#bracket', { opacity: 0 }, { opacity: 1, duration: 0.3 }, 2.7)
+    .fromTo('#diff', { scale: 0.6, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.45, ease: 'back.out(2)' }, 2.8)
+    .to('#diff', { scale: 1.08, duration: 0.25, yoyo: true, repeat: 1, ease: 'sine.inOut' }, 3.4)
+    // the note appears before the first number and stays to the end so sample values are never shown unlabeled
+    .fromTo('#note', { opacity: 0 }, { opacity: 1, duration: 0.25 }, 0.45);
+  window.__timelines['countup'] = tl;
+  tl.seek(0);
+</script>
+</body>
+</html>

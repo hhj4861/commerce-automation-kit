@@ -1,0 +1,34 @@
+/* Shared look for the HyperFrames PoC templates.
+   Palette, ink and cream ground follow apps/shopshorts/studio-animation.mjs so a
+   motion scene can sit between existing illustrated scenes without a style jump. */
+@font-face {
+  font-family: "NanumGothic";
+  src: url("assets/NanumGothic-Regular.ttf") format("truetype");
+  font-weight: 400;
+}
+:root {
+  --paper: #f5efdc;
+  --ground: #e8dfc6;
+  --ink: #3b3932;
+  --c1: #e57962;
+  --c2: #7fb8a6;
+  --c3: #e8bd58;
+  --c4: #93a8cf;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body {
+  width: 1080px; height: 1920px; overflow: hidden;
+  background: var(--paper);
+  font-family: "NanumGothic", sans-serif;
+  color: var(--ink);
+}
+.stage { position: absolute; inset: 0; }
+svg.full { position: absolute; left: 0; top: 0; width: 1080px; height: 1920px; }
+
+/* Shorts safe zone used by the PoC (content box) and the band where the studio's default
+   bottom caption lands (captionFilter y=h*0.92-text_h; measured box y≈1705–1773 at 56px).
+   Only drawn when the showSafe variable is true, for verification snapshots. */
+.safe-box, .caption-band { position: absolute; display: none; pointer-events: none; }
+.safe-box { left: 70px; top: 220px; width: 870px; height: 1160px; border: 4px dashed #2b7cff; }
+.caption-band { left: 0; top: 1690px; width: 1080px; height: 100px; background: rgba(43,124,255,.15); border-top: 4px dashed #2b7cff; }
+.show-safe .safe-box, .show-safe .caption-band { display: block; }

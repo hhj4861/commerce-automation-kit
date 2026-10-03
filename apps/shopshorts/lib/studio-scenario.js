@@ -24,7 +24,7 @@ export function validateStoryArc(arc, scenes) {
 
 export function scenarioResult(value, input) {
   const brief = validateBrief(input);
-  const scenes = validateScenes(value?.scenes);
+  const scenes = validateScenes(value?.scenes,{stripMotion:true});
   const total = scenes.reduce((n, scene) => n + scene.duration, 0);
   if (total > (brief.format === 'short' ? 180 : 600) || Math.abs(total - brief.duration) > Math.max(2, brief.duration * .1)) fail('시나리오 길이가 목표와 맞지 않습니다. 다시 생성하세요.', 502);
   if (typeof value.title !== 'string' || !value.title.trim() || value.title.length > 100) fail('시나리오 제목을 확인하지 못했습니다. 다시 생성하세요.', 502);
