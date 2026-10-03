@@ -27,6 +27,22 @@
         uri strip_prefix /llm
         reverse_proxy 127.0.0.1:4100
     }
+    @discoveryWrite {
+        method POST
+        path_regexp discoveryWrite ^/discovery/v1/discover(/([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})/(claim|complete))?$
+    }
+    handle @discoveryWrite {
+        uri strip_prefix /discovery
+        reverse_proxy 127.0.0.1:4195
+    }
+    @discoveryRead {
+        method GET
+        path_regexp discoveryRead ^/discovery/v1/discover/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$
+    }
+    handle @discoveryRead {
+        uri strip_prefix /discovery
+        reverse_proxy 127.0.0.1:4195
+    }
     @accounts path /accounts/connections /accounts/connections/* /accounts/v1/chat/completions
     handle @accounts {
         uri strip_prefix /accounts

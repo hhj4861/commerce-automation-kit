@@ -204,3 +204,13 @@ test('both Claude credential formats forward account recommendation history with
   assert.equal(generated,true);
  }
 });
+
+
+test('shared discovery draft disables all native Claude tools in actual spawn arguments',async()=>{
+ const c=child();
+ await generateClaude({HOME:'/isolated'},{spawnProcess(_bin,args){
+  assert.equal(args[args.indexOf('--tools')+1],'');assert.equal(args[args.indexOf('--allowedTools')+1],'');
+  assert.ok(!args.includes('WebSearch'));
+  queueMicrotask(()=>{c.stdout.write(wire({type:'result',subtype:'success',result:'{"candidates":[]}'}));c.emit('close',0);});return c;
+ }})('server evidence only',{draftOnly:true});
+});

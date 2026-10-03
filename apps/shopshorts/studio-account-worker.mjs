@@ -49,7 +49,7 @@ export function startAccountWorker({ env = process.env, call = accountBroker(env
     const task = { controller, done: null };
     tasks.set(owner, task);
     task.done = (async () => {
-      try { await execute(initial, { signal: controller.signal, update, read: async () => (await read()).value, env }); }
+      try { await execute(initial, { signal: controller.signal, subject: owner, update, read: async () => (await read()).value, env }); }
       catch (error) {
         if (!controller.signal.aborted) {
           log(`[llm-accounts] ${initial.job.provider === 'claude' ? 'claude' : 'codex'} ${['connect', 'recommend', 'scenario'].includes(initial.job.kind) ? initial.job.kind : 'unknown'} ${accountFailureCode(error)}`);

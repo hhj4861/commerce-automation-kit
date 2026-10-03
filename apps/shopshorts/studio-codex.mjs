@@ -14,11 +14,11 @@ export function codexEnvironment(env = process.env) {
     .filter(key => env[key]).map(key => [key, env[key]]));
 }
 
-export function codexArgs(model) {
+export function codexArgs(model, {draftOnly=false}={}) {
   if (model && !/^[a-zA-Z0-9._-]+$/.test(model)) fail('Codex 추천 모델 설정을 확인하세요.',503);
   return ['exec','--skip-git-repo-check','--ephemeral','--sandbox','read-only','--json','--color','never',
     '-c','approval_policy="never"','-c','forced_login_method="chatgpt"','-c','model_provider="openai"',
-    '-c','web_search="live"','-c','features.shell_tool=false','-c','features.apps=false',
+    '-c',draftOnly?'web_search="disabled"':'web_search="live"','-c','features.shell_tool=false','-c','features.apps=false',
     '-c','features.multi_agent=false','-c','features.computer_use=false','-c','features.browser_use=false',
     '-c','features.image_generation=false', ...(model ? ['--model',model] : []), '-'];
 }
@@ -69,9 +69,9 @@ export function parseCodexEvents(output) {
 
 export function createCodexGenerator({spawnProcess=spawn, prepare=restrictMcp, timeoutMs=180000, env=process.env}={}) {
   let running=false;
-  return async (prompt,{signal,model}={}) => {
+  return async (prompt,{signal,model,draftOnly=false}={}) => {
     if (running) fail('다른 Codex 추천을 생성 중입니다. 잠시 후 다시 시도하세요.',429);
-    const args=codexArgs(model);
+    const args=codexArgs(model,{draftOnly});
     if (signal?.aborted) fail('추천 요청이 취소되었습니다.',499);
     running=true;
     let cwd;
