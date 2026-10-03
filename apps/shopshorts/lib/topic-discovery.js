@@ -7,13 +7,13 @@ const unavailable=reason=>{
 export async function discoverRecommendations(brief,env,{generate,signal,provider,history,subject,requestId,assertConnection,now=new Date(),fetch}={}) {
   if(!subject||!requestId||!assertConnection)throw unavailable('identity_required');
   const model=(provider==='claude'?env.SHOPSHORTS_CLAUDE_MODEL:env.SHOPSHORTS_CODEX_MODEL)||'provider-default';
-  const client=createDiscoveryClient({baseUrl:env.DISCOVERY_URL,apiKey:env.DISCOVERY_API_KEY,subject,
-    allowLocalhost:env.DISCOVERY_ALLOW_LOCALHOST==='1',fetch});
   let result;
   try {
+  const client=createDiscoveryClient({baseUrl:env.DISCOVERY_URL,apiKey:env.DISCOVERY_API_KEY,subject,
+    allowLocalhost:env.DISCOVERY_ALLOW_LOCALHOST==='1',fetch});
     result=await client.discover({profile:'content',category:brief.category,brief:(brief.topic||'실제 사례 의외의 원리')+' '+brief.direction.slice(0,100)+'\n'+JSON.stringify(brief),runtime:{provider,model},
       history:history.slice(0,100).map(x=>({title:x.topic,entity:x.caseStudy?.entity||'',answer:x.caseStudy?.mechanism||x.direction||''}))},
-      {idempotencyKey:requestId,signal,assertConnection,generate:async prompt=>(await generate(prompt,{signal,model:model==='provider-default'?undefined:model})).value});
+      {idempotencyKey:requestId,signal,assertConnection,generate:async prompt=>(await generate(prompt,{signal,draftOnly:true,model:model==='provider-default'?undefined:model})).value});
   } catch(e){if(accountFailureCode(e)!=='UNKNOWN')throw e;throw unavailable(e.code||'unavailable');}
   const accepted=result.candidates.filter(c=>c.decision==='accepted');
   if(result.state!=='complete'||!accepted.length)throw unavailable(result.reasonCodes?.[0]||'no_accepted_candidates');

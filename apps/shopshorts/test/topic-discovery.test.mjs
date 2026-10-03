@@ -7,7 +7,7 @@ const c={id:'candidate-1',title:'돌아가는 다리의 비밀',entity:'회전�
 test('studio maps only accepted common-server candidates to recommendations',async()=>{
  let generation=0,checks=0;
  const data=await recommendBrief(brief,env,{subject:'a'.repeat(64),requestId:'studio-job-001',provider:'codex',history:[],assertConnection:async()=>{checks++;},
-  generate:async()=>{generation++;return {value:{candidates:[c]}};},
+  generate:async(_prompt,options)=>{assert.equal(options.draftOnly,true);generation++;return {value:{candidates:[c]}};},
   fetch:async(url,init)=>{
    const value=JSON.parse(init.body);
    if(url.endsWith('/v1/discover')){assert.equal(value.profile,'content');assert.equal(value.category,'건축학');}

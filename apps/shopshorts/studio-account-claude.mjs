@@ -96,11 +96,11 @@ export async function loginClaude(env, { signal, update, read, spawnProcess, pol
   } finally { clearInterval(timer); await pollTask; }
 }
 
-export function claudeArgs(model) {
+export function claudeArgs(model, {draftOnly=false}={}) {
   if (model && !/^[a-zA-Z0-9._-]+$/.test(model)) throw failure();
   // Only built-in web search is available. No shell, file, app, MCP or subagent tools.
   return ['-p', '--output-format', 'stream-json', '--verbose', '--no-session-persistence',
-    '--tools', 'WebSearch', '--allowedTools', 'WebSearch', '--permission-mode', 'dontAsk',
+    '--tools', draftOnly ? '' : 'WebSearch', '--allowedTools', draftOnly ? '' : 'WebSearch', '--permission-mode', 'dontAsk',
     '--strict-mcp-config', '--mcp-config', '{"mcpServers":{}}', '--setting-sources', '',
     ...(model ? ['--model', model] : [])];
 }
@@ -122,8 +122,8 @@ export function parseClaudeEvents(output) {
   try { return { searched, value: JSON.parse(String(result.result || answer).replace(/^\s*```(?:json)?\s*/, '').replace(/\s*```\s*$/, '')) }; }
   catch { throw failure('CLAUDE_OUTPUT_INVALID'); }
 }
-export const generateClaude = (env, { spawnProcess, oauthToken } = {}) => async (prompt, { signal, model } = {}) =>
-  parseClaudeEvents(await childRun(claudeArgs(model), { env, signal, input: prompt, spawnProcess, oauthToken }).done);
+export const generateClaude = (env, { spawnProcess, oauthToken } = {}) => async (prompt, { signal, model, draftOnly=false } = {}) =>
+  parseClaudeEvents(await childRun(claudeArgs(model,{draftOnly}), { env, signal, input: prompt, spawnProcess, oauthToken }).done);
 
 // Claude Code scopes its macOS Keychain item to CLAUDE_CONFIG_DIR. This adapter
 // touches only the fresh private runtime namespace, never the operator's entry.

@@ -10,7 +10,7 @@ Coordinated directly with Codex **JEV** (`01a0dbe8-c325-7680-ad08-abaab2ef43a2`)
 
 1. Authenticated backend/worker sends category, brief, `content|business`, selected provider/model and optional old history.
 2. Shared server searches the official Naver Web Search API, assigns evidence IDs, merges its own scoped recommendation history and creates the versioned generation prompt.
-3. The backend claims **one** generation action and uses its existing Codex/Claude runtime. It checks the owner, selected provider/model, connection state and cancellation before generation and again before submitting completion. The browser never receives the platform key or submits completion directly.
+3. The backend claims **one** generation action and uses its existing Codex/Claude runtime with a draft-only mode that disables native web search/tools in the process arguments. It checks the owner, selected provider/model, connection state and cancellation before generation and again before submitting completion. The browser never receives the platform key or submits completion directly.
 4. Shared server validates the untrusted generated candidates and cited IDs, performs candidate-specific searches, then calls Jev with separate relevance, semantic duplicate, evidence support and profile-value questions.
 5. Server maps those bounded choices to `accepted|held|rejected`. Clients render/use only accepted candidates while keeping existing publication/business approval gates.
 
@@ -50,7 +50,7 @@ Candidate fields are `title, entity, location, question, expectedAnswer, answer,
 
 ## Durability, limits and failures
 
-SQLite stores scoped requests, idempotency fingerprints, action state and accepted history. `BEGIN IMMEDIATE` prevents duplicate claims and concurrent discovery for one subject, including multiple workers. Up to 100 recent accepted candidates within the same profile plus imported history are considered (combined cap 100; server history takes precedence); this is a bounded history window, not all-time semantic deduplication.
+SQLite stores scoped requests, idempotency fingerprints, action state and accepted history. `BEGIN IMMEDIATE` prevents duplicate claims and concurrent discovery for one subject, including multiple workers. Expiration and expected-state transitions share one write transaction; late external responses cannot resurrect terminal requests. Only accepted candidates establish duplicate history. Up to 100 recent accepted candidates within the same profile plus imported history are considered (combined cap 100; server history takes precedence); this is a bounded history window, not all-time semantic deduplication.
 
 Requests expire in 10 minutes. A crash after search/claim/review is not automatically retried, because the provider may already have billed it. Query the saved request; expiration leaves a visible hold. Create a new request intentionally after investigating. In-flight cancellation/revocation at the adapter prevents submission; unsubmitted actions expire held. A disconnected browser does not cancel the existing Shopshorts account-worker job.
 

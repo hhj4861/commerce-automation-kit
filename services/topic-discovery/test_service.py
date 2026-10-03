@@ -95,6 +95,75 @@ class Tests(unittest.TestCase):
         result,_=self.complete(self.start(),[bad,candidate()])
         self.assertEqual([c['decision'] for c in result['candidates']],['held','accepted'])
         self.assertEqual(self.jev.call_count,1)
+    def test_failed_draft_does_not_veto_corrected_same_title(self):
+        for first in ('uncertain', 'reject'):
+            count = 0
+            def review(payload):
+                nonlocal count
+                count += 1
+                result = pass_result(payload)
+                if count == 1:
+                    result['answers']['support'] = {'choice': first, 'confidence': .95,
+                        'probabilities': {k: .95 if k == first else .025 for k in ('pass','reject','uncertain')}}
+                else:
+                    self.assertFalse(any(p['title'] == payload['state']['candidate']['title'] for p in payload['state']['prior']))
+                return result
+            self.jev.side_effect = review
+            original = candidate('동일 제목 ' + first)
+            corrected = {**original, 'answer': '공식 설명에 맞춰 수정된 원리'}
+            result,_ = self.complete(self.start(key='same-title-'+first), [original, corrected])
+            self.assertEqual([c['decision'] for c in result['candidates']],
+                ['held' if first == 'uncertain' else 'rejected', 'accepted'])
+            self.assertEqual(count, 2)
+    def test_expiry_during_review_cannot_resurrect_or_unlock_new_request(self):
+        for concurrent_read in (False, True):
+            subject = ('c' if concurrent_read else 'd') * 64
+            entered, release = threading.Event(), threading.Event()
+            def delayed(payload):
+                entered.set()
+                if not release.wait(5): raise RuntimeError('test synchronization failed')
+                return pass_result(payload)
+            self.jev.side_effect = delayed
+            request = self.start(key='race-key', subject=subject)
+            result = []
+            worker = threading.Thread(target=lambda: result.append(self.complete(request, subject=subject)[0]))
+            worker.start()
+            try:
+                self.assertTrue(entered.wait(5))
+                with self.store.db() as db:
+                    db.execute('UPDATE requests SET expires=0 WHERE id=?', (request['requestId'],))
+                scope = self.d.scope('shopshorts',subject)
+                if concurrent_read:
+                    self.assertEqual(self.store.get(scope,request['requestId'])['state'],'held')
+                    newer = self.start(key='newer-key', subject=subject)
+                release.set();worker.join(5)
+                self.assertFalse(worker.is_alive())
+                self.assertEqual(result[0]['state'],'held')
+                self.assertEqual(result[0]['reasonCodes'],['request_expired'])
+                self.assertFalse(result[0]['candidates'])
+                if concurrent_read:
+                    self.assertEqual(self.store.get(scope,newer['requestId'])['state'],'awaiting_generation')
+                    with self.assertRaises(Failure): self.start(key='third-key',subject=subject)
+            finally:
+                release.set();worker.join(5)
+    def test_expiry_during_search_stops_followup_external_calls(self):
+        request = self.start()
+        def expire_search(query):
+            with self.store.db() as db: db.execute('UPDATE requests SET expires=0 WHERE id=?',(request['requestId'],))
+            return [SOURCE]
+        self.search.side_effect = expire_search
+        result,_ = self.complete(request)
+        self.assertEqual(result['state'],'held');self.jev.assert_not_called()
+        self.assertEqual(self.search.call_count,2)
+    def test_expired_completion_is_rejected_in_transition_transaction(self):
+        request = self.start();scope=self.d.scope('shopshorts',SUBJECT)
+        self.store.claim(scope,request['requestId'],request['action']['id'])
+        with self.store.db() as db: db.execute('UPDATE requests SET expires=0 WHERE id=?',(request['requestId'],))
+        with self.assertRaises(Failure):
+            self.d.complete('shopshorts',SUBJECT,request['requestId'],{'actionId':request['action']['id'],'runtime':INPUT['runtime'],'output':{'candidates':[candidate()]}})
+        with self.store.db() as db:
+            self.assertEqual(db.execute('SELECT state FROM requests WHERE id=?',(request['requestId'],)).fetchone()[0],'held')
+        self.jev.assert_not_called()
     def test_native_sdk_bridge_with_synthetic_upstream(self):
         from service import Jev
         from http.server import BaseHTTPRequestHandler,ThreadingHTTPServer

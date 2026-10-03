@@ -15,7 +15,7 @@ try {
   };
   const generate=values.provider==='codex'?createCodexGenerator():generateClaude(process.env);
   const client=createDiscoveryClient({baseUrl:process.env.DISCOVERY_URL,apiKey:process.env.DISCOVERY_API_KEY,subject:process.env.DISCOVERY_SUBJECT,allowLocalhost:process.env.DISCOVERY_ALLOW_LOCALHOST==='1'});
-  const result=await client.discover(input,{idempotencyKey:values['request-id'],assertConnection,generate:async(prompt,{signal})=>(await generate(prompt,{signal,model:values.model==='provider-default'?undefined:values.model})).value});
+  const result=await client.discover(input,{idempotencyKey:values['request-id'],assertConnection,generate:async(prompt,{signal})=>(await generate(prompt,{signal,draftOnly:true,model:values.model==='provider-default'?undefined:values.model})).value});
   process.stdout.write(JSON.stringify(result)+'\n');
   if(result.state!=='complete'||!result.candidates.some(c=>c.decision==='accepted'))process.exitCode=2;
 } catch(e){process.stderr.write(JSON.stringify({error:typeof e.code==='string'&&/^[a-z_]+$/.test(e.code)?e.code:'discovery_failed'})+'\n');process.exitCode=1;}

@@ -1,7 +1,7 @@
 name: Shared topic discovery
 on:
   pull_request:
-    paths: ['services/topic-discovery/**', 'packages/litellm-client/jev.mjs', 'apps/shopshorts/lib/topic-discovery.js', 'apps/shopshorts/lib/studio-recommendations.js', 'apps/shopshorts/lib/llm-account-errors.js', 'apps/shopshorts/studio-account-*.mjs', 'apps/shopshorts/test/topic-discovery.test.mjs', '.github/workflows/topic-discovery.yml']
+    paths: ['services/topic-discovery/**', 'packages/litellm-client/jev.mjs', 'apps/shopshorts/lib/topic-discovery.js', 'apps/shopshorts/lib/studio-recommendations.js', 'apps/shopshorts/lib/llm-account-errors.js', 'apps/shopshorts/studio-account-*.mjs', 'apps/shopshorts/studio-codex.mjs', 'apps/shopshorts/test/studio-codex.test.mjs', 'apps/shopshorts/test/llm-claude.test.mjs', 'apps/shopshorts/test/topic-discovery.test.mjs', '.github/workflows/topic-discovery.yml']
 permissions:
   contents: read
 jobs:
@@ -19,7 +19,7 @@ jobs:
         env:
           PYTHONDONTWRITEBYTECODE: '1'
           DISCOVERY_TEST_DIR: ${{ runner.temp }}
-      - run: node --test services/topic-discovery/test-client.mjs apps/shopshorts/test/topic-discovery.test.mjs
+      - run: node --test services/topic-discovery/test-client.mjs apps/shopshorts/test/topic-discovery.test.mjs apps/shopshorts/test/studio-codex.test.mjs apps/shopshorts/test/llm-claude.test.mjs
         env:
           DISCOVERY_TEST_DIR: ${{ runner.temp }}
       - run: docker build -f services/topic-discovery/Dockerfile -t cak-discovery:test .

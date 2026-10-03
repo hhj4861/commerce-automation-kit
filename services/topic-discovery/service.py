@@ -73,21 +73,31 @@ class Store:
                 yield db
         finally:
             db.close()
-    def get(self, scope, rid):
-        with self.db() as db:
-            row = db.execute("SELECT * FROM requests WHERE scope=? AND id=?", (scope, rid)).fetchone()
+    def _load(self, db, scope, rid):
+        """Caller holds BEGIN IMMEDIATE; expiration and transitions share one lock."""
+        row = db.execute("SELECT * FROM requests WHERE scope=? AND id=?", (scope, rid)).fetchone()
         if not row:
             raise Failure("request_not_found", 404)
         data = json.loads(row["data"])
         if row["state"] not in ("complete", "held") and row["expires"] <= time.time():
             data.update(state="held", reasonCodes=["request_expired"], action=None)
-            self.save(scope, rid, data)
+            db.execute("UPDATE requests SET state='held',data=? WHERE id=?", (canonical(data), rid))
+            db.execute("DELETE FROM active WHERE scope=? AND request_id=?", (scope, rid))
         return data
-    def save(self, scope, rid, data):
+    def get(self, scope, rid):
         with self.db() as db:
-            db.execute("UPDATE requests SET state=?,data=? WHERE scope=? AND id=?", (data["state"], canonical(data), scope, rid))
+            db.execute("BEGIN IMMEDIATE")
+            return self._load(db, scope, rid)
+    def save(self, scope, rid, data, expected):
+        with self.db() as db:
+            db.execute("BEGIN IMMEDIATE")
+            current = self._load(db, scope, rid)
+            if current["state"] != expected:
+                return current  # Never resurrect expired work or overwrite a terminal snapshot.
+            db.execute("UPDATE requests SET state=?,data=? WHERE scope=? AND id=? AND state=?", (data["state"], canonical(data), scope, rid, expected))
             if data["state"] in ("complete", "held"):
                 db.execute("DELETE FROM active WHERE scope=? AND request_id=?", (scope, rid))
+            return data
     def begin(self, scope, platform, key, value, per_day=30):
         now = time.time()
         with self.db() as db:
@@ -117,33 +127,37 @@ class Store:
             db.execute("INSERT INTO active VALUES (?,?)", (scope, rid))
         return rid, True
     def claim(self, scope, rid, action_id):
-        self.get(scope, rid)
+        error = None
         with self.db() as db:
             db.execute("BEGIN IMMEDIATE")
-            row = db.execute("SELECT data,state FROM requests WHERE scope=? AND id=?", (scope, rid)).fetchone()
-            data = json.loads(row["data"])
-            if row["state"] != "awaiting_generation" or data["action"]["id"] != action_id:
-                raise Failure("generation_already_claimed", 409)
-            data["state"] = "generating"
-            data["usage"]["generationClaims"] = 1
-            db.execute("UPDATE requests SET state='generating',data=? WHERE id=?", (canonical(data), rid))
-            return data
+            data = self._load(db, scope, rid)
+            if data["state"] != "awaiting_generation" or data["action"]["id"] != action_id:
+                error = Failure("generation_already_claimed", 409)
+            else:
+                data["state"] = "generating"
+                data["usage"]["generationClaims"] = 1
+                db.execute("UPDATE requests SET state='generating',data=? WHERE id=? AND state='awaiting_generation'", (canonical(data), rid))
+        if error:
+            raise error  # Commit any expiration before reporting the failed transition.
+        return data
     def take_completion(self, scope, rid, completion):
-        self.get(scope, rid)
+        error, new = None, False
         with self.db() as db:
             db.execute("BEGIN IMMEDIATE")
-            row = db.execute("SELECT data,state FROM requests WHERE scope=? AND id=?", (scope, rid)).fetchone()
-            data = json.loads(row["data"])
+            data = self._load(db, scope, rid)
             fingerprint = digest(completion)
             if data.get("completionHash"):
                 if data["completionHash"] != fingerprint:
-                    raise Failure("completion_conflict", 409)
-                return data, False
-            if row["state"] != "generating" or completion.get("actionId") != data["action"]["id"] or completion.get("runtime") != data["input"]["runtime"]:
-                raise Failure("invalid_completion_binding", 409)
-            data.update(state="reviewing", completionHash=fingerprint)
-            db.execute("UPDATE requests SET state='reviewing',data=? WHERE id=?", (canonical(data), rid))
-            return data, True
+                    error = Failure("completion_conflict", 409)
+            elif data["state"] != "generating" or completion.get("actionId") != data["action"]["id"] or completion.get("runtime") != data["input"]["runtime"]:
+                error = Failure("invalid_completion_binding", 409)
+            else:
+                data.update(state="reviewing", completionHash=fingerprint)
+                db.execute("UPDATE requests SET state='reviewing',data=? WHERE id=? AND state='generating'", (canonical(data), rid))
+                new = True
+        if error:
+            raise error
+        return data, new
     def history(self, scope, profile):
         with self.db() as db:
             rows = db.execute("SELECT data FROM requests WHERE scope=? AND state='complete' ORDER BY created DESC LIMIT 100", (scope,)).fetchall()
@@ -259,8 +273,7 @@ class Discovery:
             data["state"] = "awaiting_generation"
         except Exception as exc:
             data.update(state="held", reasonCodes=[exc.code if isinstance(exc, Failure) else "search_failed"], action=None)
-        self.store.save(scope, rid, data)
-        return data
+        return self.store.save(scope, rid, data, expected="searching")
     def complete(self, platform, subject, rid, completion):
         if not isinstance(completion, dict) or set(completion) - {"actionId", "runtime", "output", "generationError"}:
             raise Failure("invalid_completion")
@@ -277,6 +290,9 @@ class Discovery:
                 if candidate.get("decision") == "held":
                     data["candidates"].append(candidate)
                     continue
+                current = self.store.get(scope, rid)
+                if current["state"] != "reviewing":
+                    return current
                 reasons, decision, checks = [], "held", {}
                 used = [e for e in data["evidence"] if e["id"] in candidate["evidenceIds"]]
                 if any(normalize(candidate["title"]) == normalize(p["title"]) for p in prior):
@@ -287,6 +303,9 @@ class Discovery:
                         additional = self.evidence(candidate["entity"] + " " + candidate["keyword"], candidate["id"] + "-source-")
                         data["evidence"].extend(additional)
                         used += additional
+                        current = self.store.get(scope, rid)
+                        if current["state"] != "reviewing":
+                            return current
                         data["usage"]["jevCalls"] += 1
                         response = self.jev({"state": {"request": {k:v for k,v in data["input"].items() if k != "history"}, "candidate": candidate, "evidence": used, "prior": prior}, "questions": questions(data["input"]["profile"])})
                         answers = response.get("answers", {})
@@ -307,11 +326,12 @@ class Discovery:
                     except Exception as exc:
                         reasons, decision = [exc.code if isinstance(exc, Failure) else "verification_failed"], "held"
                 data["candidates"].append({**candidate, "evidenceIds": [e["id"] for e in used], "decision": decision, "reasonCodes": reasons or ["rubric_passed"], "checks": checks})
-                # Later candidates also compare against earlier candidates, including held ones.
-                prior.append({k: candidate[k] for k in ("title", "entity", "answer")})
+                # Only accepted candidates establish duplicate history. A failed draft
+                # must not veto a corrected candidate with the same proposed title.
+                if decision == "accepted":
+                    prior.append({k: candidate[k] for k in ("title", "entity", "answer")})
             data["state"] = "complete"
         except Exception as exc:
             data.update(state="held", reasonCodes=[exc.code if isinstance(exc, Failure) else "verification_failed"])
         data["action"] = None
-        self.store.save(scope, rid, data)
-        return data
+        return self.store.save(scope, rid, data, expected="reviewing")
