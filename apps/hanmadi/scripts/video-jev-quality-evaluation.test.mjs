@@ -10,7 +10,7 @@ process.env.LITELLM_MODEL = "hanmadi-chat";
 delete process.env.HANMADI_VIDEO_REVIEW_MODEL;
 const { fixture } = loadEvaluation();
 // The transport is an oracle for harness tests only, never a quality benchmark.
-function transport({ uncertain = false, malformedContext = false, failure, wrongPass = false, falseExclude = false, hold = false } = {}) {
+function transport({ uncertain = false, malformedContext = false, failure, wrongPass = false, falseExclude = false, hold = false, referenceClaim = false, referenceError = false } = {}) {
   let calls = 0, batchIndex = -1;
   const payloads = [];
   return { count: () => calls, payloads, fetcher: async (_, init) => {
@@ -21,10 +21,11 @@ function transport({ uncertain = false, malformedContext = false, failure, wrong
     if (failure === "json") return Response.json({ private: "secret provider detail" });
     if (body.messages) {
       if (malformedContext) return Response.json({ choices: [{ finish_reason: "stop", message: { content: "secret invalid body" } }] });
-      const { candidates } = JSON.parse(body.messages[1].content);
+      const { candidates, references } = JSON.parse(body.messages[1].content);
       return Response.json({ usage: { prompt_tokens: 20, completion_tokens: 10 }, choices: [{ finish_reason: "stop", message: { content: JSON.stringify({ reviews: candidates.map(({ index }) => ({ index, detectedLanguage: fixture.batches[batchIndex].settings.language,
-        checks: Object.fromEntries(["meaning", "reading", "evidence", "relevance", "novelty"].map((k) => [k, { verdict: hold ? "uncertain" : "pass", reason: "Offline fixture reasoning", ...(k === "novelty" ? { referenceIndex: null } : {}) }])) })) }) } }] });
+        checks: Object.fromEntries(["meaning", "reading", "evidence", "relevance", "novelty"].map((k) => [k, { verdict: hold ? "uncertain" : "pass", reason: "Offline fixture reasoning", ...(k === "novelty" ? referenceClaim && index === 2 ? { verdict: "fail", reference: references[0] } : { referenceIndex: null } : {}) }])) })) }) } }] });
     }
+    if (referenceError && Object.keys(body.questions)[0].startsWith("corpus")) return Response.json({ answers: {} });
     const quality = Object.keys(body.questions).some((k) => k.startsWith("unit"));
     if (quality) batchIndex++;
     const cases = fixture.batches[batchIndex].cases;
@@ -119,4 +120,17 @@ test("unplanned context model is rejected before using any key", async () => {
   try { await assert.rejects(runQualityEvaluation({ live: true, maxRequests: 12, fetcher: t.fetcher })); }
   finally { delete process.env.HANMADI_VIDEO_REVIEW_MODEL; }
   assert.equal(t.count(), 0);
+});
+
+test("reference verification has its own stage, preserves the live cap and stops on swallowed schema failure", async () => {
+  assert.equal(evaluationPlan().maximumRequestsPerBatch, 4);
+  for (const [cap, referenceError, reason] of [[2, false, "request_limit"], [12, true, "reference_error"]]) {
+    const t = transport({ uncertain: true, referenceClaim: true, referenceError });
+    const r = await runQualityEvaluation({ live: true, maxRequests: cap, fetcher: t.fetcher });
+    assert.equal(r.stopReason, reason); assert.equal(r.complete, false);
+    assert.equal(r.referenceEvidenceComplete, false); assert.equal(r.qualityCriteriaMet, false);
+    // The current batch still dedupes its two healthy candidates; no later batch runs.
+    assert.equal(t.count(), referenceError ? 4 : 2);
+    if (referenceError) assert.equal(r.requestObservations[2].stage, "reference");
+  }
 });

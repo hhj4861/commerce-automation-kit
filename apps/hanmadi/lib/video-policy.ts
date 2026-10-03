@@ -3,7 +3,7 @@ import type { ContentDraft } from "./knowledge";
 export const VIDEO_SELECTION_LIMIT = 10;
 export const VIDEO_CONCURRENCY = 3;
 export const VIDEO_MAX_SECONDS = 15 * 60;
-export const VIDEO_RUBRIC = "hanmadi-video-jev-v9";
+export const VIDEO_RUBRIC = "hanmadi-video-jev-v10";
 export type VideoSettings = {
   language: StudyLanguage;
   scene: string;
@@ -64,6 +64,14 @@ export type ContextReview = {
     novelty: { verdict: "pass" | "fail" | "uncertain"; reason: string; referenceIndex: number | null };
   };
   referenceScope: { total: number; compared: number; digest: string };
+  // The LLM claim is not a verified duplicate. Only a confident pair result
+  // may populate matchedReference for new reviews.
+  claimedReference?: ReviewReference & { kind: "corpus"; id: string };
+  referenceVerification?: {
+    outcome: "pending" | "duplicate" | "distinct" | "uncertain" | "error";
+    model?: string;
+    evaluation?: Omit<VideoPairEvaluation, "referenceIndex" | "used">;
+  };
   matchedReference?: ReviewReference;
 };
 export type VideoDisposition = "accepted" | "review" | "excluded";
@@ -153,7 +161,7 @@ export function applyContextReview(j: VideoJudgment, review: ContextReview): Vid
   if (failed) return { ...result, accepted: false, disposition: "excluded",
     choice: "unreliable",
     reason: "context_review_failed", decidingCheck: failed };
-  if (review.outcome !== "pass" || VIDEO_CHECKS.some((k) => review.checks![k].verdict !== "pass")) return result;
+  if (review.claimedReference || review.outcome !== "pass" || VIDEO_CHECKS.some((k) => review.checks![k].verdict !== "pass")) return result;
   return { ...result, accepted: true, disposition: "accepted", choice: "useful", reason: "context_review", decidingCheck: undefined };
 }
 export function videoDisposition(j: VideoJudgment): VideoDisposition {
@@ -185,7 +193,7 @@ export function videoJudgmentReason(j: VideoJudgment) {
     ? ` · 언어 검수(${j.languageReview.model}): ${ { pass: "통과", fail: "오류", uncertain: "불확실", error: "연결·응답 확인 필요" }[j.languageReview.outcome]}${j.languageReview.checks ? ` · ${LANGUAGE_CHECKS.map((k) => j.languageReview!.checks![k].reason).join(" / ")}` : ""}`
     : "";
   const context = j.contextReview
-    ? ` · 문맥 교차 검수(${j.contextReview.model}): ${{ pass: "통과", fail: "오류·이견 발견", uncertain: "불확실", error: j.contextReview.responseIssue === "invalid_reference" ? "중복 참조 형식 확인 필요" : j.contextReview.responseIssue ? "후보 응답 형식 확인 필요" : "연결·응답 확인 필요" }[j.contextReview.outcome]}${j.contextReview.checks ? ` · ${VIDEO_CHECKS.map((k) => j.contextReview!.checks![k].reason).join(" / ")}` : ""} · 비교 자료 ${j.contextReview.referenceScope.compared}/${j.contextReview.referenceScope.total}개${j.contextReview.matchedReference ? ` · 중복 대상: ${j.contextReview.matchedReference.text}` : ""}`
+    ? ` · 문맥 교차 검수(${j.contextReview.model}): ${{ pass: "통과", fail: "오류·이견 발견", uncertain: "불확실", error: j.contextReview.responseIssue === "invalid_reference" ? "중복 참조 형식 확인 필요" : j.contextReview.responseIssue ? "후보 응답 형식 확인 필요" : "연결·응답 확인 필요" }[j.contextReview.outcome]}${j.contextReview.checks ? ` · ${VIDEO_CHECKS.map((k) => k === "novelty" && j.contextReview!.claimedReference && j.contextReview!.referenceVerification?.outcome !== "duplicate" ? "중복 주장 근거 미확인" : j.contextReview!.checks![k].reason).join(" / ")}` : ""}${j.contextReview.referenceVerification ? ` · 참조 검증: ${{ pending: "대기", duplicate: "중복 확인", distinct: "서로 다른 의도로 판정·주장 불일치", uncertain: "불확실", error: "연결·응답 확인 필요" }[j.contextReview.referenceVerification.outcome]}` : ""} · 비교 자료 ${j.contextReview.referenceScope.compared}/${j.contextReview.referenceScope.total}개${j.contextReview.matchedReference ? ` · 중복 대상: ${j.contextReview.matchedReference.text}` : ""}`
     : "";
   return `평가 분류: ${choice}${check ? ` (${check})` : ""} · ${j.reason ? reasons[j.reason] : videoJudgmentLabel(j)}${language}${context}`;
 }
