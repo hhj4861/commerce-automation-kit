@@ -1,5 +1,6 @@
 import {parseArgs,promisify} from 'node:util';
 import {execFile} from 'node:child_process';
+import {discoveryRuntimeEnv} from './runtime-config.mjs';
 import {createDiscoveryClient} from './client.mjs';
 import {createCodexGenerator,codexEnvironment} from '../../apps/shopshorts/studio-codex.mjs';
 import {generateClaude,claudeEnvironment} from '../../apps/shopshorts/studio-account-claude.mjs';
@@ -14,7 +15,8 @@ try {
     else {const {stdout}=await exec('claude',['auth','status','--json'],{timeout:15000,maxBuffer:10000,env:values.provider==='codex'?codexEnvironment(process.env):claudeEnvironment(process.env)});if(JSON.parse(stdout).loggedIn!==true)throw Error('connection_unavailable');}
   };
   const generate=values.provider==='codex'?createCodexGenerator():generateClaude(process.env);
-  const client=createDiscoveryClient({baseUrl:process.env.DISCOVERY_URL,apiKey:process.env.DISCOVERY_API_KEY,subject:process.env.DISCOVERY_SUBJECT,allowLocalhost:process.env.DISCOVERY_ALLOW_LOCALHOST==='1'});
+  const env=await discoveryRuntimeEnv({...process.env,DISCOVERY_ENABLED:'1'},process.env.DISCOVERY_PLATFORM||'cli');
+  const client=createDiscoveryClient({baseUrl:env.DISCOVERY_URL,apiKey:env.DISCOVERY_API_KEY,subject:env.DISCOVERY_SUBJECT,allowLocalhost:env.DISCOVERY_ALLOW_LOCALHOST==='1'});
   const result=await client.discover(input,{idempotencyKey:values['request-id'],assertConnection,generate:async(prompt,{signal})=>(await generate(prompt,{signal,draftOnly:true,model:values.model==='provider-default'?undefined:values.model})).value});
   process.stdout.write(JSON.stringify(result)+'\n');
   if(result.state!=='complete'||!result.candidates.some(c=>c.decision==='accepted'))process.exitCode=2;
