@@ -5,7 +5,7 @@ import threading
 import unittest
 from pathlib import Path
 from unittest.mock import Mock
-from service import Discovery, Store, Failure, questions, VERSION
+from service import Discovery, Store, Failure, questions, search_query, candidate_query, parse_candidates, VERSION
 from server import make_server
 from client import DiscoveryClient, DiscoveryError
 
@@ -29,15 +29,68 @@ class Tests(unittest.TestCase):
     def complete(self,request,items=None,subject=SUBJECT):
         scope=self.d.scope('shopshorts',subject)
         self.store.claim(scope,request['requestId'],request['action']['id'])
-        body={'actionId':request['action']['id'],'runtime':INPUT['runtime'],'output':{'candidates':items or [candidate()]}}
+        body={'actionId':request['action']['id'],'runtime':INPUT['runtime'],'output':{'candidates':items if items is not None else [candidate()]}}
         return self.d.complete('shopshorts',subject,request['requestId'],body),body
     def test_success_and_semantic_rubric(self):
         result,_=self.complete(self.start())
         self.assertEqual(result['candidates'][0]['decision'],'accepted')
         self.assertFalse(result['factChecked']);self.assertTrue(result['requiresHumanReview'])
-        self.assertIn('duplicate',self.jev.call_args.args[0]['questions'])
+        self.assertNotIn('duplicate',self.jev.call_args.args[0]['questions'])
+        self.assertEqual(result['candidates'][0]['checks']['duplicate'],{'status':'not_applicable','reason':'no_prior'})
         self.assertEqual(result['usage']['searchCalls'],2)
+        self.assertEqual(result['candidates'][0]['draftEvidenceIds'],['source-1'])
         self.assertIsNone(result['usage']['costUsd'])
+    def test_explicit_subject_search_excludes_category_and_generation_instructions(self):
+        self.assertEqual(search_query({**INPUT,'brief':'포항 스페이스워크 구조 설계\n60초 영상으로 만들어 주세요'}),'포항 스페이스워크 구조 설계')
+        self.assertEqual(search_query({**INPUT,'brief':'"스페이스워크" site:newsroom.posco.com\n영상 1개'}),'"스페이스워크" site:newsroom.posco.com')
+        self.assertEqual(search_query({**INPUT,'category':'테크','brief':'실제 사례와 일상에 도움이 되는 의외의 답을 갖춘 블로그 주제를 찾습니다. 독자는 한국어 사용자입니다. 허위 사용 후기와 효능을 만들지 마세요.'}),'생활 기술 연구 사례')
+    def test_followup_search_preserves_entity_even_for_generic_keyword(self):
+        self.assertEqual(candidate_query({'entity':'포항 스페이스워크','keyword':'구조 설계'}),'포항 스페이스워크 구조 설계')
+        self.assertEqual(candidate_query({'entity':'포항 스페이스워크','keyword':'포항 스페이스워크 구조'}),'포항 스페이스워크 구조')
+        c={**candidate(),'entity':'포항 스페이스워크','keyword':'구조 설계'}
+        self.complete(self.start(),[c])
+        self.assertEqual(self.search.call_args.args[0],'포항 스페이스워크 구조 설계')
+    def test_specific_domestic_case_hint_is_not_replaced_with_generic_seed(self):
+        self.assertEqual(search_query({**INPUT,'brief':'국내 실제 경복궁 근정전 설계'}),'국내 실제 경복궁 근정전 설계')
+    def test_search_ignores_blank_lines_and_only_replaces_exact_defaults(self):
+        for brief,expected in [
+            ('\n  \n포항 스페이스워크 구조 설계', '포항 스페이스워크 구조 설계'),
+            ('실제 사례: 포항 스페이스워크 구조를 조사해줘', '실제 사례: 포항 스페이스워크 구조를 조사해줘'),
+            ('실제 사례 의외의 원리 포항 스페이스워크', '실제 사례 의외의 원리 포항 스페이스워크'),
+            ('실제 사례 의외의 원리\n그림 중심', '국내 이색 건축물 설계'),
+        ]:
+            self.assertEqual(search_query({**INPUT,'brief':brief}),expected)
+    def test_empty_candidates_hold_without_more_search_or_review(self):
+        result,body=self.complete(self.start(),[])
+        self.assertEqual(result['state'],'held')
+        self.assertEqual(result['reasonCodes'],['no_grounded_candidates'])
+        self.assertEqual(result['usage']['searchCalls'],1)
+        self.assertEqual(result['usage']['generationClaims'],1)
+        self.assertEqual(result['usage']['jevCalls'],0)
+        self.assertIsNone(result['action'])
+        self.search.assert_called_once();self.jev.assert_not_called()
+        self.assertEqual(self.d.complete('shopshorts',SUBJECT,result['requestId'],body),result)
+    def test_no_grounded_candidate_is_not_malformed_output(self):
+        with self.assertRaises(Failure) as empty:parse_candidates({'candidates':[]},[])
+        self.assertEqual(empty.exception.code,'no_grounded_candidates')
+        with self.assertRaises(Failure) as invalid:parse_candidates({'suggestions':[]},[])
+        self.assertEqual(invalid.exception.code,'invalid_candidates')
+    def test_empty_history_only_skips_duplicate_before_first_acceptance(self):
+        result,_=self.complete(self.start(),[candidate('첫 후보'),candidate('둘째 후보')])
+        self.assertNotIn('duplicate',self.jev.call_args_list[0].args[0]['questions'])
+        self.assertIn('duplicate',self.jev.call_args_list[1].args[0]['questions'])
+        self.assertEqual(result['candidates'][0]['checks']['duplicate']['reason'],'no_prior')
+        self.assertEqual(result['candidates'][1]['checks']['duplicate']['choice'],'pass')
+        self.complete(self.start(key='persisted-history'),[candidate('셋째 후보')])
+        self.assertIn('duplicate',self.jev.call_args.args[0]['questions'])
+    def test_imported_history_keeps_duplicate_review_and_scores_are_preserved(self):
+        result,_=self.complete(self.start(value={**INPUT,'history':[{'title':'이전 주제','entity':'다른 장소','answer':'다른 설명'}]}))
+        self.assertIn('duplicate',self.jev.call_args.args[0]['questions'])
+        checks=result['candidates'][0]['checks']['support']
+        self.assertEqual(checks['probabilities'],{'pass':.95,'reject':.025,'uncertain':.025})
+        self.assertAlmostEqual(checks['margin'],.925)
+        self.assertEqual(checks['rubricVersion'],VERSION)
+        self.assertIsNone(checks['model']) # fixtures do not pretend to be an observed provider model
     def test_idempotent_start_and_completion_no_second_spend(self):
         first=self.start();same=self.start();self.assertEqual(first['requestId'],same['requestId']);self.assertEqual(self.search.call_count,1)
         result,body=self.complete(first)

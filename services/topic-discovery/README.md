@@ -113,3 +113,32 @@ Blog OIDC is off until `GITHUB_BLOG_DISCOVERY_ENABLED=true`. Only immutable blog
 - Rollout remains pending follow-up PR approval, central secret provisioning, edge/service activation, and real-account quality checks. Passing fixtures or an image build is not production activation.
 
 Follow-up validation: the isolated VM image `cak-discovery:ca-trust-check` built successfully. Python reported 150 trusted CA certificates and reached the official Naver search endpoint with TLS verification enabled, returning expected unauthenticated HTTP 401. No API keys/model calls were used. Broker, account and recommendation fixtures passed (129 JS tests total across the regression run and one added boundary case); Python server tests passed 18/18.
+
+
+### Actual rollout and acceptance — 2026-10-03
+
+Commerce #132 (`e6df2e05d3e531964ff8ade80bf0b47e1e75155b`) and blog #79 (`0704f07c328417507bbb2dc846e93da420352ed9`) were explicitly approved and merged. The approved discovery service and edge are deployed on `shared-ai` in `replay-live-508202`, `us-central1-a`; the release is `/opt/shared-ai/releases/discovery-e6df2e05d3e531964ff8ade80bf0b47e1e75155b`. Private runtime configuration/data live in `/opt/shared-ai/discovery`, not in the release or iCloud. The discovery container is healthy, private health returns 200, and the public edge rejects anonymous discovery with 401 and does not expose private health (404). Existing gateway/account/Dify containers were not restarted.
+
+Cloudflare broker version `43bbf411-5d4f-43b4-a856-3c3267d9e181` is deployed with the five discovery bindings registered. Four operator platform-scoped credential retrievals succeeded. Blog OIDC delivery is enabled, but **blog recommendation activation remains off**. Shopshorts worker activation and persistent CLI/venture runtime settings also remain pending. Pages was not redeployed; no UI activation is claimed.
+
+Live checks used existing Codex subscription authentication, official Naver search, and the existing Jev SDK. No publishing occurred:
+
+| Request / evidence | Actual result |
+| --- | --- |
+| CLI `e9cda3d2-46b8-405d-b4ed-909c74c76bf8` | Search 1, draft claim 1, Jev 0; empty generated candidate list was reported as `invalid_candidates` by v1. |
+| CLI `5e52f07b-9182-43b5-9b2d-6c26ffc32d7b` | Search 2, draft claim 1, Jev 1; candidate held, support confidence .19. |
+| CLI `7a9190a1-9a51-4412-91bc-213854b3d5d7` | Search 2, draft claim 1, Jev 1; candidate held, support confidence .29 despite focused official-source search. |
+| Blog run [37101898239](https://github.com/hhj4861/wp-auto-blog/actions/runs/37101898239), request `e531c7d4-800f-477e-9350-58c56ff0429e` | Scoped OIDC and native Codex restoration succeeded; no verified topics. Auth cleanup succeeded; no publication. |
+
+An isolated comparison of the proposed v1.1 rubric against the last saved case produced relevance .97 / support .30 / value .97 and still did **not** pass. This was an offline payload comparison (saved expanded evidence IDs), not a deployed v1.1 acceptance test. All factual claims in titles/hooks/directions remain subject to evidence review. No confidence/probability/margin threshold was lowered. Search snippets can be insufficient to substantiate a causal explanation; successful transport must not be reported as successful research acceptance.
+
+The discovery-only operating Jev key is limited to `jev-1.13.0` and `/typesafe/v1/systemone`, 10 RPM, USD 1 per 30 days, expiring **2026-11-02 06:00:33 UTC**. Wrong route and model probes returned 403. The key is intentionally retained for this service; it is not a disposable test key. Rotation before expiry is required and is not automated here. Key metadata and the scoped gateway spend ledger agreed on **USD 0.000512274** (four ledger records) at this check; this is measured Jev gateway cost, not total search/subscription cost. No keys are included in this document.
+
+### Proposed discovery-v1.1 correction (not deployed)
+
+- Search the first nonempty subject line without a category prefix; use category seeds only for exact known generic defaults. Preserve explicit subjects and separate Shopshorts production instructions onto later lines without duplicating free text in JSON. Maximum allowed topic/direction inputs (including JSON escape characters) remain within the server input limit without truncation. Follow-up searches retain the actual entity and remove repeated words.
+- Treat an empty valid draft as `no_grounded_candidates`, with no extra search/review spend; distinguish it from malformed output. Shopshorts uses its existing no-verified-topic guidance, not an account reconnection error.
+- Omit semantic duplicate review only when combined server/imported/batch accepted history is genuinely empty, recording `not_applicable/no_prior` rather than inventing a confidence score. Preserve draft evidence IDs, probabilities, margin, observed model (nullable), and rubric version for diagnosis.
+- Local tests: 26 Python server/HTTP tests and 11 JS transport/Shopshorts tests passed; 11 existing recommendation tests also passed. Fixtures demonstrate failure handling and boundaries, not live acceptance quality. The existing Jev core/SDK is unchanged; its owning Codex session reviewed the integration boundary.
+
+**Remaining before activation:** approve and deploy the follow-up correction, demonstrate evidence-supported accepted topics with real selected accounts, verify the authenticated Shopshorts flow and revocation, rerun the blog no-publication check, then enable each client. Do not silently fall back or force acceptance to complete a rollout. Existing recommendation paths stay in place until then.
