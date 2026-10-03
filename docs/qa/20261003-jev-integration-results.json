@@ -1,0 +1,845 @@
+{
+  "revision": "99d6dbaf751e455c449a094101a2eb3fa1586664",
+  "preCallControlsSha256": "0c5012abcfe8bb89eb22dbea32dbecaaefd4fc007912cb835ab426be24b25966",
+  "ledgerBefore": {
+    "records": 8,
+    "usd": 0.00110628
+  },
+  "ledgerAfter": {
+    "records": 12,
+    "usd": 0.001526952
+  },
+  "ledgerDeltaUsd": 0.000420672,
+  "tunnelExited": true,
+  "controls": {
+    "controls": [
+      {
+        "case": "supported",
+        "provisionalSupport": "supported",
+        "expectedDecision": "accepted",
+        "replayUnchanged": true,
+        "searchFixtureCalls": 2,
+        "result": {
+          "action": null,
+          "candidates": [
+            {
+              "title": "예술 건축물 안에서 책을 읽는다고?",
+              "entity": "안양파빌리온",
+              "location": "안양",
+              "question": "안양파빌리온에서는 건물 감상 말고 무엇을 할 수 있을까?",
+              "expectedAnswer": "건축물과 전시 작품을 보는 공간이라고 예상할 수 있다.",
+              "answer": "안양파빌리온은 공공예술도서관으로 책을 읽을 수 있는 공간이다.",
+              "whyItMatters": "건축물을 감상하는 방문과 책을 읽는 시간을 함께 계획할 수 있다.",
+              "direction": "건축 외관에서 책을 읽는 공간으로 넘어가는 도입을 제안한다.",
+              "keyword": "안양파빌리온 도서관",
+              "openingVisual": "건축 외관을 먼저 보여주고 책을 펼치는 장면으로 이어지는 연출을 제안한다.",
+              "evidenceIds": [
+                "source-1",
+                "lead-1-source-1",
+                "lead-1-source-2"
+              ],
+              "id": "candidate-1",
+              "leadId": "lead-1",
+              "draftEvidenceIds": [
+                "source-1",
+                "lead-1-source-2"
+              ],
+              "decision": "held",
+              "reasonCodes": [
+                "support_uncertain"
+              ],
+              "checks": {
+                "duplicate": {
+                  "status": "not_applicable",
+                  "reason": "no_prior"
+                },
+                "relevance": {
+                  "choice": "pass",
+                  "confidence": 0.96,
+                  "probabilities": {
+                    "pass": 0.98,
+                    "reject": 0.02,
+                    "uncertain": 0
+                  },
+                  "margin": 0.96,
+                  "model": "jev-1.13.0",
+                  "rubricVersion": "discovery-v2"
+                },
+                "support": {
+                  "choice": "pass",
+                  "confidence": 0.21,
+                  "probabilities": {
+                    "pass": 0.48,
+                    "reject": 0.4,
+                    "uncertain": 0.12
+                  },
+                  "margin": 0.07999999999999996,
+                  "model": "jev-1.13.0",
+                  "rubricVersion": "discovery-v2"
+                },
+                "value": {
+                  "choice": "pass",
+                  "confidence": 0.9,
+                  "probabilities": {
+                    "pass": 0.9299999999999999,
+                    "reject": 0.06,
+                    "uncertain": 0.01
+                  },
+                  "margin": 0.8699999999999999,
+                  "model": "jev-1.13.0",
+                  "rubricVersion": "discovery-v2"
+                }
+              }
+            }
+          ],
+          "createdAt": 1791023628.4952695,
+          "evidence": [
+            {
+              "excerpt": "안양 파빌리온 도서관은 한때 쇠락했던 유원지를 예술공원으로 탈바꿈시킨 안양공공예술프로젝트(Anyang Public Art Project, APAP)의 일환으로 탄생한, 국내 최초의 공공예술도서관입니다. 책을 읽는 공간을 넘어 예술과 사색....",
+              "id": "source-1",
+              "kind": "search_excerpt",
+              "retrievedAt": 1791023628.5040314,
+              "title": "[경기 이색 도서관] ⑤ 안양파빌리온",
+              "url": "https://gnews.gg.go.kr/news/news_view.do?number=202510280911419187C049"
+            },
+            {
+              "excerpt": "규모 : 526.9㎡규모의 현대미술전시관, 특징 : 2005년 안양공공예술프로젝트(APAP)의 일환으로 조성된 조형 예술물 세계적인 건축가 알바로시자가 아시아 최초로 주변경관과 어울리는 반구형으로 설계한 디자인",
+              "id": "source-2",
+              "kind": "search_excerpt",
+              "retrievedAt": 1791023628.50405,
+              "title": "안양파빌리온 | 시설현황 | 시설/대관",
+              "url": "https://ayac.or.kr/base/contents/view?contentsNo=30&menuLevel=3&menuNo=36"
+            },
+            {
+              "excerpt": "안양 파빌리온 도서관은 한때 쇠락했던 유원지를 예술공원으로 탈바꿈시킨 안양공공예술프로젝트(Anyang Public Art Project, APAP)의 일환으로 탄생한, 국내 최초의 공공예술도서관입니다. 책을 읽는 공간을 넘어 예술과 사색....",
+              "id": "lead-1-source-1",
+              "kind": "search_excerpt",
+              "retrievedAt": 1791023628.526616,
+              "title": "[경기 이색 도서관] ⑤ 안양파빌리온",
+              "url": "https://gnews.gg.go.kr/news/news_view.do?number=202510280911419187C049"
+            },
+            {
+              "excerpt": "규모 : 526.9㎡규모의 현대미술전시관, 특징 : 2005년 안양공공예술프로젝트(APAP)의 일환으로 조성된 조형 예술물 세계적인 건축가 알바로시자가 아시아 최초로 주변경관과 어울리는 반구형으로 설계한 디자인",
+              "id": "lead-1-source-2",
+              "kind": "search_excerpt",
+              "retrievedAt": 1791023628.5266278,
+              "title": "안양파빌리온 | 시설현황 | 시설/대관",
+              "url": "https://ayac.or.kr/base/contents/view?contentsNo=30&menuLevel=3&menuNo=36"
+            }
+          ],
+          "expiresAt": 1791024228.4952695,
+          "factChecked": false,
+          "reasonCodes": [],
+          "requestId": "57306578-f945-45ce-ad76-7465b0922ce9",
+          "requiresHumanReview": true,
+          "researchFailures": [],
+          "researchLeads": [
+            {
+              "draftEvidenceIds": [
+                "source-1"
+              ],
+              "entity": "안양파빌리온",
+              "evidenceIds": [
+                "source-1",
+                "lead-1-source-1",
+                "lead-1-source-2"
+              ],
+              "id": "lead-1",
+              "keyword": "안양파빌리온 도서관",
+              "question": "건물 감상 외에 무엇을 할 수 있나?"
+            }
+          ],
+          "rubricVersion": "discovery-v2",
+          "state": "complete",
+          "usage": {
+            "costUsd": null,
+            "generationClaims": 2,
+            "jevCalls": 1,
+            "searchCalls": 2
+          }
+        }
+      },
+      {
+        "case": "insufficient",
+        "provisionalSupport": "insufficient",
+        "expectedDecision": "held",
+        "replayUnchanged": true,
+        "searchFixtureCalls": 2,
+        "result": {
+          "action": null,
+          "candidates": [
+            {
+              "title": "예술 건축물 안에서 책을 읽는다고?",
+              "entity": "안양파빌리온",
+              "location": "안양",
+              "question": "안양파빌리온에서는 건물 감상 말고 무엇을 할 수 있을까?",
+              "expectedAnswer": "건축물과 전시 작품을 보는 공간이라고 예상할 수 있다.",
+              "answer": "안양파빌리온은 공공예술도서관이다. 반구형 지붕은 속삭이는 소리를 건너편 좌석까지 전달하도록 설계되었다.",
+              "whyItMatters": "건축물을 감상하는 방문과 책을 읽는 시간을 함께 계획할 수 있다.",
+              "direction": "건축 외관에서 책을 읽는 공간으로 넘어가는 도입을 제안한다.",
+              "keyword": "안양파빌리온 도서관",
+              "openingVisual": "건축 외관을 먼저 보여주고 책을 펼치는 장면으로 이어지는 연출을 제안한다.",
+              "evidenceIds": [
+                "source-1",
+                "lead-1-source-1",
+                "lead-1-source-2"
+              ],
+              "id": "candidate-1",
+              "leadId": "lead-1",
+              "draftEvidenceIds": [
+                "source-1",
+                "lead-1-source-2"
+              ],
+              "decision": "held",
+              "reasonCodes": [
+                "support_uncertain"
+              ],
+              "checks": {
+                "duplicate": {
+                  "status": "not_applicable",
+                  "reason": "no_prior"
+                },
+                "relevance": {
+                  "choice": "pass",
+                  "confidence": 0.93,
+                  "probabilities": {
+                    "pass": 0.96,
+                    "reject": 0.04,
+                    "uncertain": 0
+                  },
+                  "margin": 0.9199999999999999,
+                  "model": "jev-1.13.0",
+                  "rubricVersion": "discovery-v2"
+                },
+                "support": {
+                  "choice": "reject",
+                  "confidence": 0.66,
+                  "probabilities": {
+                    "pass": 0.08,
+                    "reject": 0.77,
+                    "uncertain": 0.15
+                  },
+                  "margin": 0.62,
+                  "model": "jev-1.13.0",
+                  "rubricVersion": "discovery-v2"
+                },
+                "value": {
+                  "choice": "pass",
+                  "confidence": 0.88,
+                  "probabilities": {
+                    "pass": 0.91,
+                    "reject": 0.08,
+                    "uncertain": 0.01
+                  },
+                  "margin": 0.8300000000000001,
+                  "model": "jev-1.13.0",
+                  "rubricVersion": "discovery-v2"
+                }
+              }
+            }
+          ],
+          "createdAt": 1791023629.0874643,
+          "evidence": [
+            {
+              "excerpt": "안양 파빌리온 도서관은 한때 쇠락했던 유원지를 예술공원으로 탈바꿈시킨 안양공공예술프로젝트(Anyang Public Art Project, APAP)의 일환으로 탄생한, 국내 최초의 공공예술도서관입니다. 책을 읽는 공간을 넘어 예술과 사색....",
+              "id": "source-1",
+              "kind": "search_excerpt",
+              "retrievedAt": 1791023629.097963,
+              "title": "[경기 이색 도서관] ⑤ 안양파빌리온",
+              "url": "https://gnews.gg.go.kr/news/news_view.do?number=202510280911419187C049"
+            },
+            {
+              "excerpt": "규모 : 526.9㎡규모의 현대미술전시관, 특징 : 2005년 안양공공예술프로젝트(APAP)의 일환으로 조성된 조형 예술물 세계적인 건축가 알바로시자가 아시아 최초로 주변경관과 어울리는 반구형으로 설계한 디자인",
+              "id": "source-2",
+              "kind": "search_excerpt",
+              "retrievedAt": 1791023629.0979788,
+              "title": "안양파빌리온 | 시설현황 | 시설/대관",
+              "url": "https://ayac.or.kr/base/contents/view?contentsNo=30&menuLevel=3&menuNo=36"
+            },
+            {
+              "excerpt": "안양 파빌리온 도서관은 한때 쇠락했던 유원지를 예술공원으로 탈바꿈시킨 안양공공예술프로젝트(Anyang Public Art Project, APAP)의 일환으로 탄생한, 국내 최초의 공공예술도서관입니다. 책을 읽는 공간을 넘어 예술과 사색....",
+              "id": "lead-1-source-1",
+              "kind": "search_excerpt",
+              "retrievedAt": 1791023629.1178954,
+              "title": "[경기 이색 도서관] ⑤ 안양파빌리온",
+              "url": "https://gnews.gg.go.kr/news/news_view.do?number=202510280911419187C049"
+            },
+            {
+              "excerpt": "규모 : 526.9㎡규모의 현대미술전시관, 특징 : 2005년 안양공공예술프로젝트(APAP)의 일환으로 조성된 조형 예술물 세계적인 건축가 알바로시자가 아시아 최초로 주변경관과 어울리는 반구형으로 설계한 디자인",
+              "id": "lead-1-source-2",
+              "kind": "search_excerpt",
+              "retrievedAt": 1791023629.117906,
+              "title": "안양파빌리온 | 시설현황 | 시설/대관",
+              "url": "https://ayac.or.kr/base/contents/view?contentsNo=30&menuLevel=3&menuNo=36"
+            }
+          ],
+          "expiresAt": 1791024229.0874643,
+          "factChecked": false,
+          "reasonCodes": [],
+          "requestId": "36f33b60-c384-4b42-8d1c-448245acd715",
+          "requiresHumanReview": true,
+          "researchFailures": [],
+          "researchLeads": [
+            {
+              "draftEvidenceIds": [
+                "source-1"
+              ],
+              "entity": "안양파빌리온",
+              "evidenceIds": [
+                "source-1",
+                "lead-1-source-1",
+                "lead-1-source-2"
+              ],
+              "id": "lead-1",
+              "keyword": "안양파빌리온 도서관",
+              "question": "건물 감상 외에 무엇을 할 수 있나?"
+            }
+          ],
+          "rubricVersion": "discovery-v2",
+          "state": "complete",
+          "usage": {
+            "costUsd": null,
+            "generationClaims": 2,
+            "jevCalls": 1,
+            "searchCalls": 2
+          }
+        }
+      },
+      {
+        "case": "contradicted",
+        "provisionalSupport": "contradicted",
+        "expectedDecision": "rejected",
+        "replayUnchanged": true,
+        "searchFixtureCalls": 2,
+        "result": {
+          "action": null,
+          "candidates": [
+            {
+              "title": "예술 건축물 안에서 책을 읽는다고?",
+              "entity": "안양파빌리온",
+              "location": "안양",
+              "question": "안양파빌리온에서는 건물 감상 말고 무엇을 할 수 있을까?",
+              "expectedAnswer": "건축물과 전시 작품을 보는 공간이라고 예상할 수 있다.",
+              "answer": "안양파빌리온은 도서관이 아니며 책을 읽는 공간도 없다.",
+              "whyItMatters": "건축물을 감상하는 방문과 책을 읽는 시간을 함께 계획할 수 있다.",
+              "direction": "건축 외관에서 책을 읽는 공간으로 넘어가는 도입을 제안한다.",
+              "keyword": "안양파빌리온 도서관",
+              "openingVisual": "건축 외관을 먼저 보여주고 책을 펼치는 장면으로 이어지는 연출을 제안한다.",
+              "evidenceIds": [
+                "source-1",
+                "lead-1-source-1",
+                "lead-1-source-2"
+              ],
+              "id": "candidate-1",
+              "leadId": "lead-1",
+              "draftEvidenceIds": [
+                "source-1",
+                "lead-1-source-2"
+              ],
+              "decision": "held",
+              "reasonCodes": [
+                "relevance_uncertain",
+                "support_rejected",
+                "value_uncertain"
+              ],
+              "checks": {
+                "duplicate": {
+                  "status": "not_applicable",
+                  "reason": "no_prior"
+                },
+                "relevance": {
+                  "choice": "pass",
+                  "confidence": 0.42,
+                  "probabilities": {
+                    "pass": 0.61,
+                    "reject": 0.38,
+                    "uncertain": 0.01
+                  },
+                  "margin": 0.22999999999999998,
+                  "model": "jev-1.13.0",
+                  "rubricVersion": "discovery-v2"
+                },
+                "support": {
+                  "choice": "reject",
+                  "confidence": 0.99,
+                  "probabilities": {
+                    "pass": 0,
+                    "reject": 1,
+                    "uncertain": 0
+                  },
+                  "margin": 1,
+                  "model": "jev-1.13.0",
+                  "rubricVersion": "discovery-v2"
+                },
+                "value": {
+                  "choice": "pass",
+                  "confidence": 0.38,
+                  "probabilities": {
+                    "pass": 0.59,
+                    "reject": 0.4,
+                    "uncertain": 0.01
+                  },
+                  "margin": 0.18999999999999995,
+                  "model": "jev-1.13.0",
+                  "rubricVersion": "discovery-v2"
+                }
+              }
+            }
+          ],
+          "createdAt": 1791023629.5547504,
+          "evidence": [
+            {
+              "excerpt": "안양 파빌리온 도서관은 한때 쇠락했던 유원지를 예술공원으로 탈바꿈시킨 안양공공예술프로젝트(Anyang Public Art Project, APAP)의 일환으로 탄생한, 국내 최초의 공공예술도서관입니다. 책을 읽는 공간을 넘어 예술과 사색....",
+              "id": "source-1",
+              "kind": "search_excerpt",
+              "retrievedAt": 1791023629.5638106,
+              "title": "[경기 이색 도서관] ⑤ 안양파빌리온",
+              "url": "https://gnews.gg.go.kr/news/news_view.do?number=202510280911419187C049"
+            },
+            {
+              "excerpt": "규모 : 526.9㎡규모의 현대미술전시관, 특징 : 2005년 안양공공예술프로젝트(APAP)의 일환으로 조성된 조형 예술물 세계적인 건축가 알바로시자가 아시아 최초로 주변경관과 어울리는 반구형으로 설계한 디자인",
+              "id": "source-2",
+              "kind": "search_excerpt",
+              "retrievedAt": 1791023629.5638201,
+              "title": "안양파빌리온 | 시설현황 | 시설/대관",
+              "url": "https://ayac.or.kr/base/contents/view?contentsNo=30&menuLevel=3&menuNo=36"
+            },
+            {
+              "excerpt": "안양 파빌리온 도서관은 한때 쇠락했던 유원지를 예술공원으로 탈바꿈시킨 안양공공예술프로젝트(Anyang Public Art Project, APAP)의 일환으로 탄생한, 국내 최초의 공공예술도서관입니다. 책을 읽는 공간을 넘어 예술과 사색....",
+              "id": "lead-1-source-1",
+              "kind": "search_excerpt",
+              "retrievedAt": 1791023629.5865517,
+              "title": "[경기 이색 도서관] ⑤ 안양파빌리온",
+              "url": "https://gnews.gg.go.kr/news/news_view.do?number=202510280911419187C049"
+            },
+            {
+              "excerpt": "규모 : 526.9㎡규모의 현대미술전시관, 특징 : 2005년 안양공공예술프로젝트(APAP)의 일환으로 조성된 조형 예술물 세계적인 건축가 알바로시자가 아시아 최초로 주변경관과 어울리는 반구형으로 설계한 디자인",
+              "id": "lead-1-source-2",
+              "kind": "search_excerpt",
+              "retrievedAt": 1791023629.5865698,
+              "title": "안양파빌리온 | 시설현황 | 시설/대관",
+              "url": "https://ayac.or.kr/base/contents/view?contentsNo=30&menuLevel=3&menuNo=36"
+            }
+          ],
+          "expiresAt": 1791024229.5547504,
+          "factChecked": false,
+          "reasonCodes": [],
+          "requestId": "6aa66f1e-c15a-4e51-a110-ab4225ef46d4",
+          "requiresHumanReview": true,
+          "researchFailures": [],
+          "researchLeads": [
+            {
+              "draftEvidenceIds": [
+                "source-1"
+              ],
+              "entity": "안양파빌리온",
+              "evidenceIds": [
+                "source-1",
+                "lead-1-source-1",
+                "lead-1-source-2"
+              ],
+              "id": "lead-1",
+              "keyword": "안양파빌리온 도서관",
+              "question": "건물 감상 외에 무엇을 할 수 있나?"
+            }
+          ],
+          "rubricVersion": "discovery-v2",
+          "state": "complete",
+          "usage": {
+            "costUsd": null,
+            "generationClaims": 2,
+            "jevCalls": 1,
+            "searchCalls": 2
+          }
+        }
+      }
+    ]
+  },
+  "fresh": {
+    "revision": "99d6dbaf751e455c449a094101a2eb3fa1586664",
+    "environment": "isolated remote QA over authenticated SSH tunnel; scoped key from Cloudflare broker",
+    "elapsedSeconds": 42.6,
+    "exitCode": 2,
+    "input": {
+      "profile": "content",
+      "category": "건축학",
+      "brief": "포항 스페이스워크 롤러코스터 계단\n한국 시청자에게 의외의 실제 건축 사례를 소개할 쇼츠 주제 한 개를 제안하세요. 실제로 무엇을 하는 장소인지, 생김새 때문에 어떤 오해가 생기는지 제공된 근거만으로 설명하세요. 확인되지 않는 구조 안전 수치나 세계 최초 주장을 추가하지 마세요."
+    },
+    "result": {
+      "action": null,
+      "candidates": [
+        {
+          "answer": "스페이스워크는 달리는 놀이기구가 아니라 사람이 계단을 직접 걸어 올라가는 보행형 조형물입니다. 롤러코스터를 닮은 곡선이 첫인상을 만들지만, 실제 이용 방식은 걷기입니다.",
+          "checks": {
+            "duplicate": {
+              "reason": "no_prior",
+              "status": "not_applicable"
+            },
+            "relevance": {
+              "choice": "pass",
+              "confidence": 0.99,
+              "margin": 1,
+              "model": "jev-1.13.0",
+              "probabilities": {
+                "pass": 1,
+                "reject": 0,
+                "uncertain": 0
+              },
+              "rubricVersion": "discovery-v2"
+            },
+            "support": {
+              "choice": "pass",
+              "confidence": 0.68,
+              "margin": 0.63,
+              "model": "jev-1.13.0",
+              "probabilities": {
+                "pass": 0.79,
+                "reject": 0.16,
+                "uncertain": 0.05
+              },
+              "rubricVersion": "discovery-v2"
+            },
+            "value": {
+              "choice": "pass",
+              "confidence": 0.99,
+              "margin": 0.98,
+              "model": "jev-1.13.0",
+              "probabilities": {
+                "pass": 0.99,
+                "reject": 0.01,
+                "uncertain": 0
+              },
+              "rubricVersion": "discovery-v2"
+            }
+          },
+          "decision": "held",
+          "direction": "한국 시청자용 쇼츠로, 곡선 형태를 보여주는 전경을 도입 화면으로 제안합니다. 먼저 놀이기구인지 묻고, 이어 계단과 사람이 걷는 모습을 보여주는 화면으로 정체를 공개합니다. 외형의 인상과 실제 이용 방식을 비교하며 마무리합니다. 화면 자료는 설명과 일치하는지 확인해 선정하고, 구조물 전체 구간을 걸을 수 있다는 인상을 주지 않도록 구성합니다.",
+          "draftEvidenceIds": [
+            "source-1",
+            "source-3",
+            "lead-1-source-6"
+          ],
+          "entity": "포항 환호공원 스페이스워크",
+          "evidenceIds": [
+            "source-1",
+            "source-3",
+            "source-6",
+            "lead-1-source-1",
+            "lead-1-source-2",
+            "lead-1-source-3",
+            "lead-1-source-4",
+            "lead-1-source-5",
+            "lead-1-source-6",
+            "lead-1-source-7",
+            "lead-1-source-8",
+            "lead-1-source-9",
+            "lead-1-source-10"
+          ],
+          "expectedAnswer": "외형만 보면 열차를 타고 달리는 놀이기구라고 예상할 수 있습니다.",
+          "id": "candidate-1",
+          "keyword": "포항 스페이스워크 계단",
+          "leadId": "lead-1",
+          "location": "경상북도 포항시",
+          "openingVisual": "롤러코스터를 연상시키는 곡선 구조의 전경에 ‘이곳에서는 무엇을 탈까요?’라는 질문을 얹고, 계단을 걷는 모습으로 전환하는 화면을 제안합니다.",
+          "question": "롤러코스터처럼 휘어진 이 구조물은 열차를 타는 곳일까요, 사람이 걷는 곳일까요?",
+          "reasonCodes": [
+            "support_uncertain"
+          ],
+          "title": "롤러코스터처럼 생겼는데 걸어 올라간다고? 포항 스페이스워크",
+          "whyItMatters": "공원에서 조형물을 바라보는 데 그치지 않고 직접 올라가 경험할 수 있는 장소입니다. 익숙한 놀이기구의 생김새와 산책이라는 이용 방식의 차이가 공간을 새롭게 보게 합니다."
+        }
+      ],
+      "createdAt": 1791023657.018808,
+      "evidence": [
+        {
+          "excerpt": "포항 환호공원 내에 위치한 스페이스워크는 트랙길이 333m, 계단 개수 717개 규모로 만들어졌다. 철로 그려진 우아한 곡선과 밤하늘을 수놓는 조명은 철과 빛의 도시 포항을 상징하며, 360도로 펼쳐져 있는...",
+          "id": "source-1",
+          "kind": "search_excerpt",
+          "retrievedAt": 1791023657.9752016,
+          "title": "환호공원 스페이스워크 > 여행지 - 야간관광 밤밤곡곡",
+          "url": "https://korean.visitkorea.or.kr/detail/ms_detail.do?cotid=2a08732b-eba3-45e7-8b72-384abd02c9be"
+        },
+        {
+          "excerpt": "타지 사람들은 포항 하면 지역경제의 핵심인 포스코, 철강, 구룡포 과메기, 호미곶 해맞이를 떠올린다. 실제로 포스코가 지역경제에 미치는 영향은 오늘날까지 지대하고, 코로나19 이전까지 호미곶에는 새해 첫날 해맞이....",
+          "id": "source-2",
+          "kind": "search_excerpt",
+          "retrievedAt": 1791023657.975207,
+          "title": "계단 오르는 롤러코스터, 밤에는 이런 모습입니다",
+          "url": "https://www.ohmynews.com/NWS_Web/View/at_pg_w.aspx?CNTN_CD=A0002822952"
+        },
+        {
+          "excerpt": "포항 환호공원 스페이스워크는 실제로 달리는 놀이기구가 아니라, 롤러코스터 레일을 그대로 닮은 철제 트랙 위를 사람이 직접 걸어 올라가는 보행형 조형물입니다.포스코",
+          "id": "source-3",
+          "kind": "search_excerpt",
+          "retrievedAt": 1791023657.975211,
+          "title": "걸어서 타는 롤러코스터? 포항 환호공원 스페이스워크, 없던 고소공포증 생기....",
+          "url": "https://www.thetrippick.com/news/articleView.html?idxno=3328"
+        },
+        {
+          "excerpt": "위대한 포항, 더 나은 내일-시민과 함께 더 큰 미래를 만들어가는 포항시입니다.",
+          "id": "source-4",
+          "kind": "search_excerpt",
+          "retrievedAt": 1791023657.975215,
+          "title": "환호공원 조형물(스페이스 워크) | 푸른도시 | 포항시청 홈페이지",
+          "url": "https://www.pohang.go.kr/dept/spaceWalk/info.do?mid=0603010000&token=1707121599751"
+        },
+        {
+          "excerpt": "보면 스페이스 워크라는 제목처럼 '예술 위, 구름 위를 걸으며 마치 공간과 우주를 유영'하는 신비로운 경험을 할 수 있다. 모양은 롤러코스터를 연상하는 디자인이지만, 레일 대신 계단이 있어 직접 올라갈 수... ",
+          "id": "source-5",
+          "kind": "search_excerpt",
+          "retrievedAt": 1791023657.9752207,
+          "title": "스페이스워크 - 나무위키",
+          "url": "https://namu.wiki/w/%EC%8A%A4%ED%8E%98%EC%9D%B4%EC%8A%A4%EC%9B%8C%ED%81%AC"
+        },
+        {
+          "excerpt": "“와~ 포항에도 이런 랜드마크가 생기다니…. 마치 롤러코스터처럼 생긴 계단인데, 밑바닥을 내려다보기 무서울 정도로 아찔하고 짜릿하..",
+          "id": "source-6",
+          "kind": "search_excerpt",
+          "retrievedAt": 1791023657.9752245,
+          "title": "\"롤러코스터 같은데 걸어다니네?\"…포항 랜드마크 된 이 작품의 정체 - 땅집고 >....",
+          "url": "https://realty.chosun.com/site/data/html_dir/2023/04/10/2023041000419.html"
+        },
+        {
+          "excerpt": "경북 포항시 북구 환호공원 언덕에 오르면 영일만 해안선을 배경으로 은빛 곡선을 그리며 솟아오른 대형 구조물이 눈길을 끈다. 포스코가 기획·제작해 포항시에 기부한 체험형 조형물 ‘스페이스워크’다. 이곳은 멀리....",
+          "id": "source-7",
+          "kind": "search_excerpt",
+          "retrievedAt": 1791023657.9752278,
+          "title": "롤러코스터인 줄 아셨나요?…포항의 117억 대작, '무료' 공중 산책로",
+          "url": "https://www.wikitree.co.kr/articles/1123587"
+        },
+        {
+          "excerpt": "무더웠던 여름이 가고 시원한 바람이 부는 가을이 됐다. 가을을 만끽하며 연인 혹은 친구들과 특별한 추억을 남길 여행지를 찾고 있다면 여길 주목하자. 넘치는 스릴과 막 찍어도 인생샷이 나오는 영롱함을 자랑하는 특....",
+          "id": "source-8",
+          "kind": "search_excerpt",
+          "retrievedAt": 1791023657.9752343,
+          "title": "별 가득한 하늘 걷는 스릴 만끽할 수 있는 '포항 롤러코스터 산책 계단'",
+          "url": "https://www.insight.co.kr/news/453091"
+        },
+        {
+          "excerpt": "포항 스페이스워크는 환호공원 숲 위에 놓인 길이 333m, 717계단의 무료 체험형 조형물이다. 운영시간과 주차, 루프 통행 제한, 강풍·우천 때 통제 기준, 영일대 야경을 연결하는 추천 관람 동선을 정리했다.",
+          "id": "source-9",
+          "kind": "search_excerpt",
+          "retrievedAt": 1791023657.9752383,
+          "title": "포항 스페이스워크 운영시간·주차·무료 관람 코스",
+          "url": "https://thetravelnews.co.kr/2026/07/pohang-space-walk-hwanho-park-yeongil-bay/"
+        },
+        {
+          "excerpt": "특별함을 느끼다 사뿐사뿐 걸어가 | Theme : 고민하지 말고 Go! 환상적인 세상 속으로, 걸어서 저 하늘까지! 포항 환호공원 스페이스워크 눈부시도록 맑은 하늘 아래, 롤러코스터처럼 아찔한 곡선을 그리는 철의 계단을 올....",
+          "id": "source-10",
+          "kind": "search_excerpt",
+          "retrievedAt": 1791023657.975242,
+          "title": "2204-특별함을느끼다-사뿐사뿐 걸어가 – MG새마을금고 웹진",
+          "url": "https://www.kfcc.co.kr/html/cyberpr/webzine_kfcc/2204-webzine/post/13136.html"
+        },
+        {
+          "excerpt": "포항 환호공원 내에 위치한 스페이스워크는 트랙길이 333m, 계단 개수 717개 규모로 만들어졌다. 철로 그려진 우아한 곡선과 밤하늘을 수놓는 조명은 철과 빛의 도시 포항을 상징하며, 360도로 펼쳐져 있는...",
+          "id": "lead-1-source-1",
+          "kind": "search_excerpt",
+          "retrievedAt": 1791023674.5250273,
+          "title": "환호공원 스페이스워크 > 여행지 - 야간관광 밤밤곡곡",
+          "url": "https://korean.visitkorea.or.kr/detail/ms_detail.do?cotid=2a08732b-eba3-45e7-8b72-384abd02c9be"
+        },
+        {
+          "excerpt": "위대한 포항, 더 나은 내일-시민과 함께 더 큰 미래를 만들어가는 포항시입니다.",
+          "id": "lead-1-source-2",
+          "kind": "search_excerpt",
+          "retrievedAt": 1791023674.5250332,
+          "title": "환호공원 조형물(스페이스 워크) | 푸른도시 | 포항시청 홈페이지",
+          "url": "https://www.pohang.go.kr/dept/spaceWalk/info.do?mid=0603010000&token=1707121599751"
+        },
+        {
+          "excerpt": "하늘 위를 걷는 듯한 짜릿한 전망대 포항 환호공원 내에 위치한 스페이스워크는 트랙길이 333m, 계단 개수 717개 규모로 만들어졌다. 철로 그려진 우아한 곡선과 밤하늘을 수놓는 조명은 철과 빛의 도시 포항을 상징하며, 3....",
+          "id": "lead-1-source-3",
+          "kind": "search_excerpt",
+          "retrievedAt": 1791023674.5250378,
+          "title": "스페이스워크 | 여기유",
+          "url": "https://xn--ok0b236bp0a.com/place/25411"
+        },
+        {
+          "excerpt": "개요 포항 환호공원 스페이스 워크는 포스코가 창단 50주년을 기념해 기획-제작-설치하여 포항시민에게... 모양은 롤러코스터를 연상하는 디자인이지만, 레일 대신 계단이 있어 직접 올라갈 수 있다는 특징이... ",
+          "id": "lead-1-source-4",
+          "kind": "search_excerpt",
+          "retrievedAt": 1791023674.5250428,
+          "title": "스페이스워크 - 나무위키",
+          "url": "https://namu.wiki/w/%EC%8A%A4%ED%8E%98%EC%9D%B4%EC%8A%A4%EC%9B%8C%ED%81%AC"
+        },
+        {
+          "excerpt": "영일대해수욕장 끝 해안마을 뒷동산에 위치한 환호공원은 시민들의 문화와 여가, 휴식을 즐길 수 있는 포항 최대 규모의 공원이다. 해안 절벽과 수목들의 자연 속에 현대적 미를 조화롭게 가미한 광활한 공간에는...",
+          "id": "lead-1-source-5",
+          "kind": "search_excerpt",
+          "retrievedAt": 1791023674.525052,
+          "title": "환호공원 > 여행지 - '열린 관광' 모두의 여행",
+          "url": "https://korean.visitkorea.or.kr/detail/ms_detail.do?cotid=fbeee097-1c6e-4dc1-a917-ff4b5e214175"
+        },
+        {
+          "excerpt": "포항 스페이스워크 는 대한민국 경상북도 포항시 북구의 환호공원에 위치한 체험형 조형물이다.... 총 717개의 계단으로 구성되어 있다. 관련 법규에 따라 릭터 규모 6.5의 지진을 견딜 수 있도록... ",
+          "id": "lead-1-source-6",
+          "kind": "search_excerpt",
+          "retrievedAt": 1791023674.5250556,
+          "title": "포항 스페이스워크",
+          "url": "https://ko.wikipedia.org/wiki/%ED%8F%AC%ED%95%AD_%EC%8A%A4%ED%8E%98%EC%9D%B4%EC%8A%A4%EC%9B%8C%ED%81%AC"
+        },
+        {
+          "excerpt": "하절기(4~10월)평일 10:00~20:00/주말 및 공휴일 10:00~21:00 동절기(11~3월)평일 10:00~17:00/주말 및 공휴일 10:00~18:00 매월 첫째주 월요일 정기휴무(공휴일인 경우 다음날)",
+          "id": "lead-1-source-7",
+          "kind": "search_excerpt",
+          "retrievedAt": 1791023674.5250592,
+          "title": "퐝퐝여행 > 포항관광 > 관광지 > 자연/휴양지 > 포항 스페이스워크",
+          "url": "https://www.pohang.go.kr/phtour/wmap/tourInformation/view.do?menu_idx=104&tour_info_idx=747&type=&cate_id=93&representative_views=&recommended_travel=&recommended_travel_yn=&region=&hygiene_grade=0&vaucher_yn=N&search_type=t"
+        },
+        {
+          "excerpt": "특별함을 느끼다 사뿐사뿐 걸어가 | Theme : 고민하지 말고 Go! 환상적인 세상 속으로, 걸어서 저 하늘까지! 포항 환호공원 스페이스워크 눈부시도록 맑은 하늘 아래, 롤러코스터처럼 아찔한 곡선을 그리는 철의 계단을 올....",
+          "id": "lead-1-source-8",
+          "kind": "search_excerpt",
+          "retrievedAt": 1791023674.5250633,
+          "title": "2204-특별함을느끼다-사뿐사뿐 걸어가 – MG새마을금고 웹진",
+          "url": "https://www.kfcc.co.kr/html/cyberpr/webzine_kfcc/2204-webzine/post/13136.html"
+        },
+        {
+          "excerpt": "경상북도 포항시 북구 두호동 산8, 환호공원 스페이스워크 - 전망 좋은 계단에서 놀이동산 온 기분 느껴보자. 21건의 리뷰. 기하학적 문양이 예뻐서 \"곳곳이 포토존\"이에요.",
+          "id": "lead-1-source-9",
+          "kind": "search_excerpt",
+          "retrievedAt": 1791023674.5250669,
+          "title": "환호공원 스페이스워크 - 경북 포항시에서 아이와 갈 곳 추천",
+          "url": "https://mom-mom.net/travel/places/64ae5b460a27d49441c9989f"
+        },
+        {
+          "excerpt": "포항 전경을 관람할 수 있는 국내 최대 규모 체험형 조형물 환호공원 스페이스워크. 약 333m의 철로 만들어진 우아한 곡선 구조로 360도 전망을 자랑하며, 낮에는 푸른 오션 뷰, 저녁에는 붉은 일몰을 감상할 수 있습니다.",
+          "id": "lead-1-source-10",
+          "kind": "search_excerpt",
+          "retrievedAt": 1791023674.5250702,
+          "title": "환호공원 스페이스워크 - 나를 아는 여행 앱, 트리플",
+          "url": "https://triple.guide/attractions/c4c6a70a-639c-4f40-80c6-4528f72f08f0"
+        }
+      ],
+      "expiresAt": 1791024257.018808,
+      "factChecked": false,
+      "reasonCodes": [],
+      "requestId": "57c8c919-bf6d-4bff-85bf-c552bfc66260",
+      "requiresHumanReview": true,
+      "researchFailures": [],
+      "researchLeads": [
+        {
+          "draftEvidenceIds": [
+            "source-1",
+            "source-3",
+            "source-6"
+          ],
+          "entity": "포항 환호공원 스페이스워크",
+          "evidenceIds": [
+            "source-1",
+            "source-3",
+            "source-6",
+            "lead-1-source-1",
+            "lead-1-source-2",
+            "lead-1-source-3",
+            "lead-1-source-4",
+            "lead-1-source-5",
+            "lead-1-source-6",
+            "lead-1-source-7",
+            "lead-1-source-8",
+            "lead-1-source-9",
+            "lead-1-source-10"
+          ],
+          "id": "lead-1",
+          "keyword": "포항 스페이스워크 계단",
+          "question": "스페이스워크는 실제로 무엇을 하는 장소이며, 롤러코스터를 닮은 외형과 사람이 계단을 걸어 오르는 이용 방식의 차이를 쇼츠에서 어떻게 보여줄 수 있을까?"
+        }
+      ],
+      "rubricVersion": "discovery-v2",
+      "state": "complete",
+      "usage": {
+        "costUsd": null,
+        "generationClaims": 2,
+        "jevCalls": 1,
+        "searchCalls": 2
+      }
+    }
+  },
+  "clients": {
+    "jsReplay": {
+      "requestId": "57c8c919-bf6d-4bff-85bf-c552bfc66260",
+      "generationCalls": 0,
+      "usage": {
+        "costUsd": null,
+        "generationClaims": 2,
+        "jevCalls": 1,
+        "searchCalls": 2
+      },
+      "state": "complete"
+    },
+    "pythonReplay": {
+      "requestId": "57c8c919-bf6d-4bff-85bf-c552bfc66260",
+      "usage": {
+        "costUsd": null,
+        "generationClaims": 2,
+        "jevCalls": 1,
+        "searchCalls": 2
+      },
+      "state": "complete"
+    },
+    "access": [
+      {
+        "name": "invalid-key",
+        "status": 401
+      },
+      {
+        "name": "cross-subject",
+        "status": 404
+      },
+      {
+        "name": "browser-origin",
+        "status": 403
+      }
+    ],
+    "shopshortsCapturedResultFilters": [
+      {
+        "case": "supported",
+        "code": "DISCOVERY_NO_ACCEPTED_CANDIDATES"
+      },
+      {
+        "case": "insufficient",
+        "code": "DISCOVERY_NO_ACCEPTED_CANDIDATES"
+      },
+      {
+        "case": "contradicted",
+        "code": "DISCOVERY_NO_ACCEPTED_CANDIDATES"
+      },
+      {
+        "case": "fresh",
+        "code": "DISCOVERY_NO_ACCEPTED_CANDIDATES"
+      }
+    ],
+    "filterScope": "captured real-result replay through actual adapter; not browser E2E"
+  },
+  "cleanup": {
+    "ledgerAfter": "12|0.0015269520000000003",
+    "actions": [
+      {
+        "actionId": "040d4f22-f81f-4fa6-a4d1-6f7b82b0844e",
+        "storedState": "awaiting_generation",
+        "nextStage": "draft",
+        "generationClaims": 1,
+        "evidenceRows": 20,
+        "expandedEvidenceInNextPrompt": true,
+        "storedSha256": "2c0e5f6a63cc381eddf272001a371fb48b6f680696ad8357a36909301426a550"
+      },
+      {
+        "actionId": "ab70cc02-7baa-4b51-934f-84ba7366a0d3",
+        "storedState": "complete",
+        "nextStage": null,
+        "generationClaims": 2,
+        "evidenceRows": 20,
+        "expandedEvidenceInNextPrompt": false,
+        "storedSha256": "089b6d6dea01d190fbdf59c8e781ad2e3c23cee26d1281b4af92c53e8db8c90d"
+      }
+    ],
+    "qaContainerRemoved": true,
+    "qaNetworkRemoved": true,
+    "qaImageTagRemoved": true,
+    "privateAuditDataRetained": "/opt/shared-ai/discovery/verify-99d6dba",
+    "productionHealth": "healthy",
+    "productionImage": "sha256:510643740b910aef848d174bb2358787cb4aa79cd6b72a5535652a3f06fdb7d7",
+    "productionRelease": "/opt/shared-ai/releases/discovery-3857765d2028c03ad1d345cb50cc95d01cedd313/services/topic-discovery"
+  }
+}

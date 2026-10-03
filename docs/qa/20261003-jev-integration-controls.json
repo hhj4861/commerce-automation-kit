@@ -1,0 +1,138 @@
+{
+  "frozenBeforeCalls": true,
+  "revision": "99d6dbaf751e455c449a094101a2eb3fa1586664",
+  "workflow": "research-v2",
+  "rubricVersion": "discovery-v2",
+  "model": "jev-1.13.0",
+  "limits": {
+    "fixedJevCalls": 3,
+    "freshDiscoveryRequests": 1,
+    "freshDiscoveryMaxJevCalls": 3,
+    "generationMax": 2,
+    "searchMax": 4,
+    "noAutomaticRetries": true
+  },
+  "method": "Controlled variants using saved public search excerpts. Provisional labels by integrating Codex, not independent human labels or blind evaluation. Search and generation are replay fixtures for controls; JEV and server decision are real. Never publish the deliberately unsupported/contradicted variants.",
+  "priorCaseLabels": [
+    {
+      "requestId": "3134dea4-e6e0-4b73-9b6d-0447fa0bd3c5",
+      "claim": "library/reading use",
+      "label": "supported"
+    },
+    {
+      "requestId": "3134dea4-e6e0-4b73-9b6d-0447fa0bd3c5",
+      "claim": "2005 year in that earlier evidence set",
+      "label": "insufficient_primary_evidence"
+    },
+    {
+      "requestId": "9b2d20a7-f5cb-4aa1-af04-10b3f3a7b869",
+      "claim": "hemispherical design",
+      "label": "supported"
+    },
+    {
+      "requestId": "9b2d20a7-f5cb-4aa1-af04-10b3f3a7b869",
+      "claim": "historical exhibition-to-library transition",
+      "label": "insufficient_primary_evidence"
+    }
+  ],
+  "deduplication": "source-1 and source-7 in the old run are the same government article; only source-1 retained here.",
+  "input": {
+    "profile": "content",
+    "category": "건축학",
+    "brief": "안양파빌리온의 의외의 용도를 한국 시청자에게 설명하는 건축 영상 주제",
+    "workflow": "research-v2",
+    "runtime": {
+      "provider": "codex",
+      "model": "fixture-no-generation"
+    }
+  },
+  "evidence": [
+    {
+      "excerpt": "안양 파빌리온 도서관은 한때 쇠락했던 유원지를 예술공원으로 탈바꿈시킨 안양공공예술프로젝트(Anyang Public Art Project, APAP)의 일환으로 탄생한, 국내 최초의 공공예술도서관입니다. 책을 읽는 공간을 넘어 예술과 사색....",
+      "id": "source-1",
+      "kind": "search_excerpt",
+      "retrievedAt": 1791021685.9133127,
+      "title": "[경기 이색 도서관] ⑤ 안양파빌리온",
+      "url": "https://gnews.gg.go.kr/news/news_view.do?number=202510280911419187C049"
+    },
+    {
+      "excerpt": "규모 : 526.9㎡규모의 현대미술전시관, 특징 : 2005년 안양공공예술프로젝트(APAP)의 일환으로 조성된 조형 예술물 세계적인 건축가 알바로시자가 아시아 최초로 주변경관과 어울리는 반구형으로 설계한 디자인",
+      "id": "lead-1-source-1",
+      "kind": "search_excerpt",
+      "retrievedAt": 1791021705.7486658,
+      "title": "안양파빌리온 | 시설현황 | 시설/대관",
+      "url": "https://ayac.or.kr/base/contents/view?contentsNo=30&menuLevel=3&menuNo=36"
+    }
+  ],
+  "cases": [
+    {
+      "case": "supported",
+      "provisionalSupport": "supported",
+      "expectedDecision": "accepted",
+      "basis": "Government excerpt explicitly identifies a public art library and reading space.",
+      "candidate": {
+        "title": "예술 건축물 안에서 책을 읽는다고?",
+        "entity": "안양파빌리온",
+        "location": "안양",
+        "question": "안양파빌리온에서는 건물 감상 말고 무엇을 할 수 있을까?",
+        "expectedAnswer": "건축물과 전시 작품을 보는 공간이라고 예상할 수 있다.",
+        "answer": "안양파빌리온은 공공예술도서관으로 책을 읽을 수 있는 공간이다.",
+        "whyItMatters": "건축물을 감상하는 방문과 책을 읽는 시간을 함께 계획할 수 있다.",
+        "direction": "건축 외관에서 책을 읽는 공간으로 넘어가는 도입을 제안한다.",
+        "keyword": "안양파빌리온 도서관",
+        "openingVisual": "건축 외관을 먼저 보여주고 책을 펼치는 장면으로 이어지는 연출을 제안한다.",
+        "evidenceIds": [
+          "source-1",
+          "lead-1-source-1"
+        ],
+        "leadId": "lead-1"
+      }
+    },
+    {
+      "case": "insufficient",
+      "provisionalSupport": "insufficient",
+      "expectedDecision": "held",
+      "basis": "The supplied primary excerpts do not establish an acoustic mechanism. Absence of support is not contradiction.",
+      "candidate": {
+        "title": "예술 건축물 안에서 책을 읽는다고?",
+        "entity": "안양파빌리온",
+        "location": "안양",
+        "question": "안양파빌리온에서는 건물 감상 말고 무엇을 할 수 있을까?",
+        "expectedAnswer": "건축물과 전시 작품을 보는 공간이라고 예상할 수 있다.",
+        "answer": "안양파빌리온은 공공예술도서관이다. 반구형 지붕은 속삭이는 소리를 건너편 좌석까지 전달하도록 설계되었다.",
+        "whyItMatters": "건축물을 감상하는 방문과 책을 읽는 시간을 함께 계획할 수 있다.",
+        "direction": "건축 외관에서 책을 읽는 공간으로 넘어가는 도입을 제안한다.",
+        "keyword": "안양파빌리온 도서관",
+        "openingVisual": "건축 외관을 먼저 보여주고 책을 펼치는 장면으로 이어지는 연출을 제안한다.",
+        "evidenceIds": [
+          "source-1",
+          "lead-1-source-1"
+        ],
+        "leadId": "lead-1"
+      }
+    },
+    {
+      "case": "contradicted",
+      "provisionalSupport": "contradicted",
+      "expectedDecision": "rejected",
+      "basis": "The claim explicitly negates the government excerpt identifying a library and reading space.",
+      "candidate": {
+        "title": "예술 건축물 안에서 책을 읽는다고?",
+        "entity": "안양파빌리온",
+        "location": "안양",
+        "question": "안양파빌리온에서는 건물 감상 말고 무엇을 할 수 있을까?",
+        "expectedAnswer": "건축물과 전시 작품을 보는 공간이라고 예상할 수 있다.",
+        "answer": "안양파빌리온은 도서관이 아니며 책을 읽는 공간도 없다.",
+        "whyItMatters": "건축물을 감상하는 방문과 책을 읽는 시간을 함께 계획할 수 있다.",
+        "direction": "건축 외관에서 책을 읽는 공간으로 넘어가는 도입을 제안한다.",
+        "keyword": "안양파빌리온 도서관",
+        "openingVisual": "건축 외관을 먼저 보여주고 책을 펼치는 장면으로 이어지는 연출을 제안한다.",
+        "evidenceIds": [
+          "source-1",
+          "lead-1-source-1"
+        ],
+        "leadId": "lead-1"
+      }
+    }
+  ]
+}
