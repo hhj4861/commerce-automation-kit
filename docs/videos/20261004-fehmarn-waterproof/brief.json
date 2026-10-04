@@ -1,0 +1,111 @@
+{
+  "id": "20261004-fehmarn-waterproof",
+  "title": "바닷속에서 터널을 연결하면, 사이의 물은 어디로 갈까?",
+  "voice": "RU7aSi6lT4uQBXMLgDxK",
+  "speed": 1.1,
+  "targetSeconds": [
+    45,
+    50
+  ],
+  "openingQuestion": "터널 사이의 물은 어디로 갈까?",
+  "maxHiggsfieldCredits": 54,
+  "scenes": [
+    {
+      "id": "question",
+      "duration": 8,
+      "narration": "바닷속에서 터널 두 개를 연결하면, 사이에 있던 물은 어디로 갈까요?",
+      "prompt": "Original explanatory 3D cutaway of immersed tunnel connection: question"
+    },
+    {
+      "id": "lower",
+      "duration": 8,
+      "narration": "지금 덴마크와 독일 사이에서는 터널 조각을 바다에 가라앉혀 잇고 있습니다.",
+      "prompt": "Original explanatory 3D cutaway of immersed tunnel connection: lower"
+    },
+    {
+      "id": "walls",
+      "duration": 8,
+      "narration": "먼저 양쪽 입구를 임시 벽으로 막습니다. 터널 안은 마른 상태죠.",
+      "prompt": "Original explanatory 3D cutaway of immersed tunnel connection: walls"
+    },
+    {
+      "id": "drain",
+      "duration": 8,
+      "narration": "두 조각을 맞댄 뒤, 고무 패킹으로 둘러싸인 연결 공간의 물을 빼냅니다.",
+      "prompt": "Original explanatory 3D cutaway of immersed tunnel connection: drain"
+    },
+    {
+      "id": "pressure",
+      "duration": 8,
+      "narration": "그러면 바깥 수압이 새 터널을 밀어, 패킹을 더 꽉 눌러줍니다.",
+      "prompt": "Original explanatory 3D cutaway of immersed tunnel connection: pressure"
+    },
+    {
+      "id": "open",
+      "duration": 8,
+      "narration": "방수가 확보되면 임시 벽을 걷어내 길을 잇습니다. 바닷물을 막는 데, 바닷물의 힘을 이용하는 겁니다.",
+      "prompt": "Original explanatory 3D cutaway of immersed tunnel connection: open"
+    },
+    {
+      "id": "scale",
+      "duration": 7,
+      "narration": "한 조각이 이백십칠 미터입니다. 배처럼 양 끝을 막아 띄운 뒤, 해저의 홈에 내려놓는 거죠.",
+      "prompt": "Sealed concrete tunnel element lowered into gravel trench, illustrative cutaway."
+    },
+    {
+      "id": "chamber",
+      "duration": 8,
+      "narration": "막힌 벽 두 개 사이에는 바닷물이 남습니다. 바로 이 작은 공간을 바깥 바다와 먼저 분리해야 합니다.",
+      "prompt": "Close view of trapped water between two bulkheads; exterior gasket highlighted."
+    }
+  ],
+  "broll": [
+    {
+      "id": "opening",
+      "kind": "video",
+      "duration": 6,
+      "aspect": "9:16",
+      "prompt": "Photorealistic marine civil engineering documentary, vertical 9:16, one continuous 6 second underwater shot. Baltic teal blue water, realistic suspended particles and soft sunlight shafts, excellent visibility close to structures. Two enormous RECTANGULAR pale concrete immersed tunnel elements sit almost aligned in a gravel seabed trench. Far section stationary on the left, nearer section slowly lowered into alignment beside it from above, suspension cables extending up out of frame. Both end faces are fully closed with dark ribbed temporary steel bulkheads. Large black perimeter rubber gasket at connection, yellow safety paint on lifting brackets. Camera glides gently toward the small space between closed ends. Show immense scale, weight, realistic textured wet concrete and steel. No round pipes, no exposed flooded interiors, no open roads, no cars, no people, no explosions, no fantasy machinery, no writing or logos, no voice or music. Balanced clear blue-green shadows and warm neutral concrete highlights, cinematic natural lighting. Concept reconstruction, not actual filmed site."
+    }
+  ],
+  "sources": [
+    {
+      "url": "https://femern.com/press/news/the-fehmarnbelt-tunnel-is-approaching-its-first-kilometre/",
+      "date": "2026-09-28",
+      "claims": [
+        "Fourth element immersed; nearly 900 metres in place",
+        "Construction still in progress"
+      ]
+    },
+    {
+      "url": "https://femern.com/the-construction/building-the-tunnel",
+      "claims": [
+        "Watertight temporary bulkheads",
+        "Water pumped from sealed space between bulkheads",
+        "External hydrostatic pressure pushes elements together"
+      ]
+    },
+    {
+      "url": "https://www.trelleborg.com/de-de/medien/nachrichten-zu-produkten-und-losungen/tailor-made-sealing-systems-for-the-fehmarnbelt-immersed-tunnel",
+      "claims": [
+        "Project uses Gina gaskets and Omega seals"
+      ]
+    }
+  ],
+  "visualLimits": [
+    "Simplified single-bore longitudinal section; not measured site reconstruction",
+    "Seal colored orange for visibility; actual gasket is rubber",
+    "Pressure arrows and water particles are explanatory; not a fluid simulation",
+    "Secondary sealing and structural completion precede bulkhead removal; stages compressed for teaching"
+  ],
+  "shortIds": [
+    "question",
+    "lower",
+    "scale",
+    "walls",
+    "chamber",
+    "drain",
+    "pressure",
+    "open"
+  ]
+}

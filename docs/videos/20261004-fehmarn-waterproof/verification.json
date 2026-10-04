@@ -1,0 +1,83 @@
+{
+  "file": "/Users/admin/Downloads/vedio/fehmarnbelt-waterproof-short.mp4",
+  "resolution": [
+    1080,
+    1920
+  ],
+  "duration": 41.25,
+  "audioDuration": 41.25,
+  "fps": "24/1",
+  "voice": "RU7aSi6lT4uQBXMLgDxK",
+  "speed": 1.1,
+  "fullDecode": true,
+  "silencesOver1_3sec": [],
+  "blackSegments": [],
+  "maxVolume": [
+    "-1.4 dB"
+  ],
+  "sha256": "51ba2ef2721ab7043f41e321fc1892db6b4834949972566b071ef0fd7a632241",
+  "visualReview": {
+    "method": "sampled actual rendered frames; not continuous human playback",
+    "samplesSeconds": [
+      0.2,
+      5.8,
+      10.5,
+      16,
+      21,
+      27,
+      29.4,
+      32,
+      36,
+      41
+    ],
+    "finalCorrectionsReviewed": [
+      0.2,
+      32,
+      41
+    ],
+    "result": "question contrast, gasket/water cutaway, pressure arrows and complete ending verified"
+  },
+  "captions": {
+    "count": 18,
+    "widthCheck": true,
+    "timingCheck": true,
+    "last": {
+      "scene": "open",
+      "start": 37.53636363636364,
+      "end": 41.25,
+      "text": "바닷물을 막는 데, 바닷물의\\N힘을 이용하는 겁니다."
+    }
+  },
+  "speech": {
+    "exactSourceAlignment": true,
+    "independentModels": [
+      "small",
+      "medium"
+    ],
+    "mediumCheckedSourceIndices": [
+      1,
+      4,
+      5
+    ],
+    "notes": "Recognition contains spelling/homophone differences; meaning and key words reviewed. Not a claim of verbatim ASR accuracy."
+  },
+  "generation": {
+    "higgsfieldId": "9563f93c-cb49-4a7d-8f32-ea09cfa30c2a",
+    "openingSeconds": 6,
+    "credits": 54,
+    "balanceBefore": 901.1,
+    "balanceAfter": 847.1,
+    "rerolls": 0,
+    "ttsRuns": [
+      37202524125,
+      37202870586
+    ],
+    "originalVoiceClipsReused": 6,
+    "additionalVoiceClips": 2
+  },
+  "limits": [
+    "Simplified one-bore explanatory cutaway, not measured reconstruction or fluid simulation",
+    "Final waterproofing and structural checks compressed before bulkhead removal",
+    "Not uploaded to YouTube"
+  ]
+}
