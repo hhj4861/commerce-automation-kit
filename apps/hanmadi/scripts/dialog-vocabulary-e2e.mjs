@@ -23,7 +23,7 @@ const mock = createServer(async (req, res) => {
     const mode = alignmentMode;
     if (mode === "slow") await new Promise(r => setTimeout(r, 1500));
     res.setHeader("Content-Type", "application/json");
-    res.end(JSON.stringify({ choices: [{ message: { content: JSON.stringify({ text: mode === "none" ? null : target, occurrence: 0 }) } }] }));
+    res.end(JSON.stringify({ choices: [{ message: { content: JSON.stringify({ text: mode === "none" ? null : mode === "whole" ? input.sentence : target, occurrence: 0 }) } }] }));
     return;
   }
   calls++;
@@ -75,6 +75,9 @@ try {
     for (const b of await page.locator(".hm-bottom button").all()) { const box = await b.boundingBox(); assert(box.width >= 44 && box.height >= 44); }
     await openLesson();
     const d = dialogs.first(), close = d.getByRole("button", { name: "닫기", exact: true });
+    assert.equal(await d.locator(".hm-lesson-context").isVisible(), false, "context is collapsed by default");
+    await d.getByText("장면과 목표", { exact: true }).click();
+    assert(await d.locator(".hm-lesson-context").isVisible());
     const before = await close.boundingBox();
     const scrolling = await d.locator(".hm-dialog-body").evaluate(el => { el.scrollTop = el.scrollHeight; return { top: el.scrollTop, overflow: el.scrollWidth - el.clientWidth }; });
     const after = await close.boundingBox();
@@ -100,6 +103,19 @@ try {
   assert.equal((await state()).expressions.length, initialWords);
   const aligned = await lesson.locator(".hm-word-aligned mark").allTextContents();
   assert.equal(aligned.join(""), "今日");
+  await lesson.getByRole("button", { name: "선택한 표현 뜻 보기", exact: true }).waitFor();
+  assert.equal(await lesson.locator(".hm-alignment-status").count(), 0, "success is not repeated below the Korean meaning");
+  assert.equal(await lesson.getByText("단어를 누르거나 길게 눌러 범위를 선택하면 뜻을 볼 수 있어요.", { exact: true }).count(), 0);
+  for (const width of [320, 390, 844]) {
+    await page.setViewportSize({ width, height: 844 });
+    const tip = await lesson.locator(".hm-selection-tip").boundingBox();
+    const source = await lesson.locator(".hm-word-aligned mark").first().boundingBox();
+    assert(tip.x >= 0 && tip.x + tip.width <= width, "tooltip stays within the viewport");
+    assert(tip.y + tip.height <= source.y + 1 && source.y - tip.y - tip.height < 12, "tooltip follows the highlighted original");
+    const arrow = await lesson.locator(".hm-selection-tip").evaluate(el => parseFloat(el.style.getPropertyValue("--hm-tip-anchor")));
+    assert(Math.abs(tip.x + arrow - source.x - source.width / 2) < 2, "arrow points to the selected word even at a screen edge");
+  }
+  await page.setViewportSize({ width: 390, height: 844 });
   await page.screenshot({ path: resolve(dir, "today-alignment.png") });
   const highlightedBox = await lesson.locator(".hm-word-aligned").first().boundingBox();
   await page.mouse.move(highlightedBox.x + 1, highlightedBox.y + highlightedBox.height / 2);
@@ -120,8 +136,15 @@ try {
     const selection = window.getSelection(); selection.removeAllRanges(); selection.addRange(range);
     document.dispatchEvent(new Event("selectionchange"));
   }, [start, end]);
-  alignmentMode = "none";
+  alignmentMode = "whole";
   await selectMeaning(0, (await meaning.innerText()).length);
+  await lesson.getByRole("button", { name: "선택한 표현 뜻 보기", exact: true }).waitFor();
+  for (let i = 0; i < 50 && (await lesson.locator("mark").allTextContents()).join("") !== "今日、この街に到着しました。"; i++) await page.waitForTimeout(50);
+  assert.equal((await lesson.locator("mark").allTextContents()).join(""), "今日、この街に到着しました。");
+  assert.equal(await lesson.locator(".hm-alignment-status").count(), 0, "full-sentence selection does not add explanatory text");
+  await page.screenshot({ path: resolve(dir, "full-sentence-tooltip.png") });
+  alignmentMode = "none";
+  await selectMeaning(0, (await meaning.innerText()).length - 1);
   await lesson.getByText("정확히 대응하는 원문을 찾지 못했어요. 더 짧은 범위로 선택해 주세요.", { exact: true }).waitFor();
   assert.equal(await lesson.locator("mark").count(), 0);
   alignmentMode = "slow";
@@ -138,6 +161,15 @@ try {
   await selectMeaning(0, 2);
   await lesson.locator(".hm-word-aligned").first().waitFor();
   await page.screenshot({ path: resolve(dir, "meaning-alignment-mobile.png") });
+  await page.keyboard.press("Escape");
+  assert.equal(await lesson.locator(".hm-selection-tip").count(), 0, "Escape dismisses only the tooltip first");
+  assert.equal(await dialogs.count(), 1);
+  await selectMeaning(0, 3);
+  await lesson.getByRole("button", { name: "선택한 표현 뜻 보기", exact: true }).waitFor();
+  await lesson.getByRole("button", { name: "선택한 표현 뜻 보기", exact: true }).click();
+  await dialogs.last().getByText("문맥 속 단어 뜻", { exact: true }).waitFor();
+  await page.keyboard.press("Escape");
+  assert(await lesson.locator(".hm-word-aligned").first().evaluate(el => document.activeElement === el));
   await page.keyboard.press("Escape");
   await openLesson();
   assert.equal(await dialogs.first().locator("mark").count(), 0, "reopened lessons reset alignment");

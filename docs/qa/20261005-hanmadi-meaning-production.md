@@ -11,3 +11,9 @@ The definition exposed a separate pre-existing quality defect: it returned readi
 The selection feature is deployed. This pronunciation follow-up needs its own PR approval before merge/deployment. Regression tests cover 오늘→쿄오 repair, repeated error rejection, coffee long vowels, and legitimate coincident loanword/contextual readings.
 
 Local follow-up verification: npm test passed 228/228; TypeScript no-emit and ESLint for the modified files passed. Production word-reading repair remains unverified until this follow-up is approved and deployed.
+
+## Selection UI follow-up
+
+The long successful-alignment sentence and two always-visible instruction paragraphs are removed from the speaking card. Selecting Korean or dragging the original now reveals a compact 뜻 보기 action bubble attached to the first highlighted/selected line; its arrow follows the target even when the bubble must shift at the screen edge. Native range selection is retained, and the bubble can open the existing definition, close via ×, or dismiss on Escape without closing the lesson. Source words remain directly clickable. Context and goal are available in a collapsed 장면과 목표 disclosure; word instructions are available in 단어 도움말. Errors/loading remain visible when needed.
+
+Chrome E2E (fixture provider) covers 320/390/844 px widths, anchored position/arrow, original and Korean range selection, full-sentence selection, Escape dismissal, nested-dialog focus restoration, explicit-only saving, and the existing four-language wordbook flows. Screenshots are in the designated iCloud task root under commerce-automation-kit/hanmadi-selection-tooltip-v3/. This UI and pronunciation follow-up are both in PR #146 and are not deployed by this change.
