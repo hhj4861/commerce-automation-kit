@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type RefObject } from "react";
 import type { Phrase, StudyLanguage, StudyState } from "@/lib/v2";
 import type { MeaningMatch } from "@/lib/vocabulary";
 import { wordSegments } from "@/lib/word-segments";
@@ -57,10 +57,55 @@ function Definition({ text, sentence, language, onSaved }: {
   </div>;
 }
 
+/** A small action bubble follows the first selected line and stays inside the sentence width. */
+function SelectionTip({ frameRef, textRef, text, onOpen, onDismiss }: {
+  frameRef: RefObject<HTMLDivElement | null>; textRef: RefObject<HTMLParagraphElement | null>;
+  text: string; onOpen: (text: string, trigger: HTMLElement) => void; onDismiss: () => void;
+}) {
+  const tipRef = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const frame = frameRef.current, sentence = textRef.current, tip = tipRef.current;
+    if (!frame || !sentence || !tip) return;
+    const position = () => {
+      const selected = window.getSelection();
+      const original = selected && !selected.isCollapsed && sentence.contains(selected.anchorNode) && sentence.contains(selected.focusNode);
+      const anchor = original ? selected.getRangeAt(0).getClientRects()[0] : sentence.querySelector("mark")?.getClientRects()[0];
+      if (!anchor) { tip.style.visibility = "hidden"; return; }
+      const box = frame.getBoundingClientRect();
+      const half = tip.offsetWidth / 2;
+      const center = anchor.left + anchor.width / 2 - box.left;
+      const clamped = Math.max(half, Math.min(box.width - half, center));
+      tip.style.left = `${clamped}px`;
+      tip.style.setProperty("--hm-tip-anchor", `${Math.max(8, Math.min(tip.offsetWidth - 8, center - clamped + half))}px`);
+      tip.style.top = `${Math.max(tip.offsetHeight + 4, anchor.top - box.top) - 4}px`;
+      tip.style.visibility = "visible";
+    };
+    position();
+    const observer = new ResizeObserver(position); observer.observe(frame); observer.observe(tip);
+    document.addEventListener("selectionchange", position);
+    window.addEventListener("resize", position);
+    return () => { observer.disconnect(); document.removeEventListener("selectionchange", position); window.removeEventListener("resize", position); };
+  }, [frameRef, textRef, text]);
+  useEffect(() => {
+    const dismiss = (event: KeyboardEvent) => {
+      if (event.key === "Escape") { event.preventDefault(); event.stopPropagation(); onDismiss(); }
+    };
+    document.addEventListener("keydown", dismiss, true);
+    return () => document.removeEventListener("keydown", dismiss, true);
+  }, [onDismiss]);
+  return <div className="hm-selection-tip" role="group" aria-label="단어 선택 안내" ref={tipRef}>
+    <button type="button" aria-label="선택한 표현 뜻 보기" onPointerDown={event => event.preventDefault()}
+      onClick={event => onOpen(text, event.currentTarget)}>뜻 보기</button>
+    <button type="button" aria-label="선택 안내 닫기" onClick={onDismiss}>×</button>
+  </div>;
+}
+
 export function Vocabulary({ phrase, language, onSaved }: {
   phrase: Phrase; language: StudyLanguage; onSaved?: (state: StudyState) => void;
 }) {
+  const frameRef = useRef<HTMLDivElement>(null);
   const textRef = useRef<HTMLParagraphElement>(null);
+  const [tipDismissed, setTipDismissed] = useState(false);
   const meaningRef = useRef<HTMLParagraphElement>(null);
   const [match, setMatch] = useState<MeaningMatch | null>(null);
   const [alignmentStatus, setAlignmentStatus] = useState("");
@@ -75,6 +120,7 @@ export function Vocabulary({ phrase, language, onSaved }: {
       const selected = window.getSelection();
       const original = selected && !selected.isCollapsed && textRef.current?.contains(selected.anchorNode) && textRef.current.contains(selected.focusNode);
       setSelection(original ? selected.toString().trim() : "");
+      if (original) setTipDismissed(false);
       const meaning = meaningRef.current;
       if (!selected || selected.isCollapsed || !meaning?.contains(selected.anchorNode) || !meaning.contains(selected.focusNode)) return;
       const range = selected.getRangeAt(0);
@@ -82,13 +128,14 @@ export function Vocabulary({ phrase, language, onSaved }: {
       const raw = selected.toString(), text = raw.trim();
       const start = prefix.toString().length + raw.length - raw.trimStart().length;
       const key = start + ":" + text;
+      setTipDismissed(false);
       if (key === lastKey) return;
       lastKey = key;
       clearTimeout(timer); controller?.abort(); setMatch(null);
       if (!text || text.length > 80) { setAlignmentStatus("한국어 뜻을 80자 이내로 선택해 주세요."); return; }
       const show = (value: MeaningMatch | null) => {
         setMatch(value);
-        setAlignmentStatus(value ? `‘${text}’에 해당하는 원문을 눌러 뜻을 보세요.` : "정확히 대응하는 원문을 찾지 못했어요. 더 짧은 범위로 선택해 주세요.");
+        setAlignmentStatus(value ? "" : "정확히 대응하는 원문을 찾지 못했어요. 더 짧은 범위로 선택해 주세요.");
       };
       if (cache.has(key)) { show(cache.get(key)!); return; }
       setAlignmentStatus("대응하는 원문을 찾고 있어요…");
@@ -115,11 +162,16 @@ export function Vocabulary({ phrase, language, onSaved }: {
     return () => { document.removeEventListener("selectionchange", changed); clearTimeout(timer); controller?.abort(); };
   }, [language, phrase.text, phrase.meaning]);
   function open(text: string, trigger: HTMLElement) {
-    trigger.focus({ preventScroll: true });
+    const focusTarget = trigger.closest(".hm-selection-tip")
+      ? textRef.current?.querySelector<HTMLElement>(".hm-word-aligned") ?? textRef.current?.querySelector<HTMLElement>(".hm-word")
+      : trigger;
+    focusTarget?.focus({ preventScroll: true });
     window.getSelection()?.removeAllRanges();
-    setSelection(""); setWord(text);
+    setTipDismissed(true); setSelection(""); setWord(text);
   }
+  const tipText = selection || match?.text || "";
   return <>
+    <div className="hm-word-frame" ref={frameRef}>
     <p className="hm-native hm-word-sentence" lang={language} ref={textRef}>
       {wordSegments(phrase.text, language).map(part => {
         const from = Math.max(part.index, match?.start ?? Infinity);
@@ -138,14 +190,15 @@ export function Vocabulary({ phrase, language, onSaved }: {
             }}>{content}</button> : <span key={part.index}>{part.text}</span>;
       })}
     </p>
-    <small className="hm-muted">단어를 누르거나 길게 눌러 범위를 선택하면 뜻을 볼 수 있어요.</small>
-    {selection && <div className="hm-selection-action">
-      {selection.length <= 80 ? <button className="hm-soft" onPointerDown={e => e.preventDefault()} onClick={event => open(selection, event.currentTarget)}>선택한 표현 뜻 보기</button> :
-        <span role="status">80자 이내로 선택해 주세요.</span>}
-    </div>}
+    {tipText && tipText.length <= 80 && !word && !tipDismissed &&
+      <SelectionTip frameRef={frameRef} textRef={textRef} text={tipText} onOpen={open} onDismiss={() => setTipDismissed(true)} />}
+    </div>
+    {selection.length > 80 && <small role="status">80자 이내로 선택해 주세요.</small>}
     <p className="hm-reading">{phrase.reading}</p>
     <p className="hm-meaning-selectable" lang="ko" ref={meaningRef}>{phrase.meaning}</p>
-    <small className="hm-muted">한국어 뜻을 두 번 누르거나 길게 눌러 선택하면 해당 원문을 찾아줘요.</small>
+    <details className="hm-word-help"><summary>단어 도움말</summary>
+      <p>원문을 누르면 뜻을 볼 수 있어요. 한국어 뜻을 두 번 누르거나 길게 눌러 선택하면 해당 원문을 강조해요.</p>
+    </details>
     {alignmentStatus && <p className="hm-alignment-status" role="status">{alignmentStatus}</p>}
     {word && <Dialog title="단어 뜻" onClose={() => setWord("")}>
       <Definition key={language + word} text={word} sentence={phrase.text} language={language} onSaved={onSaved} />

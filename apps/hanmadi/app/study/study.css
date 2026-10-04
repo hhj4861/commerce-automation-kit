@@ -2266,3 +2266,35 @@ body:has(.hm-dialog[open]) { overflow: hidden; }
 .hm-meaning-selectable { user-select: text; -webkit-user-select: text; }
 .hm-word-aligned mark { background: #ffe08a; color: #182b50; border-radius: 3px; box-shadow: 0 2px 0 #bd7900; }
 .hm-alignment-status { font-size: 0.85rem; color: #405475; overflow-wrap: anywhere; }
+
+/* Keep the speaking card quiet; reveal explanations only when requested. */
+.hm-dialog .hm-lesson-details { margin: 4px 0 8px; padding: 0; border: 0; }
+.hm-dialog .hm-word-help { margin: 0 0 4px; padding: 0; border: 0; }
+.hm-dialog .hm-lesson .hm-expression { margin: 4px 0; padding: 0; }
+.hm-lesson-details summary, .hm-word-help summary {
+  cursor: pointer; color: #64748b; font-size: 12px; min-height: 44px;
+  display: flex; align-items: center; gap: 6px; width: fit-content; list-style: none;
+}
+.hm-lesson-details summary::-webkit-details-marker, .hm-word-help summary::-webkit-details-marker { display: none; }
+.hm-lesson-details summary::after, .hm-word-help summary::after { content: "+"; font-size: 16px; }
+.hm-lesson-details[open] summary::after, .hm-word-help[open] summary::after { content: "−"; }
+.hm-lesson-cue { color: #64748b; }
+.hm-word-frame { position: relative; padding-top: 52px; }
+.hm-word-frame .hm-word-sentence { margin: 0; }
+.hm-selection-tip {
+  position: absolute; z-index: 2; display: flex; align-items: center; max-width: 100%;
+  transform: translate(-50%, -100%); visibility: hidden; border-radius: 10px;
+  background: #243557; color: white; box-shadow: 0 4px 12px #182b5026;
+}
+.hm-selection-tip::after {
+  content: ""; position: absolute; top: 100%; left: var(--hm-tip-anchor, 50%); margin-left: -4px;
+  border: 4px solid transparent; border-top-color: #243557; pointer-events: none;
+}
+.hm-dialog .hm-selection-tip button {
+  min-height: 44px; min-width: 44px; padding: 8px 12px; border: 0; margin: 0;
+  background: transparent; color: white; font-size: 13px; white-space: nowrap;
+}
+.hm-dialog .hm-selection-tip button:hover:not(:disabled) { background: #354b75; transform: none; }
+.hm-dialog .hm-selection-tip button:focus-visible { outline: 2px solid #ffe08a; outline-offset: -3px; }
+.hm-dialog .hm-word-help p { font-size: 12px; color: #64748b; line-height: 1.6; margin: 0 0 8px; }
+.hm-lesson-details summary:focus-visible, .hm-word-help summary:focus-visible { outline: 2px solid #3155dc; outline-offset: 3px; }
