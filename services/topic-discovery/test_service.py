@@ -5,7 +5,7 @@ import threading
 import unittest
 from pathlib import Path
 from unittest.mock import Mock
-from service import Discovery, Store, Failure, questions, search_query, candidate_query, parse_candidates, VERSION, RESEARCH_VERSION, SUPPORT_FIELDS, unique_evidence, decision_from_reasons, scoped_review
+from service import Discovery, Store, Failure, questions, search_query, candidate_query, parse_candidates, VERSION, RESEARCH_VERSION, EXPERIMENTAL_RESEARCH_VERSION, SUPPORT_FIELDS, unique_evidence, decision_from_reasons, scoped_review, split_review
 from server import make_server
 from client import DiscoveryClient, DiscoveryError
 
@@ -19,7 +19,7 @@ def choice_result(question, choice='pass', confidence=.95):
     return {'type':'choice','choice':choice,'confidence':confidence,
         'probabilities':{k: .95 if k==choice else .05/(len(question['criteria'])-1) for k in question['criteria']}}
 def pass_result(payload):
-    return {'answers':{k:choice_result(q) for k,q in payload['questions'].items()}}
+    return {'answers':{k:choice_result(q, "factual" if k.startswith("factual_") else "pass") for k,q in payload['questions'].items()}}
 class Tests(unittest.TestCase):
     def setUp(self):
         self.tmp=tempfile.TemporaryDirectory(prefix='shared-discovery-test-',dir=os.environ['DISCOVERY_TEST_DIR'])
@@ -223,9 +223,15 @@ class Tests(unittest.TestCase):
         with self.store.db() as db:
             self.assertEqual(db.execute('SELECT state FROM requests WHERE id=?',(request['requestId'],)).fetchone()[0],'held')
         self.jev.assert_not_called()
-    def research_start(self,key='research-test'):
+    def research_start(self,key='research-test',rubric=None):
         self.search.return_value=[{**SOURCE,'title':'공식 회전교1 회전교2 회전교3 설명'}]
-        return self.start(key=key,value={**INPUT,'workflow':'research-v2'})
+        result=self.start(key=key,value={**INPUT,'workflow':'research-v2'})
+        if rubric:
+            with self.store.db() as db:
+                data=json.loads(db.execute('SELECT data FROM requests WHERE id=?',(result['requestId'],)).fetchone()[0])
+                data['rubricVersion']=rubric
+                db.execute('UPDATE requests SET data=? WHERE id=?',(json.dumps(data),result['requestId']))
+        return result
     def finish_action(self,request,output=None,**extra):
         self.store.claim(self.d.scope('shopshorts',SUBJECT),request['requestId'],request['action']['id'])
         body={'actionId':request['action']['id'],'runtime':INPUT['runtime'],'output':output,**extra}
@@ -515,7 +521,7 @@ class Tests(unittest.TestCase):
                 response['answers'][key]=choice_result(payload['questions'][key],'not_applicable')
             return response
         self.jev.side_effect=nonfactual
-        second,_=self.finish_action(self.research_start(),self.lead_output())
+        second,_=self.finish_action(self.research_start(rubric='discovery-v2.2'),self.lead_output())
         result,body=self.finish_action(second,self.draft_output())
         row=result['candidates'][0]
         self.assertEqual(row['decision'],'accepted')
@@ -540,7 +546,7 @@ class Tests(unittest.TestCase):
                 response['answers'][key]=choice_result(payload['questions'][key],choice,confidence)
                 return response
             self.jev.side_effect=review
-            second,_=self.finish_action(self.research_start('nonfact-'+str(i)),self.lead_output())
+            second,_=self.finish_action(self.research_start('nonfact-'+str(i),rubric='discovery-v2.2'),self.lead_output())
             output=self.draft_output();output['candidates'][0]['title']+=' '+str(i)
             result,_=self.finish_action(second,output)
             self.assertEqual(result['candidates'][0]['decision'],expected)
@@ -561,7 +567,7 @@ class Tests(unittest.TestCase):
                 response['answers'][key]={**choice_result(payload['questions'][key],'not_applicable'),**mutation}
                 return response
             self.jev.side_effect=review
-            second,_=self.finish_action(self.research_start('bad-nonfact-'+str(i)),self.lead_output())
+            second,_=self.finish_action(self.research_start('bad-nonfact-'+str(i),rubric='discovery-v2.2'),self.lead_output())
             result,_=self.finish_action(second,self.draft_output())
             self.assertEqual(result['candidates'][0]['decision'],'held')
         for field in ('entity','location','answer'):
@@ -571,7 +577,7 @@ class Tests(unittest.TestCase):
                     'probabilities':{'pass':0,'reject':0,'uncertain':0,'not_applicable':1}}
                 return response
             self.jev.side_effect=review
-            second,_=self.finish_action(self.research_start('required-'+field),self.lead_output())
+            second,_=self.finish_action(self.research_start('required-'+field,rubric='discovery-v2.2'),self.lead_output())
             result,_=self.finish_action(second,self.draft_output())
             self.assertEqual(result['candidates'][0]['reasonCodes'],['invalid_jev_response'])
 
@@ -612,15 +618,119 @@ class Tests(unittest.TestCase):
         try:
             self.d.jev=Jev({'PATH':os.environ['PATH'],'JEV_BASE_URL':'http://127.0.0.1:'+str(server.server_port),'JEV_API_KEY':'synthetic-jev-key','JEV_ALLOW_LOCALHOST':'1'})
             result,_=self.complete(self.start());self.assertEqual(result['candidates'][0]['decision'],'accepted')
+            self.d.research_version=EXPERIMENTAL_RESEARCH_VERSION
             second,_=self.finish_action(self.research_start(),self.lead_output())
             result,_=self.finish_action(second,self.draft_output())
             row=result['candidates'][0]
             self.assertEqual(row['decision'],'accepted')
-            self.assertEqual(len(row['checks']),12) # Nine support fields + relevance/value/duplicate.
+            self.assertEqual(len(row['checks']),18) # Nine support + six presence + relevance/value/duplicate.
             self.assertEqual(row['checks']['support_answer']['model'],'jev-1.13.0')
-            self.assertEqual(row['checks']['support_direction']['choice'],'not_applicable')
+            self.assertEqual(row['checks']['support_direction']['choice'],'pass')
+            self.assertEqual(row['checks']['factual_direction']['choice'],'factual')
             self.assertEqual(result['usage']['jevCalls'],1)
         finally:server.shutdown();server.server_close();thread.join()
+
+    def test_experimental_version_requires_internal_opt_in_and_pins_requests(self):
+        self.assertEqual(RESEARCH_VERSION,'discovery-v2.2')
+        self.assertEqual(self.d.research_version,RESEARCH_VERSION)
+        for version in ('unknown','discovery-v2.1'):
+            with self.assertRaises(Failure):Discovery(self.store,self.search,self.jev,research_version=version)
+        first=self.research_start()
+        self.d.research_version=EXPERIMENTAL_RESEARCH_VERSION
+        repeated=self.research_start()
+        self.assertEqual(repeated['requestId'],first['requestId'])
+        self.assertEqual(repeated['rubricVersion'],RESEARCH_VERSION)
+        second,_=self.finish_action(first,self.lead_output())
+        result,_=self.finish_action(second,self.draft_output())
+        self.assertEqual(result['rubricVersion'],RESEARCH_VERSION)
+        self.assertNotIn('factual_title',result['candidates'][0]['checks'])
+        for name in ('rubricVersion','researchVersion'):
+            with self.assertRaises(Failure):self.start(key='invalid-'+name,value={**INPUT,name:EXPERIMENTAL_RESEARCH_VERSION})
+
+    def test_split_payload_keeps_full_text_and_has_no_conditional_exemption(self):
+        state={'request':INPUT,'candidate':candidate(),'prior':[],'evidence':[SOURCE]}
+        for profile in ('content','business'):
+            state['request']={**INPUT,'profile':profile}
+            payload=split_review(state)
+            self.assertEqual(len(payload['questions']),17)
+            self.assertEqual(payload['state'],{'evidence':[SOURCE]})
+            for field in SUPPORT_FIELDS:
+                support=payload['questions']['support_'+field]
+                self.assertEqual(support['instructions']['text'],candidate()[field])
+                self.assertEqual(set(support['criteria']),{'pass','reject','uncertain'})
+                if field in ('entity','location','answer'):
+                    self.assertNotIn('factual_'+field,payload['questions'])
+                else:
+                    presence=payload['questions']['factual_'+field]
+                    self.assertEqual(presence['instructions']['text'],support['instructions']['text'])
+                    for key in ('subject','role','field'):
+                        self.assertEqual(presence['instructions'][key],support['instructions'][key])
+                    self.assertEqual(set(presence['criteria']),{'factual','nonfactual','uncertain'})
+            changed=split_review({**state,'candidate':{**candidate(),'answer':'거짓 타 필드'}})
+            for name in ('support_openingVisual','factual_openingVisual'):
+                self.assertEqual(payload['questions'][name],changed['questions'][name])
+
+    def test_split_reduction_matrix_and_durable_replay(self):
+        self.d=Discovery(self.store,self.search,self.jev,research_version=EXPERIMENTAL_RESEARCH_VERSION)
+        # No fabricated score: both raw answers must pass their original thresholds.
+        cases=[('factual','pass',.95,'accepted'),('nonfactual','pass',.95,'accepted'),
+               ('nonfactual','uncertain',.95,'held'),('nonfactual','reject',.95,'rejected'),
+               ('uncertain','pass',.95,'held'),('uncertain','reject',.95,'rejected'),
+               ('factual','pass',.79,'held')]
+        for i,(presence,support,confidence,expected) in enumerate(cases):
+            def review(payload):
+                response=pass_result(payload)
+                response['answers']['factual_openingVisual']=choice_result(payload['questions']['factual_openingVisual'],presence,confidence)
+                response['answers']['support_openingVisual']=choice_result(payload['questions']['support_openingVisual'],support)
+                return response
+            self.jev.side_effect=review
+            first=self.research_start('split-matrix-'+str(i))
+            second,_=self.finish_action(first,self.lead_output())
+            draft=self.draft_output();draft['candidates'][0]['title']+=' '+str(i)
+            result,body=self.finish_action(second,draft)
+            row=result['candidates'][0]
+            self.assertEqual(row['decision'],expected)
+            self.assertEqual(row['checks']['factual_openingVisual']['choice'],presence)
+            self.assertEqual(row['checks']['support_openingVisual']['choice'],support)
+            self.assertEqual(result['usage']['jevCalls'],1)
+            count=self.jev.call_count
+            fresh=Discovery(Store(self.store.path),self.search,self.jev)
+            self.assertEqual(fresh.complete('shopshorts',SUBJECT,result['requestId'],body),result)
+            self.assertEqual(self.jev.call_count,count)
+
+    def test_split_missing_malformed_and_low_margin_never_bypass_support(self):
+        self.d=Discovery(self.store,self.search,self.jev,research_version=EXPERIMENTAL_RESEARCH_VERSION)
+        for i,mutation in enumerate(('missing_presence','missing_support','extra','invalid_choice','bool','nan','low_probability','low_margin')):
+            def review(payload):
+                response=pass_result(payload);answers=response['answers'];key='factual_direction'
+                answers['support_openingVisual']=choice_result(payload['questions']['support_openingVisual'],'reject')
+                if mutation=='missing_presence':del answers[key]
+                elif mutation=='missing_support':del answers['support_direction']
+                elif mutation=='extra':answers['unexpected']=answers[key]
+                elif mutation=='invalid_choice':answers[key]['choice']='nonfactual_bypass'
+                elif mutation=='bool':answers[key]['confidence']=True
+                elif mutation=='nan':answers[key]['confidence']=float('nan')
+                else:
+                    answers['support_openingVisual']=choice_result(payload['questions']['support_openingVisual'])
+                    answers[key]['probabilities']={'factual':.79,'nonfactual':.11,'uncertain':.1} if mutation=='low_probability' else {'factual':.45,'nonfactual':.4,'uncertain':.15}
+                return response
+            self.jev.side_effect=review
+            second,_=self.finish_action(self.research_start('split-invalid-'+str(i)),self.lead_output())
+            result,_=self.finish_action(second,self.draft_output())
+            self.assertEqual(result['candidates'][0]['decision'],'held')
+
+    def test_inflight_v22_payload_and_prompt_unchanged(self):
+        first=self.research_start(rubric='discovery-v2.2')
+        second,_=self.finish_action(first,self.lead_output())
+        self.assertIn('discovery-v2.2',second['action']['prompt'])
+        self.assertNotIn(EXPERIMENTAL_RESEARCH_VERSION,second['action']['prompt'])
+        result,_=self.finish_action(second,self.draft_output())
+        payload=self.jev.call_args.args[0]
+        self.assertEqual(len(payload['questions']),11)
+        self.assertIn('not_applicable',payload['questions']['support_openingVisual']['criteria'])
+        self.assertFalse(any(k.startswith('factual_') for k in payload['questions']))
+        self.assertEqual(result['rubricVersion'],'discovery-v2.2')
+
     def test_http_python_adapter_and_auth(self):
         server=make_server(('127.0.0.1',0),self.d,{'shopshorts':KEY,'blog':'b'*40})
         thread=threading.Thread(target=server.serve_forever,daemon=True);thread.start()

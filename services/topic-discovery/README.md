@@ -2,6 +2,16 @@
 
 Current source: `discovery-v1.2` (single-stage, unchanged) and `discovery-v2.2` (opt-in `workflow: research-v2`). v2.2 isolates per-question candidate context and explicitly distinguishes purely nonfactual text. This source change is not deployed and does not enable clients. The last verified production service remains v1.1. Live quality is still NOT accepted: v2.1 held the supported control in the 2026-10-04 evaluation. Historical rollout notes below describe earlier revisions.
 
+## Experimental split review — 2026-10-05, quality gate NOT passed
+
+`discovery-v2.3` separates factual-presence classification from factual-support review for six optional factual fields. Every question receives the original full field and evidence; no question is skipped based on another model answer. One call contains 17 questions (18 with history), preserving confidence/probability/margin thresholds, contradiction priority and malformed-response holds. Entity/location/answer retain their required factual checks. Raw answers remain separate in `checks`.
+
+**v2.3 is not the default or a production recommendation.** Two frozen prompt prototypes failed to resolve all three supported-location proposals. The first also held previously accepted pure production directions. The shorter second prototype restored those pure directions but still held all three supported proposals. Do not lower thresholds or activate this version on the basis of unit tests.
+
+The production entry point still constructs `Discovery` with v2.2. Only internal tests/evaluation can opt in explicitly with `Discovery(..., research_version="discovery-v2.3")`; no client field or environment flag enables it. A request pins its version at creation, and subsequent default changes do not alter stored prompts, results, or replay spending. Unknown internal versions fail closed. The service and evaluation share `score_review` validation.
+
+See [quality evidence and human review](../../docs/qa/20261005-jev-v23-quality.md). The business reviewer rejected an unsupported universal revenue promise; a held factual-support result alone does not prove the full business rejection path works. Conflicting 20m/30m source reports must retain attribution and uncertainty, not become an asserted measured interval. Full-candidate quality acceptance remains incomplete.
+
 ## Scoped field review — 2026-10-04
 
 - The v2.1 fixed controls changed only `answer`, yet the unchanged entity's JEV verdict also changed. This suggests context interference; three controls do not prove its cause. New v2.2 puts **only deduplicated evidence in shared state**. Each support question's structured `instructions` contains the complete target text, its role and the unverified entity name as a reference anchor. Other candidate fields, the request and prior history are absent from that question's context. Relevance/value/duplicate have their own candidate context within their own question. This follows TypeSafe's [independent questions and structured instructions](https://docs.typesafe.ai/primitives).
