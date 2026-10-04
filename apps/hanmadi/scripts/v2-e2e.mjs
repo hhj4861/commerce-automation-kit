@@ -663,11 +663,15 @@ try {
       await dialog
         .getByRole("heading", { name: plan.title, exact: true })
         .waitFor();
-      assert(
-        (await dialog.locator(".hm-lesson-context").innerText()).includes(
-          plan.context,
-        ),
-      );
+      const lessonDetails = dialog.locator(".hm-lesson-details");
+      const lessonContext = dialog.locator(".hm-lesson-context");
+      assert(!(await lessonContext.isVisible()), "lesson guidance starts collapsed");
+      await lessonDetails.locator("summary").click();
+      assert(await lessonContext.isVisible());
+      assert((await lessonContext.innerText()).includes(plan.context));
+      assert((await dialog.locator(".hm-lesson-goal").innerText()).includes(plan.goal));
+      await lessonDetails.locator("summary").click();
+      assert(!(await lessonContext.isVisible()), "lesson guidance collapses again");
       const navigationBox = await dialog
         .locator(".hm-lesson-navigation")
         .boundingBox();
