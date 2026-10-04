@@ -83,7 +83,13 @@ export async function renderMotionScene(job, scene, work, env = {}, {spawnImpl =
   const project = join(work, `${scene.id}-motion`);
   await rm(project, {recursive: true, force: true});
   await mkdir(join(project, 'assets'), {recursive: true});
-  await copyFile(join(TEMPLATE_DIR, `${template.id}.html`), join(project, `${template.id}.html`));
+  let templateHtml=await readFile(join(TEMPLATE_DIR, `${template.id}.html`),'utf8');
+  if(job.brief?.aspect==='16:9'&&template.id==='summary') {
+    templateHtml=templateHtml.replace('data-resolution="portrait"','data-resolution="landscape"').replaceAll('width=1080, height=1920','width=1920, height=1080').replaceAll('data-width="1080" data-height="1920"','data-width="1920" data-height="1080"').replace('viewBox="0 0 1080 1920"','viewBox="0 0 1920 1080"');
+    templateHtml=templateHtml.replace('translate(270 560)','translate(390 420)').replace('translate(270 870)','translate(960 420)').replace('translate(270 1180)','translate(1530 420)').replace('x1="270" y1="660" x2="270" y2="780"','x1="510" y1="420" x2="830" y2="420"').replace('x1="270" y1="970" x2="270" y2="1090"','x1="1090" y1="420" x2="1410" y2="420"');
+    templateHtml=templateHtml.replace('</head>',`<style>html,body,svg.full{width:1920px;height:1080px}#heading{left:0;width:1920px;top:130px;font-size:70px}.item{top:590px!important;width:500px;text-align:center;font-size:56px}#it1{left:140px}#it2{left:710px}#it3{left:1280px}</style></head>`);
+  }
+  await writeFile(join(project, `${template.id}.html`),templateHtml);
   await copyFile(join(TEMPLATE_DIR, 'shared.css'), join(project, 'shared.css'));
   await copyFile(FONT, join(project, 'assets/NanumGothic-Regular.ttf'));
   await copyFile(gsap, join(project, 'assets/gsap.min.js'));

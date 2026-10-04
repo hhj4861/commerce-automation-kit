@@ -40,7 +40,10 @@ async function fixture(t, provider = 'codex') {
     if (items.get(p.id)?.revision !== revision) return false;
     items.set(p.id, structuredClone(p)); return true;
   } };
-  const project = createProject(brief); await store.create(project);
+  const project = createProject(brief);
+  // This fixture represents a saved project predating the visual-direction contract.
+  delete project.brief.visualQuality;
+  await store.create(project);
   const call = (owner, operation, input) => accountAction(env, owner, operation, input);
   const request = (path = '', body, extraHeaders = {}) => studioApi(new Request(`https://studio.test/api/studio/${project.id}${path}`, {
     method: body ? 'POST' : 'GET', headers: { ...headers, ...extraHeaders }, ...(body ? { body: JSON.stringify(body) } : {}),

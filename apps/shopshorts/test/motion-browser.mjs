@@ -4,7 +4,7 @@
 // Run: SHOPSHORTS_MOTION_NODE=<node 22+> PLAYWRIGHT_CHANNEL=chrome node apps/shopshorts/test/motion-browser.mjs
 import assert from 'node:assert/strict';
 import {createServer} from 'node:http';
-import {mkdtemp, readFile, writeFile} from 'node:fs/promises';
+import {mkdtemp, mkdir, readFile, writeFile} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import {join, resolve, sep} from 'node:path';
 import {chromium} from 'playwright';
@@ -15,6 +15,7 @@ import {command} from '../studio-runner.mjs';
 
 if (!process.env.SHOPSHORTS_MOTION_NODE) throw Error('SHOPSHORTS_MOTION_NODE (Node 22+) is required for the motion renderer');
 const dir = process.env.MOTION_E2E_DIR || await mkdtemp(join(tmpdir(), 'motion-e2e-'));
+await mkdir(dir,{recursive:true});
 // No GEMINI/Higgsfield credentials: any accidental provider path would fail instead of paying.
 const env = {SHOPSHORTS_MOTION_NODE: process.env.SHOPSHORTS_MOTION_NODE};
 const store = localStudioStore(dir, env);
@@ -51,12 +52,13 @@ try {
   page.on('pageerror', e => errors.push(e.message));
   page.on('dialog', d => d.accept());
   await page.goto(origin + '/studio?new=1');
+  assert.equal(await page.locator('#duration').inputValue(),'45');
   await page.locator('#topic').fill('건물 아래 지하철 · 모션 템플릿 로컬 검증');
   await page.locator('#create').click(); await page.waitForURL(/id=/);
   const id = new URL(page.url()).searchParams.get('id');
   const post = async (action, body) => { const p = await store.get(id); const r = await page.request.post(`${origin}/api/studio/${id}/${action}`, {headers: {origin}, data: {revision: p.revision, ...body}}); return {status: r.status(), body: await r.json()}; };
   const scenes = [
-    {id: 'scene-1', kind: 'video', duration: 6, narration: '도시 한가운데, 건물 바로 아래로 지하철이 지나가요.', prompt: '도심 건물 아래 터널 단면'},
+    {id: 'scene-1', kind: 'video', duration: 6, narration: '도시 한가운데, 건물 바로 아래로 지하철이 지나가요.', prompt: '도심 건물 아래 터널 단면', visualDirection:{focus:'건물 아래 터널',before:'막힌 지반',action:'지반 아래 터널이 드러남',after:'터널과 건물의 위치가 보임',continuity:'같은 건물과 지반',material:'거친 흙과 콘크리트',lighting:'지반과 터널 명도 분리',representation:'conceptual',treatment:'cutaway',hookText:'건물 아래를 어떻게 뚫을까?'}},
     {id: 'scene-2', kind: 'video', duration: 6, narration: '얼마나 깊이 파야 할지 두 깊이를 비교해 볼게요.', prompt: '두 깊이 비교'},
   ];
   assert.equal((await post('scenes', {scenes})).status, 200);
@@ -122,7 +124,8 @@ try {
 
   // Final render with a caption through the unchanged render pipeline; nothing is published.
   const edit = normalizeEdit(project); edit.voice = 'none';
-  edit.captions = [{id: 'caption-1', clipId: edit.clips[1].id, text: '같은 깊이라도 지반에 따라 달라요', startFrame: 0, endFrame: 150, font: 'gothic', size: 56, color: '#ffffff', position: 'bottom', background: true}];
+  assert.equal(edit.captions[0].id,'opening-question');
+  edit.captions = [...edit.captions,{id: 'caption-1', clipId: edit.clips[1].id, text: '같은 깊이라도 지반에 따라 달라요', startFrame: 0, endFrame: 150, font: 'gothic', size: 56, color: '#ffffff', position: 'bottom', background: true}];
   assert.equal((await post('edit', edit)).status, 200); assert.equal((await post('render', {})).status, 200);
   const renderDeadline = Date.now() + 120000;
   do { await new Promise(r => setTimeout(r, 500)); project = await store.get(id); if (project.task?.state === 'failed') throw Error(project.task.error); } while (!project.render && Date.now() < renderDeadline);
@@ -130,6 +133,7 @@ try {
   const final = join(dir, 'motion-final.mp4'); await writeFile(final, await store.readAsset(project.render.key));
   const probe = JSON.parse(await command('ffprobe', ['-v', 'error', '-show_streams', '-show_format', '-of', 'json', final], {}));
   assert.equal(probe.streams[0].width, 1080); assert.equal(probe.streams[0].height, 1920); assert.ok(Math.abs(Number(probe.format.duration) - 12) < .15, probe.format.duration);
+  await command('ffmpeg',['-y','-v','error','-ss','0.2','-i',final,'-frames:v','1',join(dir,'opening-question.png')],{});
   await command('ffmpeg', ['-y', '-v', 'error', '-ss', '10.5', '-i', final, '-frames:v', '1', join(dir, 'final-motion-frame.png')], {});
 
   // Existing projects without motion keep their plain image/video controls; mobile has no overflow.
