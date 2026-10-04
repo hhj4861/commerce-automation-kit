@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {mkdtemp,rm} from 'node:fs/promises';
+import {mkdtemp,rm,writeFile} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {generateHiggsfieldScene,higgsfieldPlan,downloadHiggsfield} from '../studio-higgsfield.mjs';
@@ -50,3 +50,18 @@ test('download rejects unsafe URLs, redirects, HTML, empty and oversized results
  await assert.rejects(downloadHiggsfield(url,'image',async()=>new Response('',{headers:{'content-type':'image/png'}})));
  await assert.rejects(downloadHiggsfield(url,'image',async()=>new Response('x',{headers:{'content-type':'image/png','content-length':String(51*1024*1024)}})));
 });
+
+test('fortune cap reserves credits durably, refuses overspend, and reuses accepted generations',()=>temporary(async work=>{
+ const project={...job(),fortune:{fingerprint:'test',paidAuthorization:{provider:'higgsfield',fingerprint:'test',maxCredits:2}}};let creates=0;
+ const run=async args=>{if(args[1]==='cost')return {credits:2};if(args[1]==='create'){creates++;return [id]}return completed};
+ await generateHiggsfieldScene(project,scene,{},work,async()=>{},{run,fetcher:download});
+ await generateHiggsfieldScene(project,scene,{},work,async()=>{},{run,fetcher:download});assert.equal(creates,1);
+ await assert.rejects(generateHiggsfieldScene(project,{...scene,id:'scene-2'}, {},work,async()=>{},{run,fetcher:download}),/상한/);assert.equal(creates,1);
+}));
+test('fortune reservation persistence failure stops payment; exact reference content determines generation identity',()=>temporary(async work=>{
+ const project={...job(),fortune:{fingerprint:'test',paidAuthorization:{provider:'higgsfield',fingerprint:'test',maxCredits:20}}};let creates=0;const commands=[];
+ const run=async args=>{commands.push(args);if(args[1]==='cost')return {credits:2};if(args[1]==='create'){creates++;return [id]}return completed};
+ await assert.rejects(generateHiggsfieldScene(project,scene,{},work,async()=>{throw Error('cannot persist')},{run,fetcher:download}));assert.equal(creates,0);
+ const ref=join(work,'reference.png');await writeFile(ref,'reference one');await generateHiggsfieldScene(project,scene,{},work,async()=>{},{references:[ref],run,fetcher:download});
+ assert.ok(commands.find(a=>a[1]==='create').includes(ref));await writeFile(ref,'reference two');await generateHiggsfieldScene(project,scene,{},work,async()=>{},{references:[ref],run,fetcher:download});assert.equal(creates,2);
+}));

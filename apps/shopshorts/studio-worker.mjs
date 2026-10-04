@@ -22,7 +22,7 @@ export function startStudioWorker({ env, cloud, token, workDir, keepAlive = fals
           const response = await api(`/${job.id}/${action}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...body, revision: job.revision, taskId: job.task.id }) });
           job = (await response.json()).project;
         };
-        try { await update('claim'); } catch { continue; }
+        try { await update('claim', {fortuneEngine:1}); } catch { continue; }
         const io = {
           workDir,
           readAsset: async key => Buffer.from(await (await api(`/${job.id}/worker-media?key=${encodeURIComponent(key)}`)).arrayBuffer()),
