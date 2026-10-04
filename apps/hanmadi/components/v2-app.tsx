@@ -206,11 +206,11 @@ function PhraseCard({
 }) {
   return (
     <article className="hm-expression">
-      {vocabulary ? <Vocabulary phrase={phrase} language={language} onSaved={onVocabularySaved} /> : (
+      {vocabulary ? <Vocabulary key={language + phrase.text + phrase.meaning} phrase={phrase} language={language} onSaved={onVocabularySaved} /> : <>
         <p className="hm-native" lang={language}>{phrase.text}</p>
-      )}
-      <p className="hm-reading">{phrase.reading}</p>
-      <p>{phrase.meaning}</p>
+        <p className="hm-reading">{phrase.reading}</p>
+        <p>{phrase.meaning}</p>
+      </>}
       <Speaker key={language + phrase.text} text={phrase.text} language={language} />
       {children}
     </article>

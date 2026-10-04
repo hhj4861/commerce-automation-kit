@@ -35,6 +35,9 @@ jobs:
           HANMADI_E2E_SCREENSHOTS: ${{ runner.temp }}/hanmadi-google-login
       - run: npm run test:v2
       - run: npm run test:admin-deployment
+      - run: npm run test:dialog-vocabulary
+        env:
+          HANMADI_E2E_ARTIFACTS: ${{ runner.temp }}/hanmadi-vocabulary
       - run: npm run test:diagnostics
         env:
           HANMADI_E2E_SCREENSHOTS: ${{ runner.temp }}/hanmadi-diagnostics
@@ -48,4 +51,6 @@ jobs:
             apps/hanmadi/.next/admin-deployment-evidence/*.png
             ${{ runner.temp }}/hanmadi-diagnostics/*.png
             ${{ runner.temp }}/hanmadi-diagnostics/result.json
+            ${{ runner.temp }}/hanmadi-vocabulary/*.png
+            ${{ runner.temp }}/hanmadi-vocabulary/result.json
           retention-days: 7
