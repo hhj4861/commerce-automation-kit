@@ -1,0 +1,229 @@
+{
+  "id": "20261004-seokbinggo-chipstack",
+  "title": "칩 적층 4탄과 경주 석빙고",
+  "voice": "RU7aSi6lT4uQBXMLgDxK",
+  "scenes": [
+    {
+      "id": "hook",
+      "theme": "chip",
+      "narration": "반도체도 아파트처럼 쌓으면 더 빨라질까요? 실제로 칩을 위아래로 붙이는 기술이 쓰이고 있습니다. 그런데 가까이 붙일수록 좋아 보이는 이 방법에는, 서로 반대 방향으로 풀어야 하는 문제가 있습니다.",
+      "duration": 22,
+      "prompt": "hook"
+    },
+    {
+      "id": "distance",
+      "theme": "chip",
+      "narration": "우리가 인공지능에게 질문하면 계산 장치가 데이터를 읽고, 계산하고, 결과를 다시 전달합니다. 이때 시간과 에너지는 계산에만 쓰이지 않습니다. 칩과 칩 사이로 데이터를 옮기는 일에도 필요합니다.",
+      "duration": 22,
+      "prompt": "distance"
+    },
+    {
+      "id": "stack",
+      "theme": "chip",
+      "narration": "그래서 자주 대화하는 칩을 위아래로 붙입니다. 멀리 돌아가던 연결을 짧고 촘촘하게 만들 수 있기 때문입니다. 칩 적층의 핵심은 층수 자랑이 아니라, 데이터를 옮기는 거리를 줄이는 데 있습니다.",
+      "duration": 22,
+      "prompt": "stack"
+    },
+    {
+      "id": "analogy",
+      "theme": "chip",
+      "narration": "사무실에서 옆 건물에 있는 자료실을 하루에도 수백 번 왕복한다고 생각해 보세요. 자료실을 바로 아래층으로 옮기면 동선이 짧아집니다. 반도체에서도 연결 구조를 바꾸는 이유를 이런 식으로 이해할 수 있습니다.",
+      "duration": 22,
+      "prompt": "analogy"
+    },
+    {
+      "id": "energy",
+      "theme": "chip",
+      "narration": "물론 전기 신호가 사람처럼 계단을 뛰어다니는 건 아닙니다. 배선에는 전기적인 저항과 용량이 있습니다. 길이와 연결 구조를 줄이면 신호를 전달하는 부담을 낮출 여지가 생깁니다. 실제 이득은 회로와 설계에 따라 달라집니다.",
+      "duration": 22,
+      "prompt": "energy"
+    },
+    {
+      "id": "layout",
+      "theme": "chip",
+      "narration": "지난 편의 고대역폭 메모리도 여러 메모리 칩을 쌓습니다. 하지만 메모리 적층과, 연산 칩에 캐시를 붙이는 설계가 모두 같은 구조는 아닙니다. 무엇을 쌓고 어디를 연결하느냐에 따라 필요한 기술과 효과가 달라집니다.",
+      "duration": 22,
+      "prompt": "layout"
+    },
+    {
+      "id": "contacts",
+      "theme": "chip",
+      "narration": "그런데 칩 두 장을 포개기만 하면 전기가 통할까요? 아닙니다. 서로 다른 두 칩의 접점을 정확히 맞춰야 합니다. 수많은 작은 연결이 제자리에 닿아야 하나의 시스템으로 일할 수 있습니다.",
+      "duration": 22,
+      "prompt": "contacts"
+    },
+    {
+      "id": "bumps",
+      "theme": "chip",
+      "narration": "한 방법은 작은 금속 돌기로 칩과 칩을 연결하는 것입니다. 화면에서 크게 보이는 돌기는 실제로는 아주 미세한 접점입니다. 더 많은 신호를 주고받으려면 같은 면적에 더 많은 접점을 배치해야 합니다.",
+      "duration": 22,
+      "prompt": "bumps"
+    },
+    {
+      "id": "hybrid",
+      "theme": "chip",
+      "narration": "여기서 하이브리드 본딩이 등장합니다. 금속 접점끼리 연결하면서 주변 절연층도 함께 접합하는 방식입니다. 커다란 납땜 덩어리를 사이에 끼우는 대신, 두 표면을 아주 정밀하게 맞붙이는 모습을 떠올리면 됩니다.",
+      "duration": 22,
+      "prompt": "hybrid"
+    },
+    {
+      "id": "precision",
+      "theme": "chip",
+      "narration": "관건은 깨끗하고 평평한 표면, 그리고 정확한 정렬입니다. 먼지나 어긋남으로 필요한 접점이 연결되지 않으면 문제가 생길 수 있습니다. 접점 수를 늘리는 것만큼, 그 접점들을 제대로 연결하는 제조 기술도 중요합니다.",
+      "duration": 22,
+      "prompt": "precision"
+    },
+    {
+      "id": "heat",
+      "theme": "chip",
+      "narration": "하지만 신호가 가는 길을 줄이면 새로운 숙제가 생깁니다. 좁은 공간에서 발생한 열은 밖으로 빠져나가야 합니다. 특히 아래쪽의 뜨거운 칩은 위쪽 재료와 접합면까지 고려해서 냉각 경로를 설계해야 합니다.",
+      "duration": 22,
+      "prompt": "heat"
+    },
+    {
+      "id": "thermal",
+      "theme": "chip",
+      "narration": "그래서 칩을 더 쌓았다고 무조건 성능이 좋아지지는 않습니다. 열을 충분히 빼내지 못하면 같은 속도를 계속 유지하기 어렵습니다. 더 높은 탑을 만드는 일보다, 그 안의 열이 어디로 빠지는지를 보는 일이 중요해집니다.",
+      "duration": 22,
+      "prompt": "thermal"
+    },
+    {
+      "id": "amd",
+      "theme": "chip",
+      "narration": "실제 제품에도 이 고민이 들어 있습니다. 에이엠디는 이 세대 쓰리디 브이 캐시에서 캐시를 연산 칩 아래로 옮겼습니다. 연산 칩을 냉각 장치 쪽에 더 가깝게 두는 배치입니다. 같은 적층이라도 위아래 순서가 중요하다는 사례입니다.",
+      "duration": 22,
+      "prompt": "amd"
+    },
+    {
+      "id": "industry",
+      "theme": "chip",
+      "narration": "티에스엠씨의 소아이씨, 인텔의 포베로스 다이렉트 같은 기술도 이런 촘촘한 수직 연결을 다룹니다. 회사 이름보다 기억할 것은 세 가지입니다. 어떤 칩을 붙이고, 접점을 얼마나 정밀하게 연결하며, 열을 어떻게 처리하느냐입니다.",
+      "duration": 22,
+      "prompt": "industry"
+    },
+    {
+      "id": "yield",
+      "theme": "chip",
+      "narration": "또 하나는 비용입니다. 잘 만든 칩이라도 결합 과정에서 문제가 생기면 완성품에 영향을 줍니다. 그래서 접합 전후 검사와 제조 수율이 중요합니다. 복잡하게 쌓는 기술이 언제나 가장 경제적인 답은 아닙니다.",
+      "duration": 22,
+      "prompt": "yield"
+    },
+    {
+      "id": "daily",
+      "theme": "chip",
+      "narration": "이 변화는 우리에게 어떻게 돌아올까요? 자주 쓰는 데이터를 가까이 두면, 그 데이터에 자주 접근하는 작업에서 기다림을 줄이는 데 도움이 될 수 있습니다. 게임과 계산 작업에서도 쓰이지만 모든 프로그램이 똑같이 빨라지는 것은 아닙니다.",
+      "duration": 22,
+      "prompt": "daily"
+    },
+    {
+      "id": "system",
+      "theme": "chip",
+      "narration": "인공지능 서비스 역시 칩 하나만으로 속도가 정해지지 않습니다. 메모리, 칩 사이 통신, 냉각, 소프트웨어가 함께 맞아야 합니다. 적층은 그중 연결을 개선하는 도구입니다. 한 부분의 개선을 전체 서비스의 성능과 혼동하면 안 됩니다.",
+      "duration": 22,
+      "prompt": "system"
+    },
+    {
+      "id": "ending",
+      "theme": "chip",
+      "narration": "결국 좋은 칩 적층은 데이터에는 가까운 길을, 열에는 빠져나갈 길을 동시에 만드는 설계입니다. 더 많이 쌓는 것이 아니라, 필요한 것을 잘 연결하고 충분히 식히는 것. 반도체의 층수보다 중요한 것은 그 안의 동선입니다.",
+      "duration": 22,
+      "prompt": "ending"
+    },
+    {
+      "id": "icehook",
+      "theme": "ice",
+      "narration": "냉장고 문은 꼭 닫으라고 하죠. 그런데 경주 석빙고의 천장에는 공기구멍이 세 개나 있습니다. 얼음을 보관하는 건물에, 왜 구멍을 냈을까요?",
+      "duration": 22,
+      "prompt": "icehook"
+    },
+    {
+      "id": "winter",
+      "theme": "ice",
+      "narration": "먼저 이곳은 얼음을 만드는 냉동기가 아닙니다. 겨울에 강에서 얻은 얼음을 보관했다가 여름에 꺼내 쓰던 창고입니다. 핵심은 차가움을 만드는 것보다, 얼음이 녹는 속도를 늦추는 데 있었습니다.",
+      "duration": 22,
+      "prompt": "winter"
+    },
+    {
+      "id": "insulation",
+      "theme": "ice",
+      "narration": "건물의 일부를 땅속에 넣고, 위를 두껍게 덮었습니다. 외부의 열이 내부에 전달되는 영향을 줄이는 구조입니다. 돌로 방 하나만 만든 것이 아니라, 그 방을 둘러싼 흙까지 설계에 활용한 겁니다.",
+      "duration": 22,
+      "prompt": "insulation"
+    },
+    {
+      "id": "drain",
+      "theme": "ice",
+      "narration": "바닥도 평평하지 않습니다. 경사를 따라 녹은 물이 배수구로 빠집니다. 얼음을 넣고 문을 닫는 것으로 끝나는 게 아니라, 보관하는 동안 생기는 물까지 처리해야 했습니다.",
+      "duration": 22,
+      "prompt": "drain"
+    },
+    {
+      "id": "vent",
+      "theme": "ice",
+      "narration": "그리고 천장 높은 곳에는 환기구가 있습니다. 국사편찬위원회는 내부에서 데워져 올라온 공기를 내보내는 역할로 설명합니다. 단열, 배수, 환기가 함께 작동하도록 만든 구조입니다.",
+      "duration": 22,
+      "prompt": "vent"
+    },
+    {
+      "id": "iceending",
+      "theme": "ice",
+      "narration": "그렇다고 구멍만 뚫으면 냉장고가 되는 건 아닙니다. 겨울에 모은 얼음과 열의 유입을 줄이는 건축이 함께 필요했습니다. 경주 석빙고는 차가움을 만드는 기계가 아니라, 겨울의 차가움을 오래 보관하는 건물이었던 겁니다.",
+      "duration": 22,
+      "prompt": "iceending"
+    }
+  ],
+  "shortIds": [
+    "hook",
+    "stack",
+    "contacts",
+    "heat",
+    "ending"
+  ],
+  "iceIds": [
+    "icehook",
+    "winter",
+    "insulation",
+    "drain",
+    "vent",
+    "iceending"
+  ],
+  "maxHiggsfieldCredits": 108,
+  "broll": [
+    {
+      "id": "chip-opening",
+      "kind": "video",
+      "aspect": "16:9",
+      "duration": 6,
+      "prompt": "Photoreal cinematic macro in a dark semiconductor packaging laboratory. A robotic precision bonding tool gently lowers one thin square silicon die toward another die on a green package substrate, tiny copper contact grid catching amber side light. Begin with the pair clearly separated, slowly align then stop just before contact. Camera makes a subtle push-in, realistic engineered materials and scale, silver cleanroom equipment softly out of focus. Center-safe composition for vertical crop, scientific illustrative reconstruction, no text, no logos, no floating magical components, no audio."
+    },
+    {
+      "id": "ice-opening",
+      "kind": "video",
+      "aspect": "9:16",
+      "duration": 6,
+      "prompt": "Photoreal cinematic historical reconstruction inspired by Gyeongju Seokbinggo in Korea. Warm summer afternoon, low long grass-covered earth mound with a small weathered granite entrance, no palace, no pagoda. Camera gently approaches the stone entrance at low eye level, revealing a cool dark stone-vaulted storage chamber with stacked translucent ice blocks inside. Natural granite texture, restrained realistic lighting, no people, no text, no logos, no audio. The ice is stored, not magically forming."
+    }
+  ],
+  "sources": [
+    {
+      "url": "https://contents.history.go.kr/mobile/tt/view.do?levelId=tt_b30",
+      "claims": "겨울 채빙·반지하·단열·경사배수·환기. 실제 환기 운용 시기/온도나 보존율은 단정하지 않음."
+    },
+    {
+      "url": "https://www.gyeongju.go.kr/tour_bak/page.do?mnu_uid=2534",
+      "claims": "경주 석빙고 위치, 공기구멍 3개, 바닥 경사와 홈."
+    },
+    {
+      "url": "https://3dfabric.tsmc.com/english/dedicatedFoundry/technology/SoIC.htm",
+      "claims": "웨이퍼 수준 3D 적층과 고밀도 접합 연결."
+    },
+    {
+      "url": "https://www.intel.com/content/www/us/en/foundry/library/advanced-process-technologies-for-data-center.html",
+      "claims": "Foveros Direct 3D 직접 칩렛 접합 및 구리 연결."
+    },
+    {
+      "url": "https://www.amd.com/en/products/processors/technologies/3d-v-cache.html",
+      "claims": "2세대 캐시를 코어 아래 배치, 냉각 경로 개선. 모든 작업 성능 향상 보장하지 않음."
+    }
+  ]
+}

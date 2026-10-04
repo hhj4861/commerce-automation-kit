@@ -1,0 +1,233 @@
+{
+  "verifiedAt": "2026-10-04",
+  "artifacts": {
+    "long": {
+      "file": "/Users/admin/Downloads/vedio/chip-stacking-episode-4-long.mp4",
+      "resolution": [
+        1920,
+        1080
+      ],
+      "duration": 273.75,
+      "audioDuration": 273.75,
+      "fps": "24/1",
+      "voice": "RU7aSi6lT4uQBXMLgDxK",
+      "speed": 1,
+      "fullDecode": true,
+      "silencesOver1_3sec": [],
+      "blackSegments": [],
+      "maxVolume": [
+        "-1.1 dB"
+      ],
+      "sha256": "fc5099c77e464c4fbd8c05a90f9a9ff26a8d1449d3e893d42d844fbde332a3a8",
+      "visualReview": {
+        "sampledScenes": 18,
+        "summaryTemplate": "hyperframes",
+        "note": "Sampled rendered frames, not continuous full-length manual playback."
+      },
+      "captionValidation": {
+        "cues": 93,
+        "widthAndTiming": true,
+        "punctuationOnly": 0,
+        "endingHeldToEnd": true
+      }
+    },
+    "short": {
+      "file": "/Users/admin/Downloads/vedio/chip-stacking-episode-4-short.mp4",
+      "duration": 48.75,
+      "audioDuration": 48.75,
+      "resolution": [
+        1080,
+        1920
+      ],
+      "fps": "24/1",
+      "speed": 1.1,
+      "voice": "RU7aSi6lT4uQBXMLgDxK",
+      "segments": [
+        {
+          "id": "hook",
+          "sourceIndex": 0,
+          "sourceStart": 0,
+          "start": 0,
+          "duration": 6.625,
+          "speechEnd": 6.5272727272727264,
+          "videoEnd": 6.460606060606059
+        },
+        {
+          "id": "stack",
+          "sourceIndex": 1,
+          "sourceStart": 12.375,
+          "start": 6.625,
+          "duration": 7.666666666666667,
+          "speechEnd": 7.581818181818181,
+          "videoEnd": 7.515151515151513
+        },
+        {
+          "id": "contacts",
+          "sourceIndex": 2,
+          "sourceStart": 25.25,
+          "start": 14.291666666666668,
+          "duration": 7.125,
+          "speechEnd": 7.036363636363636,
+          "videoEnd": 6.969696969696966
+        },
+        {
+          "id": "heat",
+          "sourceIndex": 3,
+          "sourceStart": 36.708333333333336,
+          "start": 21.416666666666668,
+          "duration": 12.875,
+          "speechEnd": 12.875,
+          "videoEnd": 12.875
+        },
+        {
+          "id": "ending",
+          "sourceIndex": 4,
+          "sourceStart": 49.583333333333336,
+          "start": 34.29166666666667,
+          "duration": 14.458333333333334,
+          "speechEnd": 14.458333333333334,
+          "videoEnd": 14.458333333333334
+        }
+      ],
+      "openingQuestion": "칩도 쌓으면 더 빨라질까?",
+      "newPaidCalls": 0,
+      "captionReview": {
+        "cues": 20,
+        "completeAtCuts": true,
+        "lastCaption": {
+          "scene": "ending",
+          "start": 44.77575757575759,
+          "end": 48.75000000000001,
+          "text": "반도체의 층수보다 중요한\\N것은 그 안의 동선입니다."
+        }
+      },
+      "fullDecode": true,
+      "silencesOver1_3sec": [],
+      "blackSegments": [],
+      "maxVolume": [
+        "-1.4 dB"
+      ],
+      "sha256": "53bdad8b4994875531a1bea515c4c0cb912255f713a03519050c9d357bce7552",
+      "visualReview": {
+        "method": "sampled rendered frames; not continuous manual playback",
+        "samplesSeconds": [
+          0.2,
+          6.5,
+          14.2,
+          21.35,
+          40,
+          48.5
+        ],
+        "result": "opening question, caption cuts, mechanism views and complete ending reviewed",
+        "contactSheet": "qa-final-short-sheet.jpg"
+      }
+    },
+    "ice": {
+      "file": "/Users/admin/Downloads/vedio/gyeongju-seokbinggo-short.mp4",
+      "duration": 46.208333,
+      "audioDuration": 46.208,
+      "resolution": [
+        1080,
+        1920
+      ],
+      "fps": "24/1",
+      "speed": 1.1,
+      "voice": "RU7aSi6lT4uQBXMLgDxK",
+      "segments": [
+        {
+          "id": "icehook",
+          "sourceIndex": 0,
+          "sourceStart": 0,
+          "start": 0,
+          "duration": 9.208333333333334,
+          "speechEnd": 9.208333333333334,
+          "videoEnd": 9.208333333333334
+        },
+        {
+          "id": "insulation",
+          "sourceIndex": 2,
+          "sourceStart": 22.25,
+          "start": 9.208333333333334,
+          "duration": 7.875,
+          "speechEnd": 7.763636363636362,
+          "videoEnd": 7.696969696969693
+        },
+        {
+          "id": "drain",
+          "sourceIndex": 3,
+          "sourceStart": 35.291666666666664,
+          "start": 17.083333333333336,
+          "duration": 4.708333333333333,
+          "speechEnd": 4.6,
+          "videoEnd": 4.533333333333329
+        },
+        {
+          "id": "vent",
+          "sourceIndex": 4,
+          "sourceStart": 46.45833333333333,
+          "start": 21.791666666666668,
+          "duration": 10.75,
+          "speechEnd": 10.75,
+          "videoEnd": 10.75
+        },
+        {
+          "id": "iceending",
+          "sourceIndex": 5,
+          "sourceStart": 57.20833333333333,
+          "start": 32.54166666666667,
+          "duration": 13.666666666666666,
+          "speechEnd": 13.666666666666666,
+          "videoEnd": 13.666666666666666
+        }
+      ],
+      "openingQuestion": "얼음 창고에 왜 구멍을 냈을까?",
+      "newPaidCalls": 0,
+      "captionReview": {
+        "cues": 20,
+        "completeAtCuts": true,
+        "lastCaption": {
+          "scene": "iceending",
+          "start": 42.38939393939394,
+          "end": 46.208333333333336,
+          "text": "겨울의 차가움을 오래\\N보관하는 건물이었던 겁니다."
+        }
+      },
+      "fullDecode": true,
+      "silencesOver1_3sec": [],
+      "blackSegments": [],
+      "maxVolume": [
+        "-1.0 dB"
+      ],
+      "sha256": "e2f155bbb97fd748b836b622b539a528b067c1df31359d2bf46225c96bf4654c",
+      "visualReview": {
+        "method": "sampled rendered frames; not continuous manual playback",
+        "samplesSeconds": [
+          0.2,
+          11,
+          18,
+          25,
+          39,
+          46
+        ],
+        "result": "opening question, caption cuts, mechanism views and complete ending reviewed",
+        "contactSheet": "qa-final-ice-sheet.jpg"
+      }
+    }
+  },
+  "paidVideo": {
+    "provider": "Higgsfield Seedance 2.0",
+    "jobs": [
+      "9623d241-30c5-463e-abfd-307cdfc00316",
+      "977a928e-25a9-40c0-ac84-c139cdef665b"
+    ],
+    "credits": 108,
+    "rerolls": 0
+  },
+  "ttsRun": "https://github.com/hhj4861/commerce-automation-kit/actions/runs/37193757909",
+  "motion": "actual HyperFrames summary rendered into last five seconds of chip long/short",
+  "limits": [
+    "Sampled visual inspection, not continuous manual playback",
+    "Conceptual models, not physical simulation or surveyed reconstruction",
+    "YouTube upload and related-video setting not performed"
+  ]
+}
