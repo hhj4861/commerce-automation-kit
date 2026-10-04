@@ -9,6 +9,7 @@ import { Wordbook } from "./v2-wordbook";
 import { Vocabulary } from "./v2-vocabulary";
 import { V2Lesson } from "./v2-lesson";
 import { lessonPlan } from "@/lib/v2-lesson";
+import { GoogleLogin } from "./google-login";
 import { V2Settings } from "./v2-settings";
 import {
   curriculum,
@@ -244,6 +245,7 @@ function Login({ onDone }: { onDone: () => void }) {
       }}
     >
       <p>기기가 바뀌어도 내 언어와 연습 기록을 이어가요.</p>
+      <GoogleLogin onDone={onDone} disabled={busy} onBusyChange={setBusy} />
       <label>
         학습자 아이디
         <input
@@ -282,8 +284,8 @@ function Login({ onDone }: { onDone: () => void }) {
         {signup ? "이미 계정이 있어요" : "처음이에요 · 계정 만들기"}
       </button>
       <p className="hm-muted">
-        학습 계정에는 학생·콘텐츠 관리 권한이 없어요. 비밀번호 재설정은 아직
-        지원하지 않으니 안전하게 보관해 주세요.
+        학습 계정에는 학생·콘텐츠 관리 권한이 없어요. 아이디로 가입했다면
+        비밀번호를 안전하게 보관해 주세요. 비밀번호 재설정은 아직 지원하지 않아요.
       </p>
       <Link href="/login?from=%2Fstudy">기존 튜터·관리자 로그인 →</Link>
     </form>

@@ -2256,6 +2256,13 @@ body:has(.hm-dialog[open]) { overflow: hidden; }
 .hm-word-review button { flex: 1; white-space: nowrap; }
 .hm-app .hm-word-remove { margin-top: 12px; color: #67738b; font-size: 12px; }
 
+/* Google renders its official branded button; keep the surrounding form calm. */
+.hm-google-login { margin: 20px 0 12px; }
+.hm-google-button { display: flex; justify-content: center; min-height: 44px; }
+.hm-google-button[aria-disabled="true"] { opacity: .55; pointer-events: none; }
+.hm-login-divider { display: flex; align-items: center; gap: 14px; margin: 22px 0 16px; color: #5a6980; font-size: 13px; }
+.hm-login-divider::before, .hm-login-divider::after { content: ""; height: 1px; background: #e2e7f0; flex: 1; }
+
 .hm-meaning-selectable { user-select: text; -webkit-user-select: text; }
 .hm-word-aligned mark { background: #ffe08a; color: #182b50; border-radius: 3px; box-shadow: 0 2px 0 #bd7900; }
 .hm-alignment-status { font-size: 0.85rem; color: #405475; overflow-wrap: anywhere; }

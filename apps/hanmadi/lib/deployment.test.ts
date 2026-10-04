@@ -33,6 +33,7 @@ test("admin deployment exposes only login, release identity and owner endpoints"
     "/study",
     "/api/study",
     "/api/study/account",
+    "/api/study/account/google",
     "/api/model-connections",
     "/api/register",
     "/api/auth/extra",

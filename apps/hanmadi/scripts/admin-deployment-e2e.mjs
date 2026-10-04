@@ -86,6 +86,8 @@ try {
     403,
   );
   assert.equal((await fetch(`${origin}/api/study`)).status, 404);
+  assert.equal((await fetch(`${origin}/api/study/account/google`)).status, 404);
+  assert.equal((await fetch(`${origin}/api/study/account/google`, { method: "POST" })).status, 404);
   assert.equal(
     (await fetch(`${origin}/api/register`, { method: "POST" })).status,
     404,

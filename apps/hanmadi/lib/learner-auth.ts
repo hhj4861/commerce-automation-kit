@@ -117,13 +117,19 @@ export async function learnerLogin(
     if (!verifyPin(password, account.passwordHash) || !raw)
       throw new ConversationError(401, "아이디 또는 비밀번호를 확인해 주세요.");
   }
+  return issueLearnerSession(account);
+}
+
+/** Shared session boundary for password and verified Google identities. */
+export async function issueLearnerSession(account: { id: string; name: string }) {
   const value = Buffer.from(
-    JSON.stringify({ id: account.id, name, expires: Date.now() + TTL * 1000 }),
+    JSON.stringify({ id: account.id, name: account.name, expires: Date.now() + TTL * 1000 }),
   ).toString("base64url");
   // A learner login must not retain privileges from a previous tutor session.
   const jar = await cookies();
   jar.delete("hanmadi_tutor");
   jar.delete("hanmadi_language");
+  jar.delete("hanmadi_google_flow");
   (await cookies()).set(COOKIE, `${value}.${signature(value)}`, {
     httpOnly: true,
     sameSite: "lax",
@@ -131,11 +137,12 @@ export async function learnerLogin(
     path: "/",
     maxAge: TTL,
   });
-  return { name };
+  return { name: account.name };
 }
 export async function learnerLogout() {
   const jar = await cookies();
   jar.delete(COOKIE);
   jar.delete("hanmadi_tutor");
   jar.delete("hanmadi_language");
+  jar.delete("hanmadi_google_flow");
 }
