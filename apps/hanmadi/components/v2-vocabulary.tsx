@@ -130,8 +130,11 @@ export function Vocabulary({ phrase, language, onSaved }: {
           <button type="button" className={`hm-word${highlighted ? " hm-word-aligned" : ""}`} key={part.index}
             aria-label={`${highlighted ? match!.text : part.text} 뜻 보기`}
             onClick={event => {
+              const selected = window.getSelection();
+              // Dragging the original still selects a range, even on an aligned word.
+              if (selected?.toString().trim() && textRef.current?.contains(selected.anchorNode)) return;
               if (highlighted) open(match!.text, event.currentTarget);
-              else if (!window.getSelection()?.toString().trim()) open(part.text, event.currentTarget);
+              else if (!selected?.toString().trim()) open(part.text, event.currentTarget);
             }}>{content}</button> : <span key={part.index}>{part.text}</span>;
       })}
     </p>

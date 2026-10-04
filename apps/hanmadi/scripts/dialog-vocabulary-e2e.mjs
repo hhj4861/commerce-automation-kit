@@ -101,6 +101,14 @@ try {
   const aligned = await lesson.locator(".hm-word-aligned mark").allTextContents();
   assert.equal(aligned.join(""), "今日");
   await page.screenshot({ path: resolve(dir, "today-alignment.png") });
+  const highlightedBox = await lesson.locator(".hm-word-aligned").first().boundingBox();
+  await page.mouse.move(highlightedBox.x + 1, highlightedBox.y + highlightedBox.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(highlightedBox.x + highlightedBox.width - 1, highlightedBox.y + highlightedBox.height / 2, { steps: 8 });
+  await page.mouse.up();
+  await lesson.getByRole("button", { name: "선택한 표현 뜻 보기", exact: true }).waitFor();
+  assert.equal(await dialogs.count(), 1, "dragging a highlighted source must not open its dialog");
+  await meaning.dblclick({ position: { x: 10, y: 10 } });
   await lesson.locator(".hm-word-aligned").first().tap();
   await dialogs.last().getByText("문맥 속 단어 뜻", { exact: true }).waitFor();
   assert.equal(await dialogs.last().locator(".hm-native").innerText(), aligned.join(""));
