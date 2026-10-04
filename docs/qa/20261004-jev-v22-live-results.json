@@ -1,0 +1,1251 @@
+{
+  "planSha256": "ab185a1899b5f9ecf7ac19d0bbb6e490b03d38130226de3dedd8abd63c8f22e6",
+  "completedCalls": 3,
+  "rows": [
+    {
+      "case": "supported",
+      "expectedDecision": "accepted",
+      "elapsedMs": 2246,
+      "response": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "relevance": {
+            "type": "choice",
+            "choice": "pass",
+            "probabilities": {
+              "pass": 0.96,
+              "reject": 0.04,
+              "uncertain": 0
+            },
+            "confidence": 0.94
+          },
+          "support_answer": {
+            "type": "choice",
+            "choice": "pass",
+            "probabilities": {
+              "pass": 0.64,
+              "reject": 0.15,
+              "uncertain": 0.21
+            },
+            "confidence": 0.46
+          },
+          "support_direction": {
+            "type": "choice",
+            "choice": "not_applicable",
+            "probabilities": {
+              "not_applicable": 0.6,
+              "pass": 0.13,
+              "reject": 0.04,
+              "uncertain": 0.23
+            },
+            "confidence": 0.47
+          },
+          "support_entity": {
+            "type": "choice",
+            "choice": "pass",
+            "probabilities": {
+              "pass": 0.77,
+              "reject": 0,
+              "uncertain": 0.23
+            },
+            "confidence": 0.65
+          },
+          "support_expectedAnswer": {
+            "type": "choice",
+            "choice": "not_applicable",
+            "probabilities": {
+              "not_applicable": 0.53,
+              "pass": 0.23,
+              "reject": 0.06,
+              "uncertain": 0.18
+            },
+            "confidence": 0.38
+          },
+          "support_location": {
+            "type": "choice",
+            "choice": "pass",
+            "probabilities": {
+              "pass": 0.62,
+              "reject": 0.01,
+              "uncertain": 0.37
+            },
+            "confidence": 0.43
+          },
+          "support_openingVisual": {
+            "type": "choice",
+            "choice": "not_applicable",
+            "probabilities": {
+              "not_applicable": 0.84,
+              "pass": 0.04,
+              "reject": 0.01,
+              "uncertain": 0.11
+            },
+            "confidence": 0.79
+          },
+          "support_question": {
+            "type": "choice",
+            "choice": "not_applicable",
+            "probabilities": {
+              "not_applicable": 0.83,
+              "pass": 0.12,
+              "reject": 0.01,
+              "uncertain": 0.04
+            },
+            "confidence": 0.78
+          },
+          "support_title": {
+            "type": "choice",
+            "choice": "pass",
+            "probabilities": {
+              "not_applicable": 0.14,
+              "pass": 0.59,
+              "reject": 0.03,
+              "uncertain": 0.24
+            },
+            "confidence": 0.46
+          },
+          "support_whyItMatters": {
+            "type": "choice",
+            "choice": "uncertain",
+            "probabilities": {
+              "not_applicable": 0.19,
+              "pass": 0.39,
+              "reject": 0.01,
+              "uncertain": 0.41
+            },
+            "confidence": 0.21
+          },
+          "value": {
+            "type": "choice",
+            "choice": "pass",
+            "probabilities": {
+              "pass": 0.97,
+              "reject": 0.03,
+              "uncertain": 0
+            },
+            "confidence": 0.95
+          }
+        },
+        "usage": {
+          "input_tokens": 5786,
+          "output_tokens": 507
+        }
+      },
+      "result": {
+        "action": null,
+        "candidates": [
+          {
+            "title": "예술 건축물 안에서 책을 읽는다고?",
+            "entity": "안양파빌리온",
+            "location": "안양",
+            "question": "안양파빌리온에서는 건물 감상 말고 무엇을 할 수 있을까?",
+            "expectedAnswer": "건축물과 전시 작품을 보는 공간이라고 예상할 수 있다.",
+            "answer": "안양파빌리온은 공공예술도서관으로 책을 읽을 수 있는 공간이다.",
+            "whyItMatters": "건축물을 감상하는 방문과 책을 읽는 시간을 함께 계획할 수 있다.",
+            "direction": "건축 외관에서 책을 읽는 공간으로 넘어가는 도입을 제안한다.",
+            "keyword": "안양파빌리온 도서관",
+            "openingVisual": "건축 외관을 먼저 보여주고 책을 펼치는 장면으로 이어지는 연출을 제안한다.",
+            "evidenceIds": [
+              "source-1",
+              "lead-1-source-1",
+              "lead-1-source-2"
+            ],
+            "id": "candidate-1",
+            "leadId": "lead-1",
+            "draftEvidenceIds": [
+              "source-1",
+              "lead-1-source-2"
+            ],
+            "decision": "held",
+            "reasonCodes": [
+              "support_answer_uncertain",
+              "support_direction_uncertain",
+              "support_entity_uncertain",
+              "support_expectedAnswer_uncertain",
+              "support_location_uncertain",
+              "support_openingVisual_uncertain",
+              "support_question_uncertain",
+              "support_title_uncertain",
+              "support_whyItMatters_uncertain"
+            ],
+            "checks": {
+              "duplicate": {
+                "status": "not_applicable",
+                "reason": "no_prior"
+              },
+              "relevance": {
+                "choice": "pass",
+                "confidence": 0.94,
+                "probabilities": {
+                  "pass": 0.96,
+                  "reject": 0.04,
+                  "uncertain": 0
+                },
+                "margin": 0.9199999999999999,
+                "model": "jev-1.13.0",
+                "rubricVersion": "discovery-v2.2"
+              },
+              "support_answer": {
+                "choice": "pass",
+                "confidence": 0.46,
+                "probabilities": {
+                  "pass": 0.64,
+                  "reject": 0.15,
+                  "uncertain": 0.21
+                },
+                "margin": 0.43000000000000005,
+                "model": "jev-1.13.0",
+                "rubricVersion": "discovery-v2.2"
+              },
+              "support_direction": {
+                "choice": "not_applicable",
+                "confidence": 0.47,
+                "probabilities": {
+                  "not_applicable": 0.6,
+                  "pass": 0.13,
+                  "reject": 0.04,
+                  "uncertain": 0.23
+                },
+                "margin": 0.37,
+                "model": "jev-1.13.0",
+                "rubricVersion": "discovery-v2.2"
+              },
+              "support_entity": {
+                "choice": "pass",
+                "confidence": 0.65,
+                "probabilities": {
+                  "pass": 0.77,
+                  "reject": 0,
+                  "uncertain": 0.23
+                },
+                "margin": 0.54,
+                "model": "jev-1.13.0",
+                "rubricVersion": "discovery-v2.2"
+              },
+              "support_expectedAnswer": {
+                "choice": "not_applicable",
+                "confidence": 0.38,
+                "probabilities": {
+                  "not_applicable": 0.53,
+                  "pass": 0.23,
+                  "reject": 0.06,
+                  "uncertain": 0.18
+                },
+                "margin": 0.30000000000000004,
+                "model": "jev-1.13.0",
+                "rubricVersion": "discovery-v2.2"
+              },
+              "support_location": {
+                "choice": "pass",
+                "confidence": 0.43,
+                "probabilities": {
+                  "pass": 0.62,
+                  "reject": 0.01,
+                  "uncertain": 0.37
+                },
+                "margin": 0.25,
+                "model": "jev-1.13.0",
+                "rubricVersion": "discovery-v2.2"
+              },
+              "support_openingVisual": {
+                "choice": "not_applicable",
+                "confidence": 0.79,
+                "probabilities": {
+                  "not_applicable": 0.84,
+                  "pass": 0.04,
+                  "reject": 0.01,
+                  "uncertain": 0.11
+                },
+                "margin": 0.73,
+                "model": "jev-1.13.0",
+                "rubricVersion": "discovery-v2.2"
+              },
+              "support_question": {
+                "choice": "not_applicable",
+                "confidence": 0.78,
+                "probabilities": {
+                  "not_applicable": 0.83,
+                  "pass": 0.12,
+                  "reject": 0.01,
+                  "uncertain": 0.04
+                },
+                "margin": 0.71,
+                "model": "jev-1.13.0",
+                "rubricVersion": "discovery-v2.2"
+              },
+              "support_title": {
+                "choice": "pass",
+                "confidence": 0.46,
+                "probabilities": {
+                  "not_applicable": 0.14,
+                  "pass": 0.59,
+                  "reject": 0.03,
+                  "uncertain": 0.24
+                },
+                "margin": 0.35,
+                "model": "jev-1.13.0",
+                "rubricVersion": "discovery-v2.2"
+              },
+              "support_whyItMatters": {
+                "choice": "uncertain",
+                "confidence": 0.21,
+                "probabilities": {
+                  "not_applicable": 0.19,
+                  "pass": 0.39,
+                  "reject": 0.01,
+                  "uncertain": 0.41
+                },
+                "margin": 0.019999999999999962,
+                "model": "jev-1.13.0",
+                "rubricVersion": "discovery-v2.2"
+              },
+              "value": {
+                "choice": "pass",
+                "confidence": 0.95,
+                "probabilities": {
+                  "pass": 0.97,
+                  "reject": 0.03,
+                  "uncertain": 0
+                },
+                "margin": 0.94,
+                "model": "jev-1.13.0",
+                "rubricVersion": "discovery-v2.2"
+              }
+            },
+            "evidenceAliases": {
+              "source-1": "source-1",
+              "lead-1-source-1": "source-1",
+              "lead-1-source-2": "lead-1-source-2"
+            }
+          }
+        ],
+        "createdAt": 1791072100.643452,
+        "evidence": [
+          {
+            "excerpt": "안양 파빌리온 도서관은 한때 쇠락했던 유원지를 예술공원으로 탈바꿈시킨 안양공공예술프로젝트(Anyang Public Art Project, APAP)의 일환으로 탄생한, 국내 최초의 공공예술도서관입니다. 책을 읽는 공간을 넘어 예술과 사색....",
+            "id": "source-1",
+            "kind": "search_excerpt",
+            "retrievedAt": 1791023628.5040314,
+            "title": "[경기 이색 도서관] ⑤ 안양파빌리온",
+            "url": "https://gnews.gg.go.kr/news/news_view.do?number=202510280911419187C049"
+          },
+          {
+            "excerpt": "규모 : 526.9㎡규모의 현대미술전시관, 특징 : 2005년 안양공공예술프로젝트(APAP)의 일환으로 조성된 조형 예술물 세계적인 건축가 알바로시자가 아시아 최초로 주변경관과 어울리는 반구형으로 설계한 디자인",
+            "id": "source-2",
+            "kind": "search_excerpt",
+            "retrievedAt": 1791023628.50405,
+            "title": "안양파빌리온 | 시설현황 | 시설/대관",
+            "url": "https://ayac.or.kr/base/contents/view?contentsNo=30&menuLevel=3&menuNo=36"
+          },
+          {
+            "excerpt": "안양 파빌리온 도서관은 한때 쇠락했던 유원지를 예술공원으로 탈바꿈시킨 안양공공예술프로젝트(Anyang Public Art Project, APAP)의 일환으로 탄생한, 국내 최초의 공공예술도서관입니다. 책을 읽는 공간을 넘어 예술과 사색....",
+            "id": "lead-1-source-1",
+            "kind": "search_excerpt",
+            "retrievedAt": 1791023628.526616,
+            "title": "[경기 이색 도서관] ⑤ 안양파빌리온",
+            "url": "https://gnews.gg.go.kr/news/news_view.do?number=202510280911419187C049"
+          },
+          {
+            "excerpt": "규모 : 526.9㎡규모의 현대미술전시관, 특징 : 2005년 안양공공예술프로젝트(APAP)의 일환으로 조성된 조형 예술물 세계적인 건축가 알바로시자가 아시아 최초로 주변경관과 어울리는 반구형으로 설계한 디자인",
+            "id": "lead-1-source-2",
+            "kind": "search_excerpt",
+            "retrievedAt": 1791023628.5266278,
+            "title": "안양파빌리온 | 시설현황 | 시설/대관",
+            "url": "https://ayac.or.kr/base/contents/view?contentsNo=30&menuLevel=3&menuNo=36"
+          }
+        ],
+        "expiresAt": 1791072700.643452,
+        "factChecked": false,
+        "input": {
+          "brief": "안양파빌리온의 의외의 용도를 한국 시청자에게 설명하는 건축 영상 주제",
+          "category": "건축학",
+          "history": [],
+          "profile": "content",
+          "runtime": {
+            "model": "fixture-no-generation",
+            "provider": "codex"
+          },
+          "workflow": "research-v2"
+        },
+        "reasonCodes": [],
+        "requestId": "b2b49747-4cdc-420a-9cf3-3590c0f8ae94",
+        "requiresHumanReview": true,
+        "researchFailures": [],
+        "researchLeads": [
+          {
+            "draftEvidenceIds": [
+              "source-1"
+            ],
+            "entity": "안양파빌리온",
+            "evidenceIds": [
+              "source-1",
+              "lead-1-source-1",
+              "lead-1-source-2"
+            ],
+            "id": "lead-1",
+            "keyword": "안양파빌리온 도서관",
+            "question": "건물 감상 외에 무엇을 할 수 있나?"
+          }
+        ],
+        "rubricVersion": "discovery-v2.2",
+        "state": "complete",
+        "usage": {
+          "costUsd": null,
+          "generationClaims": 2,
+          "jevCalls": 1,
+          "searchCalls": 2
+        }
+      },
+      "idempotentReplayUnchanged": true,
+      "sshExit": 0,
+      "freshReadMatches": true
+    },
+    {
+      "case": "insufficient",
+      "expectedDecision": "held",
+      "elapsedMs": 493,
+      "response": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "relevance": {
+            "type": "choice",
+            "choice": "pass",
+            "probabilities": {
+              "pass": 0.95,
+              "reject": 0.05,
+              "uncertain": 0
+            },
+            "confidence": 0.92
+          },
+          "support_answer": {
+            "type": "choice",
+            "choice": "uncertain",
+            "probabilities": {
+              "pass": 0.01,
+              "reject": 0.08,
+              "uncertain": 0.91
+            },
+            "confidence": 0.87
+          },
+          "support_direction": {
+            "type": "choice",
+            "choice": "not_applicable",
+            "probabilities": {
+              "not_applicable": 0.66,
+              "pass": 0.1,
+              "reject": 0.03,
+              "uncertain": 0.21
+            },
+            "confidence": 0.55
+          },
+          "support_entity": {
+            "type": "choice",
+            "choice": "pass",
+            "probabilities": {
+              "pass": 0.77,
+              "reject": 0,
+              "uncertain": 0.23
+            },
+            "confidence": 0.65
+          },
+          "support_expectedAnswer": {
+            "type": "choice",
+            "choice": "not_applicable",
+            "probabilities": {
+              "not_applicable": 0.53,
+              "pass": 0.25,
+              "reject": 0.05,
+              "uncertain": 0.17
+            },
+            "confidence": 0.37
+          },
+          "support_location": {
+            "type": "choice",
+            "choice": "pass",
+            "probabilities": {
+              "pass": 0.62,
+              "reject": 0.01,
+              "uncertain": 0.37
+            },
+            "confidence": 0.43
+          },
+          "support_openingVisual": {
+            "type": "choice",
+            "choice": "not_applicable",
+            "probabilities": {
+              "not_applicable": 0.85,
+              "pass": 0.04,
+              "reject": 0.01,
+              "uncertain": 0.1
+            },
+            "confidence": 0.81
+          },
+          "support_question": {
+            "type": "choice",
+            "choice": "not_applicable",
+            "probabilities": {
+              "not_applicable": 0.86,
+              "pass": 0.09,
+              "reject": 0.01,
+              "uncertain": 0.04
+            },
+            "confidence": 0.8
+          },
+          "support_title": {
+            "type": "choice",
+            "choice": "pass",
+            "probabilities": {
+              "not_applicable": 0.14,
+              "pass": 0.58,
+              "reject": 0.03,
+              "uncertain": 0.25
+            },
+            "confidence": 0.44
+          },
+          "support_whyItMatters": {
+            "type": "choice",
+            "choice": "uncertain",
+            "probabilities": {
+              "not_applicable": 0.18,
+              "pass": 0.37,
+              "reject": 0.01,
+              "uncertain": 0.44
+            },
+            "confidence": 0.25
+          },
+          "value": {
+            "type": "choice",
+            "choice": "pass",
+            "probabilities": {
+              "pass": 0.77,
+              "reject": 0.21,
+              "uncertain": 0.02
+            },
+            "confidence": 0.66
+          }
+        },
+        "usage": {
+          "input_tokens": 5850,
+          "output_tokens": 509
+        }
+      },
+      "result": {
+        "action": null,
+        "candidates": [
+          {
+            "title": "예술 건축물 안에서 책을 읽는다고?",
+            "entity": "안양파빌리온",
+            "location": "안양",
+            "question": "안양파빌리온에서는 건물 감상 말고 무엇을 할 수 있을까?",
+            "expectedAnswer": "건축물과 전시 작품을 보는 공간이라고 예상할 수 있다.",
+            "answer": "안양파빌리온은 공공예술도서관이다. 반구형 지붕은 속삭이는 소리를 건너편 좌석까지 전달하도록 설계되었다.",
+            "whyItMatters": "건축물을 감상하는 방문과 책을 읽는 시간을 함께 계획할 수 있다.",
+            "direction": "건축 외관에서 책을 읽는 공간으로 넘어가는 도입을 제안한다.",
+            "keyword": "안양파빌리온 도서관",
+            "openingVisual": "건축 외관을 먼저 보여주고 책을 펼치는 장면으로 이어지는 연출을 제안한다.",
+            "evidenceIds": [
+              "source-1",
+              "lead-1-source-1",
+              "lead-1-source-2"
+            ],
+            "id": "candidate-1",
+            "leadId": "lead-1",
+            "draftEvidenceIds": [
+              "source-1",
+              "lead-1-source-2"
+            ],
+            "decision": "held",
+            "reasonCodes": [
+              "support_answer_uncertain",
+              "support_direction_uncertain",
+              "support_entity_uncertain",
+              "support_expectedAnswer_uncertain",
+              "support_location_uncertain",
+              "support_title_uncertain",
+              "support_whyItMatters_uncertain",
+              "value_uncertain"
+            ],
+            "checks": {
+              "duplicate": {
+                "status": "not_applicable",
+                "reason": "no_prior"
+              },
+              "relevance": {
+                "choice": "pass",
+                "confidence": 0.92,
+                "probabilities": {
+                  "pass": 0.95,
+                  "reject": 0.05,
+                  "uncertain": 0
+                },
+                "margin": 0.8999999999999999,
+                "model": "jev-1.13.0",
+                "rubricVersion": "discovery-v2.2"
+              },
+              "support_answer": {
+                "choice": "uncertain",
+                "confidence": 0.87,
+                "probabilities": {
+                  "pass": 0.01,
+                  "reject": 0.08,
+                  "uncertain": 0.91
+                },
+                "margin": 0.8300000000000001,
+                "model": "jev-1.13.0",
+                "rubricVersion": "discovery-v2.2"
+              },
+              "support_direction": {
+                "choice": "not_applicable",
+                "confidence": 0.55,
+                "probabilities": {
+                  "not_applicable": 0.66,
+                  "pass": 0.1,
+                  "reject": 0.03,
+                  "uncertain": 0.21
+                },
+                "margin": 0.45000000000000007,
+                "model": "jev-1.13.0",
+                "rubricVersion": "discovery-v2.2"
+              },
+              "support_entity": {
+                "choice": "pass",
+                "confidence": 0.65,
+                "probabilities": {
+                  "pass": 0.77,
+                  "reject": 0,
+                  "uncertain": 0.23
+                },
+                "margin": 0.54,
+                "model": "jev-1.13.0",
+                "rubricVersion": "discovery-v2.2"
+              },
+              "support_expectedAnswer": {
+                "choice": "not_applicable",
+                "confidence": 0.37,
+                "probabilities": {
+                  "not_applicable": 0.53,
+                  "pass": 0.25,
+                  "reject": 0.05,
+                  "uncertain": 0.17
+                },
+                "margin": 0.28,
+                "model": "jev-1.13.0",
+                "rubricVersion": "discovery-v2.2"
+              },
+              "support_location": {
+                "choice": "pass",
+                "confidence": 0.43,
+                "probabilities": {
+                  "pass": 0.62,
+                  "reject": 0.01,
+                  "uncertain": 0.37
+                },
+                "margin": 0.25,
+                "model": "jev-1.13.0",
+                "rubricVersion": "discovery-v2.2"
+              },
+              "support_openingVisual": {
+                "choice": "not_applicable",
+                "confidence": 0.81,
+                "probabilities": {
+                  "not_applicable": 0.85,
+                  "pass": 0.04,
+                  "reject": 0.01,
+                  "uncertain": 0.1
+                },
+                "margin": 0.75,
+                "model": "jev-1.13.0",
+                "rubricVersion": "discovery-v2.2"
+              },
+              "support_question": {
+                "choice": "not_applicable",
+                "confidence": 0.8,
+                "probabilities": {
+                  "not_applicable": 0.86,
+                  "pass": 0.09,
+                  "reject": 0.01,
+                  "uncertain": 0.04
+                },
+                "margin": 0.77,
+                "model": "jev-1.13.0",
+                "rubricVersion": "discovery-v2.2"
+              },
+              "support_title": {
+                "choice": "pass",
+                "confidence": 0.44,
+                "probabilities": {
+                  "not_applicable": 0.14,
+                  "pass": 0.58,
+                  "reject": 0.03,
+                  "uncertain": 0.25
+                },
+                "margin": 0.32999999999999996,
+                "model": "jev-1.13.0",
+                "rubricVersion": "discovery-v2.2"
+              },
+              "support_whyItMatters": {
+                "choice": "uncertain",
+                "confidence": 0.25,
+                "probabilities": {
+                  "not_applicable": 0.18,
+                  "pass": 0.37,
+                  "reject": 0.01,
+                  "uncertain": 0.44
+                },
+                "margin": 0.07,
+                "model": "jev-1.13.0",
+                "rubricVersion": "discovery-v2.2"
+              },
+              "value": {
+                "choice": "pass",
+                "confidence": 0.66,
+                "probabilities": {
+                  "pass": 0.77,
+                  "reject": 0.21,
+                  "uncertain": 0.02
+                },
+                "margin": 0.56,
+                "model": "jev-1.13.0",
+                "rubricVersion": "discovery-v2.2"
+              }
+            },
+            "evidenceAliases": {
+              "source-1": "source-1",
+              "lead-1-source-1": "source-1",
+              "lead-1-source-2": "lead-1-source-2"
+            }
+          }
+        ],
+        "createdAt": 1791072108.406791,
+        "evidence": [
+          {
+            "excerpt": "안양 파빌리온 도서관은 한때 쇠락했던 유원지를 예술공원으로 탈바꿈시킨 안양공공예술프로젝트(Anyang Public Art Project, APAP)의 일환으로 탄생한, 국내 최초의 공공예술도서관입니다. 책을 읽는 공간을 넘어 예술과 사색....",
+            "id": "source-1",
+            "kind": "search_excerpt",
+            "retrievedAt": 1791023629.097963,
+            "title": "[경기 이색 도서관] ⑤ 안양파빌리온",
+            "url": "https://gnews.gg.go.kr/news/news_view.do?number=202510280911419187C049"
+          },
+          {
+            "excerpt": "규모 : 526.9㎡규모의 현대미술전시관, 특징 : 2005년 안양공공예술프로젝트(APAP)의 일환으로 조성된 조형 예술물 세계적인 건축가 알바로시자가 아시아 최초로 주변경관과 어울리는 반구형으로 설계한 디자인",
+            "id": "source-2",
+            "kind": "search_excerpt",
+            "retrievedAt": 1791023629.0979788,
+            "title": "안양파빌리온 | 시설현황 | 시설/대관",
+            "url": "https://ayac.or.kr/base/contents/view?contentsNo=30&menuLevel=3&menuNo=36"
+          },
+          {
+            "excerpt": "안양 파빌리온 도서관은 한때 쇠락했던 유원지를 예술공원으로 탈바꿈시킨 안양공공예술프로젝트(Anyang Public Art Project, APAP)의 일환으로 탄생한, 국내 최초의 공공예술도서관입니다. 책을 읽는 공간을 넘어 예술과 사색....",
+            "id": "lead-1-source-1",
+            "kind": "search_excerpt",
+            "retrievedAt": 1791023629.1178954,
+            "title": "[경기 이색 도서관] ⑤ 안양파빌리온",
+            "url": "https://gnews.gg.go.kr/news/news_view.do?number=202510280911419187C049"
+          },
+          {
+            "excerpt": "규모 : 526.9㎡규모의 현대미술전시관, 특징 : 2005년 안양공공예술프로젝트(APAP)의 일환으로 조성된 조형 예술물 세계적인 건축가 알바로시자가 아시아 최초로 주변경관과 어울리는 반구형으로 설계한 디자인",
+            "id": "lead-1-source-2",
+            "kind": "search_excerpt",
+            "retrievedAt": 1791023629.117906,
+            "title": "안양파빌리온 | 시설현황 | 시설/대관",
+            "url": "https://ayac.or.kr/base/contents/view?contentsNo=30&menuLevel=3&menuNo=36"
+          }
+        ],
+        "expiresAt": 1791072708.406791,
+        "factChecked": false,
+        "input": {
+          "brief": "안양파빌리온의 의외의 용도를 한국 시청자에게 설명하는 건축 영상 주제",
+          "category": "건축학",
+          "history": [],
+          "profile": "content",
+          "runtime": {
+            "model": "fixture-no-generation",
+            "provider": "codex"
+          },
+          "workflow": "research-v2"
+        },
+        "reasonCodes": [],
+        "requestId": "62b2639b-c0bc-45a4-a5a4-c40f5007308e",
+        "requiresHumanReview": true,
+        "researchFailures": [],
+        "researchLeads": [
+          {
+            "draftEvidenceIds": [
+              "source-1"
+            ],
+            "entity": "안양파빌리온",
+            "evidenceIds": [
+              "source-1",
+              "lead-1-source-1",
+              "lead-1-source-2"
+            ],
+            "id": "lead-1",
+            "keyword": "안양파빌리온 도서관",
+            "question": "건물 감상 외에 무엇을 할 수 있나?"
+          }
+        ],
+        "rubricVersion": "discovery-v2.2",
+        "state": "complete",
+        "usage": {
+          "costUsd": null,
+          "generationClaims": 2,
+          "jevCalls": 1,
+          "searchCalls": 2
+        }
+      },
+      "idempotentReplayUnchanged": true,
+      "sshExit": 0,
+      "freshReadMatches": true
+    },
+    {
+      "case": "contradicted",
+      "expectedDecision": "rejected",
+      "elapsedMs": 450,
+      "response": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "relevance": {
+            "type": "choice",
+            "choice": "reject",
+            "probabilities": {
+              "pass": 0.19,
+              "reject": 0.81,
+              "uncertain": 0
+            },
+            "confidence": 0.71
+          },
+          "support_answer": {
+            "type": "choice",
+            "choice": "reject",
+            "probabilities": {
+              "pass": 0,
+              "reject": 0.99,
+              "uncertain": 0.01
+            },
+            "confidence": 0.98
+          },
+          "support_direction": {
+            "type": "choice",
+            "choice": "not_applicable",
+            "probabilities": {
+              "not_applicable": 0.61,
+              "pass": 0.12,
+              "reject": 0.04,
+              "uncertain": 0.23
+            },
+            "confidence": 0.48
+          },
+          "support_entity": {
+            "type": "choice",
+            "choice": "pass",
+            "probabilities": {
+              "pass": 0.76,
+              "reject": 0,
+              "uncertain": 0.24
+            },
+            "confidence": 0.64
+          },
+          "support_expectedAnswer": {
+            "type": "choice",
+            "choice": "not_applicable",
+            "probabilities": {
+              "not_applicable": 0.49,
+              "pass": 0.26,
+              "reject": 0.05,
+              "uncertain": 0.2
+            },
+            "confidence": 0.31
+          },
+          "support_location": {
+            "type": "choice",
+            "choice": "pass",
+            "probabilities": {
+              "pass": 0.61,
+              "reject": 0.01,
+              "uncertain": 0.38
+            },
+            "confidence": 0.43
+          },
+          "support_openingVisual": {
+            "type": "choice",
+            "choice": "not_applicable",
+            "probabilities": {
+              "not_applicable": 0.85,
+              "pass": 0.04,
+              "reject": 0.01,
+              "uncertain": 0.1
+            },
+            "confidence": 0.81
+          },
+          "support_question": {
+            "type": "choice",
+            "choice": "not_applicable",
+            "probabilities": {
+              "not_applicable": 0.85,
+              "pass": 0.1,
+              "reject": 0.01,
+              "uncertain": 0.04
+            },
+            "confidence": 0.79
+          },
+          "support_title": {
+            "type": "choice",
+            "choice": "pass",
+            "probabilities": {
+              "not_applicable": 0.12,
+              "pass": 0.61,
+              "reject": 0.03,
+              "uncertain": 0.24
+            },
+            "confidence": 0.47
+          },
+          "support_whyItMatters": {
+            "type": "choice",
+            "choice": "uncertain",
+            "probabilities": {
+              "not_applicable": 0.16,
+              "pass": 0.39,
+              "reject": 0.01,
+              "uncertain": 0.44
+            },
+            "confidence": 0.25
+          },
+          "value": {
+            "type": "choice",
+            "choice": "pass",
+            "probabilities": {
+              "pass": 0.64,
+              "reject": 0.35,
+              "uncertain": 0.01
+            },
+            "confidence": 0.47
+          }
+        },
+        "usage": {
+          "input_tokens": 5774,
+          "output_tokens": 507
+        }
+      },
+      "result": {
+        "action": null,
+        "candidates": [
+          {
+            "title": "예술 건축물 안에서 책을 읽는다고?",
+            "entity": "안양파빌리온",
+            "location": "안양",
+            "question": "안양파빌리온에서는 건물 감상 말고 무엇을 할 수 있을까?",
+            "expectedAnswer": "건축물과 전시 작품을 보는 공간이라고 예상할 수 있다.",
+            "answer": "안양파빌리온은 도서관이 아니며 책을 읽는 공간도 없다.",
+            "whyItMatters": "건축물을 감상하는 방문과 책을 읽는 시간을 함께 계획할 수 있다.",
+            "direction": "건축 외관에서 책을 읽는 공간으로 넘어가는 도입을 제안한다.",
+            "keyword": "안양파빌리온 도서관",
+            "openingVisual": "건축 외관을 먼저 보여주고 책을 펼치는 장면으로 이어지는 연출을 제안한다.",
+            "evidenceIds": [
+              "source-1",
+              "lead-1-source-1",
+              "lead-1-source-2"
+            ],
+            "id": "candidate-1",
+            "leadId": "lead-1",
+            "draftEvidenceIds": [
+              "source-1",
+              "lead-1-source-2"
+            ],
+            "decision": "rejected",
+            "reasonCodes": [
+              "relevance_uncertain",
+              "support_answer_rejected",
+              "support_direction_uncertain",
+              "support_entity_uncertain",
+              "support_expectedAnswer_uncertain",
+              "support_location_uncertain",
+              "support_question_uncertain",
+              "support_title_uncertain",
+              "support_whyItMatters_uncertain",
+              "value_uncertain"
+            ],
+            "checks": {
+              "duplicate": {
+                "status": "not_applicable",
+                "reason": "no_prior"
+              },
+              "relevance": {
+                "choice": "reject",
+                "confidence": 0.71,
+                "probabilities": {
+                  "pass": 0.19,
+                  "reject": 0.81,
+                  "uncertain": 0
+                },
+                "margin": 0.6200000000000001,
+                "model": "jev-1.13.0",
+                "rubricVersion": "discovery-v2.2"
+              },
+              "support_answer": {
+                "choice": "reject",
+                "confidence": 0.98,
+                "probabilities": {
+                  "pass": 0,
+                  "reject": 0.99,
+                  "uncertain": 0.01
+                },
+                "margin": 0.98,
+                "model": "jev-1.13.0",
+                "rubricVersion": "discovery-v2.2"
+              },
+              "support_direction": {
+                "choice": "not_applicable",
+                "confidence": 0.48,
+                "probabilities": {
+                  "not_applicable": 0.61,
+                  "pass": 0.12,
+                  "reject": 0.04,
+                  "uncertain": 0.23
+                },
+                "margin": 0.38,
+                "model": "jev-1.13.0",
+                "rubricVersion": "discovery-v2.2"
+              },
+              "support_entity": {
+                "choice": "pass",
+                "confidence": 0.64,
+                "probabilities": {
+                  "pass": 0.76,
+                  "reject": 0,
+                  "uncertain": 0.24
+                },
+                "margin": 0.52,
+                "model": "jev-1.13.0",
+                "rubricVersion": "discovery-v2.2"
+              },
+              "support_expectedAnswer": {
+                "choice": "not_applicable",
+                "confidence": 0.31,
+                "probabilities": {
+                  "not_applicable": 0.49,
+                  "pass": 0.26,
+                  "reject": 0.05,
+                  "uncertain": 0.2
+                },
+                "margin": 0.22999999999999998,
+                "model": "jev-1.13.0",
+                "rubricVersion": "discovery-v2.2"
+              },
+              "support_location": {
+                "choice": "pass",
+                "confidence": 0.43,
+                "probabilities": {
+                  "pass": 0.61,
+                  "reject": 0.01,
+                  "uncertain": 0.38
+                },
+                "margin": 0.22999999999999998,
+                "model": "jev-1.13.0",
+                "rubricVersion": "discovery-v2.2"
+              },
+              "support_openingVisual": {
+                "choice": "not_applicable",
+                "confidence": 0.81,
+                "probabilities": {
+                  "not_applicable": 0.85,
+                  "pass": 0.04,
+                  "reject": 0.01,
+                  "uncertain": 0.1
+                },
+                "margin": 0.75,
+                "model": "jev-1.13.0",
+                "rubricVersion": "discovery-v2.2"
+              },
+              "support_question": {
+                "choice": "not_applicable",
+                "confidence": 0.79,
+                "probabilities": {
+                  "not_applicable": 0.85,
+                  "pass": 0.1,
+                  "reject": 0.01,
+                  "uncertain": 0.04
+                },
+                "margin": 0.75,
+                "model": "jev-1.13.0",
+                "rubricVersion": "discovery-v2.2"
+              },
+              "support_title": {
+                "choice": "pass",
+                "confidence": 0.47,
+                "probabilities": {
+                  "not_applicable": 0.12,
+                  "pass": 0.61,
+                  "reject": 0.03,
+                  "uncertain": 0.24
+                },
+                "margin": 0.37,
+                "model": "jev-1.13.0",
+                "rubricVersion": "discovery-v2.2"
+              },
+              "support_whyItMatters": {
+                "choice": "uncertain",
+                "confidence": 0.25,
+                "probabilities": {
+                  "not_applicable": 0.16,
+                  "pass": 0.39,
+                  "reject": 0.01,
+                  "uncertain": 0.44
+                },
+                "margin": 0.04999999999999999,
+                "model": "jev-1.13.0",
+                "rubricVersion": "discovery-v2.2"
+              },
+              "value": {
+                "choice": "pass",
+                "confidence": 0.47,
+                "probabilities": {
+                  "pass": 0.64,
+                  "reject": 0.35,
+                  "uncertain": 0.01
+                },
+                "margin": 0.29000000000000004,
+                "model": "jev-1.13.0",
+                "rubricVersion": "discovery-v2.2"
+              }
+            },
+            "evidenceAliases": {
+              "source-1": "source-1",
+              "lead-1-source-1": "source-1",
+              "lead-1-source-2": "lead-1-source-2"
+            }
+          }
+        ],
+        "createdAt": 1791072115.768699,
+        "evidence": [
+          {
+            "excerpt": "안양 파빌리온 도서관은 한때 쇠락했던 유원지를 예술공원으로 탈바꿈시킨 안양공공예술프로젝트(Anyang Public Art Project, APAP)의 일환으로 탄생한, 국내 최초의 공공예술도서관입니다. 책을 읽는 공간을 넘어 예술과 사색....",
+            "id": "source-1",
+            "kind": "search_excerpt",
+            "retrievedAt": 1791023629.5638106,
+            "title": "[경기 이색 도서관] ⑤ 안양파빌리온",
+            "url": "https://gnews.gg.go.kr/news/news_view.do?number=202510280911419187C049"
+          },
+          {
+            "excerpt": "규모 : 526.9㎡규모의 현대미술전시관, 특징 : 2005년 안양공공예술프로젝트(APAP)의 일환으로 조성된 조형 예술물 세계적인 건축가 알바로시자가 아시아 최초로 주변경관과 어울리는 반구형으로 설계한 디자인",
+            "id": "source-2",
+            "kind": "search_excerpt",
+            "retrievedAt": 1791023629.5638201,
+            "title": "안양파빌리온 | 시설현황 | 시설/대관",
+            "url": "https://ayac.or.kr/base/contents/view?contentsNo=30&menuLevel=3&menuNo=36"
+          },
+          {
+            "excerpt": "안양 파빌리온 도서관은 한때 쇠락했던 유원지를 예술공원으로 탈바꿈시킨 안양공공예술프로젝트(Anyang Public Art Project, APAP)의 일환으로 탄생한, 국내 최초의 공공예술도서관입니다. 책을 읽는 공간을 넘어 예술과 사색....",
+            "id": "lead-1-source-1",
+            "kind": "search_excerpt",
+            "retrievedAt": 1791023629.5865517,
+            "title": "[경기 이색 도서관] ⑤ 안양파빌리온",
+            "url": "https://gnews.gg.go.kr/news/news_view.do?number=202510280911419187C049"
+          },
+          {
+            "excerpt": "규모 : 526.9㎡규모의 현대미술전시관, 특징 : 2005년 안양공공예술프로젝트(APAP)의 일환으로 조성된 조형 예술물 세계적인 건축가 알바로시자가 아시아 최초로 주변경관과 어울리는 반구형으로 설계한 디자인",
+            "id": "lead-1-source-2",
+            "kind": "search_excerpt",
+            "retrievedAt": 1791023629.5865698,
+            "title": "안양파빌리온 | 시설현황 | 시설/대관",
+            "url": "https://ayac.or.kr/base/contents/view?contentsNo=30&menuLevel=3&menuNo=36"
+          }
+        ],
+        "expiresAt": 1791072715.768699,
+        "factChecked": false,
+        "input": {
+          "brief": "안양파빌리온의 의외의 용도를 한국 시청자에게 설명하는 건축 영상 주제",
+          "category": "건축학",
+          "history": [],
+          "profile": "content",
+          "runtime": {
+            "model": "fixture-no-generation",
+            "provider": "codex"
+          },
+          "workflow": "research-v2"
+        },
+        "reasonCodes": [],
+        "requestId": "8c196c55-b320-43df-b215-59d46c9f4473",
+        "requiresHumanReview": true,
+        "researchFailures": [],
+        "researchLeads": [
+          {
+            "draftEvidenceIds": [
+              "source-1"
+            ],
+            "entity": "안양파빌리온",
+            "evidenceIds": [
+              "source-1",
+              "lead-1-source-1",
+              "lead-1-source-2"
+            ],
+            "id": "lead-1",
+            "keyword": "안양파빌리온 도서관",
+            "question": "건물 감상 외에 무엇을 할 수 있나?"
+          }
+        ],
+        "rubricVersion": "discovery-v2.2",
+        "state": "complete",
+        "usage": {
+          "costUsd": null,
+          "generationClaims": 2,
+          "jevCalls": 1,
+          "searchCalls": 2
+        }
+      },
+      "idempotentReplayUnchanged": true,
+      "sshExit": 0,
+      "freshReadMatches": true
+    }
+  ],
+  "mergeCommit": "f5464def89850cfa929fad0b23037ed6b843c7a6",
+  "sourceCommit": "8a2cede835601fcf2e8ff4be11e14221cc1499cd",
+  "rubric": "discovery-v2.2",
+  "newModelCalls": 3,
+  "retries": 0,
+  "totalCostUsd": "0.000731220",
+  "ledgerBefore": [
+    {
+      "records": 15,
+      "usd": 0.0020195280000000005
+    }
+  ],
+  "ledgerAfter": [
+    {
+      "records": 18,
+      "usd": 0.0027507480000000008
+    },
+    {
+      "model": "typesafe/jev-1.13.0",
+      "status": "success",
+      "spend": 0.000243012,
+      "inputTokens": 5786,
+      "outputTokens": 507,
+      "startTime": "2026-10-04T00:01:40.021",
+      "endTime": "2026-10-04T00:01:40.285"
+    },
+    {
+      "model": "typesafe/jev-1.13.0",
+      "status": "success",
+      "spend": 0.0002457,
+      "inputTokens": 5850,
+      "outputTokens": 509,
+      "startTime": "2026-10-04T00:01:47.889",
+      "endTime": "2026-10-04T00:01:48.056"
+    },
+    {
+      "model": "typesafe/jev-1.13.0",
+      "status": "success",
+      "spend": 0.000242508,
+      "inputTokens": 5774,
+      "outputTokens": 507,
+      "startTime": "2026-10-04T00:01:55.198",
+      "endTime": "2026-10-04T00:01:55.37"
+    }
+  ],
+  "productionAfter": {
+    "sshExit": 0,
+    "healthAndImage": "\"healthy\" \"sha256:510643740b910aef848d174bb2358787cb4aa79cd6b72a5535652a3f06fdb7d7\""
+  },
+  "labelProvenance": "pre-existing provisional Codex labels, not independent human or blind",
+  "scope": "Recorded search/generation fixtures; actual Jev; merged reducer; isolated SQLite. Not production HTTP end-to-end."
+}
