@@ -197,6 +197,10 @@ export function V2Settings(p: Props) {
           한국어·튜터 수업 <Icon name="arrow" />
         </Link>
       </div>
+      <div className="hm-setting-row">
+        <b>개인정보</b>
+        <Link href="/privacy">처리방침·문의 <Icon name="arrow" /></Link>
+      </div>
       <button className="hm-logout" disabled={p.busy} onClick={p.onLogout}>
         로그아웃
       </button>

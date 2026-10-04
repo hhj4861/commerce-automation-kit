@@ -79,6 +79,7 @@ export function GoogleLogin({ onDone, disabled, onBusyChange }: {
     {ready && <div ref={target} className="hm-google-button" aria-disabled={disabled} inert={disabled} />}
     {error && <p role="alert">{error} <button type="button" disabled={disabled} onClick={() => window.location.reload()}>다시 불러오기</button></p>}
     {ready && !scriptReady && !error && <p role="status">Google 로그인 버튼을 준비하고 있어요…</p>}
+    <p className="hm-muted">이름·이메일은 계정과 학습 기록 연결에 사용해요. <a href="/privacy" target="_blank" rel="noopener noreferrer" className="underline">개인정보 처리방침 (새 창)</a></p>
     <div className="hm-login-divider"><span>또는 아이디로 계속하기</span></div>
   </section>;
 }
