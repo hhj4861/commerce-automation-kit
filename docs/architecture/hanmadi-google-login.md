@@ -62,3 +62,10 @@ Google 토큰·Google 비밀번호·access/refresh token은 저장하지 않는�
 - 운영용 Next 빌드·타입 검사 통과, lint 오류 0개(기존 경고 4개), GitOps 계약 테스트 26개 통과.
 - 로컬 테스트 산출물: `/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/hanmadi/google-login-20261005/`.
 - 운영 Google OAuth 클라이언트 설정·실제 계정 검증·운영 배포는 미수행.
+
+### 운영 공개 전 개인정보 안내 보완
+
+- 로그인 전 `/privacy`에서 개인정보 처리방침을 읽을 수 있으며, Google 로그인 영역·학습 설정·일반 페이지 하단에 연결한다.
+- 현재 실제 구현에 맞춰 Google 계정 처리 항목, 쿠키, 학습 기록, AI 입력 전송, 별도 공용 자료 제공 동의, 보관·삭제 한계와 운영자 문의처를 안내한다.
+- Google Auth Platform에는 운영 홈페이지와 `https://hanmadi-lake.vercel.app/privacy`를 등록한다. 페이지 공개와 OAuth 설정 완료 여부는 운영 확인 후 별도 기록한다.
+- 근거: https://developers.google.com/terms/api-services-user-data-policy 의 공개 개인정보처리방침 요구. 이 안내는 법률 적합성 전반의 인증을 의미하지 않는다.

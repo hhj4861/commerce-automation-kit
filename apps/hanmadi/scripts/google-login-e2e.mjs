@@ -53,9 +53,17 @@ try {
       renderButton(node) { const b = document.createElement('button'); b.type='button'; b.textContent='Google 계정으로 계속하기';
         b.onclick=async()=>this.config.callback({credential:await window.fixtureCredential(this.config.nonce)}); node.append(b); }
     } } };` }));
+  // OAuth disclosures must be reachable before a learner has a session.
+  const privacy = await context.request.get(base + '/privacy', { maxRedirects: 0 });
+  assert.equal(privacy.status(), 200);
+  assert.match(await privacy.text(), /개인정보 처리방침/);
+  await page.goto(base + '/privacy');
+  assert.equal(await page.locator('body').evaluate(el => el.scrollWidth <= window.innerWidth), true);
+  await page.screenshot({ path: join(out, 'privacy-mobile.png'), fullPage: true });
   await page.goto(base + '/study');
   const button = page.getByRole('button', { name: 'Google 계정으로 계속하기' });
   await button.waitFor();
+  assert.equal(await page.getByRole('link', { name: '개인정보 처리방침 (새 창)', exact: true }).getAttribute('href'), '/privacy');
   assert.equal(await page.getByLabel('학습자 아이디', { exact: true }).count(), 1);
   assert.equal(await page.locator('body').evaluate(el => el.scrollWidth <= window.innerWidth), true);
   await page.screenshot({ path: join(out, 'google-login-mobile.png'), fullPage: true });
