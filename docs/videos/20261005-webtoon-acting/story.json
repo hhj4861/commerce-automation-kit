@@ -140,7 +140,7 @@
         {
           "id": "e1-11",
           "speaker": "S",
-          "art": 5,
+          "art": 7,
           "text": "생일이라고 먼저 말하면, 괜히 축하해 달라고 조르는 것 같잖아. 다들 바쁜데.",
           "voiceIndex": 4,
           "pause": 0.45,
@@ -155,7 +155,20 @@
           "voiceIndex": 4,
           "pause": 0.45,
           "emotion": "somber",
-          "ttsText": "[somber] 초를 꽂고도 불은 붙이지 않았다. 혼자 소원을 비는 모습까지 보고 싶지는 않았다."
+          "ttsText": "[somber] 초를 꽂고도 불은 붙이지 않았다. 혼자 소원을 비는 모습까지 보고 싶지는 않았다.",
+          "model": "eleven_v4",
+          "voiceVariant": "-v4",
+          "visualCuts": [
+            {
+              "art": 5,
+              "seconds": 4,
+              "sourceStart": 0,
+              "sourceEnd": 4
+            },
+            {
+              "art": 7
+            }
+          ]
         },
         {
           "id": "e1-13",
@@ -275,7 +288,9 @@
           "voiceIndex": 9,
           "pause": 0.45,
           "emotion": "hurt",
-          "ttsText": "[hurt] 말해야만 아는 거였어? 자료는 하루에도 몇 번씩 물어보면서, 나는 안 궁금했어?"
+          "ttsText": "[hurt] 말해야만 아는 거였어? 자료는 하루에도 몇 번씩 물어보면서, 나는 안 궁금했어?",
+          "model": "eleven_v4",
+          "voiceVariant": "-v4"
         },
         {
           "id": "e1-25",

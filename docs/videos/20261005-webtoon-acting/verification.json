@@ -1,0 +1,92 @@
+{
+  "status": "episode-1-complete",
+  "output": {
+    "episode": 1,
+    "file": "/Users/admin/Downloads/vedio/im-fine-webtoon-episode-1-acting-v2.mp4",
+    "duration": 208.87499999999997,
+    "captions": 84,
+    "sha256": "d8f6571b2257fd2134ec37e24045302c37380fd30988c4842f33b0b6819576cb",
+    "decode": "pass",
+    "audioVideoSync": "pass"
+  },
+  "sizeBytes": 101881715,
+  "video": {
+    "codec_name": "h264",
+    "width": 1920,
+    "height": 1080,
+    "r_frame_rate": "24/1"
+  },
+  "speed": 1.0,
+  "voices": {
+    "N": {
+      "name": "남성 내레이션 (사용자 지정)",
+      "id": "CxErO97xpQgQXYmapDKX"
+    },
+    "S": {
+      "name": "서윤 (사용자 지정)",
+      "id": "UqW1DivwFt1NwUMSGnTn"
+    },
+    "M": {
+      "name": "민지 (사용자 지정)",
+      "id": "DlU3oDWG5pC5PBITbfga"
+    }
+  },
+  "speechModels": {
+    "default": "eleven_v3",
+    "eleven_v4": [
+      "e1-12",
+      "e1-24"
+    ]
+  },
+  "voiceMetadataMatches": 32,
+  "independentAsr": {
+    "model": "whisper-medium",
+    "utterances": 32,
+    "tagReadoutDetected": false,
+    "completeUtteranceOmissionsDetected": false,
+    "note": "ASR has name liaison/homophone/number-format differences; not a human listening review. Two ambiguous pronunciations replaced with verified v4 trials."
+  },
+  "audio": {
+    "meanDb": -18.1,
+    "peakDb": -1.0,
+    "silencesOver2SecondsAtMinus45Db": 0
+  },
+  "blackSegmentsOverHalfSecond": 0,
+  "captions": 84,
+  "motion": {
+    "checkedAt": "2026-10-04T17:32:47.471Z",
+    "credits": 526.68,
+    "acceptedJobs": 8,
+    "usedCredits": 140,
+    "allDownloaded": true
+  },
+  "motionJobIds": {
+    "0": "fbbea368-9ec3-40c5-875e-af034a7699ba",
+    "1": "55a2ab9e-9c9c-42fe-be60-dd4111bb15ce",
+    "2": "e232941a-068c-41d2-ad91-21a6957729a6",
+    "3": "bf85519f-a190-4146-8223-06a363a1dddd",
+    "4": "302e4f05-fa9e-42f8-9973-862753d56cc0",
+    "5": "dc80e2b2-4ae4-4a68-bf27-ad5f9f9c9a6d",
+    "6": "b92cb9a6-eaca-460b-b15b-d446b3f929da",
+    "7": "a52e2073-ee33-4217-8953-598ada78f9e8"
+  },
+  "visualQa": {
+    "shotsReviewed": 8,
+    "finalFramesReviewed": [
+      "opening",
+      "candle-before",
+      "candle-reaction",
+      "conflict",
+      "ending"
+    ],
+    "candleClipSourceRange": [
+      0,
+      4
+    ],
+    "actualCharacterMovement": true,
+    "preciseLipSync": false,
+    "shotReuse": true
+  },
+  "regressionTests": 14,
+  "preserved": "Original 3 videos, artwork, voices and opening clips; no website deployment or upload. Episodes 2/3 not remade."
+}
