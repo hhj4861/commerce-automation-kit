@@ -37,7 +37,9 @@ elif a.mode=='render':
   for g in groups:lines.append(f"Dialogue: 1,{stamp(g['start'])},{stamp(g['end'])},Caption,,0,0,0,,{g['text']}")
   ass.write_text('\n'.join(lines)+'\n')
   dest=c/(role+'-final.mp4')
-  vf=f"scale=1920:1080:force_original_aspect_ratio=increase,crop=1920:1080,setsar=1,fps={fps},ass='{ass}':fontsdir='{fontdir}'"
+  # The delivered M clip contains hallucinated text below y=800; keep the face in a clean close-up.
+  clean_crop="crop=iw:800:0:0," if role=="M" else ""
+  vf=f"{clean_crop}scale=1920:1080:force_original_aspect_ratio=increase,crop=1920:1080,setsar=1,fps={fps},ass='{ass}':fontsdir='{fontdir}'"
   # Use exactly the submitted speech track with unchanged speed and start time.
   run(['ffmpeg','-hide_banner','-loglevel','error','-y','-i',src,'-i',c/(role+'-input.wav'),'-map','0:v:0','-map','1:a:0','-vf',vf,'-af','alimiter=limit=0.89:level=disabled','-c:v','libx264','-preset','fast','-crf','18','-c:a','aac','-b:a','192k','-t',dur,'-pix_fmt','yuv420p',dest]);files.append(dest)
  (c/'concat.txt').write_text(''.join("file '"+str(f).replace("'","'\\''")+"'\n"for f in files))

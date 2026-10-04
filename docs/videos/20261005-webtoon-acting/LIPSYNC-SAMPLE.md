@@ -1,21 +1,41 @@
-# 서윤·민지 립싱크 확인 샘플 — 미완료
+# 서윤·민지 립싱크 확인 샘플 — 제작 완료
 
-사용자 요청: 민지 Voice ID를 JguuvPsf0F2TNXefsblh로 변경하여 15~20초 대화의 목소리와 립싱크를 확인한다. 기존 본편 파일은 보존한다.
+사용자 요청: 민지 Voice ID를 JguuvPsf0F2TNXefsblh로 변경하여 15~20초 대화의 목소리와 립싱크를 확인한다. 기존 본편은 보존한다. 추가 지시: 대사·상황에 따른 음성 톤, 분위기, 고저·강세·쉼도 고려한다.
 
-- 서윤: UqW1DivwFt1NwUMSGnTn / Suzie - Calm Korean. 단발·아이보리 옷, 주인공.
-- 민지: JguuvPsf0F2TNXefsblh / Yuna Kim - Warm, Trustworthy Korean. 묶은 머리·버건디 옷, 친구.
-- 공식 ElevenLabs에서 정확한 ID 확인 후 두 문장을 Eleven v3 감정 태그로 생성. 속도 1.0. 목소리 확인용 오디오: `/Users/admin/Downloads/vedio/seoyun-minji-voice-sample.mp3`.
-- 원음 6.8초와 8.0초, 각 0.4초 여운 포함 총 15.6초. Whisper medium 독립 전사에서 전체 대사 확인(바랐어/바랬어 표기 차이). 강제 자막 정렬과 별도 검증했다.
-- 자체 제작 원본 shot-10.png(서윤), shot-11.png(민지)를 각각 사용한다. 이미지 자체를 수정하지 않는다.
-- 공식 웹 Lipsync Studio의 Kling Avatars 2.0 / Pro 선택. 설치 CLI 1.1.26 모델·워크플로 목록에 이 모델은 없다.
-- **현재 차단:** Chrome 확장의 fileChooser.setFiles가 Allow access to file URLs 설정을 요구한다. 설정 변경 요청을 사용자에게 보냈다. 기본 UI 시도도 공유 Chrome 활성 화면 변경으로 중단하여 다른 작업을 방해하지 않았다.
-- Higgsfield 생성 요청 0, 추가 크레딧 사용 0. 입력 업로드 후 실제 견적 확인 필요. 유료 자동 재시도 금지.
-- 준비 코드 문법 및 실제 음성 길이 검증 완료. 영상 생성·렌더·립싱크 시각 검증은 미완료다.
+## 결과와 범위
+
+- 완성본: `/Users/admin/Downloads/vedio/im-fine-seoyun-minji-lipsync-sample.mp4`.
+- 영상 15.600초, 컨테이너 15.623초, 1920×1080, 25fps, H.264/AAC. 전체 디코딩 검증 통과.
+- 이번 결과는 두 사람의 대화 확인 샘플이다. 기존 1편 및 2·3편, 운영 제작실에는 자동 적용하지 않았다.
+- 소스 기준: 준비 커밋 84240d1. 실제 생성·후반 작업·검수는 2026-10-05 완료.
+
+## 목소리와 연기 방향
+
+- 서윤: `UqW1DivwFt1NwUMSGnTn` / Suzie - Calm Korean. 단발·아이보리 옷, 주인공. `[hurt]` → `[softly]`: 서운함을 조심스럽게 고백하는 흐름.
+- 민지: `JguuvPsf0F2TNXefsblh` / Yuna Kim - Warm, Trustworthy Korean. 묶은 머리·버건디 옷, 친구. `[surprised]` → `[apologetic]` → `[warm]`: 놀람 → 사과 → 다정하게 듣는 흐름.
+- 공식 ElevenLabs에서 정확한 ID 확인 후 Eleven v3로 생성, 속도 1.0. 음성 고저·강세·쉼은 감정 방향과 함께 검토한다. 감정 태그가 연기 품질을 보장하지는 않는다.
+- 단순 자기상관 기반 유성음 피치 추정(p10/중앙값/p90): 서윤 약 163/215/286Hz, 민지 약 176/208/281Hz. 음역대가 겹치므로 높이 차이만으로 두 사람의 구분이나 감정 품질이 입증됐다고 주장하지 않는다. 인물별 음색과 말끝·강세의 청감은 사용자 확인 대상이다.
+- 이미 생성한 원음의 속도·음높이를 후반에서 바꾸지 않았다. 향후 대사의 감정·억양 수정이 필요하면 음성을 먼저 확정한 뒤 그 원음으로 립싱크를 생성한다.
+- 원음 6.8초와 8.0초에 각 0.4초 여운을 더했다. Whisper medium 독립 전사에서 전체 대사 확인(바랐어/바랬어 표기 차이). 자막은 별도 강제 정렬 결과를 사용했다.
+
+## 실제 립싱크 생성
+
+- 사용자 설정 완료 후 Chrome 파일 업로드가 정상 동작했다. 공식 웹 Lipsync Studio / Kling Avatars 2.0 / Pro로 두 작업을 각각 한 번 생성했다. 설치 CLI 1.1.26 목록에는 해당 모델이 없어 웹 UI를 사용했다.
+- 서윤: 자체 원화 `shot-10.png` + `S-input.wav`, 생성 화면 표시 15크레딧. 결과 파일 `hf_20261004_214606_9f7516f8-d8d6-4344-a483-78e2f0f836eb.mp4`.
+- 민지: 자체 원화 `shot-11.png` + `M-input.wav`, 생성 화면 표시 17크레딧. 결과 파일 `hf_20261004_214923_2c7acfb6-6309-4b7d-a46f-405d0c49f074.mp4`.
+- 표시 견적 합계 32크레딧, 유료 재시도 없음. 별도 계정 청구 내역 대조는 하지 않았다.
+- 원본 두 영상은 1920×1072, 30fps. 길이는 서윤 7.2초, 민지 8.533초. 민지는 입력 음성 길이 8.4초로 편집했다.
+- 원음과 생성 영상의 오디오를 8kHz로 디코딩해 지연 0에서 비교한 상관계수: 서윤 0.9999596, 민지 0.9999782. 음성 시작점과 내용 보존의 근거이며 음소별 입 모양 정확도를 수치로 입증한 것은 아니다.
+- 연속 프레임에서 입·눈·고개·손의 변화와 인물 정체성을 확인했다. 민지 원본 하단에 모델이 임의 문자를 생성해, y=800 아래를 제외하는 클로즈업으로 제거했다. 얼굴·입 영역은 유지하고 실제 한국어 대사만 번인했다.
+- 최종 프레임 검수에서 이름(서윤·주인공 / 민지·서윤의 친구), 한국어 자막, 임의 문자 제거를 확인했다. 자연스러운 감정과 세밀한 립싱크의 최종 청감·시청 판단은 샘플로 확인한다.
+
+## 재현과 검증 산출물
 
 캐시: `/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261005-webtoon-lipsync-sample`.
 
-업로드할 음성: 캐시의 S-input.wav, M-input.wav. 이미지: 기존 20261004-webtoon-psychology/art/shot-10.png 및 shot-11.png.
-
-다운로드한 실제 립싱크 영상은 캐시의 S-lipsync.mp4, M-lipsync.mp4로 저장한 뒤 lipsync-sample-render.py render / verify --cache <cache> 실행. 예정 완성본 `/Users/admin/Downloads/vedio/im-fine-seoyun-minji-lipsync-sample.mp4`는 아직 생성하지 않았다.
-
-검증 후 사용자에게 완성본을 전달하고 이 기록을 갱신한다. 현 상태를 영상 완료로 보고하지 않는다.
+- 입력: `S-input.wav`, `M-input.wav`, 기존 `20261004-webtoon-psychology/art/shot-10.png`, `shot-11.png`.
+- 실제 생성 원본: `S-lipsync.mp4`, `M-lipsync.mp4`.
+- 검수: `S-contact.jpg`, `M-contact.jpg`, `final-contact.jpg`, `speech-check-medium.json`, 각 음성 메타데이터·정렬 JSON.
+- 렌더: `python3 docs/videos/20261005-webtoon-acting/lipsync-sample-render.py render --cache <cache>`.
+- 검증: 같은 명령의 `verify` 모드. 최종 변경 후 실행 및 전체 디코딩 통과.
+- 다음 단계: 사용자가 15.6초 샘플에서 목소리 구분·감정·입모양을 확인한 뒤 본편 적용 범위를 결정한다. 본편 추가 생성 비용은 이번 샘플로 승인된 것으로 간주하지 않는다.
