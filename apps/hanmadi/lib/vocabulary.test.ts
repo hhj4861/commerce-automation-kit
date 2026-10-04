@@ -74,3 +74,31 @@ test("alignment rejects invented spans and bad occurrences, returns uncertain nu
   await assert.rejects(alignMeaning("오늘", 0, "오늘", "今日", "ja", async () => { calls++; throw new Error("offline"); }), /offline/);
   assert.equal(calls, 1);
 });
+
+test("word lookup repairs Korean meaning accidentally returned as 今日 pronunciation", async () => {
+  let calls = 0;
+  const phrase = await lookupVocabulary("今日", "今日、この街に到着しました。", "ja", async (prompt) => {
+    calls++;
+    if (calls === 2) assert.match(prompt, /今日 pronunciation cannot/);
+    return JSON.stringify({ meaning: "오늘", reading: calls === 1 ? "오늘" : "쿄오" });
+  });
+  assert.equal(calls, 2); assert.equal(phrase.reading, "쿄오");
+});
+test("word lookup fails visibly after repeated pronunciation errors without saving a wrong reading", async () => {
+  let calls = 0;
+  await assert.rejects(lookupVocabulary("今日", "今日着きました", "ja", async () => {
+    calls++; return '{"meaning":"오늘","reading":"오늘"}';
+  }), /단어 설명을 확인하지 못했어요/);
+  assert.equal(calls, 2);
+});
+test("word lookup shares long-vowel checks but permits genuine loanword glosses and contextual kanji readings", async () => {
+  let calls = 0;
+  const coffee = await lookupVocabulary("コーヒー", "コーヒーをください", "ja", async () => {
+    calls++; return JSON.stringify({ meaning: "커피", reading: calls === 1 ? "코히" : "코오히이" });
+  });
+  assert.equal(coffee.reading, "코오히이"); assert.equal(calls, 2);
+  for (const [text, meaning, reading, sentence] of [["パン", "빵", "빵", "パンです"], ["今日", "오늘날", "곤니치", "今日の社会"]]) {
+    const phrase = await lookupVocabulary(text, sentence, "ja", async () => JSON.stringify({ meaning, reading }));
+    assert.equal(phrase.reading, reading);
+  }
+});
