@@ -10,9 +10,22 @@ assert(dir, "Set HANMADI_E2E_ARTIFACTS to an isolated artifact directory");
 await mkdir(dir, { recursive: true });
 const dataFile = resolve(dir, "dialog-fixture.json");
 await writeFile(dataFile, "{}", { flag: "wx" });
-let fail = false, calls = 0;
+let fail = false, calls = 0, alignCalls = 0;
+let alignmentMode = "match";
 const mock = createServer(async (req, res) => {
-  for await (const chunk of req) { void chunk; }
+  let body = "";
+  for await (const chunk of req) body += chunk;
+  const request = JSON.parse(body);
+  if (request.response_format?.json_schema?.name === "hanmadi_meaning_alignment") {
+    alignCalls++;
+    const input = JSON.parse(request.messages.find(m => m.role === "user").content);
+    const target = Array.from(new Intl.Segmenter("ja", { granularity: "word" }).segment(input.sentence)).find(s => s.isWordLike).segment;
+    const mode = alignmentMode;
+    if (mode === "slow") await new Promise(r => setTimeout(r, 1500));
+    res.setHeader("Content-Type", "application/json");
+    res.end(JSON.stringify({ choices: [{ message: { content: JSON.stringify({ text: mode === "none" ? null : target, occurrence: 0 }) } }] }));
+    return;
+  }
   calls++;
   res.setHeader("Content-Type", "application/json");
   res.end(JSON.stringify({ choices: [{ message: { content: fail ? "{}" : JSON.stringify({ meaning: "문맥 속 단어 뜻", reading: "테스트" }) } }] }));
@@ -34,7 +47,7 @@ let logs = "", browser;
 app.stdout.on("data", b => { logs += b; }); app.stderr.on("data", b => { logs += b; });
 try {
   for (let i = 0; i < 90; i++) { try { if ((await fetch(base + "/study")).ok) break; } catch {} await new Promise(r => setTimeout(r, 500)); }
-  browser = await chromium.launch({ channel: "chrome", headless: true });
+  browser = await chromium.launch({ ...(process.env.PLAYWRIGHT_CHANNEL ? { channel: process.env.PLAYWRIGHT_CHANNEL } : {}), headless: true });
   const context = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true });
   const page = await context.newPage(); const errors = [];
   page.on("pageerror", e => errors.push(e.message));
@@ -74,6 +87,62 @@ try {
   }
   console.log("PASS fixed header at three sizes, outside tap and Escape");
   await page.setViewportSize({ width: 390, height: 844 });
+  // Korean meaning selection highlights the original without opening or saving a word.
+  await openLesson();
+  const lesson = dialogs.first();
+  await lesson.getByRole("button", { name: "다음", exact: true }).click();
+  await lesson.getByText("今日、この街に到着しました。", { exact: true }).waitFor();
+  const meaning = lesson.locator(".hm-meaning-selectable");
+  const initialWords = (await state()).expressions.length;
+  await meaning.dblclick({ position: { x: 10, y: 10 } });
+  await lesson.locator(".hm-word-aligned").first().waitFor();
+  assert.equal(await dialogs.count(), 1);
+  assert.equal((await state()).expressions.length, initialWords);
+  const aligned = await lesson.locator(".hm-word-aligned mark").allTextContents();
+  assert.equal(aligned.join(""), "今日");
+  await page.screenshot({ path: resolve(dir, "today-alignment.png") });
+  const highlightedBox = await lesson.locator(".hm-word-aligned").first().boundingBox();
+  await page.mouse.move(highlightedBox.x + 1, highlightedBox.y + highlightedBox.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(highlightedBox.x + highlightedBox.width - 1, highlightedBox.y + highlightedBox.height / 2, { steps: 8 });
+  await page.mouse.up();
+  await lesson.getByRole("button", { name: "선택한 표현 뜻 보기", exact: true }).waitFor();
+  assert.equal(await dialogs.count(), 1, "dragging a highlighted source must not open its dialog");
+  await meaning.dblclick({ position: { x: 10, y: 10 } });
+  await lesson.locator(".hm-word-aligned").first().tap();
+  await dialogs.last().getByText("문맥 속 단어 뜻", { exact: true }).waitFor();
+  assert.equal(await dialogs.last().locator(".hm-native").innerText(), aligned.join(""));
+  assert.equal((await state()).expressions.length, initialWords);
+  await page.keyboard.press("Escape");
+  // A native range exercises the mobile long-press/selection-handle path.
+  const selectMeaning = (start, end) => meaning.evaluate((el, [start, end]) => {
+    const range = document.createRange(); range.setStart(el.firstChild, start); range.setEnd(el.firstChild, end);
+    const selection = window.getSelection(); selection.removeAllRanges(); selection.addRange(range);
+    document.dispatchEvent(new Event("selectionchange"));
+  }, [start, end]);
+  alignmentMode = "none";
+  await selectMeaning(0, (await meaning.innerText()).length);
+  await lesson.getByText("정확히 대응하는 원문을 찾지 못했어요. 더 짧은 범위로 선택해 주세요.", { exact: true }).waitFor();
+  assert.equal(await lesson.locator("mark").count(), 0);
+  alignmentMode = "slow";
+  const beforeSlow = alignCalls;
+  await selectMeaning(0, 1);
+  for (let i = 0; i < 50 && alignCalls === beforeSlow; i++) await page.waitForTimeout(50);
+  assert(alignCalls > beforeSlow);
+  alignmentMode = "none";
+  await selectMeaning(1, 2);
+  await lesson.getByText("정확히 대응하는 원문을 찾지 못했어요. 더 짧은 범위로 선택해 주세요.", { exact: true }).waitFor();
+  await page.waitForTimeout(1600);
+  assert.equal(await lesson.locator("mark").count(), 0, "stale responses cannot highlight an earlier selection");
+  alignmentMode = "match";
+  await selectMeaning(0, 2);
+  await lesson.locator(".hm-word-aligned").first().waitFor();
+  await page.screenshot({ path: resolve(dir, "meaning-alignment-mobile.png") });
+  await page.keyboard.press("Escape");
+  await openLesson();
+  assert.equal(await dialogs.first().locator("mark").count(), 0, "reopened lessons reset alignment");
+  await page.keyboard.press("Escape");
+  console.log("PASS Korean double click, mobile range, aligned word dialog, explicit-save-only and stale result protection");
   for (const language of ["ja", "th", "en", "es"]) {
     await page.getByLabel("학습 언어", { exact: true }).selectOption(language);
     await openLesson(); const d = dialogs.first();
@@ -158,7 +227,7 @@ try {
   console.log("PASS wordbook search, meaning toggle, review, reload, removal, shared-expression preservation; zero LLM calls for browsing");
   assert.notEqual(await page.evaluate(() => getComputedStyle(document.body).overflow), "hidden");
   assert.deepEqual(errors, []);
-  await writeFile(resolve(dir, "result.json"), JSON.stringify({ passed: true, provider: "fixture", calls, errors, browsers: "Chrome mobile viewport and touch emulation; not physical iOS" }, null, 2));
+  await writeFile(resolve(dir, "result.json"), JSON.stringify({ passed: true, provider: "fixture", calls, alignCalls, errors, browsers: "Chrome mobile viewport and touch emulation; not physical iOS" }, null, 2));
   console.log("PASS lookup error/retry and persisted vocabulary after reload");
 } finally {
   await browser?.close(); app.kill("SIGTERM"); await exited;
