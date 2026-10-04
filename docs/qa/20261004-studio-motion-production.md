@@ -9,7 +9,7 @@ PR #138·#139 머지, 제작 워커 복구·갱신, Pages 배포, 운영 브라�
 - #139 최종 head `f5d79ca`의 문서 정정은 직접 diff 확인: 첫 장면의 motion 지정을 거부하며, 생성 provider 자체를 강제하는 기능은 아니다.
 - 운영 소스: `/Users/admin/workSpace/shopshorts-production`, 위 `ae6dc86`의 detached Git worktree. 기존 작업 checkout은 전환하지 않았다.
 - 운영 Pages: https://shopshorts-dash.pages.dev
-- 배포 URL: https://9c682612.shopshorts-dash.pages.dev
+- 배포 URL: https://9c682612.shopshorts-dash.pages.dev. clean 상태의 운영 worktree에서 `--commit-hash ae6dc868d6744e5e59e52d1204e5fd659e16fbb5 --commit-dirty=false`로 배포했으며, 워커와 같은 소스다.
 - 기존 production branch는 `main`이며 `deploy/shopshorts` 원격 브랜치는 없었다. 이번 반영은 기존 Direct Upload 방식이다. 플랫폼 GitOps 활성화를 완료했다고 주장하지 않는다.
 - 이전 Pages 배포: `092c3248-55a6-4b37-8fb7-0714cf6a546b`, source `8596e3b`.
 
@@ -18,7 +18,7 @@ PR #138·#139 머지, 제작 워커 복구·갱신, Pages 배포, 운영 브라�
 1. 기존 LaunchAgent `com.cak.studio-production`의 WorkingDirectory가 사라져 프로세스가 없고 종료 코드 78이었다. 기존 실행기 키는 로컬에 0600으로 보존돼 있었다. 새 키를 생성·복사하지 않았다.
 2. 영구 경로를 정확한 머지 커밋으로 복구하고 lockfile 기준 전체 `npm ci`를 실행했다. 앱만 설치한 첫 시도는 원자 CLI의 `tsx`가 빠져 실패했으므로 전체 workspace 설치로 보완했다.
 3. 긴 iCloud TMPDIR은 tsx의 macOS 소켓 경로 길이 문제를 일으켰다. 실제 저장소는 iCloud를 유지하고 짧은 심볼릭 링크 경로로 검증했다. 이후 운영에는 영구 링크 `/Users/admin/.cak-motion-tmp`를 사용한다.
-4. 복구된 운영 소스에서 Node 20.19.3 + `SHOPSHORTS_MOTION_NODE=/Users/admin/.nvm/versions/node/v22.23.3/bin/node`로 전체 테스트 **326/326 통과, skip 0**. 실제 HyperFrames 렌더·180프레임·정지 프레임 유지 검사도 포함한다. 유료 provider 호출은 해당 테스트에서 오류를 던지는 stub으로 금지한다.
+4. 복구된 운영 소스에서 Node 20.19.3 + `SHOPSHORTS_MOTION_NODE=/Users/admin/.nvm/versions/node/v22.23.3/bin/node`로 전체 테스트 **326/326 통과, skip 0**. 실제 HyperFrames 렌더·180프레임·정지 프레임 유지 검사도 포함한다. 모션 실렌더 테스트에서는 유료 provider 호출 시 오류를 던지는 stub으로 외부 생성을 금지한다.
 5. 기존 plist를 `/Users/admin/Library/Application Support/Shopshorts/studio-production-before-motion-20261004.plist`에 백업했다. 인증 및 Node 20 주 프로세스는 보존하고 모션 Node 22, 작업 디렉터리와 임시 경로만 추가했다.
 6. 첫 bootstrap 오류 때 이전 plist로 복구했다. 이후 기존 job 등록 해제를 확인하고 재등록하여 성공했다. 확인 PID 27745, LastExitStatus 0. 등록 해제 확인을 추가한 뒤 성공했지만 첫 오류 원인을 확정하지는 않는다.
 7. 기존 인증으로 제작 API 200 및 재시작 직전 대기·실행 작업 0을 확인했다. Pages 구버전은 `motion` 필드를 저장하지 않으므로 로컬 capability·실렌더·기존 heartbeat를 먼저 확인했다. Pages 배포 후 운영 `/api/studio/config`에서 **motion:true**, image/video/voice:true 및 최신 workerAt을 확인했다.
@@ -41,9 +41,13 @@ PR #138·#139 머지, 제작 워커 복구·갱신, Pages 배포, 운영 브라�
 
 비밀 없는 테스트 로그·MP4·결과 JSON은 `/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/motion-production-20261004/`에 있다. 운영 `SHOPSHORTS_WORK_DIR`도 이 경로의 `worker/`다. 인증 키·plist 백업은 로컬 비공개 저장소에 유지한다.
 
+이 저장 위치는 현재 세션의 사용자 지시(렌더·임시 산출물 iCloud 저장)를 따른다. iCloud 동기화·다운로드 상태에 따라 I/O 지연이나 일시적인 접근 문제가 발생할 수 있고, 짧은 링크는 소켓 경로 길이만 해결한다. 상시 서버용 로컬 소켓/TMPDIR 분리 정책까지 확정한 것은 아니다. `motion:true`도 도구·Node 경로 존재 여부의 힌트이므로 이후 운영 상태 판단에는 실제 렌더 결과를 함께 확인해야 한다.
+
 - `regression-final.log`: 최종 326/326 통과. 이전 실패 로그도 보존했다.
 - `intro-fixture.mp4`: 자체 제작 테스트 도입부.
 - `production-motion.mp4`, `production-result.json`: 운영 생성 asset과 검사 결과.
 - 웹 복구 기준은 위 이전 Pages deployment ID다. 워커 설정 복구 기준은 로컬 plist 백업이다. 원래 소스 폴더가 이미 없었으므로 백업 plist만으로 과거 소스 버전까지 복원된다고 주장하지 않는다.
 
 Claude 35652와 전용 `.git/peer-mailbox` 양방향 자동 수신을 확인했다. 수신 모니터는 30분 제한을 실제 만료 후 갱신했으며 영구 백그라운드 서비스로 설치한 것은 아니다. Claude는 문구 정정을 맡았고 머지·운영 변경은 Codex 리드가 수행했다.
+
+Claude 보고 011에서 최종 회귀 로그와 운영 MP4/JSON을 별도로 대조했다. 배포 소스 버전 명시, 테스트 stub 범위, iCloud 런타임 위험과 heartbeat 한계를 문서에 보완했다. 보고 시점의 untracked 상태는 이후 리드의 문서 커밋·upstream push로 해소했다.
