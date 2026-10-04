@@ -1,0 +1,27 @@
+{
+  "title": "괜찮다는 거짓말 — 목소리·립싱크 확인",
+  "speed": 1.0,
+  "targetSeconds": [
+    15,
+    20
+  ],
+  "scope": "two speaker sample only; existing episodes unchanged",
+  "beats": [
+    {
+      "id": "S",
+      "name": "서윤 · 주인공",
+      "voiceId": "UqW1DivwFt1NwUMSGnTn",
+      "art": 10,
+      "text": "민지야, 나 사실 많이 서운했어. 괜찮다고 했지만, 한 번만 더 물어봐 주길 바랐어.",
+      "ttsText": "[hurt] 민지야, 나 사실 많이 서운했어. [softly] 괜찮다고 했지만, 한 번만 더 물어봐 주길 바랐어."
+    },
+    {
+      "id": "M",
+      "name": "민지 · 서윤의 친구",
+      "voiceId": "JguuvPsf0F2TNXefsblh",
+      "art": 11,
+      "text": "난 네가 정말 괜찮은 줄 알았어. 미안해, 서윤아. 지금은 네 이야기를 듣고 싶어.",
+      "ttsText": "[surprised] 난 네가 정말 괜찮은 줄 알았어. [apologetic] 미안해, 서윤아. [warm] 지금은 네 이야기를 듣고 싶어."
+    }
+  ]
+}
