@@ -1,0 +1,140 @@
+{
+  "date": "2026-10-04",
+  "outputs": [
+    {
+      "episode": 1,
+      "file": "/Users/admin/Downloads/vedio/im-fine-webtoon-episode-1.mp4",
+      "duration": 198.4583333333333,
+      "captions": 84,
+      "sha256": "1473d8690324f1c65ba2d1d4d5b14a5799e36c64eb68196e5585743310c5f3a6",
+      "decode": "pass",
+      "audioVideoSync": "pass"
+    },
+    {
+      "episode": 2,
+      "file": "/Users/admin/Downloads/vedio/im-fine-webtoon-episode-2.mp4",
+      "duration": 212.29166666666666,
+      "captions": 79,
+      "sha256": "7df68ad64c25e30b1e39ef598381ce969138211c5dc9e7dd839d8ef55fa0474c",
+      "decode": "pass",
+      "audioVideoSync": "pass"
+    },
+    {
+      "episode": 3,
+      "file": "/Users/admin/Downloads/vedio/im-fine-webtoon-episode-3.mp4",
+      "duration": 215.79166666666669,
+      "captions": 86,
+      "sha256": "2930ac7fb8e13b956488e87b2b05e85e75a32757e48c7e7eecbd7caff2116c30",
+      "decode": "pass",
+      "audioVideoSync": "pass"
+    }
+  ],
+  "subtitleTextCoverage": "exact after whitespace normalization",
+  "subtitleMaximumLines": 2,
+  "voiceSpeed": 1.0,
+  "independentASRSamples": [
+    {
+      "id": "e1-02",
+      "speaker": "N",
+      "expected": "전화를 끊자, 웃고 있던 얼굴이 천천히 제자리로 돌아왔다. 오늘은 서윤의 마흔두 번째 생일이었다.",
+      "heard": " 전화를 끊자 웃고 있던 얼굴이 천천히 제자리로 돌아왔다. 오늘은 서윤의 42번째 생일이었다.",
+      "similarity": 0.935064935064935
+    },
+    {
+      "id": "e1-23",
+      "speaker": "M",
+      "expected": "서윤아, 오늘 생일이었네. 내가 완전히 놓쳤어. 정말 미안해. 왜 아까 말 안 했어?",
+      "heard": " 서윤아 오늘 생일이었네 내가 완전히 놓쳤어 정말 미안해 왜 아까발 안 했어?",
+      "similarity": 0.9666666666666667
+    },
+    {
+      "id": "e1-24",
+      "speaker": "S",
+      "expected": "말해야만 아는 거였어? 내 자료는 하루에도 몇 번씩 물어보면서, 나는 안 궁금했어?",
+      "heard": " 말해야만 아는 거였어? 내 자료는 하루에도 몇 번씩 물어보면서 나는 안 궁금했어?",
+      "similarity": 1.0
+    },
+    {
+      "id": "e2-14",
+      "speaker": "M",
+      "expected": "그럼 나는 언제부터 알아줬어야 했는데? 네가 아니라고 할 때마다, 반대로 믿었어야 했어?",
+      "heard": " 그럼 나는 언제부터 알아줬어야 했는데 네가 아니라고 할 때마다 반대로 믿었어야 했어?",
+      "similarity": 1.0
+    },
+    {
+      "id": "e2-16",
+      "speaker": "S",
+      "expected": "부탁했다가 거절당하면, 진짜 혼자가 되는 것 같았어. 말 안 하면 적어도 모르는 거라고 생각할 수 있으니까.",
+      "heard": " 부탁했다가 거절 당하면 진짜 혼자가 되는 것 같았어 말 안 하면 적어도 모르는 거라고 생각할 수 있으니까",
+      "similarity": 1.0
+    },
+    {
+      "id": "e2-29",
+      "speaker": "N",
+      "expected": "민지는 휴대전화를 뒤집어 놓았다. 그 작은 소리에, 서윤은 처음으로 자기 이야기를 시작했다.",
+      "heard": " 민지는 휴대전화를 뒤집어 놓았다. 그 작은 소리에 서유는 처음으로 자기 이야기를 시작했다.",
+      "similarity": 0.9459459459459459
+    },
+    {
+      "id": "e3-16",
+      "speaker": "M",
+      "expected": "오전이 필요해서 이번엔 다른 사람한테 물어볼게. 대신 다음 주 수요일 저녁에 밥 먹자. 그건 너랑 먹고 싶어.",
+      "heard": " 우전이 필요해서 이번엔 다른 사람한테 물어볼게 대신 다음 주 수요일 저녁에 밥 먹자 그건 너랑 먹고 싶어",
+      "similarity": 0.9761904761904762
+    },
+    {
+      "id": "e3-25",
+      "speaker": "S",
+      "expected": "그래도 이번엔, 내가 원하는 걸 나까지 모른 척하지는 않았어. 그 정도면 오늘은 잘한 거야.",
+      "heard": " 그래도 이번엔 내가 원하는 걸 나까지 모른 척하지는 않았어. 그 정도면 오늘은 잘한 거야.",
+      "similarity": 1.0
+    },
+    {
+      "id": "e3-29",
+      "speaker": "N",
+      "expected": "괜찮다고 말하지 않아도 이어지는 관계. 서윤은 그 가능성을, 이제 조금씩 배워 가고 있었다.",
+      "heard": " 괜찮다고 말하지 않아도 이어지는 관계 서유는 그 가능성을 이제 조금씩 배워가고 있었다",
+      "similarity": 0.9444444444444444
+    }
+  ],
+  "visualReview": "All 6 original boards plus actual final-video opening/middle/ending samples inspected; not continuous human AV playback",
+  "higgsfield": {
+    "1": {
+      "state": "downloaded",
+      "credits": 54,
+      "prompt": "Animate this exact mature Korean webtoon woman and painted scene, retain her face, illustration style, clothing and camera framing. She holds phone to ear with a small reassuring smile, slowly lowers her eyes, smile fades subtly. Rain runs down window, amber lamp steady, very gentle camera push. Restrained mature drama, six seconds, no cuts, no text, no lip sync, no new person, no photorealism.",
+      "reference": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261004-webtoon-psychology/art/opening-1.png",
+      "id": "b3521197-3b77-48bc-8d99-be5a7cc1306a"
+    },
+    "2": {
+      "state": "downloaded",
+      "credits": 54,
+      "prompt": "Animate this exact Korean webtoon cafe two-shot, preserve both women identities and wardrobe. Woman with chestnut bob ivory blouse sits left, woman with black low ponytail rust cardigan right. One gently moves her hand near coffee cup as she speaks, the other listens tensely. Slow deliberate push-in, rain on window, restrained acting, no cuts, no text, maintain illustrated style.",
+      "reference": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261004-webtoon-psychology/art/opening-2.png",
+      "id": "d29cd119-1db2-4087-be1a-d0f685747724"
+    },
+    "3": {
+      "state": "downloaded",
+      "credits": 54,
+      "prompt": "Animate this exact illustrated Korean woman at the cafe, same chin-length chestnut bob ivory blouse and gold earrings. She takes a small breath then looks up to the friend across the table with vulnerable steady eyes, slight expressive hand motion. Soft amber lighting, subtle camera push, six seconds no cuts no text, maintain Korean webtoon painting style and character identity.",
+      "reference": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261004-webtoon-psychology/art/opening-3.png",
+      "id": "964b4bb8-fb68-4a2e-bf5f-52520ed523a9"
+    }
+  },
+  "creditBalanceBefore": 829.6,
+  "creditBalanceAfter": 667.6,
+  "higgsfieldCreditsUsed": 162,
+  "paidRerolls": 0,
+  "youtubeUploaded": false,
+  "productionWebChanged": false,
+  "intentionalEndingSilenceSeconds": [
+    2.46,
+    2.6,
+    2.025
+  ],
+  "maxVolumeDb": [
+    -2.3,
+    -2.3,
+    -2.3
+  ]
+}
