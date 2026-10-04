@@ -1,3 +1,5 @@
+import {relatedVideoUrl} from '../public/shorts-policy.js';
+import {VISUAL_QUALITY,visualDirection} from './visual-direction.js';
 import {productionOptions} from './explainer-production.js';
 import {productionStyle, animationPlan, animated} from './animation-plan.js';
 import {captionExtras} from '../public/caption-style.js';
@@ -23,9 +25,10 @@ export function validateBrief(input) {
   const duration = Number(input.duration);
   if (!Number.isInteger(duration) || duration < 16 || duration > (input.format === 'short' ? 180 : 600)) fail('영상 길이는 숏폼 16~180초, 롱폼 16~600초입니다.');
   productionStyle(input.productionStyle);
-  return { ...productionOptions(input), category: input.category, topic: input.topic.trim(), format: input.format, duration, direction: String(input.direction || '').slice(0, 2000), aspect: input.format === 'short' ? '9:16' : '16:9', ...(input.productionStyle?{productionStyle:input.productionStyle}:{}) };
+  if(input.visualQuality!==undefined&&input.visualQuality!==VISUAL_QUALITY)fail('지원하지 않는 영상 품질 구성입니다.');
+  return { ...(input.visualQuality?{visualQuality:input.visualQuality}:{}), ...productionOptions(input), category: input.category, topic: input.topic.trim(), format: input.format, duration, direction: String(input.direction || '').slice(0, 2000), aspect: input.format === 'short' ? '9:16' : '16:9', ...(input.productionStyle?{productionStyle:input.productionStyle}:{}) };
 }
-// stripMotion: AI scenario output never selects motion templates; a person picks them in the media step.
+// Strip untrusted raw template requests; the validated direction compiler may derive an allow-listed summary.
 export function validateScenes(scenes, {animationStyle = false, stripMotion = false} = {}) {
   if (!Array.isArray(scenes) || !scenes.length || scenes.length > 100) fail('장면은 1~100개 필요합니다.');
   const ids = new Set();
@@ -39,7 +42,7 @@ export function validateScenes(scenes, {animationStyle = false, stripMotion = fa
     if(scene.camera!==undefined&&!CAMERAS.includes(scene.camera))fail('지원하지 않는 카메라 움직임입니다.');
     if(scene.shot!==undefined&&!SHOTS.includes(scene.shot))fail('지원하지 않는 장면 구도입니다.');
     const motion=stripMotion?undefined:validateMotionScene(scene,i,{animationStyle});
-    return { id, narration: scene.narration.trim(), prompt: scene.prompt.trim(), duration: scene.duration, kind: scene.kind, ...(scene.camera?{camera:scene.camera}:{}), ...(scene.shot?{shot:scene.shot}:{}), ...(scene.animation!==undefined?{animation:animationPlan(scene.animation)}:{}), ...(motion?{motion}:{}) };
+    return { id, narration: scene.narration.trim(), prompt: scene.prompt.trim(), duration: scene.duration, kind: scene.kind, ...(scene.camera?{camera:scene.camera}:{}), ...(scene.shot?{shot:scene.shot}:{}), ...(scene.animation!==undefined?{animation:animationPlan(scene.animation)}:{}), ...(motion?{motion}:{}), ...(scene.visualDirection!==undefined?{visualDirection:visualDirection(scene.visualDirection)}:{}) };
   });
 }
 export function validateEdit(input, job) {
@@ -94,7 +97,7 @@ export function validateTimeline(input, job) {
   return {version:2,fps:FPS,clips,captions,voice:input.voice,music:input.music||null,musicVolume:input.musicVolume,...(musicClips!==undefined?{musicClips}:{}),...(hiddenAudioAssets!==undefined?{hiddenAudioAssets}:{})};
 }
 export function createProject(input) {
-  return { id: crypto.randomUUID(), revision: 0, title: input.topic?.slice(0, 100), brief: validateBrief(input), scenes: [], assets: {}, edit: null, approved: false, render: null, upload: null, task: null, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+  return { id: crypto.randomUUID(), revision: 0, title: input.topic?.slice(0, 100), brief: validateBrief({...input,visualQuality:VISUAL_QUALITY}), scenes: [], assets: {}, edit: null, approved: false, render: null, upload: null, task: null, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
 }
 export function changeProject(original, action, body) {
   const job = structuredClone(original);
@@ -106,7 +109,7 @@ export function changeProject(original, action, body) {
     if (scenes.reduce((sum, s) => sum + s.duration, 0) > (job.brief.format === 'short' ? 180 : 600)) fail('장면의 전체 길이가 형식의 최대 길이를 넘었습니다.');
     if(animated(job.brief) && scenes.some(s=>s.kind!=='video'||!s.animation))fail('애니메이션 장면은 영상과 장면별 동작 구성이 필요합니다.');
     const old = Object.fromEntries(job.scenes.map(s => [s.id, s]));
-    for (const s of scenes) if (old[s.id]?.prompt !== s.prompt || old[s.id]?.kind !== s.kind || old[s.id]?.camera !== s.camera || old[s.id]?.shot !== s.shot || JSON.stringify(old[s.id]?.animation)!==JSON.stringify(s.animation) || JSON.stringify(old[s.id]?.motion)!==JSON.stringify(s.motion) || ((animated(job.brief)||s.motion)&&old[s.id]?.duration!==s.duration) || (old[s.id]?.narration !== s.narration && job.assets[s.id]?.source === 'ai')) delete job.assets[s.id];
+    for (const s of scenes) if (old[s.id]?.prompt !== s.prompt || old[s.id]?.kind !== s.kind || old[s.id]?.camera !== s.camera || old[s.id]?.shot !== s.shot || JSON.stringify(old[s.id]?.animation)!==JSON.stringify(s.animation) || JSON.stringify(old[s.id]?.motion)!==JSON.stringify(s.motion) || JSON.stringify(old[s.id]?.visualDirection)!==JSON.stringify(s.visualDirection) || ((animated(job.brief)||s.motion)&&old[s.id]?.duration!==s.duration) || (old[s.id]?.narration !== s.narration && job.assets[s.id]?.source === 'ai')) delete job.assets[s.id];
     for (const id of Object.keys(old)) if (!scenes.some(s => s.id === id)) delete job.assets[id];
     if(job.edit?.voice!==undefined)job.voicePreference=job.edit.voice;
     job.scenes = scenes; job.title = String(body.title || job.title).slice(0, 100); job.edit = null; invalidate();
@@ -137,7 +140,7 @@ export function changeProject(original, action, body) {
     if (job.brief.format === 'long' && body.platforms.some(p => p !== 'youtube')) fail('롱폼 업로드는 YouTube를 지원합니다.');
     if (!['private', 'unlisted', 'public'].includes(body.privacy)) fail('공개 범위를 선택하세요.');
     if (!text(body.title, 100)) fail('게시 제목은 1~100자입니다.');
-    job.publication = { platforms: [...new Set(body.platforms)], privacy: body.privacy, title: body.title, description: String(body.description || '').slice(0, 4000) };
+    job.publication = { platforms: [...new Set(body.platforms)], privacy: body.privacy, title: body.title, description: String(body.description || '').slice(0, 4000), ...(body.relatedVideoUrl?{relatedVideoUrl:relatedVideoUrl(body.relatedVideoUrl),relatedVideoStatus:'manual-required'}:{}) };
     job.task = { action, state: 'queued' };
   } else fail('지원하지 않는 작업입니다.', 404);
   if (job.task?.state === 'queued') job.task = { ...job.task, id: crypto.randomUUID(), requestedAt: new Date().toISOString() };

@@ -16,7 +16,8 @@
     "worker:cloud-secrets": "node ../credential-broker/runner-bootstrap.mjs worker.mjs",
     "test": "node --test test/*.test.mjs",
     "cloud:dev": "npx wrangler pages dev public",
-    "cloud:deploy": "npx wrangler pages deploy public --project-name shopshorts-dash"
+    "cloud:deploy": "npx wrangler pages deploy public --project-name shopshorts-dash",
+    "visual:plan": "node studio-visual-plan.mjs"
   },
   "dependencies": {
     "@higgsfield/cli": "1.1.26",

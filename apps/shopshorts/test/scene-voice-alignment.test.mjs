@@ -14,6 +14,8 @@ import {executeStudioTask} from '../studio-runner.mjs';
 
 function project(){
  const p=createProject({category:'심리학',topic:'결정을 잠시 미루는 순간',direction:'차분한 설명',format:'short',duration:24});
+ // Existing saved projects without the new visual-direction contract remain compatible.
+ delete p.brief.visualQuality;
  p.scenes=[1,2,3].map(i=>({id:`scene-${i}`,narration:`선택지 ${i}를 종이에 적어 비교해 보세요.`,prompt:'책상에서 종이 두 장을 비교하는 사람, 따뜻한 일러스트',duration:8,kind:'image'}));
  return p;
 }
