@@ -1,0 +1,398 @@
+{
+  "planSha256": "42d814d0c376d31d8aeb0a77e3c100499f388ff51bb727996e4e96fceea931c2",
+  "completedCalls": 3,
+  "rows": [
+    {
+      "id": "control-1",
+      "sourceCase": "supported",
+      "expectedDecision": "accepted",
+      "decision": "held",
+      "elapsedMs": 21360,
+      "answers": {
+        "relevance": {
+          "choice": "pass",
+          "evidenceIds": [],
+          "reason": "안양파빌리온의 독서 공간이라는 의외의 용도를 소개해 요청한 건축 영상 주제와 대상에 부합한다."
+        },
+        "value": {
+          "choice": "pass",
+          "evidenceIds": [],
+          "reason": "건축·전시 감상이라는 예상에 독서 용도를 더하며 방문 계획에 유용한 정보와 구체적인 도입 장면을 제공한다."
+        },
+        "support_title": {
+          "choice": "pass",
+          "evidenceIds": [
+            "source-1",
+            "lead-1-source-2"
+          ],
+          "reason": "예술적 건축물이라는 성격과 그 안에서 책을 읽을 수 있다는 전제가 근거로 뒷받침된다."
+        },
+        "support_question": {
+          "choice": "pass",
+          "evidenceIds": [
+            "lead-1-source-2"
+          ],
+          "reason": "건물 감상이라는 전제는 조형 예술물과 건축 디자인 설명으로 뒷받침되며 다른 활동은 열린 질문이다."
+        },
+        "support_entity": {
+          "choice": "pass",
+          "evidenceIds": [
+            "source-1",
+            "lead-1-source-2"
+          ],
+          "reason": "두 자료가 안양파빌리온이라는 대상을 명시한다."
+        },
+        "support_location": {
+          "choice": "uncertain",
+          "evidenceIds": [],
+          "reason": "제공된 발췌문은 대상명과 프로젝트명에 안양을 포함하지만 소재지를 안양으로 명시하지 않는다."
+        },
+        "support_answer": {
+          "choice": "pass",
+          "evidenceIds": [
+            "source-1"
+          ],
+          "reason": "공공예술도서관이며 책을 읽는 공간이라는 설명이 명시되어 있다."
+        },
+        "support_whyItMatters": {
+          "choice": "pass",
+          "evidenceIds": [
+            "source-1",
+            "lead-1-source-2"
+          ],
+          "reason": "건축 감상과 독서를 함께 계획할 수 있다는 전제는 건축 디자인과 독서 공간 설명으로 뒷받침된다."
+        },
+        "support_openingVisual": {
+          "choice": "not_applicable",
+          "evidenceIds": [],
+          "reason": "외관에서 책을 펼치는 장면으로 연결하는 제작 제안이며 실제 촬영이나 사건을 주장하지 않는다."
+        },
+        "support_direction": {
+          "choice": "pass",
+          "evidenceIds": [
+            "source-1",
+            "lead-1-source-2"
+          ],
+          "reason": "제안에 내포된 건축물과 독서 공간의 존재가 근거로 뒷받침된다."
+        },
+        "support_expectedAnswer": {
+          "choice": "not_applicable",
+          "evidenceIds": [],
+          "reason": "시청자가 가질 수 있는 가상적 예상을 제시할 뿐 실제 용도나 관객 반응을 단정하지 않는다."
+        }
+      },
+      "observation": {
+        "exitCode": 0,
+        "turns": [
+          {
+            "input_tokens": 23837,
+            "cached_input_tokens": 0,
+            "cache_write_input_tokens": 0,
+            "output_tokens": 642,
+            "reasoning_output_tokens": 90
+          }
+        ],
+        "itemTypes": [
+          "error",
+          "error",
+          "agent_message"
+        ],
+        "observedModels": [],
+        "diagnostics": [
+          "Two item.completed/error messages were not captured by the first observer; retained as unclassified diagnostics."
+        ]
+      },
+      "costUsd": null,
+      "runtimeDiagnosticsPresent": true
+    },
+    {
+      "id": "control-2",
+      "sourceCase": "insufficient",
+      "expectedDecision": "held",
+      "decision": "held",
+      "elapsedMs": 23268,
+      "answers": {
+        "relevance": {
+          "choice": "pass",
+          "evidenceIds": [],
+          "reason": "안양파빌리온의 의외의 도서관 용도를 소개하므로 요청한 건축 영상 주제에 부합한다."
+        },
+        "value": {
+          "choice": "pass",
+          "evidenceIds": [],
+          "reason": "건축·전시 감상이라는 예상에서 독서 용도로 확장하며 방문 계획에 유용한 정보와 구체적인 도입 장면을 제공한다."
+        },
+        "support_title": {
+          "choice": "pass",
+          "evidenceIds": [
+            "source-1",
+            "lead-1-source-2"
+          ],
+          "reason": "예술 건축물이라는 성격과 그 안에서 책을 읽는 용도가 근거에 뒷받침된다."
+        },
+        "support_question": {
+          "choice": "pass",
+          "evidenceIds": [
+            "lead-1-source-2"
+          ],
+          "reason": "건축물을 감상할 수 있다는 전제는 조형 예술물과 건축 디자인 설명으로 뒷받침되며 다른 활동은 열린 질문이다."
+        },
+        "support_entity": {
+          "choice": "pass",
+          "evidenceIds": [
+            "source-1",
+            "lead-1-source-2"
+          ],
+          "reason": "두 근거가 안양파빌리온을 명시적으로 식별한다."
+        },
+        "support_location": {
+          "choice": "uncertain",
+          "evidenceIds": [],
+          "reason": "제공된 발췌에는 소재지가 안양이라는 직접적인 설명이 없으며 명칭만으로 위치를 확정할 수 없다."
+        },
+        "support_answer": {
+          "choice": "uncertain",
+          "evidenceIds": [
+            "source-1",
+            "lead-1-source-2"
+          ],
+          "reason": "공공예술도서관과 반구형 설계는 확인되지만 속삭임을 건너편 좌석으로 전달하려는 설계 목적은 근거가 없다."
+        },
+        "support_whyItMatters": {
+          "choice": "pass",
+          "evidenceIds": [
+            "source-1",
+            "lead-1-source-2"
+          ],
+          "reason": "건축 감상과 독서를 함께 계획할 수 있다는 전제는 예술 건축물 및 독서 공간 설명으로 뒷받침된다."
+        },
+        "support_openingVisual": {
+          "choice": "not_applicable",
+          "evidenceIds": [],
+          "reason": "외관과 책을 펼치는 장면을 연결하는 연출 제안으로 실제 촬영이나 사건을 주장하지 않는다."
+        },
+        "support_direction": {
+          "choice": "pass",
+          "evidenceIds": [
+            "source-1",
+            "lead-1-source-2"
+          ],
+          "reason": "도입 제안에 포함된 건축 외관과 독서 공간의 존재는 제공된 근거로 뒷받침된다."
+        },
+        "support_expectedAnswer": {
+          "choice": "not_applicable",
+          "evidenceIds": [],
+          "reason": "시청자가 가질 수 있는 가상적 예상을 제시할 뿐 실제 용도나 관객 반응을 단정하지 않는다."
+        }
+      },
+      "observation": {
+        "exitCode": 0,
+        "turns": [
+          {
+            "input_tokens": 23886,
+            "cached_input_tokens": 0,
+            "cache_write_input_tokens": 0,
+            "output_tokens": 814,
+            "reasoning_output_tokens": 227
+          }
+        ],
+        "itemTypes": [
+          "error",
+          "error",
+          "agent_message"
+        ],
+        "observedModels": [],
+        "diagnostics": [
+          "Codex is ignoring 1 unrecognized configuration setting. Check for typos or deprecated settings.\n  user (/Users/admin/.codex/config.toml): `mcp_servers.socar-grafana.oauth_client_id` is ignored.",
+          "Codex is ignoring 1 unrecognized configuration setting. Check for typos or deprecated settings.\n  user (/Users/admin/.codex/config.toml): `mcp_servers.socar-grafana.oauth_client_id` is ignored."
+        ]
+      },
+      "costUsd": null,
+      "runtimeDiagnosticsPresent": true
+    },
+    {
+      "id": "control-3",
+      "sourceCase": "contradicted",
+      "expectedDecision": "rejected",
+      "decision": "rejected",
+      "elapsedMs": 20670,
+      "answers": {
+        "relevance": {
+          "choice": "pass",
+          "evidenceIds": [],
+          "reason": "안양파빌리온의 용도를 다루는 한국어 건축 영상 주제로 요청에 부합한다."
+        },
+        "value": {
+          "choice": "reject",
+          "evidenceIds": [],
+          "reason": "답변이 건물 감상 외의 활동을 설명하지 않고 독서 계획이라는 시청자 효용과도 모순되어 유용한 지식 차이를 제공하지 못한다."
+        },
+        "support_title": {
+          "choice": "pass",
+          "evidenceIds": [
+            "source-1",
+            "lead-1-source-2"
+          ],
+          "reason": "공공예술도서관의 독서 공간과 조형 예술 건축물이라는 설명이 제목의 전제를 뒷받침한다."
+        },
+        "support_question": {
+          "choice": "pass",
+          "evidenceIds": [
+            "lead-1-source-2"
+          ],
+          "reason": "조형 예술물과 건축 디자인 설명이 건물 감상이라는 전제를 뒷받침하며 다른 활동은 열린 질문이다."
+        },
+        "support_entity": {
+          "choice": "pass",
+          "evidenceIds": [
+            "source-1",
+            "lead-1-source-2"
+          ],
+          "reason": "두 자료의 제목이 안양파빌리온이라는 대상을 식별한다."
+        },
+        "support_location": {
+          "choice": "uncertain",
+          "evidenceIds": [
+            "source-1",
+            "lead-1-source-2"
+          ],
+          "reason": "시설명과 프로젝트명에 안양이 포함되지만 제공된 발췌문은 소재지를 명시하지 않는다."
+        },
+        "support_answer": {
+          "choice": "reject",
+          "evidenceIds": [
+            "source-1"
+          ],
+          "reason": "공공예술도서관이자 책을 읽는 공간이라는 설명이 도서관도 독서 공간도 아니라는 주장을 직접 반박한다."
+        },
+        "support_whyItMatters": {
+          "choice": "pass",
+          "evidenceIds": [
+            "source-1",
+            "lead-1-source-2"
+          ],
+          "reason": "독서 공간과 조형 예술 건축물이라는 설명이 건축 감상과 독서를 함께 계획할 수 있다는 전제를 뒷받침한다."
+        },
+        "support_openingVisual": {
+          "choice": "not_applicable",
+          "evidenceIds": [],
+          "reason": "외관에서 책을 펼치는 장면으로 연결하자는 제작 제안이며 실제 촬영이나 사건을 주장하지 않는다."
+        },
+        "support_direction": {
+          "choice": "pass",
+          "evidenceIds": [
+            "source-1",
+            "lead-1-source-2"
+          ],
+          "reason": "도입 제안에 전제된 건축물과 독서 공간의 존재가 자료로 뒷받침된다."
+        },
+        "support_expectedAnswer": {
+          "choice": "not_applicable",
+          "evidenceIds": [],
+          "reason": "시청자가 가질 수 있는 가상적 예상을 제시할 뿐 실제 용도를 단정하지 않는다."
+        }
+      },
+      "observation": {
+        "exitCode": 0,
+        "turns": [
+          {
+            "input_tokens": 23826,
+            "cached_input_tokens": 0,
+            "cache_write_input_tokens": 0,
+            "output_tokens": 693,
+            "reasoning_output_tokens": 120
+          }
+        ],
+        "itemTypes": [
+          "error",
+          "error",
+          "agent_message"
+        ],
+        "observedModels": [],
+        "diagnostics": [
+          "Codex is ignoring 1 unrecognized configuration setting. Check for typos or deprecated settings.\n  user (/Users/admin/.codex/config.toml): `mcp_servers.socar-grafana.oauth_client_id` is ignored.",
+          "Codex is ignoring 1 unrecognized configuration setting. Check for typos or deprecated settings.\n  user (/Users/admin/.codex/config.toml): `mcp_servers.socar-grafana.oauth_client_id` is ignored."
+        ]
+      },
+      "costUsd": null,
+      "runtimeDiagnosticsPresent": true
+    }
+  ],
+  "runtime": {
+    "provider": "codex",
+    "auth": "existing ChatGPT subscription through unchanged app adapter",
+    "requestedModel": "provider-default",
+    "configuredModel": "gpt-6-astra",
+    "configuredReasoningEffort": "high"
+  },
+  "observedModel": null,
+  "modelObservationNote": "Configured default gpt-6-astra/high; provider response did not report a resolved model ID.",
+  "costUsd": null,
+  "newJevCalls": 0,
+  "newCodexCalls": 3,
+  "retries": 0,
+  "comparisonPolicy": "Same cases/evidence/rubric, qualitative LLM choices versus thresholded Jev choices; confidence calibration is not equivalent",
+  "labelPolicy": "Existing provisional Codex labels, withheld from model prompts; not independent human truth",
+  "harnessInterruption": {
+    "firstExit": 1,
+    "reason": "observer initially rejected item.completed/error diagnostics despite successful model completion",
+    "recovery": "retained first response; resumed only two unattempted cases, retaining diagnostics",
+    "continuedExit": 0
+  },
+  "jevReference": {
+    "source": "docs/qa/20261004-jev-v22-live-results.json",
+    "rubric": "discovery-v2.2",
+    "newCalls": false,
+    "rows": [
+      {
+        "case": "supported",
+        "decision": "held",
+        "elapsedMs": 2246,
+        "reasons": [
+          "support_answer_uncertain",
+          "support_direction_uncertain",
+          "support_entity_uncertain",
+          "support_expectedAnswer_uncertain",
+          "support_location_uncertain",
+          "support_openingVisual_uncertain",
+          "support_question_uncertain",
+          "support_title_uncertain",
+          "support_whyItMatters_uncertain"
+        ]
+      },
+      {
+        "case": "insufficient",
+        "decision": "held",
+        "elapsedMs": 493,
+        "reasons": [
+          "support_answer_uncertain",
+          "support_direction_uncertain",
+          "support_entity_uncertain",
+          "support_expectedAnswer_uncertain",
+          "support_location_uncertain",
+          "support_title_uncertain",
+          "support_whyItMatters_uncertain",
+          "value_uncertain"
+        ]
+      },
+      {
+        "case": "contradicted",
+        "decision": "rejected",
+        "elapsedMs": 450,
+        "reasons": [
+          "relevance_uncertain",
+          "support_answer_rejected",
+          "support_direction_uncertain",
+          "support_entity_uncertain",
+          "support_expectedAnswer_uncertain",
+          "support_location_uncertain",
+          "support_question_uncertain",
+          "support_title_uncertain",
+          "support_whyItMatters_uncertain",
+          "value_uncertain"
+        ]
+      }
+    ]
+  },
+  "referenceLabelReview": "Original supported/accepted label is provisional and does not establish support for every field. All three LLM responses found the location not explicitly stated. Original labels retained, not relabelled to improve scores."
+}
