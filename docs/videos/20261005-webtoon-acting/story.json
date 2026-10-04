@@ -21,7 +21,7 @@
       "id": "DlU3oDWG5pC5PBITbfga"
     }
   },
-  "maxHiggsfieldCredits": 0,
+  "maxHiggsfieldCredits": 140,
   "episodes": [
     {
       "number": 1,
@@ -964,5 +964,8 @@
   ],
   "fiction": true,
   "model": "eleven_v3",
-  "motionBudgetStatus": "Pending explicit approval of up to 420 credits for 24 original illustrated acting clips. No paid motion submissions before approval."
+  "motionBudgetStatus": "User approved episode 1 first, up to 140 credits on 2026-10-05.",
+  "approvedEpisodes": [
+    1
+  ]
 }

@@ -16,8 +16,8 @@ for(const b of story.episodes.flatMap(e=>e.beats)){
 if(mode==='validate'){console.log(JSON.stringify({beats:ids.size,model:story.model,voices:story.voices,speed:story.speed}));process.exit(0);}
 if(!story.voices[role])throw Error('Voice role N/S/M required');
 await mkdir(cache,{recursive:true});
-const selected={N:['e1-02','e3-29'],S:['e1-24','e2-28'],M:['e2-00','e2-27']};
-let beats=story.episodes.flatMap(e=>e.beats).filter(b=>b.speaker===role);
+const selected={N:['e1-02','e1-27'],S:['e1-01','e1-24'],M:['e1-00','e1-23']};
+let beats=story.episodes.filter(e=>story.approvedEpisodes.includes(e.number)).flatMap(e=>e.beats).filter(b=>b.speaker===role);
 if(mode==='sample')beats=beats.filter(b=>selected[role].includes(b.id));
 else{
  const pending=[];
