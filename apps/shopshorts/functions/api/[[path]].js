@@ -214,7 +214,7 @@ export async function onRequest(context) {
     if (path === 'studio/worker' && method === 'PUT') {
       if (!workerAuthorized(request, env)) return json({ error: '워커 인증 필요' }, 403);
       const input = await request.json();
-      const caps = Object.fromEntries(['scenario','image','video','voice','shortsUpload','longUpload'].map(k => [k, input[k] === true]));
+      const caps = Object.fromEntries(['scenario','image','video','voice','shortsUpload','longUpload','motion'].map(k => [k, input[k] === true]));
       if (['google', 'higgsfield'].includes(input.mediaProvider)) caps.mediaProvider = input.mediaProvider;
       if(input.audioAccount)caps.audioAccount=sanitizeAudioAccount(input.audioAccount);
       caps.workerAt = new Date().toISOString();

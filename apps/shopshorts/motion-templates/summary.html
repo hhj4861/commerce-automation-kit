@@ -1,0 +1,84 @@
+<!doctype html>
+<!-- T3 그림 중심 핵심 요약. 세 아이콘이 선으로 그려지며 연결선이 차례로 이어지고, 마지막에 한 번 강조한다.
+     아이콘은 아래 고정 라이브러리 키만 받는다(임의 SVG/HTML 입력 없음). -->
+<html lang="ko" data-resolution="portrait" data-composition-variables='[
+  {"id":"heading","type":"string","label":"제목(12자 이하)","default":"한눈에 정리"},
+  {"id":"icon1","type":"string","label":"아이콘1(shield|ring|train|building|layers)","default":"layers"},
+  {"id":"label1","type":"string","label":"항목1(8자 이하)","default":"지반 확인"},
+  {"id":"icon2","type":"string","label":"아이콘2","default":"ring"},
+  {"id":"label2","type":"string","label":"항목2(8자 이하)","default":"원형 굴착"},
+  {"id":"icon3","type":"string","label":"아이콘3","default":"shield"},
+  {"id":"label3","type":"string","label":"항목3(8자 이하)","default":"벽체 보강"},
+  {"id":"showSafe","type":"boolean","label":"안전영역 표시","default":false}
+]'>
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=1080, height=1920" />
+<link rel="stylesheet" href="shared.css" />
+<script src="assets/gsap.min.js"></script>
+<style>
+  #heading { position: absolute; left: 70px; width: 940px; top: 250px; text-align: center; font-size: 76px; }
+  .item { position: absolute; left: 420px; width: 520px; font-size: 64px; }
+  #it1 { top: 512px; } #it2 { top: 822px; } #it3 { top: 1132px; }
+  .draw { fill: none; stroke: #3b3932; stroke-width: 9; stroke-linecap: round; stroke-linejoin: round; }
+</style>
+</head>
+<body>
+<div id="root" class="stage" data-composition-id="summary" data-start="0" data-duration="5" data-width="1080" data-height="1920">
+  <svg class="full" viewBox="0 0 1080 1920" aria-hidden="true">
+    <line id="link1" class="draw" x1="270" y1="660" x2="270" y2="780" pathLength="1" stroke-dasharray="1" stroke-dashoffset="1" opacity=".45" />
+    <line id="link2" class="draw" x1="270" y1="970" x2="270" y2="1090" pathLength="1" stroke-dasharray="1" stroke-dashoffset="1" opacity=".45" />
+    <g id="n1" transform="translate(270 560)"><circle class="disc" r="105" fill="#e57962" opacity=".18" /><g class="icon"></g></g>
+    <g id="n2" transform="translate(270 870)"><circle class="disc" r="105" fill="#7fb8a6" opacity=".18" /><g class="icon"></g></g>
+    <g id="n3" transform="translate(270 1180)"><circle class="disc" r="105" fill="#e8bd58" opacity=".22" /><g class="icon"></g></g>
+  </svg>
+  <div id="heading"></div>
+  <div id="it1" class="item"></div><div id="it2" class="item"></div><div id="it3" class="item"></div>
+  <div class="safe-box"></div><div class="caption-band"></div>
+</div>
+<script>
+  // Fixed icon library: stroke paths centered on 0,0 within ~±70px. Unknown keys fall back to a dot.
+  const ICONS = {
+    shield: ['M0 -66 L54 -44 V4 C54 38 28 58 0 70 C-28 58 -54 38 -54 4 V-44 Z', 'M-22 2 L-4 20 L26 -14'],
+    ring: ['M0 -62 A62 62 0 1 1 -0.1 -62 Z', 'M0 -36 A36 36 0 1 1 -0.1 -36 Z', 'M-62 0 H62', 'M0 -62 V62'],
+    train: ['M-46 -60 H46 Q58 -60 58 -46 V30 Q58 44 44 44 H-44 Q-58 44 -58 30 V-46 Q-58 -60 -46 -60 Z', 'M-58 -10 H58', 'M-30 22 h0.1 M30 22 h0.1', 'M-34 44 L-50 68 M34 44 L50 68'],
+    building: ['M-50 66 V-56 H20 V66', 'M20 -10 H56 V66', 'M-64 66 H66', 'M-30 -30 h12 M-30 0 h12 M-30 30 h12 M0 -30 h0.1'],
+    layers: ['M-64 -40 H64', 'M-64 0 Q-32 -14 0 0 T64 0', 'M-64 40 Q-32 26 0 40 T64 40', 'M-64 -66 V66 M64 -66 V66']
+  };
+  const v = window.__hyperframes.getVariables();
+  const set = (id, t) => { document.getElementById(id).textContent = t; };
+  set('heading', v.heading); set('it1', v.label1); set('it2', v.label2); set('it3', v.label3);
+  if (v.showSafe === true || v.showSafe === 'true') document.body.classList.add('show-safe');
+  // Selectors stay literal strings: the HyperFrames bundler rejects template-literal selectors.
+  const NODES = [
+    {icon: '#n1 .icon', disc: '#n1 .disc', paths: '#n1 .icon path', item: '#it1', link: '#link1'},
+    {icon: '#n2 .icon', disc: '#n2 .disc', paths: '#n2 .icon path', item: '#it2', link: '#link2'},
+    {icon: '#n3 .icon', disc: '#n3 .disc', paths: '#n3 .icon path', item: '#it3', link: null},
+  ];
+  const NS = 'http://www.w3.org/2000/svg';
+  [v.icon1, v.icon2, v.icon3].forEach((key, i) => {
+    const g = document.querySelector(NODES[i].icon);
+    (ICONS[key] || ['M0 0 h0.1']).forEach(d => {
+      const p = document.createElementNS(NS, 'path');
+      p.setAttribute('d', d); p.setAttribute('class', 'draw'); p.setAttribute('pathLength', '1');
+      p.setAttribute('stroke-dasharray', '1'); p.setAttribute('stroke-dashoffset', '1');
+      g.appendChild(p);
+    });
+  });
+
+  const tl = gsap.timeline({ paused: true, defaults: { ease: 'power3.out' } });
+  tl.fromTo('#heading', { y: 40, opacity: 0 }, { y: 0, opacity: 1, duration: 0.45 }, 0);
+  NODES.forEach((node, i) => {
+    const t = 0.35 + i * 0.95;
+    tl.fromTo(node.disc, { scale: 0, transformOrigin: '50% 50%' }, { scale: 1, duration: 0.45, ease: 'back.out(1.8)' }, t)
+      .fromTo(node.paths, { strokeDashoffset: 1 }, { strokeDashoffset: 0, duration: 0.6, stagger: 0.08, ease: 'power2.inOut' }, t + 0.1)
+      .fromTo(node.item, { x: -40, opacity: 0 }, { x: 0, opacity: 1, duration: 0.4 }, t + 0.25);
+    if (node.link) tl.fromTo(node.link, { strokeDashoffset: 1 }, { strokeDashoffset: 0, duration: 0.35, ease: 'none' }, t + 0.7);
+  });
+  // closing beat: all three nodes pulse once together
+  tl.to(['#n1 .disc', '#n2 .disc', '#n3 .disc'], { scale: 1.15, duration: 0.3, yoyo: true, repeat: 1, ease: 'sine.inOut', transformOrigin: '50% 50%' }, 3.6);
+  window.__timelines['summary'] = tl;
+  tl.seek(0);
+</script>
+</body>
+</html>
