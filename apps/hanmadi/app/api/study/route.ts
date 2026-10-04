@@ -1,5 +1,5 @@
 import { StudyTiming } from "@/lib/study-timing";
-import { lookupVocabulary } from "@/lib/vocabulary";
+import { alignMeaning, lookupVocabulary } from "@/lib/vocabulary";
 import { lessonPhrases } from "@/lib/v2-lesson";
 import { studyIdentity } from "@/lib/learner-auth";
 import {
@@ -205,6 +205,13 @@ export async function POST(req: Request) {
         });
         s.saveEpoch++;
       }) });
+    }
+    if (b.action === "align-meaning") {
+      if (typeof b.text !== "string" || typeof b.start !== "number" ||
+          typeof b.meaning !== "string" || typeof b.sentence !== "string")
+        throw new ConversationError(400, "한국어 뜻 안에서 단어나 짧은 표현을 선택해 주세요.");
+      await reserveRequest(actor, "chat");
+      return conversationJson({ match: await alignMeaning(b.text, b.start, b.meaning, b.sentence, language) });
     }
     if (b.action === "lookup-word") {
       if (typeof b.text !== "string" || typeof b.sentence !== "string" ||

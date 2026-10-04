@@ -2255,3 +2255,7 @@ body:has(.hm-dialog[open]) { overflow: hidden; }
 .hm-word-review { display: flex; flex-wrap: wrap; }
 .hm-word-review button { flex: 1; white-space: nowrap; }
 .hm-app .hm-word-remove { margin-top: 12px; color: #67738b; font-size: 12px; }
+
+.hm-meaning-selectable { user-select: text; -webkit-user-select: text; }
+.hm-word-aligned mark { background: #ffe08a; color: #182b50; border-radius: 3px; box-shadow: 0 2px 0 #bd7900; }
+.hm-alignment-status { font-size: 0.85rem; color: #405475; overflow-wrap: anywhere; }
