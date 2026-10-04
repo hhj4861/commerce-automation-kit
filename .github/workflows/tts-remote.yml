@@ -18,6 +18,21 @@ on:
         required: false
         default: "n2fbxG88jqAoaVPUy3IG"  # Yooni
         type: string
+      model_id:
+        description: "Optional speech model; default preserves length-based model selection"
+        required: false
+        default: "default"
+        type: choice
+        options:
+          - default
+          - eleven_v3
+          - eleven_multilingual_v2
+      run_label:
+        description: "Non-secret production receipt label"
+        required: false
+        type: string
+
+run-name: ${{ inputs.run_label || 'TTS narration' }}
 
 permissions:
   contents: read
@@ -44,6 +59,7 @@ jobs:
         if: ${{ !inputs.verify_secrets_only }}
         env:
           ELEVENLABS_VOICE_ID: ${{ inputs.voice_id }}
+          ELEVENLABS_TTS_MODEL: ${{ inputs.model_id != 'default' && inputs.model_id || '' }}
           SCRIPT_B64: ${{ inputs.script_b64 }}
         run: |
           printf '%s' "$SCRIPT_B64" | base64 -d > /tmp/script.json
