@@ -134,7 +134,7 @@ export async function accountAction(env, owner, operation, input = {}, now = Dat
   if (operation === 'scenario' && heartbeat.value.scenario !== true) return problem('시나리오를 지원하는 LLM 실행기를 연결하세요.', 503);
   const provider = operation === 'connect' ? input.provider : value.provider || 'codex';
   if (value.lastKind === operation && value.lastProvider === provider && value.lastRequest > now - 5000) return problem('잠시 후 다시 시도하세요.', 429);
-  const job = { id: operation === 'scenario' ? input.id : crypto.randomUUID(), kind: operation, provider, state: 'queued', createdAt: now, deadline: now + (operation === 'connect' || (operation === 'scenario' && input.brief.workflow==='explainer-v1') ? 600000 : 240000),
+  const job = { id: operation === 'scenario' ? input.id : crypto.randomUUID(), kind: operation, provider, state: 'queued', createdAt: now, deadline: now + (operation === 'scenario' ? 900000 : operation === 'connect' ? 600000 : 240000),
     ...(['recommend', 'scenario'].includes(operation) ? { input: input.brief } : {}),
     ...(operation === 'scenario' ? { projectId: input.projectId } : {}) };
   await retainScenario(env, owner, record, now);

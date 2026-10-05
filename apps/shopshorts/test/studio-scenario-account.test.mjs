@@ -1,3 +1,4 @@
+import {mockReview} from './helpers/editorial-review.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import Database from 'better-sqlite3';
@@ -58,7 +59,7 @@ async function fixture(t, provider = 'codex') {
 
 test('scenario validates narration, target duration and selected subscription model without requiring search', async () => {
   let options;
-  assert.deepEqual(await scenarioBrief(brief, { SHOPSHORTS_CLAUDE_MODEL: 'test-model' }, { provider: 'claude', generate: async (prompt, opts) => { options = opts; assert.match(prompt, /24초/); return { value: generatedResult, searched: false }; } }), result);
+  assert.deepEqual(await scenarioBrief(brief, { SHOPSHORTS_CLAUDE_MODEL: 'test-model' }, { provider: 'claude', generate: async (prompt, opts) => { if(mockReview(prompt))return mockReview(prompt); options = opts; assert.match(prompt, /24초/); return { value: generatedResult, searched: false }; } }), result);
   assert.equal(options.model, 'test-model');
   for (const value of [{}, { ...result, scenes: [{ ...result.scenes[0], duration: 1 }] }, { ...result, scenes: result.scenes.map(s => ({ ...s, narration: '' })) }]) {
     await assert.rejects(scenarioBrief(brief, {}, { generate: async () => ({ value }) }));
@@ -184,7 +185,7 @@ test('Codex scenario uses isolated owner credentials and saves refreshed tokens'
   await executeAccountJob({ credential: auth, job: { kind: 'scenario', input: brief } }, {
     update: async patch => patches.push(patch),
     openServer: async env => { runtime = env; assert.deepEqual(JSON.parse(await readFile(join(env.CODEX_HOME, 'auth.json'), 'utf8')), auth); return { call: async () => ({ account: { type: 'chatgpt' } }), close: async () => {} }; },
-    generator: () => async () => { await writeFile(join(runtime.CODEX_HOME, 'auth.json'), JSON.stringify({ ...auth, tokens: { ...auth.tokens, refresh_token: 'rotated' } })); return { value: generatedResult }; },
+    generator: () => async prompt => { if(mockReview(prompt))return mockReview(prompt); await writeFile(join(runtime.CODEX_HOME, 'auth.json'), JSON.stringify({ ...auth, tokens: { ...auth.tokens, refresh_token: 'rotated' } })); return { value: generatedResult }; },
   });
   assert.deepEqual(patches.at(-1).job.result, result); assert.equal(patches.at(-1).credential.tokens.refresh_token, 'rotated');
   await assert.rejects(stat(runtime.HOME), { code: 'ENOENT' });
@@ -195,7 +196,7 @@ test('Claude scenario uses connected setup-token without borrowing operator cred
   const credential = { kind: 'claude-setup-token-v1', accessToken: 'sk-ant-oat01-' + 'x'.repeat(90) };
   await executeClaudeAccountJob({ credential, job: { kind: 'scenario', input: brief } }, {
     env: { HOME: '/operator', PATH: '/bin', CLAUDE_CODE_OAUTH_TOKEN: 'operator-secret' },
-    generator: (env, options) => { assert.equal(env.CLAUDE_CODE_OAUTH_TOKEN, undefined); assert.equal(options.oauthToken, credential.accessToken); return async () => ({ value: generatedResult }); },
+    generator: (env, options) => { assert.equal(env.CLAUDE_CODE_OAUTH_TOKEN, undefined); assert.equal(options.oauthToken, credential.accessToken); return async prompt => mockReview(prompt) || ({ value: generatedResult }); },
     update: async value => { patch = value; },
   });
   assert.equal(patch.job.state, 'done'); assert.deepEqual(patch.job.result, result);
@@ -219,4 +220,12 @@ test('runtime status is owner-scoped, excludes credentials, and degrades without
  });
  assert.deepEqual(result,{known:true,connected:true,available:true,scenarioAvailable:true,provider:'codex'});
  assert.deepEqual(await scenarioRuntime(request,f.env,async()=>{throw Error('offline');}),{known:false});
+});
+
+test('project and account broker allow bounded drafting plus review and one repair',async t=>{
+ const f=await fixture(t),before=Date.now();
+ const {project}=await (await f.start()).json();
+ const job=(await readVault(f.env,f.name)).value.job;
+ assert.ok(project.task.deadline>=before+900000 && project.task.deadline<=Date.now()+900000);
+ assert.equal(job.deadline-job.createdAt,900000);
 });

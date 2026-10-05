@@ -1,3 +1,4 @@
+import {mockReview} from './helpers/editorial-review.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {mkdtemp,writeFile,readFile,rm} from 'node:fs/promises';
@@ -30,10 +31,10 @@ test('production choices persist and reject unsupported rates, providers and voi
 test('selected topic is researched before script, evidence is retained, missing search fails closed',async()=>{
  const phases=[];let calls=0;
  const result=await scenarioBrief(brief,{}, {onProgress:phase=>phases.push(phase),generate:async prompt=>{
-  calls++;if(calls===1){assert.match(prompt,/내장 웹 검색/);assert.match(prompt,/초고층/);return {searched:true,value:research};}
+  calls++;if(mockReview(prompt))return mockReview(prompt);if(calls===1){assert.match(prompt,/내장 웹 검색/);assert.match(prompt,/초고층/);return {searched:true,value:research};}
   assert.match(prompt,/source-1/);assert.match(prompt,/실제 측정값/);return {value:generated};
  }});
- assert.deepEqual(phases,['research','scenario']);assert.equal(calls,2);assert.deepEqual(result.research.facts,research.facts);
+ assert.deepEqual(phases,['research','scenario']);assert.equal(calls,3);assert.deepEqual(result.research.facts,research.facts);
  assert.deepEqual(scenarioResult(result,brief).research,result.research);
  assert.equal(result.scenes[0].animation.presentation,'illustrated');
  assert.equal(result.scenes[1].animation.presentation,'diagram');

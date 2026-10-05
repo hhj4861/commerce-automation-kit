@@ -1,3 +1,4 @@
+import {mockReview} from './helpers/editorial-review.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {mkdtemp,mkdir,rm,writeFile} from 'node:fs/promises';
@@ -24,7 +25,7 @@ test('animation choice persists through brief and recommendations; old briefs st
 test('LLM must return meaningful bounded animation data, never executable markup',async()=>{
  let prompt='';
  const scenes=[scene,{...scene,id:'scene-2',narration:'잠시 피한 뒤에도 일은 남아 있어요. 작은 행동부터 시작해 보세요.'}];
- const result=await scenarioBrief(brief,{}, {provider:'claude',generate:async p=>{prompt=p;return {value:{title:'미루기의 순간',scenes,storyArc:{hook:{sceneId:'scene-1',line:scene.narration},payoff:{sceneId:'scene-2',line:'잠시 피한 뒤에도 일은 남아 있어요.'},ending:{sceneId:'scene-2',line:'작은 행동부터 시작해 보세요.'}}}};}});
+ const result=await scenarioBrief(brief,{}, {provider:'claude',generate:async p=>{if(mockReview(p))return mockReview(p);prompt=p;return {value:{title:'미루기의 순간',scenes,storyArc:{hook:{sceneId:'scene-1',line:scene.narration},payoff:{sceneId:'scene-2',line:'잠시 피한 뒤에도 일은 남아 있어요.'},ending:{sceneId:'scene-2',line:'작은 행동부터 시작해 보세요.'}}}};}});
  assert.match(prompt,/코드로 렌더링/);assert.deepEqual(result.scenes[0].animation,plan);
  assert.throws(()=>scenarioResult({title:'실패',scenes:scenes.map(({animation,...s})=>s)},brief),/동작 구성/);
  assert.throws(()=>animationPlan({...plan,elements:[{icon:'<script>',motion:'enter',label:'a'},plan.elements[0]]}));
