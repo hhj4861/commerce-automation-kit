@@ -4,7 +4,7 @@ import { authorizeGithub, authorizeMigration, REPOSITORY, SUBJECT_PREFIX, DEPLOY
 
 const claims = (name = 'shopshorts') => {
   const ref = `refs/heads/deploy/${name}`;
-  return { repository: REPOSITORY, repository_id: '1310729493', repository_owner_id: '71001056',
+  return { ...(name === 'hanmadi' ? { ref_protected: 'true' } : {}), repository: REPOSITORY, repository_id: '1310729493', repository_owner_id: '71001056',
     runner_environment: 'github-hosted', event_name: 'push', ref,
     sub: `${SUBJECT_PREFIX}:ref:${ref}`, workflow_ref: `${REPOSITORY}/.github/workflows/platform-deploy.yml@${ref}` };
 };
@@ -41,4 +41,13 @@ test('admin gets a dedicated credential and cannot use learner or Replay trust',
   for (const patch of [{ repository_id: 'other' }, { repository_owner_id: 'other' }, { event_name: 'pull_request' }, { runner_environment: 'self-hosted' }, { workflow_ref: claims('hanmadi').workflow_ref }, { sub: claims('hanmadi').sub }]) assert.throws(() => authorizeGithub({ ...adminClaims, ...patch }, adminConfig));
   assert.throws(() => authorizeGithub(claims('hanmadi'), adminConfig));
   assert.throws(() => authorizeGithub(adminClaims, { GITHUB_REPLAY_DEPLOY_ENABLED: 'true' }));
+});
+
+test('learner deployment requires a protected ref and receives no admin or Replay credential', () => {
+  const learner = claims('hanmadi');
+  assert.deepEqual(authorizeGithub(learner, config).keys, ['DEPLOY_VERCEL_TOKEN']);
+  for (const ref_protected of [undefined, false, 'false'])
+    assert.throws(() => authorizeGithub({ ...learner, ref_protected }, config));
+  for (const patch of [{ workflow_ref: adminClaims.workflow_ref }, { sub: adminClaims.sub }, { repository_id: 'other' }, { runner_environment: 'self-hosted' }])
+    assert.throws(() => authorizeGithub({ ...learner, ...patch }, config));
 });
