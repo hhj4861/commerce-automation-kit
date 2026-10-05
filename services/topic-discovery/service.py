@@ -14,11 +14,13 @@ from pathlib import Path
 from urllib.parse import urlencode, urlsplit
 from urllib.request import Request, build_opener, HTTPRedirectHandler
 
+from native_review import MODE as REVIEW_MODE, VERSION as HYBRID_VERSION, eligible as review_eligible, build_prompt as native_review_prompt, apply_reviews
+
 VERSION = "discovery-v1.2"
 RESEARCH_VERSION = "discovery-v2.2"
 # Failed the quality gate: only explicit, internal evaluation may select v2.3.
 EXPERIMENTAL_RESEARCH_VERSION = "discovery-v2.3"
-SCOPED_REVIEW_VERSIONS = {RESEARCH_VERSION, EXPERIMENTAL_RESEARCH_VERSION}
+SCOPED_REVIEW_VERSIONS = {RESEARCH_VERSION, EXPERIMENTAL_RESEARCH_VERSION, HYBRID_VERSION}
 FIELD_SUPPORT_VERSIONS = {"discovery-v2.1"} | SCOPED_REVIEW_VERSIONS
 LEGACY_VERSIONS = {"discovery-v1.1", "discovery-v2"}
 SUPPORT_FIELDS = ("title", "question", "entity", "location", "answer",
@@ -48,13 +50,15 @@ def public_url(value):
         return False
 
 def validate_input(value):
-    keys = {"profile", "category", "brief", "history", "runtime", "workflow"}
+    keys = {"profile", "category", "brief", "history", "runtime", "workflow", "reviewMode"}
     if not isinstance(value, dict) or set(value) - keys or value.get("profile") not in ("content", "business"):
         raise Failure("invalid_input")
     if not text(value.get("category"), 120) or not text(value.get("brief"), 6000):
         raise Failure("invalid_input")
     if "workflow" in value and not research_workflow(value):
         raise Failure("unsupported_workflow")
+    if "reviewMode" in value and (value["reviewMode"] != REVIEW_MODE or not research_workflow(value)):
+        raise Failure("unsupported_review_mode")
     rt = value.get("runtime")
     if not isinstance(rt, dict) or set(rt) != {"provider", "model"} or rt["provider"] not in ("codex", "claude") or not text(rt["model"], 100):
         raise Failure("invalid_runtime")
@@ -130,6 +134,10 @@ class Store:
     def begin(self, scope, platform, key, value, per_day=30, research_version=RESEARCH_VERSION):
         if research_version not in SCOPED_REVIEW_VERSIONS:
             raise Failure("unsupported_rubric", 422)
+        if value.get("reviewMode") == REVIEW_MODE:
+            research_version = HYBRID_VERSION
+        elif research_version == HYBRID_VERSION:
+            raise Failure("review_capability_required", 422)
         now = time.time()
         with self.db() as db:
             db.execute("BEGIN IMMEDIATE")
@@ -162,7 +170,7 @@ class Store:
         with self.db() as db:
             db.execute("BEGIN IMMEDIATE")
             data = self._load(db, scope, rid)
-            if data["state"] != "awaiting_generation" or data["action"]["id"] != action_id or data["usage"]["generationClaims"] >= (2 if research_workflow(data["input"]) else 1):
+            if data["state"] != "awaiting_generation" or data["action"]["id"] != action_id or data["usage"]["generationClaims"] >= (3 if data["rubricVersion"] == HYBRID_VERSION else 2 if research_workflow(data["input"]) else 1):
                 error = Failure("generation_already_claimed", 409)
             else:
                 data["state"] = "generating"
@@ -596,6 +604,10 @@ class Discovery:
         if not new:
             return data
         try:
+            if data["rubricVersion"] == HYBRID_VERSION and data["action"].get("stage") == "review":
+                data["candidates"] = apply_reviews(data, None if completion.get("generationError") else completion.get("output"))
+                data.update(state="complete", action=None)
+                return self.store.save(scope, rid, data, expected="reviewing")
             if completion.get("generationError"):
                 raise Failure("generation_failed", 422)
             prior = (self.store.history(scope, data["input"]["profile"]) + data["input"]["history"])[:100]
@@ -681,6 +693,11 @@ class Discovery:
                 # must not veto a corrected candidate with the same proposed title.
                 if decision == "accepted":
                     prior.append({k: candidate[k] for k in ("title", "entity", "answer")})
+            if data["rubricVersion"] == HYBRID_VERSION and any(review_eligible(c) for c in data["candidates"]):
+                data["nativeReviewPrior"] = prior
+                data["action"] = {"id":str(uuid.uuid4()),"stage":"review","runtime":data["input"]["runtime"],"prompt":native_review_prompt(data,prior)}
+                data["state"] = "awaiting_generation"
+                return self.store.save(scope,rid,data,expected="reviewing")
             data["state"] = "complete"
         except Exception as exc:
             data.update(state="held", reasonCodes=[exc.code if isinstance(exc, Failure) else "verification_failed"])

@@ -33,7 +33,7 @@ export function createDiscoveryClient({baseUrl,apiKey,subject,allowLocalhost=fal
       if(typeof assertConnection!=='function'||typeof generate!=='function') throw new DiscoveryError('generation_adapter_required');
       await assertConnection(input.runtime);
       let result=await request('/v1/discover',input,idempotencyKey,signal);
-      const stages=input.workflow==='research-v2'?['research','draft']:[undefined];
+      const stages=input.workflow==='research-v2'?['research','draft',...(input.reviewMode==='native-llm-v1'?['review']:[])]:[undefined];
       const seen=new Set();
       if(result.state==='complete'||result.state==='held')return result;
       if(result.state!=='awaiting_generation')throw new DiscoveryError('discovery_in_progress',409);

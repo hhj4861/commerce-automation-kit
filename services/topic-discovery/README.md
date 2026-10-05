@@ -2,6 +2,18 @@
 
 Current source: `discovery-v1.2` (single-stage, unchanged) and `discovery-v2.2` (opt-in `workflow: research-v2`). v2.2 isolates per-question candidate context and explicitly distinguishes purely nonfactual text. This source change is not deployed and does not enable clients. The last verified production service remains v1.1. Live quality is still NOT accepted: v2.1 held the supported control in the 2026-10-04 evaluation. Historical rollout notes below describe earlier revisions.
 
+## Opt-in native adjudication — discovery-v2.4
+
+Research requests may explicitly add `reviewMode: "native-llm-v1"`. Ordinary requests remain v2.2. v2.4 uses the v2.2 JEV questions, not the failed v2.3 split prototype. It adds at most one `review` action after research/draft when a fully validated JEV response held a candidate solely for low confidence/probability/margin. Confident rejections, confident uncertainty, invalid responses and transport failures never dispatch this fallback.
+
+The existing authenticated JS/Python adapter executes the review prompt with the same selected runtime and rechecks its connection before claiming, running and submitting. No new provider credentials or server-side generation transport is added. The research request pins its rubric and allows at most three total claims; old requests retain their prior limits. Review outputs and terminal snapshots replay without extra calls. An error/malformed row keeps that candidate held and preserves accepted siblings.
+
+Only low-confidence JEV pass/not_applicable choices can normally be promoted. A narrow exception permits a low-confidence content expectedAnswer reject when the reviewer classifies the entire field as a nonfactual viewer prediction with empty citations. Embedded factual premises, business alternatives, JEV uncertain choices and confident rejects cannot use that exception.
+
+The reviewer checks the complete candidate, supplied sources, relevance, value and duplicates. Server validation requires exact candidate/check keys, bounded explanations, allowed issue codes and exact source quotes; factual passes require citations. Citation syntax is not a proof of entailment: the semantic review is still model judgment and human approval remains required. Original JEV checks/scores and decisions are retained separately. Unsupported commercial revenue/profit guarantees are rejected, and conflicting source values remain unresolved rather than being silently converted into a verified range.
+
+The new source and adapters require joint deployment before any product opts in. This PR does not deploy, enable Shopshorts/blog flags, or prove the production browser/account flow. See [native review verification](../../docs/qa/20261005-jev-native-review.md) for measured quality, costs and limits.
+
 ## Experimental split review — 2026-10-05, quality gate NOT passed
 
 `discovery-v2.3` separates factual-presence classification from factual-support review for six optional factual fields. Every question receives the original full field and evidence; no question is skipped based on another model answer. One call contains 17 questions (18 with history), preserving confidence/probability/margin thresholds, contradiction priority and malformed-response holds. Entity/location/answer retain their required factual checks. Raw answers remain separate in `checks`.
