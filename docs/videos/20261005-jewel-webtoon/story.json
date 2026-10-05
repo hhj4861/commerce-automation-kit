@@ -1,0 +1,109 @@
+{
+  "id": "jewel-webtoon-short",
+  "title": "폭포 하나를 비켜 놓았더니 지붕 전체가 비대칭이 됐다?",
+  "brief": {
+    "category": "건축학",
+    "topic": "창이공항 주얼의 폭포는 왜 정중앙이 아닐까?",
+    "format": "short",
+    "duration": 45,
+    "direction": "한 사례의 원인과 설계 결과를 끝까지 설명. 섬세한 웹툰, Kyle 1.1배, 현재 영상 재제작 아님. 45초 안팎이며 이해와 완결된 문장을 우선.",
+    "narrationSpeed": 1.1,
+    "voiceId": "RU7aSi6lT4uQBXMLgDxK",
+    "productionStyle": "webtoon"
+  },
+  "voiceId": "RU7aSi6lT4uQBXMLgDxK",
+  "model": "eleven_multilingual_v2",
+  "speed": 1.1,
+  "maxHiggsfieldCredits": 54,
+  "scenes": [
+    {
+      "id": "hook",
+      "duration": 4,
+      "kind": "video",
+      "narration": "이 폭포, 왜 건물 한가운데가 아닐까요?",
+      "prompt": "웹툰 원화: 창이공항 주얼의 거대한 유리 격자 지붕, 중심에서 옆으로 치우친 폭포와 그 옆을 지나가는 열차. 첫 프레임부터 폭포·열차를 함께 보여주고 상단에 짧은 질문을 오버레이한다. 열차 이동과 폭포 낙하가 지속된다."
+    },
+    {
+      "id": "existing",
+      "duration": 8,
+      "kind": "video",
+      "narration": "싱가포르 창이공항의 주얼. 건물을 짓기 전부터 터미널을 잇는 선로가 이곳을 지나고 있었어요.",
+      "prompt": "따뜻한 종이 질감의 웹툰 배치 개념도. 먼저 수평 선로와 왼쪽에서 오른쪽으로 움직이는 열차를 그린 뒤, 선로를 에워싸는 건물 외곽이 나타난다. 기존 선로는 앰버색으로 계속 유지한다. 실제 배치의 축척·방향을 그대로 복제한 시공도는 아니다."
+    },
+    {
+      "id": "conflict",
+      "duration": 6,
+      "kind": "video",
+      "narration": "여기에 폭포를 정중앙에 놓으면, 물이 떨어지는 길과 열차 길이 겹치죠.",
+      "prompt": "가정: 중앙에 놓으면 이라는 작은 라벨을 표시한다. 앞 장면과 같은 선로·외곽을 유지하고 중앙에 파란 폭포 경로가 나타난다. 중앙 선로 교차점에 붉은 링이 생긴다. 사고 장면 없이 가상의 설계 충돌만 보여준다."
+    },
+    {
+      "id": "offset",
+      "duration": 7,
+      "kind": "video",
+      "narration": "그래서 선로를 피해 폭포가 내려오는 지붕 구멍을 한쪽으로 옮겨 설계했습니다.",
+      "prompt": "배치 비교: 선로는 고정하고 파란 폭포 위치가 선로 밖으로 이동한다. 점선은 건물 중심, 파란 원은 실제 설계 방향을 단순화한 치우친 위치. 열차가 막힘없이 지나가고 붉은 충돌 링이 사라진다. 시공된 폭포가 실제 이동하는 기능처럼 보여주지 않는다."
+    },
+    {
+      "id": "roof",
+      "duration": 6,
+      "kind": "video",
+      "narration": "구멍 한쪽은 지붕 가장자리와 가까워지고, 반대쪽은 멀어지죠.",
+      "prompt": "같은 웹툰 배치 개념도에서 치우친 구멍과 고정된 건물 외곽을 유지한다. 구멍에서 가까운 가장자리까지 짧은 앰버 선, 반대쪽 가장자리까지 긴 청록 선을 순서대로 그려 거리가 달라지는 이유를 보여준다. 실측 수치는 쓰지 않는다."
+    },
+    {
+      "id": "shape",
+      "duration": 6,
+      "kind": "video",
+      "narration": "이 서로 다른 거리를 곡면으로 이으면서, 주얼의 지붕은 비대칭이 됐습니다.",
+      "prompt": "앞 장면의 가까운 쪽·먼 쪽을 지붕 단면의 양쪽 곡선으로 이어 그린다. 중앙 구멍을 가진 대칭 윤곽은 얇은 점선으로, 치우친 구멍을 가진 주얼의 비대칭 관계는 굵은 앰버색으로 보여준다. 일반 법칙이나 자동 구조 해석이 아니라 이 건물의 설계 선택을 단순화한 개념도다. 유리 패널 제조 이야기는 확장하지 않는다."
+    },
+    {
+      "id": "payoff",
+      "duration": 8,
+      "kind": "video",
+      "narration": "폭포 옆에 열찻길을 낸 게 아니라, 먼저 있던 길을 피해 폭포와 지붕을 설계한 거예요.",
+      "prompt": "처음과 같은 웹툰 주얼 공간으로 돌아간다. 기존 열차가 지나가는 길과 치우친 폭포를 비교 표시하고 창이공항 이용객의 이동이 이어지는 모습을 보여준다. 마지막 문장을 자르지 않고 온전히 들려준 뒤 약간의 여유를 둔다."
+    }
+  ],
+  "research": {
+    "sources": [
+      {
+        "id": "source-1",
+        "title": "Institution of Structural Engineers — Jewel Changi Airport",
+        "url": "https://www.istructe.org/structural-awards/projects/2021/jewel-changi-airport/"
+      },
+      {
+        "id": "source-2",
+        "title": "Safdie Architects — Jewel Changi Airport",
+        "url": "https://www.safdiearchitects.com/news/project-update-jewel-changi-airport-to-open-in-2019"
+      }
+    ],
+    "facts": [
+      {
+        "claim": "폭포는 기존 공항 열차 선로를 피하기 위해 정중앙을 벗어나 배치됐다.",
+        "sourceIds": [
+          "source-1"
+        ]
+      },
+      {
+        "claim": "비대칭 토러스형 격자 지붕과 서로 치수가 다른 삼각 유리 패널로 구성된다.",
+        "sourceIds": [
+          "source-1"
+        ]
+      },
+      {
+        "claim": "구조공학회 수상 설명은 기존 열차를 피해 폭포를 비중앙에 두었고 그 배치 때문에 토러스 지붕 형태가 약간 타원형으로 바뀌었다고 명시한다. 모든 편심 구멍이 같은 지붕을 강제한다는 일반 법칙이 아니다.",
+        "sourceIds": [
+          "source-1"
+        ]
+      }
+    ],
+    "limitations": [
+      "그림은 위치 관계를 위한 단순화된 설계 설명이며 실제 축척·방향·시공도 또는 유한요소 해석이 아니다.",
+      "폭포를 시공 후 이동시킨 사건이나 가동식 지붕이 아니다.",
+      "2019년 개장한 사례이며 최신 준공이라고 소개하지 않는다."
+    ]
+  },
+  "openingPrompt": "Six-second premium Korean webtoon architectural reveal of Jewel Changi Airport interior, preserve the illustration, fine ink linework and painterly glass and foliage. A silver airport shuttle glides horizontally on its elevated track beside the waterfall, never through the falling water. The 40-meter waterfall continuously pours straight down in a narrow luminous blue-white cylindrical curtain and mist shimmers. Slightly off-centre roof oculus stays fixed. Warm sunlight against deep cool green foliage. Camera makes a gentle forward dolly with subtle parallax. Architecture and roof stay rigid, no changing geometry, no explosion, no crash, no new train tracks, no text, no dialogue, no music, no style shift. Illustrative reconstruction, not documentary footage."
+}
