@@ -1,0 +1,157 @@
+{
+  "status": "media-complete",
+  "style": "webtoon",
+  "baseRevision": "3ee052d6a8ae9d6a1c84579bafced1445be876d7",
+  "paidOpening": {
+    "state": "downloaded",
+    "credits": 54,
+    "prompt": "Six second sophisticated hand-drawn Korean webtoon animation of this illustrated AI network board. Keep ink linework and painterly warm amber and slate blue shading throughout, never transition to photorealism or CGI. Camera gently glides toward the optical connector beside the central chip. Subtle changing server indicator lights and luminous reflected highlights, slight parallax between drawn rack layers. Board and cable mechanically stable. No text, labels, holograms, laser beams, no logos, no people. This is scientific conceptual reconstruction, not actual footage. Keep chip and connector in central portrait safe area.",
+    "reference": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261005-optical-episode-5-webtoon/art/hero.png",
+    "at": "2026-10-05T09:21:29.277Z",
+    "id": "6c738aa8-104a-47d2-9f53-1ded4e759c15"
+  },
+  "newTtsCalls": 0,
+  "extraShortPaidVideoCalls": 0,
+  "artMode": "built-in image_gen",
+  "art": [
+    {
+      "file": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261005-optical-episode-5-webtoon/art/copper.png",
+      "sha256": "48fd0b34fa5eb6eb98e564343b31fa5d53823bbf58ed917a5a4dd01dcde6a7c8"
+    },
+    {
+      "file": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261005-optical-episode-5-webtoon/art/daily.png",
+      "sha256": "48947b9c152a6a49934e2240fcca9a1ee6ced8cd6f74eb05e93eb4de6383bf19"
+    },
+    {
+      "file": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261005-optical-episode-5-webtoon/art/fiber.png",
+      "sha256": "afe5b2f18aad54d121f93f8669683ac02ee47efbb53060a0e7554e78f8ee6ce5"
+    },
+    {
+      "file": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261005-optical-episode-5-webtoon/art/hero.png",
+      "sha256": "1a208a9198f47d85f32fe194d768548f1c774d83a22622d305fa9a54ac6a2697"
+    },
+    {
+      "file": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261005-optical-episode-5-webtoon/art/lab.png",
+      "sha256": "9e6033f39e7f07bf561e5ffdcd05b8de170dcca6628bf6e697d6cce207212b37"
+    },
+    {
+      "file": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261005-optical-episode-5-webtoon/art/racks.png",
+      "sha256": "bca6526145d45e5f75c6cd668fbfcf835de1e780c26fb8c6414593fcce0170db"
+    }
+  ],
+  "sourceResearch": "Unchanged story.json sources and factChecks",
+  "verifiedAt": "2026-10-05T09:41:16.682768+00:00",
+  "long": {
+    "file": "/Users/admin/Downloads/vedio/optical-episode-5-webtoon-long.mp4",
+    "duration": 355.875,
+    "frames": 8541,
+    "resolution": [
+      1920,
+      1080
+    ],
+    "artStyle": "webtoon",
+    "audioReusedExactly": true,
+    "audioPacketHash": "SHA256=2889055b0b2a8849896cf14eb481c13dfe9cff7cfec3ec792a62071adc2903c3",
+    "voice": "RU7aSi6lT4uQBXMLgDxK",
+    "speed": 1,
+    "captionCount": 118,
+    "captionLayout": true,
+    "fullDecode": true,
+    "silencesOver1_3sec": [],
+    "blackSegments": [],
+    "maxVolume": [
+      "-1.2 dB"
+    ],
+    "sha256": "f925e5f9d970fb832610129826aeea63c19e8776b446e2125550c2ebfb2a59ca",
+    "originalSha256": "abbfbe0a3a4028c72ec3f333ce48033aa59d107d1da11e59423b5073164d7914",
+    "visualReview": {
+      "method": "sampled actual final frames; not uninterrupted manual playback",
+      "samples": 24,
+      "result": "Opening, all scene samples, readable captions and portrait-specific vertical conversion flow reviewed; short final line inspected at39.5sec."
+    },
+    "limitations": [
+      "Illustrated conceptual structure, not an as-built product schematic.",
+      "Photon and signal colors/speeds are explanatory; actual optical signals mainly infrared."
+    ],
+    "captionSourceCoverage": true,
+    "endingHeldToEnd": true,
+    "bytes": 126958670
+  },
+  "short": {
+    "file": "/Users/admin/Downloads/vedio/optical-episode-5-webtoon-short.mp4",
+    "duration": 39.833333,
+    "frames": 956,
+    "resolution": [
+      1080,
+      1920
+    ],
+    "artStyle": "webtoon",
+    "audioReusedExactly": true,
+    "audioPacketHash": "SHA256=852d64bf8a9fe8bdc55686689d5efc7593e7ee084a84462476290a4174c52073",
+    "voice": "RU7aSi6lT4uQBXMLgDxK",
+    "speed": 1.1,
+    "captionCount": 16,
+    "captionLayout": true,
+    "fullDecode": true,
+    "silencesOver1_3sec": [],
+    "blackSegments": [],
+    "maxVolume": [
+      "-0.9 dB"
+    ],
+    "sha256": "ec1244141a41861694b6662683aa8ec9ed39daeec486eabf17689c93ee0fe3f8",
+    "originalSha256": "637e5286eaadccee91b772f133c048850ada6d72d7f731bada46468c29e11233",
+    "visualReview": {
+      "method": "sampled actual final frames; not uninterrupted manual playback",
+      "samples": 5,
+      "result": "Opening, all scene samples, readable captions and portrait-specific vertical conversion flow reviewed; short final line inspected at39.5sec."
+    },
+    "limitations": [
+      "Illustrated conceptual structure, not an as-built product schematic.",
+      "Photon and signal colors/speeds are explanatory; actual optical signals mainly infrared."
+    ],
+    "captionSourceCoverage": true,
+    "endingHeldToEnd": true,
+    "bytes": 13251771
+  },
+  "sourceSha256": {
+    "story.json": "75996e2de7ecff116d621c0b58d701cce379d533022bd851cfbad5f3c217d80b",
+    "webtoon.py": "230ec43d5c0e38c58cb7e79a846229514379a76707ee4f333e75a466eb5c91a8",
+    "webtoon-produce.mjs": "b708d0f9eac444aae72f781b778833e5d0a4fc9172e0249b3529668a3bf508f5",
+    "webtoon-prompts.json": "aaf728462bddc1a43c0498f9b731c3b2f176e708bf1019d7684fa450968877fb"
+  },
+  "renderer": {
+    "compositeCanvas": {
+      "long": [
+        1280,
+        720
+      ],
+      "short": [
+        720,
+        1280
+      ]
+    },
+    "encodedResolution": {
+      "long": [
+        1920,
+        1080
+      ],
+      "short": [
+        1080,
+        1920
+      ]
+    },
+    "method": "Six original webtoon paintings plus separately animated ink diagrams, camera motion and captions; Higgsfield six-second opening. End summary stays within the webtoon scene, no old 3D/HyperFrames title card."
+  },
+  "defaultStyleGuidance": {
+    "projectCommit": "a55afa4",
+    "globalMemory": "/Users/admin/.codex/SESSION_MEMORY.md",
+    "scope": "Video production session guidance only; no production webapp change/deployment or open-session delivery claim."
+  },
+  "limits": [
+    "Conceptual drawings, not as-built engineering schematics or measured physics.",
+    "No user viewing experiment; no YouTube upload or production deployment.",
+    "Source artwork retained in authorized iCloud cache; original completed 3D videos preserved."
+  ],
+  "elapsedSecondsFromPreflight": 1258,
+  "tokenUsage": "Not available"
+}
