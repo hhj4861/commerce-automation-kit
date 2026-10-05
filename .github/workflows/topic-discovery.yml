@@ -15,7 +15,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - run: python -m unittest discover -s services/topic-discovery -p test_service.py -v
+      - run: python -m unittest discover -s services/topic-discovery -p 'test_*.py' -v
         env:
           PYTHONDONTWRITEBYTECODE: '1'
           DISCOVERY_TEST_DIR: ${{ runner.temp }}
@@ -25,5 +25,7 @@ jobs:
           DISCOVERY_TEST_DIR: ${{ runner.temp }}
       - run: docker build -f services/topic-discovery/Dockerfile -t cak-discovery:test .
       - run: docker run --rm cak-discovery:test node --check services/topic-discovery/jev-bridge.mjs
+      - name: Verify discovery runtime imports in the built image
+        run: docker run --rm --workdir /app/services/topic-discovery cak-discovery:test python3 -c 'import server, service, native_review; assert native_review.VERSION == "discovery-v2.6"'
       - name: Verify Python system certificate trust is installed
         run: docker run --rm cak-discovery:test python3 -c 'import ssl; assert ssl.create_default_context().cert_store_stats()["x509_ca"] > 0'
