@@ -1,0 +1,47 @@
+{
+  "final": "/Users/admin/Downloads/vedio/rolling-bridge-webtoon-short.mp4",
+  "duration": 36.0,
+  "resolution": [
+    1080,
+    1920
+  ],
+  "fps": 24,
+  "frames": 864,
+  "bytes": 10972343,
+  "sha256": "85025565076afe77df80994908d2889fedff834a62d9a9da0df933bc5fac3d43",
+  "checks": {
+    "fullDecode": true,
+    "audioVideoDuration": true,
+    "captionTextCoverage": true,
+    "captionLayout": true,
+    "rigidSegmentLengths": true,
+    "octagonClosure": true,
+    "eightFinalFramesReviewed": true,
+    "speechRecognitionReviewed": true,
+    "noBlackIntervalOverHalfSecond": true,
+    "noSilenceIntervalOver1_5Seconds": true
+  },
+  "captionCount": 15,
+  "voiceId": "RU7aSi6lT4uQBXMLgDxK",
+  "speed": 1.1,
+  "limitations": [
+    "Artistic reconstruction and schematic hydraulics, not an as-built engineering simulation.",
+    "Visual QA uses representative frames and geometry checks, not a full human viewing study.",
+    "No audience popularity experiment performed."
+  ],
+  "audio": {
+    "meanDb": -17.5,
+    "peakDb": -1.4,
+    "normalization": "loudnorm I=-16 TP=-1.5 LRA=9; 44100Hz"
+  },
+  "higgsfield": {
+    "credits": 54,
+    "seconds": 6,
+    "jobId": "105e75a3-d7d1-4a39-9e12-111156507f88"
+  },
+  "speechRecognition": {
+    "model": "whisper-base",
+    "coverage": "All eight beat meanings and ending present; recognition spelling errors on proper nouns and Korean homophones, not a perfect transcript.",
+    "evidence": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261005-rolling-bridge-webtoon/qa/speech-recognition.json"
+  }
+}

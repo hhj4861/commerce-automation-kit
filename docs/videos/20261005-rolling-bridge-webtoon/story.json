@@ -1,0 +1,50 @@
+{
+  "id": "rolling-bridge-webtoon",
+  "title": "배가 오면 돌돌 말리는 다리의 비밀",
+  "voiceId": "RU7aSi6lT4uQBXMLgDxK",
+  "voiceName": "Kyle",
+  "model": "eleven_multilingual_v2",
+  "speed": 1.1,
+  "maxHiggsfieldCredits": 54,
+  "format": "1080x1920 24fps",
+  "beats": [
+    {
+      "id": "reveal",
+      "text": "이 조형물, 조금 전까지 사람들이 건너던 다리였습니다."
+    },
+    {
+      "id": "context",
+      "text": "런던의 롤링 브리지는 배가 지나갈 때, 아예 몸을 돌돌 맙니다."
+    },
+    {
+      "id": "segments",
+      "text": "철이 고무처럼 휘는 걸까요? 비밀은 여덟 개로 나눈 몸체에 있습니다."
+    },
+    {
+      "id": "hinges",
+      "text": "단단한 각 조각은 그대로 두고, 조각 사이 관절의 각도만 바꾸는 거죠."
+    },
+    {
+      "id": "hydraulic",
+      "text": "유압 장치가 난간 쪽 연결부를 움직이면, 바닥 조각들이 함께 들리며 접힙니다."
+    },
+    {
+      "id": "fold",
+      "text": "끝과 끝이 만나는 순간, 길이 십이 미터의 길이 한쪽 둑 위 팔각형이 됩니다."
+    },
+    {
+      "id": "boat",
+      "text": "물 위를 막던 길은 사라지고, 배가 지날 공간이 생기죠."
+    },
+    {
+      "id": "payoff",
+      "text": "다시 펼치면 사람의 길. 다리 하나가, 사람과 배에게 번갈아 길을 내주는 겁니다."
+    }
+  ],
+  "sources": [
+    "https://heatherwick.com/project/rolling-bridge/",
+    "https://paddingtonnow.co.uk/wp-content/uploads/2022/09/Explore-Paddington-Winter-2016.pdf"
+  ],
+  "sourceCaution": "Packman Lucas website calls the shape hexagon; photographs and Paddington guide show eight sides. Use octagon supported by visible geometry and local guide. No operating schedule claims.",
+  "visualDisclosure": "웹툰 재구성 · 구조 동작은 이해를 위한 단순화"
+}
