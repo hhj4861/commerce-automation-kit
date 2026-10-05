@@ -6,7 +6,7 @@
 - 담당·범위: 현재 Hanmadi 세션. 배포 도구, 학습 앱 대상 설정, broker 보호 조건, 관련 검증·문서. 학습 앱 기능·계정 데이터·관리자 자격은 변경하지 않는다.
 - 기준 revision: main `cc7f079a6715e417482df610fbb35f538bfe89e2`.
 - 완료 조건: 코드·CI 통과 → 해당 PR 승인·머지 → 전용 CI 자격과 보호 브랜치 연결 → 첫 Actions 배포 성공 및 실제 운영 확인.
-- 현재 결과: [PR #149](https://github.com/hhj4861/commerce-automation-kit/pull/149)는 사용자 승인 후 main `3c3675218c4c1f6101824b97f78bcc24a60fedb9`에 머지됐다. 중앙 인증의 learner binding/ref 설정은 별도 후속 PR로 준비하며, 운영 자동 배포는 아직 활성화하지 않았다.
+- 현재 결과: [PR #149](https://github.com/hhj4861/commerce-automation-kit/pull/149)는 사용자 승인 후 main `3c3675218c4c1f6101824b97f78bcc24a60fedb9`에 머지됐다. 중앙 인증의 learner binding/ref 설정은 [PR #150](https://github.com/hhj4861/commerce-automation-kit/pull/150)으로 준비했으며, 운영 자동 배포는 아직 활성화하지 않았다.
 - 다음 행동: 후속 설정 PR을 검증·승인받고, 사용자가 브라우저 연결을 재개하면 전용 토큰 발급·중앙 등록과 브랜치 보호·첫 배포를 진행한다.
 
 ## 배포 대상과 흐름
@@ -64,5 +64,6 @@
 - 후속 구성은 기존 관리자·Replay 설정과 binding을 유지하면서 `refs/heads/deploy/hanmadi`와 `SS_DEPLOY_VERCEL_TOKEN`만 추가한다. 설정 파일에는 키 이름과 저장소 식별자만 있으며 실제 비밀 값은 없다.
 - Vercel 토큰 화면까지 열었지만 입력 전에 Chrome 연결이 끊겼다. 사용자가 **브라우저 연결은 나중에**라고 답했다. 새 토큰은 발급하지 않았다.
 - 활성 GitHub 계정 `socar-hyunz`는 저장소 Administration 권한이 없어 기존 배포 브랜치 보호 조회가 404다. 로그인돼 있는 소유자 계정 `hhj4861`의 별도 사용이나 활성 계정 전환은 이 단계에서 수행하지 않았다.
-- Cloudflare 기존 인증으로 실제 worker binding/Secret Store 메타데이터를 읽는 첫 시도는 401이었다. 저장소 설정만으로 실제 운영 등록 여부를 단정하지 않는다.
+- Cloudflare 기존 인증의 첫 메타데이터 조회는 401이었다. 기본 Node 20에서 최신 Wrangler가 실행되지 않아 이미 설치된 Node 24를 해당 CLI 프로세스에만 사용했고, 공식 `whoami`로 기존 로그인 토큰을 정상 갱신했다. 권한 추가·새 로그인은 하지 않았다. 이후 운영 조회에서 learner binding과 `CAK_DEPLOY_VERCEL_TOKEN` 모두 없음을 확인했다. 운영 허용 ref는 관리자만이며 Replay 설정은 유지돼 있다.
+- 후속 binding/ref 설정의 배포·broker 테스트 117개와 diff 검사가 통과했다. 후속 PR의 CI 및 승인은 별도로 확인한다.
 - 배포 브랜치 생성, 보호 설정 변경, 새 CI 키 등록, broker 운영 배포, 첫 Actions 배포는 아직 수행하지 않았다. 사용자가 브라우저 연결을 재개하기 전까지 이 단계를 완료로 표시하지 않는다.
