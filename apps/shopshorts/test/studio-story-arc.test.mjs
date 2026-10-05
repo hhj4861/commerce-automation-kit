@@ -1,3 +1,4 @@
+import {mockReview} from './helpers/editorial-review.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { scenarioBrief, scenarioResult, validateStoryArc } from '../lib/studio-scenario.js';
@@ -20,8 +21,8 @@ const result = { title: '사과 뒤의 그런데', scenes };
 
 test('new generation requires actual spoken beats but keeps the stored project contract unchanged', async () => {
   let calls = 0;
-  assert.deepEqual(await scenarioBrief(brief, {}, { generate: async () => { calls++; return { value: { ...result, storyArc } }; } }), result);
-  assert.equal(calls, 1);
+  assert.deepEqual(await scenarioBrief(brief, {}, { generate: async prompt => { calls++; if(mockReview(prompt)) return mockReview(prompt); return { value: { ...result, storyArc } }; } }), result);
+  assert.equal(calls, 2);
   assert.deepEqual(scenarioResult(result, brief), result); // Existing stored scenarios remain readable.
   await assert.rejects(scenarioBrief(brief, {}, { generate: async () => ({ value: result }) }), { code: 'SCENARIO_ARC_INVALID' });
 });

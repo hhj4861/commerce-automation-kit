@@ -1,3 +1,4 @@
+import {mockReview} from './helpers/editorial-review.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {mkdtemp, readFile, rm} from 'node:fs/promises';
@@ -30,7 +31,7 @@ function fixture(){
 
 test('cinematic scenario metadata survives validation and is required only on the new profile',async()=>{
  const value={title:'같은 종이, 다른 빛',scenes,visualStyle:'따뜻한 창빛과 남색 그림자',storyArc:{hook:{sceneId:'scene-1',line:scenes[0].narration},payoff:{sceneId:'scene-2',line:'빛이 오는 방향을 바꿔요.'},ending:{sceneId:'scene-2',line:'종이를 돌려 직접 살펴보세요.'}}};
- const result=await scenarioBrief(brief,{}, {generate:async prompt=>{assert.match(prompt,/visualStyle/);assert.match(prompt,/4~8초/);return {value};}});
+ const result=await scenarioBrief(brief,{}, {generate:async prompt=>{if(mockReview(prompt))return mockReview(prompt);assert.match(prompt,/visualStyle/);assert.match(prompt,/4~8초/);return {value};}});
  assert.equal(result.visualStyle,value.visualStyle);assert.equal(result.scenes[0].camera,'push-in');
  assert.throws(()=>scenarioResult({...value,visualStyle:undefined},brief),/공통 연출/);
  assert.throws(()=>scenarioResult({...value,scenes:scenes.map(s=>({...s,camera:undefined}))},brief),/공통 연출/);

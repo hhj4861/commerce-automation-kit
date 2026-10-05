@@ -1,3 +1,4 @@
+import {mockReview} from './helpers/editorial-review.mjs';
 import {normalizeEdit} from '../public/editor-model.js';
 import {SHORTS_DEFAULT_SECONDS,suggestedDescription,relatedVideoUrl} from '../public/shorts-policy.js';
 import test from 'node:test';
@@ -25,7 +26,7 @@ test('new projects opt into a versioned direction plan; legacy briefs are not si
  assert.equal(scenarioResult(legacy,legacy.brief).visualQuality,undefined);
 });
 test('web generation, stored result validation and CLI compile the same safe plan',async t=>{
- const f=fixture();let prompt='';const generated=await scenarioBrief(f.brief,{}, {generate:async p=>{prompt=p;return {value:f};}});
+ const f=fixture();let prompt='';const generated=await scenarioBrief(f.brief,{}, {generate:async p=>{if(mockReview(p))return mockReview(p);prompt=p;return {value:f};}});
  assert.match(prompt,/before/);assert.match(prompt,/물리 시뮬레이션/);assert.equal(generated.visualQuality.passed,true);
  assert.equal(generated.scenes[2].motion.template,'summary');assert.equal(generated.scenes[2].motion.vars.label3,'녹은 물 배출');
  assert.deepEqual(scenarioResult(generated,f.brief),generated,'account result survives second validation');
