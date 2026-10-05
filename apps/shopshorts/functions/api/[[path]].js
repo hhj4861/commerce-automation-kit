@@ -216,6 +216,7 @@ export async function onRequest(context) {
       const input = await request.json();
       const caps = Object.fromEntries(['scenario','image','video','voice','shortsUpload','longUpload','motion'].map(k => [k, input[k] === true]));
       if (['google', 'higgsfield'].includes(input.mediaProvider)) caps.mediaProvider = input.mediaProvider;
+      if(input.fortuneEngine===1)caps.fortuneEngine=1;
       if(input.audioAccount)caps.audioAccount=sanitizeAudioAccount(input.audioAccount);
       caps.workerAt = new Date().toISOString();
       await env.DB.prepare("INSERT INTO meta (key,value) VALUES ('studio_worker',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value").bind(JSON.stringify(caps)).run();

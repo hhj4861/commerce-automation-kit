@@ -7,7 +7,7 @@ import { higgsfieldCommand } from './studio-higgsfield-auth.mjs';
 export function higgsfieldPlan(scene,aspect,job={brief:{aspect}}) {
   const image=scene.kind==='image';
   return {model:image?'nano_banana_2':'seedance_2_0',kind:scene.kind,
-    prompt:sceneMediaPrompt(job,scene),generation:job.mediaVersions?.[scene.id],
+    prompt:sceneMediaPrompt(job,scene),referenceFingerprint:job.fortune?.fingerprint,generation:job.mediaVersions?.[scene.id],
     aspect,resolution:image?'2k':'1080p',...(image?{}:{duration:Math.max(4,Math.min(15,Math.ceil(scene.duration)))})};
 }
 function parameters(plan){return ['--prompt',plan.prompt,'--aspect_ratio',plan.aspect,'--resolution',plan.resolution,...(plan.kind==='video'?['--duration',String(plan.duration),'--mode','std','--generate_audio','false']:[])];}
@@ -33,8 +33,10 @@ export async function downloadHiggsfield(url,kind,fetcher=fetch){
   }
   throw Error('Higgsfield 다운로드 리디렉션을 확인해 주세요.');
 }
-export async function generateHiggsfieldScene(job,scene,env,work,checkpoint,{run=args=>higgsfieldCommand(args,env),fetcher=fetch,sleep=ms=>new Promise(r=>setTimeout(r,ms)),now=Date.now}={}){
+export async function generateHiggsfieldScene(job,scene,env,work,checkpoint,{run=args=>higgsfieldCommand(args,env),references=[],fetcher=fetch,sleep=ms=>new Promise(r=>setTimeout(r,ms)),now=Date.now}={}){
   const plan=higgsfieldPlan(scene,job.brief.aspect,job),params=parameters(plan);
+  for(const reference of references)params.push('--image',reference);
+  if(references.length)plan.referenceContentHashes=await Promise.all(references.map(async p=>createHash('sha256').update(await readFile(p)).digest('hex')));
   const fingerprint=createHash('sha256').update(JSON.stringify(plan)).digest('hex');
   const receipt=join(work,`${scene.id}-${fingerprint}.higgsfield.json`);
   const jobs=job.mediaJobs ||= {};
@@ -48,6 +50,15 @@ export async function generateHiggsfieldScene(job,scene,env,work,checkpoint,{run
   if(!operation || operation.state==='failed'){
     const estimate=await run(['generate','cost',plan.model,...params]);
     if(!Number.isFinite(estimate?.credits)||estimate.credits<0)throw Error('Higgsfield 사용 크레딧을 확인하지 못했습니다.');
+    if(job.fortune){
+      const authorization=job.fortune.paidAuthorization;
+      if(!authorization||authorization.provider!=='higgsfield'||authorization.fingerprint!==job.fortune.fingerprint)throw Error('에피소드 생성 사용량 승인이 없습니다.');
+      const sum=entries=>entries.reduce((n,[,j])=>n+(Number.isFinite(j.credits)?j.credits:0),0);
+      const spent=Math.max(sum(Object.entries(jobs).filter(([k])=>k.startsWith('fortune-reservation-'))),sum(Object.entries(jobs).filter(([k])=>!k.startsWith('fortune-reservation-'))));
+      if(spent+estimate.credits>authorization.maxCredits)throw Error('이번 에피소드의 크레딧 상한을 초과합니다. 완성된 장면은 보존됩니다.');
+      jobs['fortune-reservation-'+crypto.randomUUID()]={credits:estimate.credits,state:'reserved'};
+      await checkpoint({mediaJobs:structuredClone(jobs)});
+    }
     await save({provider:'higgsfield',fingerprint,state:'submitting',model:plan.model,credits:estimate.credits});
     // Intent is durable BEFORE the paid request. Unknown responses never auto-resubmit.
     const created=await run(['generate','create',plan.model,...params]);

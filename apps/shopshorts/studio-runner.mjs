@@ -20,7 +20,7 @@ import { FPS, FONTS, normalizeEdit, frameCount, clipSpans } from './public/edito
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const GOOGLE = 'https://generativelanguage.googleapis.com/v1beta';
-export const capabilities = env => ({ workerAt: new Date().toISOString(), scenario: false, animation: true, motion: motionCapability(env), image: env.SHOPSHORTS_MEDIA_PROVIDER === 'higgsfield' || !!env.GEMINI_API_KEY, video: env.SHOPSHORTS_MEDIA_PROVIDER === 'higgsfield' || !!env.GEMINI_API_KEY, mediaProvider: env.SHOPSHORTS_MEDIA_PROVIDER === 'higgsfield' ? 'higgsfield' : 'google', voice: !!env.ELEVENLABS_API_KEY, shortsUpload: !!(env.UPLOAD_POST_API_KEY && env.UPLOAD_POST_USER), longUpload: !!env.YOUTUBE_CLIENT_SECRET });
+export const capabilities = env => ({ fortuneEngine: 1, workerAt: new Date().toISOString(), scenario: false, animation: true, motion: motionCapability(env), image: env.SHOPSHORTS_MEDIA_PROVIDER === 'higgsfield' || !!env.GEMINI_API_KEY, video: env.SHOPSHORTS_MEDIA_PROVIDER === 'higgsfield' || !!env.GEMINI_API_KEY, mediaProvider: env.SHOPSHORTS_MEDIA_PROVIDER === 'higgsfield' ? 'higgsfield' : 'google', voice: !!env.ELEVENLABS_API_KEY, shortsUpload: !!(env.UPLOAD_POST_API_KEY && env.UPLOAD_POST_USER), longUpload: !!env.YOUTUBE_CLIENT_SECRET });
 export function command(bin, args, env, timeout = 600000) {
   return new Promise((resolveP, reject) => {
     const child = spawn(bin, args, { cwd: ROOT, env: { ...process.env, ...env }, stdio: ['ignore', 'pipe', 'pipe'] });
@@ -167,7 +167,14 @@ export async function executeStudioTask(job, env, io, checkpoint, { fetcher = fe
         const result=await renderAnimationScene(job,explainer(job.brief)&&job.automation&&!job.edit?{...scene,duration:Math.ceil(((narrationAsset({...job,assets},scene,normalizeEdit(job).voice)?.duration||scene.duration)+.3)*FPS)/FPS}:scene,work,env);
         ({data,type}=result);providerInfo={provider:result.provider};
       } else if (job.brief.mediaProvider === 'higgsfield' || env.SHOPSHORTS_MEDIA_PROVIDER === 'higgsfield') {
-        const result = await generateHiggsfieldScene(job, scene, env, work, checkpoint, { run: runHiggsfield, fetcher });
+        const references=[];
+        if(job.fortune&&scene.id!==job.fortune.referenceSceneId){
+          const reference=assets[job.fortune.referenceSceneId];
+          if(!reference)throw Error('기준 캐릭터 그림을 먼저 생성해야 합니다.');
+          const path=join(work,'fortune-character-reference.png');
+          await writeFile(path,await io.readAsset(reference.key));references.push(path);
+        }
+        const result = await generateHiggsfieldScene(job, scene, env, work, checkpoint, { run: runHiggsfield,references,fetcher });
         ({ data, type } = result); providerInfo = { provider: result.provider, providerJobId: result.providerJobId };
       } else if (scene.kind === 'image') {
         const result = await googleMediaRequest(`models/${env.SHOPSHORTS_IMAGE_MODEL || 'gemini-2.5-flash-image'}:generateContent`, { contents: [{ parts: [{ text: mediaPrompt }] }], generationConfig: { responseModalities: ['TEXT', 'IMAGE'], imageConfig: { aspectRatio: job.brief.aspect } } }, env, fetcher);

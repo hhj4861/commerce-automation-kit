@@ -1,3 +1,6 @@
+import {fortuneApi} from './fortune-api.js';
+import {fortuneGuard,continueFortune} from './fortune.js';
+import {llmOwner} from './llm-account-api.js';
 import { startScenario, syncScenario, scenarioRuntime } from './studio-scenario-account.js';
 import { CATEGORIES, VOICES, PLATFORMS, createProject, changeProject, busy, fail, validateScenes } from './studio.js';
 import { sameOrigin, workerAuthorized } from './google-auth.js';
@@ -10,10 +13,11 @@ export async function studioApi(request, env, store, { localWorker = false, reco
   try {
     if (!['GET', 'HEAD'].includes(request.method) && !sameOrigin(request)) fail('다른 사이트에서 요청할 수 없습니다.', 403);
     if (parts[0] === 'config' && request.method === 'GET') return json({ categories: CATEGORIES, voices: VOICES, platforms: PLATFORMS, execution: store.execution, capabilities: await store.capabilities(), scenarioRuntime: await scenarioRuntime(request, env, scenarioAccounts), recommendations: !!recommendationGenerate || recommendationAccounts, recommendationProvider: recommendationGenerate ? 'codex' : null, recommendationProviders: recommendationAccounts ? ['codex', 'claude'] : recommendationGenerate ? ['codex'] : [] });
+    if(parts[0]==='fortune')return await fortuneApi(request,env,store,parts);
     if (parts.length===1 && parts[0]==='recommendations' && request.method==='POST') return json(await recommendBrief(await request.json(),env,{generate:recommendationGenerate,signal:request.signal}));
     if (parts.length===1 && parts[0]==='automatic' && request.method==='POST') return json(await startAutomatic(request, env, store, await request.json(), scenarioAccounts), 201);
     if (!parts.length) {
-      if (request.method === 'GET') return json({ projects: await Promise.all((await store.list()).map(project => syncScenario(store, project, scenarioAccounts))) });
+      if (request.method === 'GET') { const owner=await llmOwner(request,env); return json({ projects: await Promise.all((await store.list()).filter(p=>!p.fortune || worker || p.fortune.owner===owner).map(project => syncScenario(store, project, scenarioAccounts))) }); }
       if (request.method === 'POST') {
         const project = createProject(await request.json());
         await store.create(project); return json({ project }, 201);
@@ -23,6 +27,7 @@ export async function studioApi(request, env, store, { localWorker = false, reco
     if (!/^[a-f0-9-]{36}$/.test(id || '')) fail('프로젝트를 찾을 수 없습니다.', 404);
     const project = await store.get(id);
     if (!project) fail('프로젝트를 찾을 수 없습니다.', 404);
+    if(project.fortune&&!worker&&project.fortune.owner!==await llmOwner(request,env))fail('프로젝트를 찾을 수 없습니다.',404);
     if (action === 'worker-media' && worker) {
       const key = url.searchParams.get('key') || '';
       if (!new RegExp(`^studio/${id}/[a-zA-Z0-9.-]+$`).test(key)) fail('미디어 키 오류');
@@ -70,6 +75,7 @@ export async function studioApi(request, env, store, { localWorker = false, reco
       if (project.task?.runner === 'llm-account') fail('이 시나리오는 연결한 계정 실행기가 처리합니다.', 409);
       const next = structuredClone(project);
       if (action === 'claim') {
+        if(project.fortune && body.fortuneEngine!==1)fail('운세 생성 엔진 워커 업데이트가 필요합니다.',409);
         if (project.task?.state !== 'queued') fail('대기 작업이 없습니다.', 409);
         next.task.state = 'running'; next.task.startedAt = new Date().toISOString();
       } else {
@@ -84,12 +90,13 @@ export async function studioApi(request, env, store, { localWorker = false, reco
           if (action === 'complete') next.task.state = 'done';
         }
       }
-      return save(action === 'complete' ? continueAutomatic(next) : next);
+      return save(action === 'complete' ? continueAutomatic(continueFortune(next)) : next);
     }
     if (action === 'approve') {
       if (busy(project) || project.upload || body.approved !== true || !project.scenes.length) fail('대본을 검수하고 확인하세요.');
       return save({ ...project, approved: true });
     }
+    fortuneGuard(project,action,body);
     if (action === 'scenario') return json({ project: await startScenario(request, env, store, project, body, scenarioAccounts) }, 202);
     return save(changeProject(project, action, body));
   } catch (e) { return json({ error: e.status ? e.message : '요청을 처리하지 못했습니다. 저장소·서버 설정을 확인하세요.' }, e.status || 500); }

@@ -1,3 +1,4 @@
+import {continueFortune} from './lib/fortune.js';
 import {continueAutomatic} from './lib/studio-automatic.js';
 import { existsSync, mkdirSync, readFileSync, writeFileSync, renameSync } from 'node:fs';
 import { resolve, join, dirname, extname, sep } from 'node:path';
@@ -60,7 +61,7 @@ export function startLocalStudio(store, env, execute = executeStudioTask) {
           const fresh = await store.get(job.id);
           if (fresh.task?.id !== job.task.id || fresh.task.state !== 'running') throw new Error('제작 도중 프로젝트가 변경되었습니다.');
           let next = { ...fresh, ...result, revision: fresh.revision + 1, updatedAt: new Date().toISOString(), task: { ...fresh.task, ...(state ? { state } : {}) } };
-          if(state==='done')next=continueAutomatic(next);
+          if(state==='done')next=continueAutomatic(continueFortune(next));
           if (!await store.cas(next, fresh.revision)) throw new Error('제작 결과 저장 충돌');
           job = next;
         };
