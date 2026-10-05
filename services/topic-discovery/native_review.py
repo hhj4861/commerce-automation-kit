@@ -10,7 +10,8 @@ import re
 import unicodedata
 
 MODE = 'native-llm-v1'
-VERSION = 'discovery-v2.4'
+VERSION = 'discovery-v2.6'
+VERSIONS = {'discovery-v2.4', 'discovery-v2.5', VERSION}
 FIELDS = ('title','question','entity','location','answer','whyItMatters','openingVisual','direction','expectedAnswer')
 REQUIRED = {'support_'+field for field in FIELDS} | {'relevance','value','duplicate'}
 OPTIONAL_FACTS = {'title','question','whyItMatters','openingVisual','direction','expectedAnswer'}
@@ -103,6 +104,12 @@ def apply_reviews(data, output):
         def promotable_reason(reason):
             name=reason[:-10];original=c['checks'][name];review=checks[name]
             if original['choice'] in ('pass','not_applicable'): return True
+            if data.get('rubricVersion') == VERSION and low_confidence(original):
+                # Low-confidence uncertainty is the reason to request grounded review.
+                # Only a fully resolved, validated native review can adopt the candidate.
+                # Editorial value is subjective; factual rejections keep their guard.
+                if original['choice']=='uncertain': return True
+                if name=='value' and original['choice']=='reject': return True
             # A wrong fictional viewer prediction is not an endorsed fact. Only a
             # low-confidence role mistake can be resolved; confident rejects stay final.
             return (data['input']['profile']=='content' and name=='support_expectedAnswer'

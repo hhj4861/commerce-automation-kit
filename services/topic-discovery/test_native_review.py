@@ -4,7 +4,7 @@ import time
 import unittest
 from unittest.mock import Mock
 import test_service as fixtures
-from service import Discovery, Failure, RESEARCH_VERSION, validate_input, normalize
+from service import Discovery, Failure, RESEARCH_VERSION, validate_input, normalize, role_review, scoped_review
 from native_review import MODE, VERSION, REQUIRED, eligible, build_prompt, apply_reviews
 
 
@@ -30,12 +30,54 @@ class NativeReviewTests(unittest.TestCase):
     lead_output=fixtures.Tests.lead_output
     draft_output=fixtures.Tests.draft_output
 
-    def review_stage(self,key='hybrid-test',n=1):
+    def review_stage(self,key='hybrid-test',n=1,suffix=''):
         self.search.return_value=[{**fixtures.SOURCE,'title':'회전교1 회전교2 회전교3 공식 설명'}]
         first=self.start(key=key,value={**fixtures.INPUT,'workflow':'research-v2','reviewMode':MODE})
         second,_=self.finish_action(first,self.lead_output(n))
-        review,body=self.finish_action(second,self.draft_output(n))
+        draft=self.draft_output(n)
+        for candidate in draft['candidates']:candidate['title']+=suffix
+        review,body=self.finish_action(second,draft)
         return first,second,review,body
+
+    def test_role_review_preserves_all_text_and_business_fact_contract(self):
+        state={'request':fixtures.INPUT,'candidate':fixtures.candidate(),'prior':[],'evidence':[fixtures.SOURCE]}
+        original=scoped_review(state);revised=role_review(state)
+        self.assertEqual(set(revised['questions']),set(original['questions']))
+        self.assertEqual(revised['state'],original['state'])
+        for field in fixtures.SUPPORT_FIELDS:
+            self.assertEqual(revised['questions']['support_'+field]['instructions']['text'],state['candidate'][field])
+        self.assertIn('HYPOTHETICAL VIEWER PREDICTION',revised['questions']['support_expectedAnswer']['instructions']['task'])
+        business=copy.deepcopy(state);business['request']['profile']='business'
+        business_check=role_review(business)['questions']['support_expectedAnswer']
+        self.assertNotIn('not_applicable',business_check['criteria'])
+        self.assertIn('EXISTING customer alternative',business_check['instructions']['task'])
+        self.assertIn('not_applicable',scoped_review(business)['questions']['support_expectedAnswer']['criteria'])
+
+    def test_business_alternative_cannot_be_exempted_as_nonfactual(self):
+        from service import score_review
+        state={'request':{**fixtures.INPUT,'profile':'business'},'candidate':fixtures.candidate(),'prior':[],'evidence':[fixtures.SOURCE]}
+        payload=role_review(state);response=fixtures.pass_result(payload)
+        response['answers']['support_expectedAnswer'].update(choice='not_applicable',probabilities={'not_applicable':1})
+        with self.assertRaises(Failure):score_review(response,payload['questions'],VERSION)
+
+    def test_existing_v24_request_keeps_original_questions_and_review_stage(self):
+        self.search.return_value=[{**fixtures.SOURCE,'title':'회전교1 공식 설명'}]
+        self.jev.side_effect=low_result
+        first=self.start(key='pinned-old-native',value={**fixtures.INPUT,'workflow':'research-v2','reviewMode':MODE})
+        scope=self.d.scope('shopshorts',fixtures.SUBJECT)
+        with self.store.db() as db:
+            data=json.loads(db.execute('SELECT data FROM requests WHERE id=?',(first['requestId'],)).fetchone()[0])
+            data['rubricVersion']='discovery-v2.4'
+            db.execute('UPDATE requests SET data=? WHERE id=?',(json.dumps(data),first['requestId']))
+        second,_=self.finish_action(first,self.lead_output())
+        review,_=self.finish_action(second,self.draft_output())
+        self.assertEqual(review['rubricVersion'],'discovery-v2.4')
+        task=self.jev.call_args.args[0]['questions']['support_expectedAnswer']['instructions']['task']
+        self.assertNotIn('HYPOTHETICAL VIEWER PREDICTION',task)
+        self.assertEqual(review['action']['stage'],'review')
+        final,_=self.finish_action(review,valid_output(review))
+        self.assertEqual(final['usage']['generationClaims'],3)
+        self.assertEqual(final['candidates'][0]['decision'],'accepted')
 
     def test_opt_in_only_and_protocol_constraints(self):
         for value in ({**fixtures.INPUT,'reviewMode':MODE},{**fixtures.INPUT,'workflow':'research-v2','reviewMode':'invented'}):
@@ -68,13 +110,13 @@ class NativeReviewTests(unittest.TestCase):
         with self.assertRaises(Failure):self.store.claim(self.d.scope('shopshorts',fixtures.SUBJECT),final['requestId'],review['action']['id'])
         self.assertEqual(len(self.store.history(self.d.scope('shopshorts',fixtures.SUBJECT),'content')),1)
 
-    def test_uncertain_or_reject_choice_cannot_be_promoted_by_second_model(self):
+    def test_low_uncertainty_resolves_but_factual_reject_stays_held(self):
         for i,choice in enumerate(('uncertain','reject')):
             self.jev.side_effect=lambda p:low_result(p,choice)
-            _,_,review,_=self.review_stage('nonpromotable-'+str(i))
+            _,_,review,_=self.review_stage('nonpromotable-'+str(i),suffix=str(i))
             final,_=self.finish_action(review,valid_output(review))
-            self.assertEqual(final['candidates'][0]['decision'],'held')
-            self.assertIn('jev_unresolved_preserved',final['candidates'][0]['reasonCodes'])
+            self.assertEqual(final['candidates'][0]['decision'],'accepted' if choice=='uncertain' else 'held')
+            if choice=='reject':self.assertIn('jev_unresolved_preserved',final['candidates'][0]['reasonCodes'])
 
     def test_only_content_prediction_role_mismatch_can_resolve_low_reject(self):
         self.jev.side_effect=low_result
@@ -96,10 +138,32 @@ class NativeReviewTests(unittest.TestCase):
         self.assertEqual(apply_reviews(data,out)[0]['decision'],'held')
         data['input']['profile']='content'
         c['checks']['support_expectedAnswer'].update(choice='uncertain',probabilities={'uncertain':.6})
-        self.assertEqual(apply_reviews(data,out)[0]['decision'],'held')
+        self.assertEqual(apply_reviews(data,out)[0]['decision'],'accepted')
         prompt=build_prompt(data,[])
         self.assertIn('hypothetical viewer prediction',prompt)
         self.assertIn('EXISTING real-world alternative',prompt)
+
+    def test_adjudication_policy_is_pinned_and_never_overrides_unresolved_review(self):
+        self.jev.side_effect=lambda p:low_result(p,'uncertain')
+        _,_,review,_=self.review_stage()
+        out=valid_output(review)
+        for version in ('discovery-v2.4','discovery-v2.5'):
+            old=copy.deepcopy(review);old['rubricVersion']=version
+            self.assertEqual(apply_reviews(old,out)[0]['decision'],'held')
+        self.assertEqual(apply_reviews(review,out)[0]['decision'],'accepted')
+        check=out['reviews'][0]['checks']['support_openingVisual']
+        check.update(choice='uncertain',issue='missing_evidence',citations=[])
+        self.assertEqual(apply_reviews(review,out)[0]['decision'],'held')
+        out=valid_output(review);check=out['reviews'][0]['checks']['support_openingVisual']
+        check.update(choice='reject',issue='contradiction')
+        self.assertEqual(apply_reviews(review,out)[0]['decision'],'rejected')
+        data=copy.deepcopy(review);c=data['candidates'][0]
+        c['checks']['value']=copy.deepcopy(c['checks']['support_openingVisual'])
+        c['checks']['value'].update(choice='reject',probabilities={'reject':.6})
+        c['reasonCodes']=['value_uncertain']
+        self.assertEqual(apply_reviews(data,valid_output(data))[0]['decision'],'accepted')
+        c['checks']['value'].update(confidence=.95,margin=.9,probabilities={'reject':.95})
+        self.assertFalse(eligible(c))
 
     def test_confident_reject_uncertainty_errors_and_accepted_do_not_request_review(self):
         for i,(choice,confidence,decision) in enumerate((('reject',.95,'rejected'),('uncertain',.95,'held'),('pass',.95,'accepted'))):

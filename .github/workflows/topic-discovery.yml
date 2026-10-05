@@ -26,6 +26,6 @@ jobs:
       - run: docker build -f services/topic-discovery/Dockerfile -t cak-discovery:test .
       - run: docker run --rm cak-discovery:test node --check services/topic-discovery/jev-bridge.mjs
       - name: Verify discovery runtime imports in the built image
-        run: docker run --rm --workdir /app/services/topic-discovery cak-discovery:test python3 -c 'import server, service, native_review; assert native_review.VERSION == "discovery-v2.4"'
+        run: docker run --rm --workdir /app/services/topic-discovery cak-discovery:test python3 -c 'import server, service, native_review; assert native_review.VERSION == "discovery-v2.6"'
       - name: Verify Python system certificate trust is installed
         run: docker run --rm cak-discovery:test python3 -c 'import ssl; assert ssl.create_default_context().cert_store_stats()["x509_ca"] > 0'

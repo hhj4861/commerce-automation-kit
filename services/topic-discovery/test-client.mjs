@@ -23,7 +23,7 @@ for(const {workflow,dropReply,rubric,reviewMode,dropReview} of [{},{workflow:'re
   if(dropReply||dropReview)await assert.rejects(client.discover(request,options),e=>e.code==='discovery_unavailable');
   const result=await client.discover(request,options);
   assert.equal(result.candidates[0].decision,'accepted');assert.equal(checks,dropReview?11:reviewMode?10:dropReply?8:workflow?7:4);
-  assert.equal(result.factChecked,false);assert.equal(result.rubricVersion,workflow?(reviewMode?'discovery-v2.4':rubric||'discovery-v2.2'):'discovery-v1.2');
+  assert.equal(result.factChecked,false);assert.equal(result.rubricVersion,workflow?(reviewMode?'discovery-v2.6':rubric||'discovery-v2.2'):'discovery-v1.2');
   assert.equal((await client.discover(request,options)).requestId,result.requestId);assert.equal(generated,reviewMode?3:workflow?2:1);
   if(reviewMode){assert.equal(result.usage.generationClaims,3);assert.equal(result.candidates[0].jevDecision,'held');}
   const wrong=createDiscoveryClient({baseUrl:'http://127.0.0.1:'+port,apiKey:'k'.repeat(40),subject:'b'.repeat(64),allowLocalhost:true});
