@@ -12,6 +12,8 @@ In v2.6, a fully validated and resolved native review may also resolve low-confi
 
 The reviewer checks the complete candidate, supplied sources, relevance, value and duplicates. Server validation requires exact candidate/check keys, bounded explanations, allowed issue codes and exact source quotes; factual passes require citations. Citation syntax is not a proof of entailment: the semantic review is still model judgment and human approval remains required. Original JEV checks/scores and decisions are retained separately. Unsupported commercial revenue/profit guarantees are rejected, and conflicting source values remain unresolved rather than being silently converted into a verified range.
 
+Shopshorts account workers opt in with backend-only `DISCOVERY_WORKFLOW=research-v2` plus `DISCOVERY_REVIEW_MODE=native-llm-v1`. An absent/empty review mode preserves the prior flow; unknown modes or review without research-v2 fail before HTTP/model calls. Browser planning fields cannot enable this policy. Both Codex and Claude use the existing selected account/model and connection checks for the third review action. CLI callers continue to pass `reviewMode` explicitly in request JSON.
+
 The new source and adapters require joint deployment before any product opts in. This PR does not deploy, enable Shopshorts/blog flags, or prove the production browser/account flow. See [final v2.6 fixed-input verification](../../docs/qa/20261005-jev-v26-final.md), [role review verification](../../docs/qa/20261005-jev-role-review.md) and the preceding [native review verification](../../docs/qa/20261005-jev-native-review.md) for measured quality, costs and limits.
 
 ## Experimental split review — 2026-10-05, quality gate NOT passed

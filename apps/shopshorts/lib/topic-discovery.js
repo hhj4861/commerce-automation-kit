@@ -6,6 +6,9 @@ const unavailable=reason=>{
 };
 export async function discoverRecommendations(brief,env,{generate,signal,provider,history,subject,requestId,assertConnection,now=new Date(),fetch}={}) {
   if(!subject||!requestId||!assertConnection)throw unavailable('identity_required');
+  // Operator opt-in only; never infer review policy from browser planning input.
+  const reviewMode=env.DISCOVERY_REVIEW_MODE;
+  if(reviewMode && (reviewMode!=='native-llm-v1'||env.DISCOVERY_WORKFLOW!=='research-v2')) throw unavailable('discovery_not_configured');
   const model=(provider==='claude'?env.SHOPSHORTS_CLAUDE_MODEL:env.SHOPSHORTS_CODEX_MODEL)||'provider-default';
   const {topic,direction,...preferences}=brief;
   const requestBrief=(topic||'실제 사례 의외의 원리')+'\n제작 요청사항:\n'+direction+'\n제작 설정:\n'+JSON.stringify(preferences);
@@ -13,7 +16,7 @@ export async function discoverRecommendations(brief,env,{generate,signal,provide
   try {
   const client=createDiscoveryClient({baseUrl:env.DISCOVERY_URL,apiKey:env.DISCOVERY_API_KEY,subject,
     allowLocalhost:env.DISCOVERY_ALLOW_LOCALHOST==='1',fetch});
-    result=await client.discover({...(env.DISCOVERY_WORKFLOW?{workflow:env.DISCOVERY_WORKFLOW}:{}),profile:'content',category:brief.category,brief:requestBrief,runtime:{provider,model},
+    result=await client.discover({...(env.DISCOVERY_WORKFLOW?{workflow:env.DISCOVERY_WORKFLOW}:{}),...(reviewMode?{reviewMode}:{}),profile:'content',category:brief.category,brief:requestBrief,runtime:{provider,model},
       history:history.slice(0,100).map(x=>({title:x.topic,entity:x.caseStudy?.entity||'',answer:x.caseStudy?.mechanism||x.direction||''}))},
       {idempotencyKey:requestId,signal,assertConnection,generate:async prompt=>(await generate(prompt,{signal,draftOnly:true,model:model==='provider-default'?undefined:model})).value});
   } catch(e){if(accountFailureCode(e)!=='UNKNOWN')throw e;throw unavailable(e.code||'unavailable');}
