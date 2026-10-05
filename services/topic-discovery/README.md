@@ -1,6 +1,6 @@
 # Shared discovery v1
 
-Current source: `discovery-v1.2` (single-stage, unchanged) and `discovery-v2.2` (opt-in `workflow: research-v2`). v2.2 isolates per-question candidate context and explicitly distinguishes purely nonfactual text. This source change is not deployed and does not enable clients. The last verified production service remains v1.1. Live quality is still NOT accepted: v2.1 held the supported control in the 2026-10-04 evaluation. Historical rollout notes below describe earlier revisions.
+Current source: `discovery-v1.2` (single-stage, unchanged) and `discovery-v2.2` (opt-in `workflow: research-v2`). v2.2 isolates per-question candidate context and explicitly distinguishes purely nonfactual text. This source change is not deployed and does not enable clients. The last verified production service remains v1.1. The explicit v2.6 native-review path completed a 15-case fixed-input evaluation: 14 semantic outcomes on the first run, plus one separately planned diagnostic after a bridge failure. This is not independent quality certification or production browser E2E. Historical rollout notes below describe earlier revisions.
 
 ## Opt-in native adjudication — discovery-v2.6
 
@@ -12,7 +12,7 @@ In v2.6, a fully validated and resolved native review may also resolve low-confi
 
 The reviewer checks the complete candidate, supplied sources, relevance, value and duplicates. Server validation requires exact candidate/check keys, bounded explanations, allowed issue codes and exact source quotes; factual passes require citations. Citation syntax is not a proof of entailment: the semantic review is still model judgment and human approval remains required. Original JEV checks/scores and decisions are retained separately. Unsupported commercial revenue/profit guarantees are rejected, and conflicting source values remain unresolved rather than being silently converted into a verified range.
 
-The new source and adapters require joint deployment before any product opts in. This PR does not deploy, enable Shopshorts/blog flags, or prove the production browser/account flow. See [role review verification](../../docs/qa/20261005-jev-role-review.md) and the preceding [native review verification](../../docs/qa/20261005-jev-native-review.md) for measured quality, costs and limits.
+The new source and adapters require joint deployment before any product opts in. This PR does not deploy, enable Shopshorts/blog flags, or prove the production browser/account flow. See [final v2.6 fixed-input verification](../../docs/qa/20261005-jev-v26-final.md), [role review verification](../../docs/qa/20261005-jev-role-review.md) and the preceding [native review verification](../../docs/qa/20261005-jev-native-review.md) for measured quality, costs and limits.
 
 ## Experimental split review — 2026-10-05, quality gate NOT passed
 
