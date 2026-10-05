@@ -4,8 +4,8 @@
   "format": "16:9",
   "speed": 1.0,
   "targetSeconds": [
-    180,
-    240
+    160,
+    180
   ],
   "voices": {
     "N": {
@@ -21,46 +21,29 @@
       "id": "JguuvPsf0F2TNXefsblh"
     }
   },
-  "maxHiggsfieldCredits": null,
+  "maxHiggsfieldCredits": 140,
   "episodes": [
     {
       "number": 1,
       "title": "괜찮다는 거짓말",
       "beats": [
         {
-          "id": "e1-00",
-          "speaker": "M",
-          "art": 0,
-          "text": "너는 혼자서도 잘 지내잖아. 오늘은 그냥 먼저 들어가도 되지?",
-          "voiceIndex": 0,
-          "pause": 0.25,
-          "emotion": "casual",
-          "ttsText": "[casual] 너는 혼자서도 잘 지내잖아. [lighthearted] 오늘은 그냥 먼저 들어가도 되지?",
-          "delivery": "spoken",
-          "lipArt": 11
-        },
-        {
-          "id": "e1-01",
+          "id": "e1-hook",
           "speaker": "S",
-          "art": 0,
-          "text": "그럼. 신경 쓰지 마. 나도 집에 가서 할 일이 좀 있어.",
-          "voiceIndex": 0,
-          "pause": 0.25,
-          "emotion": "reassuring",
-          "ttsText": "[cheerful] 그럼. 신경 쓰지 마. [softly] 나도 집에 가서 할 일이 좀 있어.",
-          "delivery": "spoken",
-          "lipArt": 0
-        },
-        {
-          "id": "e1-02",
-          "speaker": "N",
-          "art": 1,
-          "text": "전화를 끊자, 웃고 있던 얼굴이 천천히 제자리로 돌아왔다. 오늘은 서윤의 마흔두 번째 생일이었다.",
-          "voiceIndex": 0,
+          "art": 6,
+          "text": "말해야만 아는 거였어? 자료는 하루에도 몇 번씩 물어보면서, 나는 안 궁금했어?",
+          "voiceIndex": 9,
           "pause": 0.45,
-          "emotion": "somber",
-          "ttsText": "[somber] 전화를 끊자, 웃고 있던 얼굴이 천천히 제자리로 돌아왔다. 오늘은 서윤의 마흔두 번째 생일이었다.",
-          "delivery": "narration"
+          "emotion": "hurt",
+          "ttsText": "[hurt] 말해야만 아는 거였어? [frustrated] 자료는 하루에도 몇 번씩 물어보면서, [softly] 나는 안 궁금했어?",
+          "delivery": "spoken",
+          "lipArt": 0,
+          "reuseAudioOf": "e1-24",
+          "lipReuseOf": "e1-24",
+          "chapter": "그날 밤",
+          "model": "eleven_v4",
+          "voiceVariant": "-v4",
+          "lipCrop": "crop=iw:780:0:0"
         },
         {
           "id": "e1-03",
@@ -71,7 +54,8 @@
           "pause": 0.25,
           "emotion": "thoughtful",
           "ttsText": "[thoughtful] 그날 오후에도 서윤은 늘 하던 말을 했다. 부탁을 받으면, 생각보다 대답이 먼저 나왔다.",
-          "delivery": "narration"
+          "delivery": "narration",
+          "chapter": "그날 오후"
         },
         {
           "id": "e1-04",
@@ -82,7 +66,9 @@
           "pause": 0.25,
           "emotion": "hurried",
           "ttsText": "[hurried] 서윤아, 미안한데 내일 발표 자료 한 번만 봐줄 수 있어? 오늘 아이 데리러 가야 해서 정신이 없네.",
-          "delivery": "spoken"
+          "delivery": "spoken",
+          "model": "eleven_v4",
+          "voiceVariant": "-v4"
         },
         {
           "id": "e1-05",
@@ -94,7 +80,8 @@
           "emotion": "cheerful",
           "ttsText": "[cheerful] 보내 줘. 내가 저녁에 볼게. 큰일도 아닌데 뭘.",
           "delivery": "spoken",
-          "lipArt": 2
+          "lipArt": 2,
+          "lipCrop": "crop=iw:870:0:0"
         },
         {
           "id": "e1-06",
@@ -120,17 +107,6 @@
           "lipArt": 2
         },
         {
-          "id": "e1-08",
-          "speaker": "N",
-          "art": 3,
-          "text": "퇴근길, 케이크를 고르는 데 십 분이 걸렸다. 두 사람이 먹을 크기와, 혼자 먹을 크기 사이에서.",
-          "voiceIndex": 2,
-          "pause": 0.45,
-          "emotion": "somber",
-          "ttsText": "[somber] 퇴근길, 케이크를 고르는 데 십 분이 걸렸다. 두 사람이 먹을 크기와, 혼자 먹을 크기 사이에서.",
-          "delivery": "narration"
-        },
-        {
           "id": "e1-09",
           "speaker": "S",
           "art": 3,
@@ -140,17 +116,46 @@
           "emotion": "hesitant",
           "ttsText": "[hesitant] 이 작은 걸로 주세요. 초는 하나면 돼요. 네, 혼자 먹을 거예요.",
           "delivery": "spoken",
-          "lipArt": 3
+          "lipArt": 3,
+          "chapter": "퇴근길",
+          "lipCrop": "crop=iw:960:0:0"
         },
         {
-          "id": "e1-10",
+          "id": "e1-00",
+          "speaker": "M",
+          "art": 0,
+          "text": "너는 혼자서도 잘 지내잖아. 오늘은 그냥 먼저 들어가도 되지?",
+          "voiceIndex": 0,
+          "pause": 0.25,
+          "emotion": "casual",
+          "ttsText": "[casual] 너는 혼자서도 잘 지내잖아. [lighthearted] 오늘은 그냥 먼저 들어가도 되지?",
+          "delivery": "spoken",
+          "lipArt": 20,
+          "chapter": "그날 저녁",
+          "lipCrop": "crop=iw:840:0:0"
+        },
+        {
+          "id": "e1-01",
+          "speaker": "S",
+          "art": 0,
+          "text": "그럼. 신경 쓰지 마. 나도 집에 가서 할 일이 좀 있어.",
+          "voiceIndex": 0,
+          "pause": 0.25,
+          "emotion": "reassuring",
+          "ttsText": "[cheerful] 그럼. 신경 쓰지 마. [softly] 나도 집에 가서 할 일이 좀 있어.",
+          "delivery": "spoken",
+          "lipArt": 0,
+          "lipCrop": "crop=iw:780:0:0"
+        },
+        {
+          "id": "e1-02",
           "speaker": "N",
-          "art": 4,
-          "text": "집에 도착해 습관처럼 불을 켰다. 축하한다는 말 대신 냉장고 돌아가는 소리가 방을 채웠다.",
-          "voiceIndex": 3,
+          "art": 1,
+          "text": "전화를 끊자, 웃고 있던 얼굴이 천천히 제자리로 돌아왔다. 오늘은 서윤의 마흔두 번째 생일이었다.",
+          "voiceIndex": 0,
           "pause": 0.45,
           "emotion": "somber",
-          "ttsText": "[somber] 집에 도착해 습관처럼 불을 켰다. 축하한다는 말 대신 냉장고 돌아가는 소리가 방을 채웠다.",
+          "ttsText": "[somber] 전화를 끊자, 웃고 있던 얼굴이 천천히 제자리로 돌아왔다. 오늘은 서윤의 마흔두 번째 생일이었다.",
           "delivery": "narration"
         },
         {
@@ -233,17 +238,6 @@
           "delivery": "inner"
         },
         {
-          "id": "e1-17",
-          "speaker": "N",
-          "art": 7,
-          "text": "서운함은 없어지지 않았다. 말하지 않은 채로, 상대가 알아주지 않았던 순간만 하나씩 늘어났다.",
-          "voiceIndex": 6,
-          "pause": 0.45,
-          "emotion": "somber",
-          "ttsText": "[somber] 서운함은 없어지지 않았다. 말하지 않은 채로, 상대가 알아주지 않았던 순간만 하나씩 늘어났다.",
-          "delivery": "narration"
-        },
-        {
           "id": "e1-18",
           "speaker": "M",
           "art": 6,
@@ -253,17 +247,6 @@
           "emotion": "grateful",
           "ttsText": "[grateful] 수정한 거 봤어. 역시 너한테 물어보길 잘했네. 다음에 내가 맛있는 거 살게.",
           "delivery": "message"
-        },
-        {
-          "id": "e1-19",
-          "speaker": "S",
-          "art": 6,
-          "text": "다음 말고 오늘이면 좋겠다고, 왜 그 한마디를 못 하겠지. 그냥 십 분만 통화하자고 하면 되는데.",
-          "voiceIndex": 7,
-          "pause": 0.25,
-          "emotion": "frustrated",
-          "ttsText": "[frustrated] 다음 말고 오늘이면 좋겠다고, 왜 그 한마디를 못 하겠지. 그냥 십 분만 통화하자고 하면 되는데.",
-          "delivery": "inner"
         },
         {
           "id": "e1-20",
@@ -277,17 +260,6 @@
           "delivery": "narration"
         },
         {
-          "id": "e1-21",
-          "speaker": "S",
-          "art": 7,
-          "text": "나는 괜찮다고 했으니까. 민지가 잘못한 건 없잖아. 그런데 왜 자꾸 화가 나는 걸까.",
-          "voiceIndex": 8,
-          "pause": 0.45,
-          "emotion": "hurt",
-          "ttsText": "[hurt] 나는 괜찮다고 했으니까. 민지가 잘못한 건 없잖아. 그런데 왜 자꾸 화가 나는 걸까.",
-          "delivery": "inner"
-        },
-        {
           "id": "e1-22",
           "speaker": "N",
           "art": 6,
@@ -296,7 +268,8 @@
           "pause": 0.25,
           "emotion": "serious",
           "ttsText": "[serious] 밤 열한 시, 휴대전화가 다시 울렸다. 민지가 달력에 남겨 둔 생일 알림을 뒤늦게 본 것이다.",
-          "delivery": "narration"
+          "delivery": "narration",
+          "chapter": "밤 11시"
         },
         {
           "id": "e1-23",
@@ -308,7 +281,8 @@
           "emotion": "apologetic",
           "ttsText": "[surprised] 서윤아, 오늘 생일이었네. [apologetic] 내가 완전히 놓쳤어. 정말 미안해. [hesitant] 왜 아까 말 안 했어?",
           "delivery": "spoken",
-          "lipArt": 20
+          "lipArt": 20,
+          "lipCrop": "crop=iw:840:0:0"
         },
         {
           "id": "e1-24",
@@ -320,7 +294,10 @@
           "emotion": "hurt",
           "ttsText": "[hurt] 말해야만 아는 거였어? [frustrated] 자료는 하루에도 몇 번씩 물어보면서, [softly] 나는 안 궁금했어?",
           "delivery": "spoken",
-          "lipArt": 0
+          "lipArt": 0,
+          "model": "eleven_v4",
+          "voiceVariant": "-v4",
+          "lipCrop": "crop=iw:780:0:0"
         },
         {
           "id": "e1-25",
@@ -332,7 +309,8 @@
           "emotion": "defensive",
           "ttsText": "[defensive] 그런 뜻이 아니야. 아까 약속 없냐고 물었을 때, [hesitant] 네가 집에서 쉰다길래 난 정말 괜찮은 줄 알았지.",
           "delivery": "spoken",
-          "lipArt": 20
+          "lipArt": 20,
+          "lipCrop": "crop=iw:840:0:0"
         },
         {
           "id": "e1-26",
@@ -344,18 +322,8 @@
           "emotion": "coldly",
           "ttsText": "[coldly] 그래. 내가 괜찮다고 했지. [quietly] 그러니까 이제 됐어. 오늘은 더 얘기하고 싶지 않아.",
           "delivery": "spoken",
-          "lipArt": 0
-        },
-        {
-          "id": "e1-27",
-          "speaker": "N",
-          "art": 7,
-          "text": "서윤은 통화를 끝냈다. 채팅창에는 축하한다는 말이 뒤늦게 쌓였다. 읽을수록 마음은 더 멀어졌다.",
-          "voiceIndex": 9,
-          "pause": 0.45,
-          "emotion": "somber",
-          "ttsText": "[somber] 서윤은 통화를 끝냈다. 채팅창에는 축하한다는 말이 뒤늦게 쌓였다. 읽을수록 마음은 더 멀어졌다.",
-          "delivery": "narration"
+          "lipArt": 0,
+          "lipCrop": "crop=iw:780:0:0"
         },
         {
           "id": "e1-28",
@@ -377,18 +345,8 @@
           "pause": 0.25,
           "emotion": "gentle",
           "ttsText": "[gentle] 다음 날 아침, 민지에게서 메시지가 왔다. 오늘 만나자. 이번엔 자료 말고, 네 이야기를 듣고 싶어.",
-          "delivery": "narration"
-        },
-        {
-          "id": "e1-30",
-          "speaker": "N",
-          "art": 6,
-          "text": "서윤은 한참 뒤에 답했다. 만나면, 좋은 말만 나오지는 않을 거야.",
-          "voiceIndex": 11,
-          "pause": 0.25,
-          "emotion": "serious",
-          "ttsText": "[serious] 서윤은 한참 뒤에 답했다. 만나면, 좋은 말만 나오지는 않을 거야.",
-          "delivery": "narration"
+          "delivery": "narration",
+          "chapter": "다음 날 아침"
         },
         {
           "id": "e1-31",
@@ -399,14 +357,16 @@
           "pause": 0.25,
           "emotion": "reassuring",
           "ttsText": "[warm] 괜찮은 척 안 해도 돼. [earnest] 오늘은 나도 피하지 않을게.",
-          "delivery": "message"
+          "delivery": "message",
+          "model": "eleven_v4",
+          "voiceVariant": "-v4"
         }
       ]
     }
   ],
   "fiction": true,
   "model": "eleven_v3",
-  "motionBudgetStatus": "Additional 9-clip estimate 120–125 credits; user has asked for cost. Awaiting an explicit additional spending cap before Higgsfield submissions.",
+  "motionBudgetStatus": "User agreed to compressed conflict-first episode and generation after disclosed 120–125-credit estimate; cap 140, no automatic paid retries.",
   "approvedEpisodes": [
     1
   ],

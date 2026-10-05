@@ -21,6 +21,20 @@ def run(args,log=None):
 
 def voice(b):return C/('voice-'+b['speaker'])/f"beat-{b['voiceIndex']:02d}{b.get('voiceVariant','')}.mp3"
 def probe(f):return json.loads(run(['ffprobe','-v','error','-show_format','-show_streams','-of','json',f]))
+def valid_clip(path,frames):
+ if not path.exists():return False
+ try:
+  v=next(x for x in probe(path)['streams'] if x['codec_type']=='video')
+  return int(v['nb_frames'])==frames
+ except (RuntimeError,KeyError,ValueError,StopIteration):return False
+
+def encode_clip(args,path,frames,log):
+ if valid_clip(path,frames):return
+ staging=path.with_suffix('.partial.mp4')
+ run([*args,staging],log)
+ if not valid_clip(staging,frames):raise RuntimeError('Incomplete encoded clip: '+str(path))
+ staging.replace(path)
+
 def align():
  import torch,whisper
  from whisper.timing import find_alignment
@@ -28,7 +42,7 @@ def align():
  torch.set_num_threads(4);m=whisper.load_model('base',device='cpu',download_root=MODEL);tok=get_tokenizer(m.is_multilingual,language='ko',task='transcribe')
  for ep in EPISODES:
   for b in ep['beats']:
-   dest=C/'alignment'/(b['id']+'.json')
+   dest=C/'alignment'/(b.get('reuseAudioOf',b['id'])+b.get('voiceVariant','')+'.json')
    if dest.exists():continue
    f=voice(b);meta=json.loads(Path(str(f)+'.json').read_text())
    assert meta['text']==b['ttsText'] and meta['voiceId']==STORY['voices'][b['speaker']]['id'] and meta['modelId']==b.get('model',STORY['model'])
@@ -57,7 +71,7 @@ def wrapped(text,font,maxwidth=1530):
 def plan(ep):
  n=ep['number'];font=ImageFont.truetype(str(FONT),48);t=0;beats=[];captions=[]
  for i,b in enumerate(ep['beats']):
-  a=json.loads((C/'alignment'/(b['id']+'.json')).read_text());dur=a['duration'];pause=b['pause']+(1.8 if i==len(ep['beats'])-1 else 0)
+  a=json.loads((C/'alignment'/(b.get('reuseAudioOf',b['id'])+b.get('voiceVariant','')+'.json')).read_text());dur=a['duration'];pause=b['pause']+(1.8 if i==len(ep['beats'])-1 else 0)
   frames=math.ceil((dur+pause)*FPS);entry={**b,'start':t,'duration':frames/FPS,'speechDuration':dur,'frames':frames};beats.append(entry)
   words=a['words'];groups=[];g=[]
   for w in words:
@@ -71,7 +85,7 @@ def plan(ep):
    if end<=start:continue
    captions.append(dict(start=t+start,end=t+end,speaker=b['speaker'],text=text,wrapped=wrapped(text,font)))
   t+=frames/FPS
- if not 150<=t<=240:raise RuntimeError(f'Episode {n} runtime {t:.2f}s outside remake guard; revise content, never pad/stretch')
+ if not STORY['targetSeconds'][0]<=t<=STORY['targetSeconds'][1]:raise RuntimeError(f'Episode {n} runtime {t:.2f}s outside remake guard; revise content, never pad/stretch')
  out=dict(episode=n,title=ep['title'],duration=t,beats=beats,captions=captions)
  (C/f'timeline-{n}.json').write_text(json.dumps(out,ensure_ascii=False,indent=2))
  header='''[Script Info]
@@ -88,6 +102,8 @@ Style: Title,Pretendard SemiBold,38,&H00E8E8F3,&H00FFFFFF,&H00241D18,&H70000000,
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 '''
  lines=[header,f'Dialogue: 0,0:00:00.00,0:00:05.50,Title,,0,0,0,,{n}화  ·  {ep["title"]}']
+ for b in beats:
+  if b.get('chapter'):lines.append(f'Dialogue: 1,{stamp(b["start"])},{stamp(b["start"]+min(2.5,b["duration"]))},Title,,0,0,0,,'+r'{\an9\fad(120,150)}'+b['chapter'])
  names={'N':'','S':'서윤','M':'민지'};colors={'N':'&HFFFFFF&','S':'&HBBE4FF&','M':'&HE6CBFF&'}
  for c in captions:
   beat=next(b for b in beats if b['start']<=c['start']<b['start']+b['duration'])
@@ -139,15 +155,19 @@ def render(ep):
   start=b['start'];end=start+b['duration'];frames=b['frames']
   if frames<=0:continue
   if 'lipArt' in b:
-   source=C/'lipsync'/(b['id']+'.mp4')
+   source=C/'lipsync'/(b.get('lipReuseOf',b['id'])+'.mp4')
    info=probe(source)
-   if float(info['format']['duration'])<b['duration']-.05:raise RuntimeError('Short lip-sync clip: '+b['id'])
+   video=next(x for x in info['streams'] if x['codec_type']=='video')
+   visualDuration=float(video['duration']);tailGap=max(0,b['duration']-visualDuration)
+   if visualDuration<b['speechDuration']-.025 or tailGap>.25:raise RuntimeError('Short lip-sync speech: '+b['id'])
    # Each input is the exact final dialogue plus its intentional short pause; never retime lip motion.
    clean=b.get('lipCrop','')
-   vf=(clean+',' if clean else '')+'scale=1920:1080:force_original_aspect_ratio=increase,crop=1920:1080,setsar=1,fps=24,format=yuv420p'
+   vf=(clean+',' if clean else '')+'scale=1920:1080:force_original_aspect_ratio=increase,crop=1920:1080,setsar=1'+(f',tpad=stop_mode=clone:stop_duration={tailGap+1/FPS}' if tailGap else '')+',fps=24,format=yuv420p'
    signature=hashlib.sha256(json.dumps([str(source),source.stat().st_mtime_ns,frames,vf]).encode()).hexdigest()[:12]
    clip=outdir/(b['id']+'-lip-'+signature+'.mp4')
-   if not clip.exists():run(['ffmpeg','-y','-v','error','-i',source,'-vf',vf,'-frames:v',frames,'-an','-c:v','libx264','-preset','fast','-crf','19','-threads','2',clip],b['id']+'-lip.log')
+   encode_clip(['ffmpeg','-y','-v','error','-i',source,'-vf',vf,'-frames:v',frames,'-an','-c:v','libx264','-preset','fast','-crf','19','-threads','2'],clip,frames,b['id']+'-lip.log')
+   clipVideo=next(x for x in probe(clip)['streams'] if x['codec_type']=='video')
+   if int(clipVideo['nb_frames'])!=frames:raise RuntimeError('Lip frame count mismatch: '+b['id'])
    clips.append(clip);edits.append(dict(beat=b['id'],source=str(source),sourceStart=0,duration=frames/FPS,lipsync=True));continue
   beatRemaining=frames;part=0
   for cut in b.get('visualCuts',[{'art':b['art']}]):
@@ -166,20 +186,19 @@ def render(ep):
     signature=hashlib.sha256(json.dumps([str(source),source.stat().st_mtime_ns,offset,count,scale]).encode()).hexdigest()[:12]
     dest=outdir/(b['id']+f'-{part:02d}-{signature}.mp4');clips.append(dest)
     edits.append(dict(beat=b['id'],source=str(source),sourceStart=offset/FPS,duration=count/FPS,reused=art in offsets))
-    if not dest.exists():
-     run(['ffmpeg','-y','-v','error','-ss',f'{offset/FPS:.6f}','-i',source,'-vf',scale+',setsar=1,fps=24,format=yuv420p','-frames:v',count,'-an','-c:v','libx264','-preset','fast','-crf','19','-threads','2',dest],b['id']+f'-{part}.log')
+    encode_clip(['ffmpeg','-y','-v','error','-ss',f'{offset/FPS:.6f}','-i',source,'-vf',scale+',setsar=1,fps=24,format=yuv420p','-frames:v',count,'-an','-c:v','libx264','-preset','fast','-crf','19','-threads','2'],dest,count,b['id']+f'-{part}.log')
     offsets[art]=offset+count;remaining-=count;part+=1
    if beatRemaining<=0:break
   if beatRemaining:raise RuntimeError('Visual cuts do not cover full beat')
   print('ANIMATED',b['id'],frames,flush=True)
  (C/f'motion-edit-{n}.json').write_text(json.dumps(edits,indent=2)+'\n')
  listing=outdir/'concat.txt';listing.write_text('\n'.join("file '"+str(f).replace("'","'\\''")+"'"for f in clips)+'\n')
- base=outdir/'base.mp4';run(['ffmpeg','-y','-v','error','-f','concat','-safe','0','-i',listing,'-c','copy',base],f'concat-{n}.log')
+ # Read the concat list directly to avoid an unnecessary full-size intermediate copy.
  A.output.mkdir(parents=True,exist_ok=True);final=A.output/f'im-fine-webtoon-episode-{n}-lipsync-v3.mp4'
  # FFmpeg filter syntax needs escaped drive-path punctuation, not shell escaping.
  esc=lambda p:str(p).replace('\\','\\\\').replace(':','\\:').replace("'","'\\''")
  vf=f"subtitles=filename='{esc(C/f'captions-{n}.ass')}':fontsdir='{esc(C/'fonts')}'"
- run(['ffmpeg','-y','-v','error','-i',base,'-i',C/'render'/f'audio-{n}.wav','-vf',vf,'-map','0:v','-map','1:a','-af','alimiter=limit=0.92:level=false','-c:v','libx264','-preset','fast','-crf','20','-threads','4','-c:a','aac','-b:a','192k','-ar',SR,'-t',f'{timeline["duration"]:.6f}','-movflags','+faststart',final],f'final-{n}.log')
+ run(['ffmpeg','-y','-v','error','-f','concat','-safe','0','-i',listing,'-i',C/'render'/f'audio-{n}.wav','-vf',vf,'-map','0:v','-map','1:a','-af','alimiter=limit=0.92:level=false','-c:v','libx264','-preset','fast','-crf','20','-threads','4','-c:a','aac','-b:a','192k','-ar',SR,'-t',f'{timeline["duration"]:.6f}','-movflags','+faststart',final],f'final-{n}.log')
  print('FINAL',str(final),timeline['duration'],flush=True)
 
 def verify():
@@ -200,7 +219,7 @@ def prepare():
  for ep in EPISODES:
   timeline=plan(ep);folder=C/'inputs';folder.mkdir(exist_ok=True);(C/'lipsync').mkdir(exist_ok=True)
   for b in timeline['beats']:
-   if 'lipArt' not in b:continue
+   if 'lipArt' not in b or b.get('lipReuseOf'):continue
    run(['ffmpeg','-y','-v','error','-i',voice(b),'-af','apad','-t',b['duration'],'-ar','44100','-ac','1',folder/(b['id']+'.wav')])
    print('LIPSYNC INPUT',b['id'],b['duration'],flush=True)
 

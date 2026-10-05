@@ -7,10 +7,15 @@ const here=dirname(fileURLToPath(import.meta.url));
 const story=JSON.parse(await readFile(join(here,'story.json'),'utf8'));
 const [mode,role]=process.argv.slice(2),cache=process.env.VIDEO_CACHE,root=process.env.CAK_ENGINE_ROOT;
 if(!['sample','tts','validate','voices'].includes(mode))throw Error('sample|tts|validate|voices [N/S/M]');
-const ids=new Set(),indices={N:new Set(),S:new Set(),M:new Set()};
+const beatsById=new Map(story.episodes.flatMap(e=>e.beats).map(b=>[b.id,b]));
+const ids=new Set(),indices=new Map();
 for(const b of story.episodes.flatMap(e=>e.beats)){
- if(ids.has(b.id)||indices[b.speaker].has(b.voiceIndex))throw Error('Duplicate beat/index');
- ids.add(b.id);indices[b.speaker].add(b.voiceIndex);
+ if(ids.has(b.id))throw Error('Duplicate beat ID');
+ const canonical=b.reuseAudioOf?beatsById.get(b.reuseAudioOf):b;
+ if(!canonical||canonical.reuseAudioOf||['speaker','voiceIndex','voiceVariant','text','ttsText','model'].some(k=>canonical[k]!==b[k]))throw Error('Invalid shared audio reference');
+ const key=b.speaker+':'+b.voiceIndex+':'+(b.voiceVariant||'');
+ if(indices.has(key)&&indices.get(key)!==canonical.id)throw Error('Duplicate voice index without explicit reuse');
+ ids.add(b.id);indices.set(key,canonical.id);
  if(b.ttsText.replace(/\[[^\]]+\]\s*/g,'').trim()!==b.text||!b.emotion||/\[/.test(b.text))throw Error('Display and speech text mismatch');
 }
 if(mode==='validate'){console.log(JSON.stringify({beats:ids.size,model:story.model,voices:story.voices,speed:story.speed}));process.exit(0);}
@@ -43,8 +48,8 @@ if(mode==='voices'){
 }
 if(!story.voices[role])throw Error('Voice role N/S/M required');
 const {synthesizeNarration}=await import(pathToFileURL(join(root,'packages/tts-narration/src/adapters/elevenlabs.ts')));
-const selected={N:['e1-02','e1-27'],S:['e1-01','e1-24'],M:['e1-00','e1-23']};
-let beats=story.episodes.filter(e=>story.approvedEpisodes.includes(e.number)).flatMap(e=>e.beats).filter(b=>b.speaker===role);
+const selected={N:['e1-02','e1-03'],S:['e1-01','e1-24'],M:['e1-00','e1-23']};
+let beats=story.episodes.filter(e=>story.approvedEpisodes.includes(e.number)).flatMap(e=>e.beats).filter(b=>b.speaker===role&&!b.reuseAudioOf);
 if(mode==='sample')beats=beats.filter(b=>selected[role].includes(b.id));
 const ledger=join(cache,'tts-'+role+'-local-receipts.json');let receipts={};try{receipts=JSON.parse(await readFile(ledger,'utf8'))}catch(e){if(e.code!=='ENOENT')throw e;}
 const save=()=>writeFile(ledger,JSON.stringify(receipts,null,2)+'\n');

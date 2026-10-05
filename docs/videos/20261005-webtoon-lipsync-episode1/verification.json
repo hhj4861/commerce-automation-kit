@@ -1,0 +1,172 @@
+{
+  "episode": 1,
+  "file": "/Users/admin/Downloads/vedio/im-fine-webtoon-episode-1-lipsync-v3.mp4",
+  "duration": 170.79166666666669,
+  "captions": 70,
+  "sha256": "b08a3231a8238c21d8954f145320a83f920c6af5969cf4ba1470747a00d3a634",
+  "decode": "pass",
+  "audioVideoSync": "pass",
+  "format": "1920x1080 H.264/AAC 24fps, 16:9",
+  "baseRevision": "f576436",
+  "sourceSha256": {
+    "story.json": "9a8d98c7469eb4ce7d99f4fd0eca7f935a40700ad78671d3843c54d85f000226",
+    "render.py": "6a12d81fecb0d11e569804b60e6a4fded5a1cf216feeb12dd1999591c08d48f2",
+    "produce.mjs": "53ceb79ad7c0d7f2598b83d71aeff0154acd2055e1092eaf12ba6a8eef41b984",
+    "check_speech.py": "a3124bf37666d02af65cc34838862b8888abcb5cdbf1b9f42a4f8b9e950d7058"
+  },
+  "voiceMetadata": "26/26 exact text, model and Voice ID",
+  "captionCompleteness": "70/70 captions, normalized text equals all 26 script beats, timing and two-line bounds pass",
+  "generation": {
+    "model": "Kling Avatars 2.0",
+    "quality": "Pro",
+    "budgetCap": 140,
+    "totalDisplayedCredits": 123,
+    "jobs": [
+      {
+        "id": "e1-01",
+        "displayedCredits": 9,
+        "state": "downloaded",
+        "sha256": "63e6dc8d9a004aef48d3e89988710d77221834abdd985addf516d6b2c6538740"
+      },
+      {
+        "id": "e1-26",
+        "displayedCredits": 16,
+        "state": "downloaded",
+        "sha256": "1706fceaff03d75a9659a0908ab07d46d65b56b06c12b5cece06bb1df46b83a3"
+      },
+      {
+        "id": "e1-05",
+        "displayedCredits": 9,
+        "state": "downloaded",
+        "sha256": "66416196b14b54b6d7e332ee3670578ca67496b4042bc6f55336e987ab415723"
+      },
+      {
+        "id": "e1-07",
+        "displayedCredits": 10,
+        "state": "downloaded",
+        "sha256": "44e01fed650d5dc870a64929574527b1c2539ccfeaa159ef2a1ce067bea90f78"
+      },
+      {
+        "id": "e1-09",
+        "displayedCredits": 18,
+        "state": "downloaded",
+        "sha256": "ecb8a3eac44531ce57ceaca5d16a1d69cf72742b174aaab681938a6f34ae1f0f"
+      },
+      {
+        "id": "e1-00",
+        "displayedCredits": 10,
+        "state": "downloaded",
+        "sha256": "ccdfa4237d351814913a5cfbd6fc3e979756b8223e5a2283de9e3254ce092421"
+      },
+      {
+        "id": "e1-23",
+        "displayedCredits": 17,
+        "state": "downloaded",
+        "sha256": "66f028ed334627f50692bb1bca31897e07bacc2d5ee9a5f8ad5655b525ac080e"
+      },
+      {
+        "id": "e1-25",
+        "displayedCredits": 18,
+        "state": "downloaded",
+        "sha256": "3d7187104b72e4e728743ac7b548caba72bfd18322ff7bc6bd4fbf2f41b4b78e"
+      },
+      {
+        "id": "e1-24",
+        "displayedCredits": 16,
+        "state": "downloaded",
+        "sha256": "e4fe742cb2524ceba076f3fa48102d371d81c98c81955c179240105b4b62e941"
+      }
+    ]
+  },
+  "audioPreservation": [
+    {
+      "id": "e1-00",
+      "inputSeconds": 5.0,
+      "outputAudioSeconds": 5.0155,
+      "zeroLagCorrelation": 0.9997229030759966,
+      "bestLagMs": 0.0
+    },
+    {
+      "id": "e1-01",
+      "inputSeconds": 4.25,
+      "outputAudioSeconds": 4.2725,
+      "zeroLagCorrelation": 0.9999482380017111,
+      "bestLagMs": 0.0
+    },
+    {
+      "id": "e1-05",
+      "inputSeconds": 4.333375,
+      "outputAudioSeconds": 4.2725,
+      "zeroLagCorrelation": 0.9999683464947858,
+      "bestLagMs": 0.0
+    },
+    {
+      "id": "e1-07",
+      "inputSeconds": 5.0,
+      "outputAudioSeconds": 5.0155,
+      "zeroLagCorrelation": 0.9999375692645887,
+      "bestLagMs": 0.0
+    },
+    {
+      "id": "e1-09",
+      "inputSeconds": 8.875,
+      "outputAudioSeconds": 8.89325,
+      "zeroLagCorrelation": 0.9999591001316915,
+      "bestLagMs": 0.0
+    },
+    {
+      "id": "e1-23",
+      "inputSeconds": 8.125,
+      "outputAudioSeconds": 8.127,
+      "zeroLagCorrelation": 0.999979046284444,
+      "bestLagMs": 0.0
+    },
+    {
+      "id": "e1-24",
+      "inputSeconds": 7.6666875,
+      "outputAudioSeconds": 7.6858125,
+      "zeroLagCorrelation": 0.999922844625027,
+      "bestLagMs": 0.0
+    },
+    {
+      "id": "e1-25",
+      "inputSeconds": 9.0,
+      "outputAudioSeconds": 9.009375,
+      "zeroLagCorrelation": 0.9999556898455162,
+      "bestLagMs": 0.0
+    },
+    {
+      "id": "e1-26",
+      "inputSeconds": 7.5416875,
+      "outputAudioSeconds": 7.5465,
+      "zeroLagCorrelation": 0.9999559170648123,
+      "bestLagMs": 0.0
+    }
+  ],
+  "avAnalysis": {
+    "meanDb": -17.8,
+    "peakDb": -1.0,
+    "blackIntervalsAtLeast05s": 0,
+    "silenceAtLeast2s": [
+      {
+        "start": 168.781111,
+        "end": 170.805986,
+        "intentional": "end hold after final dialogue"
+      }
+    ]
+  },
+  "visualReview": {
+    "finalSampledFrames": 18,
+    "allNineGeneratedClipsSampled": true,
+    "checked": [
+      "character identity and clothing",
+      "mouth and expression changes across frames",
+      "removal of generated text artifacts through documented crops",
+      "speaker/inner thought/message labels",
+      "subtitle legibility and framing",
+      "opening and ending"
+    ],
+    "limit": "Sampled frames and automated audio checks; not continuous human audiovisual viewing or measured phoneme-level visual synchrony."
+  },
+  "publication": "local file only; no YouTube upload or production deployment"
+}
