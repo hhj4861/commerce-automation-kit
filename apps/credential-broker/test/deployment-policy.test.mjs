@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { authorizeGithub, authorizeMigration, REPOSITORY, SUBJECT_PREFIX, DEPLOYMENT_KEYS, STATIC_KEYS, PAGE_KEYS, GITHUB_KEYS } from '../policy.mjs';
@@ -50,4 +51,18 @@ test('learner deployment requires a protected ref and receives no admin or Repla
     assert.throws(() => authorizeGithub({ ...learner, ref_protected }, config));
   for (const patch of [{ workflow_ref: adminClaims.workflow_ref }, { sub: adminClaims.sub }, { repository_id: 'other' }, { runner_environment: 'self-hosted' }])
     assert.throws(() => authorizeGithub({ ...learner, ...patch }, config));
+});
+
+test('checked-in broker configuration isolates both Hanmadi deployment keys', () => {
+  const deployed = JSON.parse(readFileSync(new URL('../wrangler.json', import.meta.url), 'utf8'));
+  for (const [name, key] of [['hanmadi', 'DEPLOY_VERCEL_TOKEN'], ['hanmadi-admin', 'HANMADI_ADMIN_DEPLOY_VERCEL_TOKEN']]) {
+    const identity = { ...claims(name), ref_protected: 'true' };
+    assert.deepEqual(authorizeGithub(identity, deployed.vars).keys, [key]);
+    assert.deepEqual(deployed.secrets_store_secrets.filter(b => b.binding === `SS_${key}`), [
+      { binding: `SS_${key}`, store_id: deployed.vars.STORE_ID, secret_name: `CAK_${key}` },
+    ]);
+    assert.throws(() => authorizeGithub({ ...identity, ref_protected: 'false' }, deployed.vars));
+    assert.throws(() => authorizeGithub({ ...identity, ref: 'refs/heads/main' }, deployed.vars));
+  }
+  for (const name of ['shopshorts', 'firstframe']) assert.throws(() => authorizeGithub(claims(name), deployed.vars));
 });
