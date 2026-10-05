@@ -16,6 +16,10 @@
       "directory": "apps/hanmadi",
       "project": "prj_xJ5tTXyMYNV6qL1fVnWxFBuIRoRf",
       "organization": "team_RUHKd04LgBmYVYUwwRTJlW8b",
+      "credential": "DEPLOY_VERCEL_TOKEN",
+      "deploymentMode": "learner",
+      "productionUrl": "https://hanmadi-lake.vercel.app",
+      "googleClientId": "929788436284-lba8th8rsk71krahee3vhssq1m2nt1kj.apps.googleusercontent.com",
       "paths": ["apps/hanmadi/"]
     },
     "hanmadi-admin": {

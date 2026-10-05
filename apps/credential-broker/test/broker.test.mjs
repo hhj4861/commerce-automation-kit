@@ -66,7 +66,7 @@ test('GitHub response is scoped, uncached, and has no CORS header', async () => 
 });
 test('deployment route returns one key, runtime cannot retrieve deployment tokens', async () => {
   const ref = 'refs/heads/deploy/hanmadi';
-  const identity = { ...claims(), ref, sub: `${SUBJECT_PREFIX}:ref:${ref}`, event_name: 'push',
+  const identity = { ...claims(), ref_protected: 'true', ref, sub: `${SUBJECT_PREFIX}:ref:${ref}`, event_name: 'push',
     workflow_ref: `${REPOSITORY}/.github/workflows/platform-deploy.yml@${ref}` };
   const config = { ...env(), GITHUB_DEPLOY_ALLOWED_REFS: ref,
     SS_DEPLOY_VERCEL_TOKEN: { get: async () => 'fixture-vercel' },
@@ -74,6 +74,9 @@ test('deployment route returns one key, runtime cannot retrieve deployment token
   const response = await handleRequest(request('/github/secrets'), config, { github: async () => identity });
   assert.equal(response.status, 200);
   assert.deepEqual((await response.json()).values, { DEPLOY_VERCEL_TOKEN: 'fixture-vercel' });
+  const unprotected = await handleRequest(request('/github/secrets'), config, { github: async () => ({ ...identity, ref_protected: 'false' }) });
+  assert.equal(unprotected.status, 403);
+  assert.doesNotMatch(await unprotected.text(), /fixture-vercel/);
   const runtime = await handleRequest(request('/runner/secrets'), config, verify());
   assert.equal(runtime.status, 200);
   assert.doesNotMatch(await runtime.text(), /fixture-vercel|fixture-cloudflare|DEPLOY_/);

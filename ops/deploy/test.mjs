@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { configuration, plan } from './plan.mjs';
-import { commands, deployment, verifyAdminRelease, verifyAdminConfiguration } from './deploy.mjs';
+import { commands, deployment, verifyAdminRelease, verifyAdminConfiguration, verifyLearnerRelease, verifyLearnerConfiguration } from './deploy.mjs';
 
 const sha = 'a'.repeat(40);
 const env = name => ({ GITHUB_REPOSITORY: configuration.repository,
@@ -53,14 +53,24 @@ test('Pages deployments target explicit production branch, project and revision'
   }
   assert.ok(commands('firstframe', configuration.targets.firstframe, env('firstframe'))[1].args.includes('apps/firstframe'));
 });
-test('Vercel pulls production env and builds before prebuilt production deploy', () => {
-  assert.throws(() => commands('hanmadi', configuration.targets.hanmadi, env('hanmadi')));
-  const steps = commands('hanmadi', configuration.targets.hanmadi, { ...env('hanmadi'), DEPLOY_VERCEL_TOKEN: 'fixture' });
-  assert.ok(steps[0].args.includes('--workspaces=false'));
-  assert.deepEqual(steps.slice(2).map(s => s.args[2]), ['pull', 'build', 'deploy']);
-  assert.ok(steps[2].args.includes('--environment=production'));
-  assert.ok(steps.at(-1).args.includes('--prebuilt'));
-  assert.ok(steps.every(s => s.cwd === 'apps/hanmadi'));
+test('learner uses a project-scoped remote build with explicit production identity', () => {
+  const target = configuration.targets.hanmadi;
+  assert.throws(() => commands('hanmadi', target, env('hanmadi')));
+  assert.throws(() => commands('hanmadi', target, { ...env('hanmadi'), HANMADI_ADMIN_DEPLOY_VERCEL_TOKEN: 'admin-only' }));
+  const steps = commands('hanmadi', target, { ...env('hanmadi'), DEPLOY_VERCEL_TOKEN: 'learner-fixture-secret' });
+  assert.deepEqual(steps.slice(0, 2).map(s => [s.command, ...s.args]), [['npm', 'ci', '--workspaces=false'], ['npm', 'test']]);
+  assert.deepEqual(steps.filter(s => s.command === 'npx').map(s => s.args[2]), ['deploy']);
+  assert.ok(steps.every(s => s.cwd === target.directory));
+  const args = steps.at(-1).args;
+  assert.equal(args[args.indexOf('--project') + 1], target.project);
+  assert.ok(args.includes('--prod'));
+  for (const flag of ['--prebuilt', '--no-wait', '--token']) assert.ok(!args.includes(flag));
+  const values = flag => args.flatMap((arg, index) => arg === flag ? [args[index + 1]] : []);
+  const identity = [`HANMADI_RELEASE_SHA=${sha}`, 'HANMADI_DEPLOYMENT=learner'];
+  assert.deepEqual(values('--env'), identity);
+  assert.deepEqual(values('--build-env'), identity);
+  assert.deepEqual(values('--meta'), [`githubCommitSha=${sha}`, `githubCommitRef=${target.branch}`, 'hanmadiApplication=hanmadi']);
+  assert.doesNotMatch(JSON.stringify(steps), /learner-fixture-secret|HANMADI_DEPLOYMENT=admin|HANMADI_APP_URL/);
 });
 test('LiteLLM archives exact commit and uses personal VM through IAP', () => {
   const steps = commands('litellm', configuration.targets.litellm, env('litellm'));
@@ -139,4 +149,61 @@ test('missing admin runtime secrets block deployment before a production upload'
   await verifyAdminConfiguration(target, 'fixture', fixture(keys));
   await assert.rejects(verifyAdminConfiguration(target, 'fixture', fixture(keys.filter(key => key !== 'LITELLM_API_KEY'))), /LITELLM_API_KEY/);
   await assert.rejects(verifyAdminConfiguration(target, 'fixture', async () => Response.json({ envs: keys.map(key => ({ key, target: ['preview'] })) })), /production variables/);
+});
+
+const learnerTarget = configuration.targets.hanmadi;
+function learnerFixture(overrides = {}) {
+  return async (url, options) => {
+    assert.equal(new URL(url).origin, learnerTarget.productionUrl);
+    assert.equal(options.redirect, 'error');
+    assert.equal(options.cache, 'no-store');
+    assert.equal(options.headers, undefined); // Anonymous probes; no session or deployment credentials.
+    const path = new URL(url).pathname;
+    if (overrides[path]) return overrides[path]();
+    switch (path) {
+      case '/api/deployment': return Response.json({ application: 'hanmadi', revision: sha });
+      case '/study': return new Response('<title>한마디 2.0</title>');
+      case '/privacy': return new Response('<h1>개인정보 처리방침</h1>');
+      case '/api/study/account/google': return Response.json({ available: true, clientId: learnerTarget.googleClientId });
+      case '/api/study/admin': return new Response('', { status: 403 });
+      default: throw new Error('Unexpected probe');
+    }
+  };
+}
+test('learner release probes identity, public login surfaces and anonymous access without signing in', async () => {
+  const paths = [];
+  await verifyLearnerRelease(learnerTarget, sha, (url, options) => {
+    paths.push(new URL(url).pathname);
+    return learnerFixture()(url, options);
+  });
+  assert.deepEqual(paths, ['/api/deployment', '/study', '/privacy', '/api/study/account/google', '/api/study/admin']);
+});
+for (const [name, path, response] of [
+  ['old revision', '/api/deployment', () => Response.json({ application: 'hanmadi', revision: 'old' })],
+  ['wrong application', '/api/deployment', () => Response.json({ application: 'hanmadi-admin', revision: sha })],
+  ['identity unavailable', '/api/deployment', () => new Response('', { status: 503 })],
+  ['entry unavailable', '/study', () => new Response('', { status: 500 })],
+  ['entry redirect', '/study', () => new Response('', { status: 302, headers: { location: '/admin-login' } })],
+  ['privacy unavailable', '/privacy', () => new Response('', { status: 404 })],
+  ['privacy wrong body', '/privacy', () => new Response('<h1>Login</h1>')],
+  ['Google disabled', '/api/study/account/google', () => Response.json({ available: false })],
+  ['Google wrong client', '/api/study/account/google', () => Response.json({ available: true, clientId: 'wrong.apps.googleusercontent.com' })],
+  ['Google unavailable', '/api/study/account/google', () => new Response('', { status: 503 })],
+  ['admin exposed', '/api/study/admin', () => new Response('private data')],
+]) test(`learner release rejects ${name}`, async () => {
+  await assert.rejects(verifyLearnerRelease(learnerTarget, sha, learnerFixture({ [path]: response })));
+});
+test('learner production configuration requires login and durable storage before upload', async () => {
+  const keys = ['AUTH_SECRET', 'TUTOR_PINS', 'UPSTASH_REDIS_REST_URL', 'UPSTASH_REDIS_REST_TOKEN', 'HANMADI_GOOGLE_CLIENT_ID'];
+  const fixture = (names, target = 'production') => async (url, options) => {
+    assert.equal(new URL(url).pathname, `/v9/projects/${learnerTarget.project}/env`);
+    assert.equal(new URL(url).searchParams.get('teamId'), learnerTarget.organization);
+    assert.equal(options.headers.authorization, 'Bearer fixture');
+    return Response.json({ envs: names.map(key => ({ key, target: [target] })) });
+  };
+  await verifyLearnerConfiguration(learnerTarget, 'fixture', fixture(keys));
+  for (const missing of keys)
+    await assert.rejects(verifyLearnerConfiguration(learnerTarget, 'fixture', fixture(keys.filter(k => k !== missing))), new RegExp(missing));
+  await assert.rejects(verifyLearnerConfiguration(learnerTarget, 'fixture', fixture(keys, 'preview')), /production variables/);
+  await assert.rejects(verifyLearnerConfiguration(learnerTarget, 'fixture', async () => new Response('', { status: 403 })), /Cannot verify/);
 });

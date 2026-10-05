@@ -6,7 +6,7 @@
 | 플랫폼 | 저장소 | 배포 브랜치 | 배포 대상 |
 |---|---|---|---|
 | Shorts 웹 | commerce-automation-kit | `deploy/shopshorts` | Cloudflare Pages `shopshorts-dash` |
-| Hanmadi 웹 | commerce-automation-kit | `deploy/hanmadi` | Vercel `hanmadi` |
+| Hanmadi 웹 | commerce-automation-kit | `deploy/hanmadi` | Vercel `hanmadi`; [학습 앱 활성화 상태](hanmadi-learner.md) |
 | Hanmadi 관리자 | commerce-automation-kit | `deploy/hanmadi-admin` | Vercel `hanmadi-admin`; [분리·활성화 상태](hanmadi-admin.md) |
 | FIRSTFRAME | commerce-automation-kit | `deploy/firstframe` | Cloudflare Pages `firstframe-showcase` |
 | LiteLLM | commerce-automation-kit | `deploy/litellm` | 개인 GCP `replay-live-508202`의 `shared-ai` |
@@ -41,8 +41,9 @@ Festa는 `feature/agent-test`였다. Vercel Git 연결 상태는 API 접근 제�
 
 Hanmadi의 `vercel.json`은 Vercel 자체 Git 배포를 끄므로 Actions와 중복 배포되지 않는다.
 **이 설정이 머지된 뒤에는 기존 native Git 배포에 의존하지 말고 인증/브랜치 준비 후 첫 Actions 배포까지 확인한다.**
-학습 앱은 Vercel CLI production 환경 pull → production build → prebuilt production deploy 순서다.
-관리자는 프로젝트 전용 토큰을 유지하기 위해 테스트 → 소스 업로드 → Vercel production 원격 빌드·배포를 사용한다. [차이와 검증 상태](hanmadi-admin.md)를 참고한다.
+학습 앱과 관리자는 각각의 프로젝트 전용 토큰으로 테스트 → 소스 업로드 → Vercel production 원격 빌드·배포를 사용한다.
+팀 조회가 필요한 `pull`은 사용하지 않는다. 학습 앱도 운영 SHA·Google 로그인 준비 상태·공개 개인정보처리방침·비로그인 관리자 접근 차단을 확인한 뒤 배포 성공으로 처리한다.
+[학습 앱 활성화 상태](hanmadi-learner.md)와 [관리자 설정](hanmadi-admin.md)을 구분한다.
 
 ## 인증정보
 
@@ -52,10 +53,10 @@ GitHub의 짧은 수명 OIDC 토큰으로 Cloudflare broker에 필요한 키만 
 | Cloudflare Secrets Store 이름 | 용도 |
 |---|---|
 | `CAK_DEPLOY_CLOUDFLARE_API_TOKEN` | 위 Cloudflare 계정의 Pages 편집용 API 토큰 |
-| `CAK_DEPLOY_VERCEL_TOKEN` | Hanmadi 소속 Vercel 팀의 배포용 토큰 |
+| `CAK_DEPLOY_VERCEL_TOKEN` | 학습 앱 Vercel `hanmadi` 프로젝트 전용 배포 토큰 |
 
 로컬 로그인 토큰을 복사하지 말고 CI용 토큰을 발급한다. Cloudflare 토큰은 Pages 편집에 필요한 계정 범위로 제한한다.
-Vercel 토큰의 접근 범위/만료도 발급 시 설정한다. 토큰 값은 Git·로그·채팅에 남기지 않는다.
+Vercel 토큰은 대상 프로젝트만 접근하도록 제한하고 만료를 설정한다. 토큰 값은 Git·로그·채팅에 남기지 않는다.
 권한 `0600`인 비공개 JSON 파일에 필요한 키만 넣어 다음 명령으로 등록한다.
 
 ```sh

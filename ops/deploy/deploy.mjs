@@ -27,22 +27,18 @@ export function commands(name, target, env) {
     const vercel = ['--yes', 'vercel@60.1.3'];
     const admin = target.deploymentMode === 'admin';
     const releaseEnv = [`HANMADI_RELEASE_SHA=${env.GITHUB_SHA}`,
-      ...(admin ? ['HANMADI_DEPLOYMENT=admin', `HANMADI_APP_URL=${target.learningAppUrl}`] : [])];
+      `HANMADI_DEPLOYMENT=${admin ? 'admin' : 'learner'}`,
+      ...(admin ? [`HANMADI_APP_URL=${target.learningAppUrl}`] : [])];
     return [
       { command: 'npm', cwd, args: ['ci', '--workspaces=false'] },
       { command: 'npm', cwd, args: ['test'] },
-      // pull requires team metadata access that project-scoped tokens do not have.
-      // deploy supports these tokens and builds the admin source on Vercel instead.
+      // Project-scoped CI tokens cannot read team metadata for pull/build.
+      // Both Hanmadi surfaces use the validated remote production build path.
       // https://github.com/vercel/vercel/issues/17506
-      ...(!admin ? [
-        { command: 'npx', cwd, args: [...vercel, 'pull', '--yes', '--environment=production'] },
-        { command: 'npx', cwd, args: [...vercel, 'build', '--prod'] },
-      ] : []),
-      { command: 'npx', cwd, args: [...vercel, 'deploy', ...(!admin ? ['--prebuilt'] : []), '--prod', '--yes',
-        ...(admin ? ['--project', target.project] : []),
+      { command: 'npx', cwd, args: [...vercel, 'deploy', '--prod', '--yes', '--project', target.project,
         '--meta', `githubCommitSha=${env.GITHUB_SHA}`, '--meta', `githubCommitRef=${target.branch}`,
         '--meta', `hanmadiApplication=${name}`, ...releaseEnv.flatMap(value => ['--env', value]),
-        ...(admin ? releaseEnv.flatMap(value => ['--build-env', value]) : [])] },
+        ...releaseEnv.flatMap(value => ['--build-env', value])] },
     ];
   }
   const archive = `/tmp/cak-litellm-${env.GITHUB_SHA}.tar`;
@@ -82,6 +78,39 @@ export async function verifyAdminConfiguration(target, token, request = fetch) {
   if (missing.length) throw new Error(`Configure admin production variables before deployment: ${missing.join(', ')}`);
 }
 
+export async function verifyLearnerRelease(target, sha, request = fetch) {
+  const origin = new URL(target.productionUrl).origin;
+  const get = path => request(`${origin}${path}`, {
+    redirect: 'error', signal: AbortSignal.timeout(15000), cache: 'no-store',
+  });
+  const identity = await get('/api/deployment');
+  if (!identity.ok) throw new Error('Learner release identity is unavailable');
+  const body = await identity.json();
+  if (body.application !== 'hanmadi' || body.revision !== sha) throw new Error('Learner release identity does not match');
+  const study = await get('/study');
+  if (!study.ok || !(await study.text()).includes('한마디')) throw new Error('Learner entry page is unavailable');
+  const privacy = await get('/privacy');
+  if (!privacy.ok || !(await privacy.text()).includes('개인정보 처리방침')) throw new Error('Learner privacy policy is unavailable');
+  const google = await get('/api/study/account/google');
+  if (!google.ok) throw new Error('Learner Google login is unavailable');
+  const settings = await google.json();
+  if (settings.available !== true || !target.googleClientId || settings.clientId !== target.googleClientId)
+    throw new Error('Learner Google login configuration does not match');
+  const admin = await get('/api/study/admin');
+  if (admin.status !== 403) throw new Error('Learner admin API must reject anonymous requests');
+}
+
+export async function verifyLearnerConfiguration(target, token, request = fetch) {
+  const response = await request(`https://api.vercel.com/v9/projects/${target.project}/env?teamId=${target.organization}`, {
+    headers: { authorization: `Bearer ${token}` }, redirect: 'error', signal: AbortSignal.timeout(20000),
+  });
+  if (!response.ok) throw new Error('Cannot verify learner runtime configuration');
+  const body = await response.json();
+  const names = new Set((body.envs || []).filter(item => item.target?.includes('production')).map(item => item.key));
+  const missing = ['AUTH_SECRET', 'TUTOR_PINS', 'UPSTASH_REDIS_REST_URL', 'UPSTASH_REDIS_REST_TOKEN', 'HANMADI_GOOGLE_CLIENT_ID'].filter(key => !names.has(key));
+  if (missing.length) throw new Error(`Configure learner production variables before deployment: ${missing.join(', ')}`);
+}
+
 async function main() {
   const name = process.argv[2], env = { ...process.env }, target = deployment(name, env);
   const head = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
@@ -107,30 +136,34 @@ async function main() {
     env.VERCEL_ORG_ID = target.organization; env.VERCEL_PROJECT_ID = target.project;
     env.VERCEL_TOKEN = env[target.credential || 'DEPLOY_VERCEL_TOKEN'];
     env.HANMADI_RELEASE_SHA = env.GITHUB_SHA;
+    env.HANMADI_DEPLOYMENT = target.deploymentMode === 'admin' ? 'admin' : 'learner';
     if (target.deploymentMode === 'admin') {
       env.HANMADI_DEPLOYMENT = 'admin'; env.HANMADI_APP_URL = target.learningAppUrl;
       await verifyAdminConfiguration(target, env.VERCEL_TOKEN);
+    } else {
+      await verifyLearnerConfiguration(target, env.VERCEL_TOKEN);
     }
   }
   for (const step of commands(name, target, env)) {
     console.log(`Deploy ${name}: ${step.command}`); // Never log credential-bearing arguments.
     execFileSync(step.command, step.args, { cwd: resolve(step.cwd || '.'), env, stdio: 'inherit' });
   }
-  if (target.deploymentMode === 'admin') {
+  if (target.driver === 'vercel') {
+    const verifyRelease = target.deploymentMode === 'admin' ? verifyAdminRelease : verifyLearnerRelease;
     for (let attempt = 0; ; attempt++) {
-      try { await verifyAdminRelease(target, env.GITHUB_SHA); break; }
+      try { await verifyRelease(target, env.GITHUB_SHA); break; }
       catch (error) {
         if (attempt >= 11) throw error;
         await new Promise(resolve => setTimeout(resolve, 5000));
       }
     }
-    console.log(`Verified hanmadi-admin: ${target.productionUrl}, revision ${env.GITHUB_SHA}`);
+    console.log(`Verified ${name}: ${target.productionUrl}, revision ${env.GITHUB_SHA}`);
   }
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   main().catch(error => {
-    if (error.message?.startsWith('Configure admin production variables before deployment:')) console.error(error.message);
+    if (/^Configure (admin|learner) production variables before deployment:/.test(error.message || '')) console.error(error.message);
     else console.error('Deployment failed; inspect the preceding stage. Credentials are not included in this error.');
     process.exitCode = 1;
   });
