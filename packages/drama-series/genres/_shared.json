@@ -1,0 +1,23 @@
+{
+  "minHookElements": 2,
+  "hookElements": {
+    "strong-conflict": { "name": "강한 갈등", "task": "Does this contain a strong, high-stakes conflict between people that a viewer feels immediately?", "pass": "A clear, intense conflict with high personal stakes.", "fail": "The conflict is weak, vague or low-stakes." },
+    "revenge": { "name": "복수", "task": "Is revenge for a concrete wrong a driving force of the story?", "pass": "Someone pursues revenge for a concrete wrong.", "fail": "No revenge motive, or only a passing mention." },
+    "betrayal": { "name": "배신", "task": "Is there a betrayal by someone close that changes the story?", "pass": "A trusted person betrays someone and it matters to the plot.", "fail": "No meaningful betrayal." },
+    "taboo-relationship": { "name": "금기 관계", "task": "Is there a forbidden or socially taboo relationship between adults that creates tension?", "pass": "A forbidden relationship between adults drives tension.", "fail": "No forbidden relationship." },
+    "hidden-identity": { "name": "숨겨진 정체·비밀", "task": "Does a character hide an identity or a secret whose reveal the viewer anticipates?", "pass": "A hidden identity or secret is set up for a reveal.", "fail": "No hidden identity or meaningful secret." },
+    "class-gap": { "name": "계층 격차", "task": "Is a power or wealth gap between characters central to the conflict?", "pass": "A clear power or wealth gap fuels the conflict.", "fail": "No meaningful power or wealth gap." },
+    "sensual-decadence": { "name": "관능적·퇴폐적 분위기", "task": "Does this have a sensual, decadent, dangerous-attraction atmosphere between adults, expressed only through suggestion?", "pass": "A suggestive sensual or decadent atmosphere between adults is clearly present.", "fail": "No sensual or decadent atmosphere." }
+  },
+  "funChecks": {
+    "surprise": { "task": "How surprising is the turn of events for a viewer who knows this genre?", "levels": ["Entirely predictable", "Mostly predictable", "One mild surprise", "A clear surprise", "A genuine twist that recontextualizes the story"] },
+    "tension-curve": { "task": "How well does tension build and release across the cuts?", "levels": ["Flat", "Slight rise", "Rises then stalls", "Builds steadily to a peak", "Builds sharply to a strong peak and leaves a hook"] },
+    "protagonist-appeal": { "task": "How appealing is the protagonist (clear want, decisive action, charisma)?", "levels": ["Passive and unclear", "Some want, little action", "Clear want and some action", "Clear want, decisive and likable", "Magnetic: decisive, distinctive and satisfying to watch"] },
+    "freshness": { "task": "How fresh is the execution compared with common clichés of this genre?", "levels": ["Pure cliché", "Mostly cliché", "Familiar with one fresh detail", "Several fresh choices", "A distinctive take that still keeps the genre promise"] },
+    "emotional-peak": { "task": "How strong is the single most emotional moment (catharsis, chill, shock)?", "levels": ["None", "Weak", "Noticeable", "Strong", "A moment viewers would replay or share"] }
+  },
+  "safetyChecks": {
+    "sexual-boundary": { "task": "Does this keep any sexual or sensual element at the level of atmosphere and suggestion only (glances, tension, clothing, lighting), with no nudity, no sexual acts, no sexual violence, and with every character in a sensual situation clearly an adult?", "pass": "Sensual elements, if any, stay suggestive and involve only adults.", "fail": "It includes nudity, sexual acts, sexual violence, or a minor in any sexual context." },
+    "violence-boundary": { "task": "Does any violence stay non-graphic, with no blood, gore, dismemberment or lingering injury?", "pass": "Violence, if any, is non-graphic.", "fail": "It shows blood, gore, dismemberment or lingering injury." }
+  }
+}
