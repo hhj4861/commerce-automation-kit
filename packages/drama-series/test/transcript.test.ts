@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { parseEpisode, parseSeries } from '../src/core/model.js';
 import { loadGenre } from '../src/core/genre.js';
 import { bestSubstringDistance, normalizeKo, scoreTranscript, transcriptGate, transcriptReadiness } from '../src/core/transcript.js';
-import { TranscribeError, parseWhisperJson } from '../src/adapters/transcribe/whisper.js';
+import { DEFAULT_WHISPER_MODEL, TranscribeError, parseWhisperJson } from '../src/adapters/transcribe/whisper.js';
 import type { GateContext } from '../src/core/gates/types.js';
 
 const fx = (name: string): any => JSON.parse(readFileSync(new URL(`./fixtures/${name}`, import.meta.url), 'utf8'));
@@ -61,6 +61,10 @@ describe('transcript gate', () => {
     expect(transcriptReadiness(c, [...ok, bad]).map((f) => f.message)).toEqual([expect.stringMatching(/미통과: c2/)]);
     const edited = ctx((e) => { e.cuts[2].lines[0].text = '그 손 놓으세요.'; });
     expect(transcriptReadiness(edited, ok).some((f) => /현재 대본과 다름/.test(f.message))).toBe(true);
+  });
+  it('defaults to whisper large-v3', () => {
+    // 2026-10-06: small/medium 이 실제로 발음된 대사를 "아이고"·"샤토"로 적거나 통째로 빠뜨렸다. large-v3 는 같은 클립을 정확히 받아썼다.
+    expect(DEFAULT_WHISPER_MODEL).toBe('large-v3');
   });
   it('parses whisper JSON output', () => {
     expect(parseWhisperJson({ text: ' 넌 또 뭐야? ', segments: [] })).toBe('넌 또 뭐야?');
