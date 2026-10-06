@@ -1,6 +1,7 @@
 // Only these fixed diagnostics may cross the runner boundary. Never return CLI
 // stdout/stderr: login output can contain authorization URLs and credentials.
 const messages = Object.freeze({
+  DISCOVERY_RESEARCH_UNGROUNDED: 'AI가 고른 대상명을 인용된 검색 자료에서 확인하지 못해 추천을 보류했어요. 주제나 조건을 좁혀 다시 추천받아 주세요.',
   DISCOVERY_NO_ACCEPTED_CANDIDATES: '검색 근거와 새로움을 모두 충족한 후보를 찾지 못했어요. 관심사를 더 구체화해 주세요.',
   DISCOVERY_BUDGET_LIMIT: '오늘의 주제 검증 요청 한도에 도달했어요. 한도가 회복된 뒤 다시 시도해 주세요.',
   DISCOVERY_IN_PROGRESS: '이전 주제 검증이 진행 중이에요. 완료 후 결과를 확인해 주세요.',
