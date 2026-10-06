@@ -1,3 +1,4 @@
+import {hybridScene,hybridPlan} from '../public/hybrid-plan.js';
 import {webtoon,webtoonPlan,webtoonScenes} from './webtoon-plan.js';
 import {relatedVideoUrl} from '../public/shorts-policy.js';
 import {VISUAL_QUALITY,visualDirection} from './visual-direction.js';
@@ -44,7 +45,7 @@ export function validateScenes(scenes, {animationStyle = false, stripMotion = fa
     if(scene.camera!==undefined&&!CAMERAS.includes(scene.camera))fail('지원하지 않는 카메라 움직임입니다.');
     if(scene.shot!==undefined&&!SHOTS.includes(scene.shot))fail('지원하지 않는 장면 구도입니다.');
     const motion=stripMotion?undefined:validateMotionScene(scene,i,{animationStyle});
-    return { id, narration: scene.narration.trim(), prompt: scene.prompt.trim(), duration: scene.duration, kind: scene.kind, ...(scene.camera?{camera:scene.camera}:{}), ...(scene.shot?{shot:scene.shot}:{}), ...(scene.animation!==undefined?{animation:animationPlan(scene.animation)}:{}), ...(motion?{motion}:{}), ...(scene.webtoon!==undefined?{webtoon:webtoonPlan(scene.webtoon)}:{}), ...(scene.visualDirection!==undefined?{visualDirection:visualDirection(scene.visualDirection)}:{}) };
+    return { ...(scene.hybrid!==undefined?{hybrid:hybridScene(scene.hybrid,scene)}:{}), id, narration: scene.narration.trim(), prompt: scene.prompt.trim(), duration: scene.duration, kind: scene.kind, ...(scene.camera?{camera:scene.camera}:{}), ...(scene.shot?{shot:scene.shot}:{}), ...(scene.animation!==undefined?{animation:animationPlan(scene.animation)}:{}), ...(motion?{motion}:{}), ...(scene.webtoon!==undefined?{webtoon:webtoonPlan(scene.webtoon)}:{}), ...(scene.visualDirection!==undefined?{visualDirection:visualDirection(scene.visualDirection)}:{}) };
   });
 }
 export function validateEdit(input, job) {
@@ -106,14 +107,15 @@ export function changeProject(original, action, body) {
   const job = structuredClone(original);
   if (busy(job)) fail('현재 작업이 끝난 뒤 수정하세요.', 409);
   if (job.upload) fail('업로드가 접수된 프로젝트는 변경할 수 없습니다. 새 프로젝트를 만드세요.', 409);
-  const invalidate = () => { job.approved = false; job.render = null; job.task = null; };
+  const invalidate = () => { job.approved = false; job.render = null; job.task = null; delete job.productionPlan; };
   if (action === 'scenes') {
     const scenes = validateScenes(body.scenes,{animationStyle:animated(job.brief)});
     if (scenes.reduce((sum, s) => sum + s.duration, 0) > (job.brief.format === 'short' ? 180 : 600)) fail('장면의 전체 길이가 형식의 최대 길이를 넘었습니다.');
     if(animated(job.brief) && scenes.some(s=>s.kind!=='video'||!s.animation))fail('애니메이션 장면은 영상과 장면별 동작 구성이 필요합니다.');
     if(webtoon(job.brief))webtoonScenes(scenes);
+    hybridPlan({...job,scenes});
     const old = Object.fromEntries(job.scenes.map(s => [s.id, s]));
-    for (const s of scenes) if (old[s.id]?.prompt !== s.prompt || old[s.id]?.kind !== s.kind || old[s.id]?.camera !== s.camera || old[s.id]?.shot !== s.shot || JSON.stringify(old[s.id]?.animation)!==JSON.stringify(s.animation) || JSON.stringify(old[s.id]?.webtoon)!==JSON.stringify(s.webtoon) || JSON.stringify(old[s.id]?.motion)!==JSON.stringify(s.motion) || JSON.stringify(old[s.id]?.visualDirection)!==JSON.stringify(s.visualDirection) || ((animated(job.brief)||webtoon(job.brief)||s.motion)&&old[s.id]?.duration!==s.duration) || (old[s.id]?.narration !== s.narration && job.assets[s.id]?.source === 'ai')) delete job.assets[s.id];
+    for (const s of scenes) if (old[s.id]?.prompt !== s.prompt || old[s.id]?.kind !== s.kind || old[s.id]?.camera !== s.camera || old[s.id]?.shot !== s.shot || JSON.stringify(old[s.id]?.animation)!==JSON.stringify(s.animation) || JSON.stringify(old[s.id]?.hybrid)!==JSON.stringify(s.hybrid) || JSON.stringify(old[s.id]?.webtoon)!==JSON.stringify(s.webtoon) || JSON.stringify(old[s.id]?.motion)!==JSON.stringify(s.motion) || JSON.stringify(old[s.id]?.visualDirection)!==JSON.stringify(s.visualDirection) || ((animated(job.brief)||webtoon(job.brief)||s.motion)&&old[s.id]?.duration!==s.duration) || (old[s.id]?.narration !== s.narration && job.assets[s.id]?.source === 'ai')) delete job.assets[s.id];
     for (const id of Object.keys(old)) if (!scenes.some(s => s.id === id)) delete job.assets[id];
     if(job.edit?.voice!==undefined)job.voicePreference=job.edit.voice;
     job.scenes = scenes; job.title = String(body.title || job.title).slice(0, 100); job.edit = null; invalidate();
