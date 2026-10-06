@@ -1,0 +1,299 @@
+{
+  "seriesId": "day-zero",
+  "no": 1,
+  "title": "사태 0일 — 시험분",
+  "cuts": [
+    {
+      "id": "c1",
+      "locationId": "ruin",
+      "durationSec": 8,
+      "cast": [
+        {
+          "characterId": "seoyun",
+          "lookId": "future"
+        }
+      ],
+      "action": "10년 후 폐허 도시. 지친 서윤이 버려진 차에 기대 주저앉으며 숨을 고른다.",
+      "visualEn": "Wide shot of {location}, then a slow push-in on {seoyun} sinking down against a rusted abandoned car, exhausted, breathing hard, eyes closing. Quiet wind.",
+      "caption": "사태 10년 후",
+      "lines": [
+        {
+          "speaker": "seoyun",
+          "text": "결국… 아무도 못 지켰네.",
+          "kind": "dialogue",
+          "verification": {
+            "status": "human-approved",
+            "approvedBy": "user",
+            "at": "2026-10-06T06:10:24.384Z",
+            "note": "JEV r2 미확정(context p .78/.89, voice p .76/.88, natural p .90/.95) — 사용자 추천안 승인 2026-10-06",
+            "lineHash": "8a39f5300724fab3"
+          }
+        }
+      ]
+    },
+    {
+      "id": "c2",
+      "locationId": "aisle",
+      "durationSec": 12,
+      "cast": [
+        {
+          "characterId": "seoyun",
+          "lookId": "present"
+        },
+        {
+          "characterId": "minjae",
+          "lookId": "base"
+        }
+      ],
+      "action": "새벽 2시 물류센터. 박스를 들던 서윤이 그대로 멈춘다. 조끼 주머니에서 스마트폰을 꺼내 잠금화면의 날짜를 확인한다(화면 클로즈업). 지나가던 민재가 의아하게 본다.",
+      "visualEn": "In {location}, {seoyun} freezes while holding a cardboard box, sets it down, pulls a smartphone from her vest pocket and stares at the glowing lock screen (close-up of the phone screen, no readable text). Her eyes widen in disbelief. {minjae} walks past carrying a box and looks at her, puzzled.",
+      "caption": "10월 6일 (목) 오전 2:00 · 사태 3시간 전",
+      "propState": {
+        "빈 박스 더미": "쌓여 있음",
+        "셔터": "열려 있음"
+      },
+      "transitionIn": "flash",
+      "lines": [
+        {
+          "speaker": "seoyun",
+          "text": "날짜가… 십 년 전이야.",
+          "kind": "dialogue",
+          "verification": {
+            "status": "unverified"
+          }
+        },
+        {
+          "speaker": "seoyun",
+          "text": "정말 돌아왔어.",
+          "kind": "dialogue",
+          "verification": {
+            "status": "unverified"
+          }
+        },
+        {
+          "speaker": "minjae",
+          "text": "누나, 왜 그래요? 어디 아파요?",
+          "kind": "dialogue",
+          "verification": {
+            "status": "unverified"
+          }
+        }
+      ]
+    },
+    {
+      "id": "c3",
+      "locationId": "aisle",
+      "durationSec": 15,
+      "cast": [
+        {
+          "characterId": "seoyun",
+          "lookId": "present"
+        },
+        {
+          "characterId": "changsik",
+          "lookId": "base"
+        },
+        {
+          "characterId": "minjae",
+          "lookId": "base"
+        },
+        {
+          "characterId": "parkys",
+          "lookId": "base"
+        }
+      ],
+      "action": "멀리서 사이렌이 울린다. 서윤이 박스를 내려놓고 셔터를 내리라고 외치자, 오창식이 비웃으며 민재 손에서 창고 열쇠 꾸러미를 낚아챈다. 박반장이 웃으며 셔터 스위치 앞을 가로막고 서서 사람들을 말린다. 아무도 셔터를 내리지 않는다.",
+      "visualEn": "Distant sirens begin. In {location}, {seoyun} drops a box and shouts toward the half-open loading shutter. {changsik} sneers and snatches the warehouse key ring from the hand of {minjae}. {parkys} steps in front of the shutter control switch with a warm smile and waves everyone off. Nobody moves to the shutter.",
+      "sfx": "distant sirens",
+      "propState": {
+        "빈 박스 더미": "쌓여 있음",
+        "셔터": "반쯤 열림",
+        "창고 열쇠 꾸러미": "오창식이 쥠"
+      },
+      "lines": [
+        {
+          "speaker": "seoyun",
+          "text": "셔터 내려요! 빨리요!",
+          "kind": "dialogue",
+          "verification": {
+            "status": "unverified"
+          }
+        },
+        {
+          "speaker": "changsik",
+          "text": "알바 주제에 어디서 명령이야?",
+          "kind": "dialogue",
+          "verification": {
+            "status": "unverified"
+          }
+        },
+        {
+          "speaker": "parkys",
+          "text": "별일 아니야. 셔터는 그냥 둬.",
+          "kind": "dialogue",
+          "verification": {
+            "status": "unverified"
+          }
+        }
+      ]
+    },
+    {
+      "id": "c4",
+      "locationId": "aisle",
+      "durationSec": 12,
+      "cast": [
+        {
+          "characterId": "seoyun",
+          "lookId": "present"
+        },
+        {
+          "characterId": "changsik",
+          "lookId": "base"
+        }
+      ],
+      "action": "내려지지 않은 셔터 아래로 감염자가 달려든다. 서윤이 몸통을 걷어차지만 감염자는 끄떡없이 다시 덤빈다. 서윤이 벽 소화함의 소방도끼를 뽑아 휘두르고, 베는 순간 화면은 굳은 오창식의 얼굴로 넘어간다. 둔탁한 소리 뒤 감염자가 빈 박스 더미 위로 쓰러져 다시 일어나지 않는다.",
+      "visualEn": "Under the half-open shutter of {location}, an infected worker with pale grey skin and clouded eyes lunges in. {seoyun} kicks it hard in the chest; it barely staggers and comes again. She pulls a red fire axe from the wall fire cabinet and swings; at the moment of impact the shot cuts to the frozen, shocked face of {changsik}, with a dull thud off-screen. The infected collapses onto the pile of empty boxes and stays still. Non-graphic, no blood, no visible wound.",
+      "sfx": "body kick thud, axe swing whoosh, dull off-screen thud, boxes collapsing, sudden silence",
+      "propState": {
+        "빈 박스 더미": "무너짐",
+        "셔터": "반쯤 열림",
+        "창고 열쇠 꾸러미": "오창식이 쥠",
+        "소방도끼": "서윤이 쥠"
+      },
+      "lines": [
+        {
+          "speaker": "seoyun",
+          "text": "다들 뒤로 가요!",
+          "kind": "dialogue",
+          "verification": {
+            "status": "unverified"
+          }
+        },
+        {
+          "speaker": "seoyun",
+          "text": "몸은 안 통해요. 머리를 쳐야 돼요.",
+          "kind": "dialogue",
+          "verification": {
+            "status": "unverified"
+          }
+        }
+      ]
+    },
+    {
+      "id": "c5",
+      "locationId": "aisle",
+      "durationSec": 12,
+      "cast": [
+        {
+          "characterId": "seoyun",
+          "lookId": "present"
+        },
+        {
+          "characterId": "changsik",
+          "lookId": "base"
+        },
+        {
+          "characterId": "parkys",
+          "lookId": "base"
+        }
+      ],
+      "action": "서윤이 오창식의 손목을 꺾어 열쇠를 되찾고 셔터를 끝까지 내린다. 박반장이 다정하게 웃으며 다가오고, 서윤은 차갑게 그를 바라본다.",
+      "visualEn": "{seoyun} twists the wrist of {changsik} and takes back the ring of keys, then pulls the shutter fully down. {parkys} approaches with a warm smile. Close-up of {seoyun} watching him with cold, knowing eyes.",
+      "propState": {
+        "빈 박스 더미": "무너짐",
+        "셔터": "완전히 내려감",
+        "창고 열쇠 꾸러미": "서윤이 쥠",
+        "소방도끼": "서윤 곁에 세워 둠"
+      },
+      "lines": [
+        {
+          "speaker": "changsik",
+          "text": "이거 놔!",
+          "kind": "dialogue",
+          "verification": {
+            "status": "unverified"
+          }
+        },
+        {
+          "speaker": "seoyun",
+          "text": "열쇠는 제가 맡을게요.",
+          "kind": "dialogue",
+          "verification": {
+            "status": "unverified"
+          }
+        },
+        {
+          "speaker": "parkys",
+          "text": "서윤 씨, 그 열쇠는 나한테 줘.",
+          "kind": "dialogue",
+          "verification": {
+            "status": "unverified"
+          }
+        }
+      ]
+    },
+    {
+      "id": "c6",
+      "locationId": "aisle",
+      "durationSec": 5,
+      "cast": [
+        {
+          "characterId": "parkys",
+          "lookId": "base"
+        }
+      ],
+      "action": "서윤의 기억. 10년 전 같은 밤 같은 통로, 모두 잠든 사이 박반장이 몰래 셔터 개방 버튼을 누른다.",
+      "visualEn": "Flashback with a cold blue tint in {location}: workers asleep on the floor, {parkys} glances around, then secretly presses the shutter open button with a blank face. The shutter starts to rise.",
+      "sfx": "low hum of the shutter motor",
+      "propState": {
+        "빈 박스 더미": "무너짐",
+        "셔터": "완전히 내려감",
+        "창고 열쇠 꾸러미": "서윤이 쥠",
+        "소방도끼": "소화함 안(회상)"
+      },
+      "transitionIn": "flash",
+      "lines": []
+    },
+    {
+      "id": "c7",
+      "locationId": "aisle",
+      "durationSec": 9,
+      "cast": [
+        {
+          "characterId": "seoyun",
+          "lookId": "present"
+        }
+      ],
+      "action": "서윤이 벽시계(2시 13분)를 올려다본 뒤, 저편의 박반장을 차갑게 바라보며 혼잣말을 한다.",
+      "visualEn": "{seoyun} looks up at the wall clock reading 2:13 in {location}, keys tight in her fist, jaw set.",
+      "caption": "2화에서 계속",
+      "propState": {
+        "빈 박스 더미": "무너짐",
+        "셔터": "완전히 내려감",
+        "창고 열쇠 꾸러미": "서윤이 쥠",
+        "소방도끼": "서윤 곁에 세워 둠"
+      },
+      "lines": [
+        {
+          "speaker": "seoyun",
+          "text": "오늘 밤, 저 사람이 문을 열어.",
+          "kind": "dialogue",
+          "verification": {
+            "status": "unverified"
+          }
+        },
+        {
+          "speaker": "seoyun",
+          "text": "이번엔… 내가 먼저야.",
+          "kind": "dialogue",
+          "verification": {
+            "status": "verified",
+            "judgeRef": "v2-dialogue-r1.res.json",
+            "at": "2026-10-06T08:27:02.115Z",
+            "lineHash": "427f5792a09548cb"
+          }
+        }
+      ]
+    }
+  ]
+}

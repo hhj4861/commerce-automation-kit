@@ -1,0 +1,12 @@
+{
+  "gate": "topic-traitor-foreman",
+  "stage": "topic",
+  "ok": true,
+  "fingerprint": "7062e0c1ea5876cc",
+  "findings": [
+    {
+      "severity": "review",
+      "message": "장르 약속 미확정(pass 0.06/0.53)"
+    }
+  ]
+}

@@ -1,0 +1,103 @@
+{
+  "ok": true,
+  "report": {
+    "gate": "dialogue-judge",
+    "stage": "episode",
+    "ok": true,
+    "fingerprint": "d814964953c02b88",
+    "findings": [
+      {
+        "severity": "review",
+        "message": "JEV 미확정: context, voice, natural, reaction — 문구 수정 후 재판정 또는 사람 승인",
+        "cutId": "c2",
+        "lineIndex": 0,
+        "evidence": "날짜가… 십 년 전이야."
+      },
+      {
+        "severity": "review",
+        "message": "JEV 미확정: voice, reaction — 문구 수정 후 재판정 또는 사람 승인",
+        "cutId": "c2",
+        "lineIndex": 1,
+        "evidence": "정말 돌아왔어."
+      },
+      {
+        "severity": "review",
+        "message": "JEV 미확정: context, voice, natural, reaction — 문구 수정 후 재판정 또는 사람 승인",
+        "cutId": "c2",
+        "lineIndex": 2,
+        "evidence": "누나, 안 들고 뭐 해요?"
+      },
+      {
+        "severity": "review",
+        "message": "JEV 미확정: voice, reaction — 문구 수정 후 재판정 또는 사람 승인",
+        "cutId": "c3",
+        "lineIndex": 0,
+        "evidence": "셔터 내려요! 빨리요!"
+      },
+      {
+        "severity": "review",
+        "message": "JEV 미확정: natural — 문구 수정 후 재판정 또는 사람 승인",
+        "cutId": "c3",
+        "lineIndex": 1,
+        "evidence": "알바 주제에 어디서 명령이야?"
+      },
+      {
+        "severity": "review",
+        "message": "JEV 미확정: context, voice — 문구 수정 후 재판정 또는 사람 승인",
+        "cutId": "c3",
+        "lineIndex": 2,
+        "evidence": "별일 아니야. 셔터는 그냥 둬."
+      },
+      {
+        "severity": "review",
+        "message": "JEV 미확정: reaction — 문구 수정 후 재판정 또는 사람 승인",
+        "cutId": "c4",
+        "lineIndex": 0,
+        "evidence": "다들 뒤로 가요!"
+      },
+      {
+        "severity": "review",
+        "message": "JEV 미확정: context, voice, natural, reaction — 문구 수정 후 재판정 또는 사람 승인",
+        "cutId": "c4",
+        "lineIndex": 1,
+        "evidence": "몸은 소용없어요. 머리예요."
+      },
+      {
+        "severity": "review",
+        "message": "JEV 미확정: context, voice, natural, reaction — 문구 수정 후 재판정 또는 사람 승인",
+        "cutId": "c5",
+        "lineIndex": 0,
+        "evidence": "이거 놔!"
+      },
+      {
+        "severity": "review",
+        "message": "JEV 미확정: voice, natural — 문구 수정 후 재판정 또는 사람 승인",
+        "cutId": "c5",
+        "lineIndex": 1,
+        "evidence": "열쇠는 제가 맡을게요."
+      },
+      {
+        "severity": "review",
+        "message": "JEV 미확정: context, voice, natural, reaction — 문구 수정 후 재판정 또는 사람 승인",
+        "cutId": "c5",
+        "lineIndex": 2,
+        "evidence": "서윤 씨, 어디서 그런 걸 배웠어?"
+      },
+      {
+        "severity": "review",
+        "message": "JEV 미확정: context, voice, reaction — 문구 수정 후 재판정 또는 사람 승인",
+        "cutId": "c6",
+        "lineIndex": 0,
+        "evidence": "미안하다… 다들."
+      },
+      {
+        "severity": "review",
+        "message": "JEV 미확정: context, voice, natural — 문구 수정 후 재판정 또는 사람 승인",
+        "cutId": "c7",
+        "lineIndex": 0,
+        "evidence": "오늘 밤, 당신이 문을 열었지."
+      }
+    ]
+  },
+  "verifiedLines": 1
+}

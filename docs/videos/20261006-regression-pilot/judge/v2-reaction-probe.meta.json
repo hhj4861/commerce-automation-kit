@@ -1,0 +1,55 @@
+{
+  "kind": "dialogue",
+  "fingerprint": "522cb5f5e583d052",
+  "questions": [
+    {
+      "id": "c3__0__context",
+      "type": "choice"
+    },
+    {
+      "id": "c3__0__voice",
+      "type": "choice"
+    },
+    {
+      "id": "c3__0__natural",
+      "type": "choice"
+    },
+    {
+      "id": "c3__0__reaction",
+      "type": "choice"
+    },
+    {
+      "id": "c3__1__context",
+      "type": "choice"
+    },
+    {
+      "id": "c3__1__voice",
+      "type": "choice"
+    },
+    {
+      "id": "c3__1__natural",
+      "type": "choice"
+    },
+    {
+      "id": "c3__1__reaction",
+      "type": "choice"
+    },
+    {
+      "id": "c3__2__context",
+      "type": "choice"
+    },
+    {
+      "id": "c3__2__voice",
+      "type": "choice"
+    },
+    {
+      "id": "c3__2__natural",
+      "type": "choice"
+    },
+    {
+      "id": "c3__2__reaction",
+      "type": "choice"
+    }
+  ],
+  "createdAt": "2026-10-06T08:26:14.362Z"
+}

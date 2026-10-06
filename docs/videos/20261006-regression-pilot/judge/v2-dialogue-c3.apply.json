@@ -1,0 +1,26 @@
+{
+  "ok": true,
+  "report": {
+    "gate": "dialogue-judge",
+    "stage": "episode",
+    "ok": true,
+    "fingerprint": "522cb5f5e583d052",
+    "findings": [
+      {
+        "severity": "review",
+        "message": "JEV 미확정: voice — 문구 수정 후 재판정 또는 사람 승인",
+        "cutId": "c3",
+        "lineIndex": 0,
+        "evidence": "셔터부터 내려요! 지금 바로!"
+      },
+      {
+        "severity": "review",
+        "message": "JEV 미확정: natural — 문구 수정 후 재판정 또는 사람 승인",
+        "cutId": "c3",
+        "lineIndex": 1,
+        "evidence": "알바 주제에 어디서 명령이야?"
+      }
+    ]
+  },
+  "verifiedLines": 1
+}

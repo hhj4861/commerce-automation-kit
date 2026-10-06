@@ -1,0 +1,166 @@
+{
+  "sshExit": 0,
+  "events": [
+    {
+      "event": "ready",
+      "alias": "drama-series-jev-1791275183",
+      "policy": {
+        "models": [
+          "jev-1.13.0"
+        ],
+        "allowed_routes": [
+          "/typesafe/v1/systemone"
+        ],
+        "duration": "1h",
+        "max_budget": 0.01,
+        "budget_duration": "1d",
+        "rpm_limit": 10
+      },
+      "maxRequests": 1,
+      "startedUtc": "2026-10-06T08:26:23.647380+00:00"
+    },
+    {
+      "event": "response",
+      "status": 200,
+      "elapsedMs": 280,
+      "body": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "c3__0__context": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.93,
+            "probabilities": {
+              "pass": 0.97,
+              "fail": 0.03
+            }
+          },
+          "c3__0__voice": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.63,
+            "probabilities": {
+              "pass": 0.82,
+              "fail": 0.18
+            }
+          },
+          "c3__0__natural": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.89,
+            "probabilities": {
+              "pass": 0.94,
+              "fail": 0.06
+            }
+          },
+          "c3__0__reaction": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.65,
+            "probabilities": {
+              "pass": 0.82,
+              "fail": 0.18
+            }
+          },
+          "c3__1__context": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.97,
+            "probabilities": {
+              "pass": 0.98,
+              "fail": 0.02
+            }
+          },
+          "c3__1__voice": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.98,
+            "probabilities": {
+              "pass": 0.99,
+              "fail": 0.01
+            }
+          },
+          "c3__1__natural": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.78,
+            "probabilities": {
+              "pass": 0.89,
+              "fail": 0.11
+            }
+          },
+          "c3__1__reaction": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.95,
+            "probabilities": {
+              "pass": 0.98,
+              "fail": 0.02
+            }
+          },
+          "c3__2__context": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.89,
+            "probabilities": {
+              "pass": 0.94,
+              "fail": 0.06
+            }
+          },
+          "c3__2__voice": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.89,
+            "probabilities": {
+              "pass": 0.95,
+              "fail": 0.05
+            }
+          },
+          "c3__2__natural": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.94,
+            "probabilities": {
+              "pass": 0.97,
+              "fail": 0.03
+            }
+          },
+          "c3__2__reaction": {
+            "type": "choice",
+            "choice": "fail",
+            "confidence": 0.11,
+            "probabilities": {
+              "pass": 0.44,
+              "fail": 0.56
+            }
+          }
+        },
+        "usage": {
+          "input_tokens": 6904,
+          "output_tokens": 399
+        }
+      }
+    },
+    {
+      "event": "cleanup",
+      "alias": "drama-series-jev-1791275183",
+      "requests": 1,
+      "revoked": true,
+      "policyAndSpend": {
+        "models": [
+          "jev-1.13.0"
+        ],
+        "allowed_routes": [
+          "/typesafe/v1/systemone"
+        ],
+        "spend": 0,
+        "max_budget": 0.01,
+        "budget_duration": "1d",
+        "rpm_limit": 10,
+        "expires": "2026-10-06T09:26:23.633000Z"
+      },
+      "afterRevokeStatus": 401,
+      "finishedUtc": "2026-10-06T08:26:24.420058+00:00"
+    }
+  ]
+}

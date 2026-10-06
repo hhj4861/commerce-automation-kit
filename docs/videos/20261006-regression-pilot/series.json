@@ -98,7 +98,7 @@
     {
       "id": "aisle",
       "name": "물류센터 야간 작업 통로",
-      "anchorText": "Same continuous location in every cut: the night-shift aisle of the warehouse shown in the location reference - a roller conveyor on the left, tall blue pallet racks stacked with cardboard boxes on the right, polished grey epoxy floor with yellow lane lines, amber safety lamps, a wide roll-up loading shutter at the far end, a wall clock, and a waist-high pile of empty cardboard boxes beside the conveyor. Keep the same layout, lighting and time of night.",
+      "anchorText": "Same continuous location in every cut: the night-shift aisle of the warehouse shown in the location reference - a roller conveyor on the left, tall blue pallet racks stacked with cardboard boxes on the right, polished grey epoxy floor with yellow lane lines, amber safety lamps, a wide roll-up loading shutter at the far end, a wall clock, a red wall-mounted fire cabinet holding a fire axe, and a waist-high pile of empty cardboard boxes beside the conveyor. Keep the same layout, lighting and time of night.",
       "props": [
         "컨베이어",
         "팔레트",
@@ -106,7 +106,10 @@
         "빈 박스 더미",
         "셔터",
         "창고 열쇠 꾸러미",
-        "벽시계"
+        "벽시계",
+        "스마트폰",
+        "소방도끼",
+        "소화함"
       ],
       "refAssetId": "2ae41641-0ebc-45ea-ae47-f785e1c5b8f3"
     },

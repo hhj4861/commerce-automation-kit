@@ -1,0 +1,139 @@
+{
+  "sshExit": 0,
+  "events": [
+    {
+      "event": "ready",
+      "alias": "drama-series-jev-1791274785",
+      "policy": {
+        "models": [
+          "jev-1.13.0"
+        ],
+        "allowed_routes": [
+          "/typesafe/v1/systemone"
+        ],
+        "duration": "1h",
+        "max_budget": 0.01,
+        "budget_duration": "1d",
+        "rpm_limit": 10
+      },
+      "maxRequests": 1,
+      "startedUtc": "2026-10-06T08:19:45.154947+00:00"
+    },
+    {
+      "event": "response",
+      "status": 200,
+      "elapsedMs": 260,
+      "body": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "c3__0__context": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.89,
+            "probabilities": {
+              "fail": 0.06,
+              "pass": 0.94
+            }
+          },
+          "c3__0__voice": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.66,
+            "probabilities": {
+              "fail": 0.17,
+              "pass": 0.83
+            }
+          },
+          "c3__0__natural": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.91,
+            "probabilities": {
+              "fail": 0.04,
+              "pass": 0.96
+            }
+          },
+          "c3__1__context": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.93,
+            "probabilities": {
+              "fail": 0.04,
+              "pass": 0.96
+            }
+          },
+          "c3__1__voice": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.96,
+            "probabilities": {
+              "fail": 0.02,
+              "pass": 0.98
+            }
+          },
+          "c3__1__natural": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.77,
+            "probabilities": {
+              "fail": 0.11,
+              "pass": 0.89
+            }
+          },
+          "c3__2__context": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.89,
+            "probabilities": {
+              "fail": 0.05,
+              "pass": 0.95
+            }
+          },
+          "c3__2__voice": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.9,
+            "probabilities": {
+              "fail": 0.05,
+              "pass": 0.95
+            }
+          },
+          "c3__2__natural": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.93,
+            "probabilities": {
+              "fail": 0.04,
+              "pass": 0.96
+            }
+          }
+        },
+        "usage": {
+          "input_tokens": 4037,
+          "output_tokens": 300
+        }
+      }
+    },
+    {
+      "event": "cleanup",
+      "alias": "drama-series-jev-1791274785",
+      "requests": 1,
+      "revoked": true,
+      "policyAndSpend": {
+        "models": [
+          "jev-1.13.0"
+        ],
+        "allowed_routes": [
+          "/typesafe/v1/systemone"
+        ],
+        "spend": 0,
+        "max_budget": 0.01,
+        "budget_duration": "1d",
+        "rpm_limit": 10,
+        "expires": "2026-10-06T09:19:45.134000Z"
+      },
+      "afterRevokeStatus": 401,
+      "finishedUtc": "2026-10-06T08:19:45.894395+00:00"
+    }
+  ]
+}
