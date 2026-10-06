@@ -85,7 +85,7 @@ describe('drama-series CLI', { timeout: 180_000 }, () => {
     cli(['validate', ...w.base, '--gates', w.p('gates')]);
     judge(w, 'scenario');
     judge(w, 'props');
-    expect(cli(['judge-build', '--kind', 'dialogue', ...w.base, '--out', w.p('again2.json')]).json.questions).toBe(3);
+    expect(cli(['judge-build', '--kind', 'dialogue', ...w.base, '--out', w.p('again2.json')]).json.questions).toBe(4);
     const still = plan(w);
     expect(still.code).toBe(1);
     expect(JSON.stringify(still.json)).toMatch(/검증 이후 대사·장면이 바뀜/);

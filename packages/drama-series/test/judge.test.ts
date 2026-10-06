@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { parseEpisode, parseSeries } from '../src/core/model.js';
 import { loadGenre } from '../src/core/genre.js';
 import { applyVerdicts, buildQuestions } from '../src/core/judge-gates.js';
-import { JudgeError, type ExpectedQuestion, type JudgeQuestion, type JudgeVerdict } from '../src/core/judge-types.js';
+import { JudgeError, type ChoiceQuestion, type ExpectedQuestion, type JudgeQuestion, type JudgeVerdict } from '../src/core/judge-types.js';
 import { buildJevRequest, parseJevResponse } from '../src/adapters/judge/jev.js';
 import type { GateContext } from '../src/core/gates/types.js';
 import { lineHash } from '../src/core/line-hash.js';
@@ -30,25 +30,32 @@ function answer(qs: JudgeQuestion[], pick: (id: string) => ['pass' | 'fail', num
 }
 
 describe('buildQuestions', () => {
-  it('asks three choice checks for every unverified line', () => {
+  it('asks four choice checks for every unverified line', () => {
     const qs = buildQuestions('dialogue', ctx());
-    expect(qs).toHaveLength(15);
+    expect(qs).toHaveLength(20);
     expect(qs[0]).toMatchObject({ id: 'c2__0__context', type: 'choice' });
     const voice = qs.find((q) => q.id === 'c4__0__voice')!;
     expect(String(voice.candidate.speakerProfile)).toMatch(/윗사람에게 깍듯한 존댓말/);
+  });
+  it('asks whether a line reacts to what just happened instead of generic filler', () => {
+    const qs = buildQuestions('dialogue', ctx());
+    const r = qs.find((q) => q.id === 'c3__0__reaction') as ChoiceQuestion;
+    expect(r.type).toBe('choice');
+    expect(r.fail).toMatch(/generic/i);
+    expect(String(r.candidate.previousCut)).toContain(ctx().episode.cuts[1]!.action);
   });
   it('skips lines already verified or approved', () => {
     const c = ctx();
     const cut = c.episode.cuts[1]!;
     cut.lines[0]!.verification = { status: 'human-approved', approvedBy: 'u', lineHash: lineHash(cut, cut.lines[0]!) };
-    expect(buildQuestions('dialogue', c)).toHaveLength(12);
+    expect(buildQuestions('dialogue', c)).toHaveLength(16);
   });
   it('asks again for a verified line whose text changed after verification', () => {
     const c = ctx();
     const cut = c.episode.cuts[1]!;
     cut.lines[0]!.verification = { status: 'verified', lineHash: lineHash(cut, cut.lines[0]!) };
     cut.lines[0]!.text = '야, 막내. 돈 내놔.';
-    expect(buildQuestions('dialogue', c)).toHaveLength(15);
+    expect(buildQuestions('dialogue', c)).toHaveLength(20);
   });
   it('builds scenario structure, topic-element carry, safety and fun-score questions', () => {
     const ids = buildQuestions('scenario', ctx()).map((q) => `${q.id}:${q.type}`);

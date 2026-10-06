@@ -24,6 +24,12 @@ const LINE_CHECKS = {
     'Sounds like natural colloquial Korean dialogue.',
     'Sounds unnatural, translated, stiff, or grammatically awkward for spoken dialogue.',
   ],
+  // 2026-10-06: "다들 진정해. 내가 있잖아." 처럼 어느 위기 장면에도 붙는 범용 대사가 context 를 통과했다.
+  reaction: [
+    'This is one dialogue line of a Korean drama. Does this line respond specifically to the immediately preceding line or action (see sceneSoFar and previousCut) and move this scene forward? Judge only specificity and scene function, not wording.',
+    'The line directly answers or reacts to what just happened, and could not be moved to another scene without losing meaning.',
+    'The line is generic filler that could be pasted into any tense scene, ignores the immediately preceding line or action, or adds nothing to the scene.',
+  ],
 } as const satisfies Record<string, Check>;
 export const LINE_CHECK_KEYS = Object.keys(LINE_CHECKS) as (keyof typeof LINE_CHECKS)[];
 
@@ -48,6 +54,14 @@ function speakerProfile(ctx: GateContext, id: string): string {
   if (!c) return id;
   const s = c.speech;
   return `${c.profile} 말투: 기본 ${s.default}${s.toSuperior ? `, 윗사람에게 ${s.toSuperior}` : ''}${s.toSubordinate ? `, 아랫사람에게 ${s.toSubordinate}` : ''}`;
+}
+
+function previousCut(ctx: GateContext, cut: DramaCut): string {
+  const i = ctx.episode.cuts.findIndex((c) => c.id === cut.id);
+  const prev = i > 0 ? ctx.episode.cuts[i - 1] : undefined;
+  if (!prev) return '(첫 컷)';
+  const lines = prev.lines.map((l) => `${nameOf(ctx, l.speaker)}: "${l.text}"`).join(' ');
+  return `${prev.action}${lines ? ` 대사 — ${lines}` : ''}`;
 }
 
 function sceneSoFar(ctx: GateContext, cut: DramaCut, index: number): string {
@@ -77,7 +91,7 @@ export function buildQuestions(kind: EpisodeJudgeKind, ctx: GateContext): JudgeQ
         isLineCleared(cut, line)
           ? []
           : LINE_CHECK_KEYS.map((k) => choiceQ(`${cut.id}__${i}__${k}`, LINE_CHECKS[k], {
-              speaker: nameOf(ctx, line.speaker), speakerProfile: speakerProfile(ctx, line.speaker), sceneSoFar: sceneSoFar(ctx, cut, i), line: line.text,
+              speaker: nameOf(ctx, line.speaker), speakerProfile: speakerProfile(ctx, line.speaker), previousCut: previousCut(ctx, cut), sceneSoFar: sceneSoFar(ctx, cut, i), line: line.text,
             })),
       ),
     );
