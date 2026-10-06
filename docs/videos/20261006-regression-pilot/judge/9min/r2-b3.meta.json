@@ -1,0 +1,231 @@
+{
+  "kind": "dialogue",
+  "fingerprint": "60ad19fa1b1c7637",
+  "questions": [
+    {
+      "id": "c18__1__context",
+      "type": "choice"
+    },
+    {
+      "id": "c18__1__voice",
+      "type": "choice"
+    },
+    {
+      "id": "c18__1__natural",
+      "type": "choice"
+    },
+    {
+      "id": "c18__1__reaction",
+      "type": "choice"
+    },
+    {
+      "id": "c19__0__context",
+      "type": "choice"
+    },
+    {
+      "id": "c19__0__voice",
+      "type": "choice"
+    },
+    {
+      "id": "c19__0__natural",
+      "type": "choice"
+    },
+    {
+      "id": "c19__0__reaction",
+      "type": "choice"
+    },
+    {
+      "id": "c20__0__context",
+      "type": "choice"
+    },
+    {
+      "id": "c20__0__voice",
+      "type": "choice"
+    },
+    {
+      "id": "c20__0__natural",
+      "type": "choice"
+    },
+    {
+      "id": "c20__0__reaction",
+      "type": "choice"
+    },
+    {
+      "id": "c20__1__context",
+      "type": "choice"
+    },
+    {
+      "id": "c20__1__voice",
+      "type": "choice"
+    },
+    {
+      "id": "c20__1__natural",
+      "type": "choice"
+    },
+    {
+      "id": "c20__1__reaction",
+      "type": "choice"
+    },
+    {
+      "id": "c21__0__context",
+      "type": "choice"
+    },
+    {
+      "id": "c21__0__voice",
+      "type": "choice"
+    },
+    {
+      "id": "c21__0__natural",
+      "type": "choice"
+    },
+    {
+      "id": "c21__0__reaction",
+      "type": "choice"
+    },
+    {
+      "id": "c21__1__context",
+      "type": "choice"
+    },
+    {
+      "id": "c21__1__voice",
+      "type": "choice"
+    },
+    {
+      "id": "c21__1__natural",
+      "type": "choice"
+    },
+    {
+      "id": "c21__1__reaction",
+      "type": "choice"
+    },
+    {
+      "id": "c22__0__context",
+      "type": "choice"
+    },
+    {
+      "id": "c22__0__voice",
+      "type": "choice"
+    },
+    {
+      "id": "c22__0__natural",
+      "type": "choice"
+    },
+    {
+      "id": "c22__0__reaction",
+      "type": "choice"
+    },
+    {
+      "id": "c22__1__context",
+      "type": "choice"
+    },
+    {
+      "id": "c22__1__voice",
+      "type": "choice"
+    },
+    {
+      "id": "c22__1__natural",
+      "type": "choice"
+    },
+    {
+      "id": "c22__1__reaction",
+      "type": "choice"
+    },
+    {
+      "id": "c23__0__context",
+      "type": "choice"
+    },
+    {
+      "id": "c23__0__voice",
+      "type": "choice"
+    },
+    {
+      "id": "c23__0__natural",
+      "type": "choice"
+    },
+    {
+      "id": "c23__0__reaction",
+      "type": "choice"
+    },
+    {
+      "id": "c24__0__context",
+      "type": "choice"
+    },
+    {
+      "id": "c24__0__voice",
+      "type": "choice"
+    },
+    {
+      "id": "c24__0__natural",
+      "type": "choice"
+    },
+    {
+      "id": "c24__0__reaction",
+      "type": "choice"
+    },
+    {
+      "id": "c25__0__context",
+      "type": "choice"
+    },
+    {
+      "id": "c25__0__voice",
+      "type": "choice"
+    },
+    {
+      "id": "c25__0__natural",
+      "type": "choice"
+    },
+    {
+      "id": "c25__0__reaction",
+      "type": "choice"
+    },
+    {
+      "id": "c25__1__context",
+      "type": "choice"
+    },
+    {
+      "id": "c25__1__voice",
+      "type": "choice"
+    },
+    {
+      "id": "c25__1__natural",
+      "type": "choice"
+    },
+    {
+      "id": "c25__1__reaction",
+      "type": "choice"
+    },
+    {
+      "id": "c26__0__context",
+      "type": "choice"
+    },
+    {
+      "id": "c26__0__voice",
+      "type": "choice"
+    },
+    {
+      "id": "c26__0__natural",
+      "type": "choice"
+    },
+    {
+      "id": "c26__0__reaction",
+      "type": "choice"
+    },
+    {
+      "id": "c26__1__context",
+      "type": "choice"
+    },
+    {
+      "id": "c26__1__voice",
+      "type": "choice"
+    },
+    {
+      "id": "c26__1__natural",
+      "type": "choice"
+    },
+    {
+      "id": "c26__1__reaction",
+      "type": "choice"
+    }
+  ],
+  "createdAt": "2026-10-06T08:58:54.809Z"
+}

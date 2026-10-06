@@ -1,0 +1,110 @@
+{
+  "ok": true,
+  "report": {
+    "gate": "dialogue-judge",
+    "stage": "episode",
+    "ok": true,
+    "fingerprint": "8e4421e731bc041a",
+    "findings": [
+      {
+        "severity": "review",
+        "message": "JEV 미확정: voice, reaction — 문구 수정 후 재판정 또는 사람 승인",
+        "cutId": "c26",
+        "lineIndex": 0,
+        "evidence": "고생했어. 물 좀 마셔."
+      },
+      {
+        "severity": "review",
+        "message": "JEV 미확정: context, voice, natural, reaction — 문구 수정 후 재판정 또는 사람 승인",
+        "cutId": "c26",
+        "lineIndex": 1,
+        "evidence": "반장님은 안 주무세요?"
+      },
+      {
+        "severity": "review",
+        "message": "JEV 미확정: context, voice, natural, reaction — 문구 수정 후 재판정 또는 사람 승인",
+        "cutId": "c27",
+        "lineIndex": 0,
+        "evidence": "난 불침번 설게. 다들 자."
+      },
+      {
+        "severity": "review",
+        "message": "JEV 미확정: reaction — 문구 수정 후 재판정 또는 사람 승인",
+        "cutId": "c29",
+        "lineIndex": 0,
+        "evidence": "이번엔 안 열려."
+      },
+      {
+        "severity": "review",
+        "message": "JEV 미확정: context, voice, natural, reaction — 문구 수정 후 재판정 또는 사람 승인",
+        "cutId": "c30",
+        "lineIndex": 0,
+        "evidence": "이건… 누구 거지?"
+      },
+      {
+        "severity": "review",
+        "message": "JEV 미확정: context, reaction — 문구 수정 후 재판정 또는 사람 승인",
+        "cutId": "c31",
+        "lineIndex": 0,
+        "evidence": "누나, 진짜 안 자요?"
+      },
+      {
+        "severity": "review",
+        "message": "JEV 미확정: context, voice, natural, reaction — 문구 수정 후 재판정 또는 사람 승인",
+        "cutId": "c31",
+        "lineIndex": 1,
+        "evidence": "오늘 밤은 길 거예요."
+      },
+      {
+        "severity": "review",
+        "message": "JEV 미확정: context, natural, reaction — 문구 수정 후 재판정 또는 사람 승인",
+        "cutId": "c32",
+        "lineIndex": 0,
+        "evidence": "온다."
+      },
+      {
+        "severity": "review",
+        "message": "JEV 미확정: context, voice — 문구 수정 후 재판정 또는 사람 승인",
+        "cutId": "c34",
+        "lineIndex": 0,
+        "evidence": "왜 안 되지…?"
+      },
+      {
+        "severity": "review",
+        "message": "JEV 미확정: context, voice, natural — 문구 수정 후 재판정 또는 사람 승인",
+        "cutId": "c35",
+        "lineIndex": 0,
+        "evidence": "전원은 제가 내렸어요."
+      },
+      {
+        "severity": "review",
+        "message": "JEV 미확정: context, voice, natural, reaction — 문구 수정 후 재판정 또는 사람 승인",
+        "cutId": "c35",
+        "lineIndex": 1,
+        "evidence": "서윤 씨, 오해야. 확인만 한 거야."
+      },
+      {
+        "severity": "review",
+        "message": "JEV 미확정: context, voice, natural — 문구 수정 후 재판정 또는 사람 승인",
+        "cutId": "c36",
+        "lineIndex": 0,
+        "evidence": "십 년 전에도 그렇게 웃었죠."
+      },
+      {
+        "severity": "review",
+        "message": "JEV 미확정: context, voice, reaction — 문구 수정 후 재판정 또는 사람 승인",
+        "cutId": "c36",
+        "lineIndex": 1,
+        "evidence": "그게 무슨 소리야?"
+      },
+      {
+        "severity": "review",
+        "message": "JEV 미확정: context, voice, natural, reaction — 문구 수정 후 재판정 또는 사람 승인",
+        "cutId": "c37",
+        "lineIndex": 0,
+        "evidence": "그래, 다 알면 얘기가 쉽지."
+      }
+    ]
+  },
+  "verifiedLines": 3
+}

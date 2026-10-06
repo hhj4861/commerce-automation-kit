@@ -1,0 +1,16 @@
+{
+  "gate": "continuity",
+  "stage": "episode",
+  "ok": true,
+  "fingerprint": "60ad19fa1b1c7637",
+  "findings": [
+    {
+      "severity": "review",
+      "message": "장소 참조 이미지 없음: 물류센터 식량 창고 (컷 간 배경 일관성을 보장할 수 없음)"
+    },
+    {
+      "severity": "review",
+      "message": "장소 참조 이미지 없음: 물류센터 관제실 (컷 간 배경 일관성을 보장할 수 없음)"
+    }
+  ]
+}

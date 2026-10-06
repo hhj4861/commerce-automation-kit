@@ -1,0 +1,31 @@
+{
+  "ok": true,
+  "report": {
+    "gate": "props",
+    "stage": "episode",
+    "ok": true,
+    "fingerprint": "8e4421e731bc041a",
+    "findings": [
+      {
+        "severity": "review",
+        "message": "single-location 미확정(pass 0.82/0.91)",
+        "cutId": "c4"
+      },
+      {
+        "severity": "review",
+        "message": "props 미확정(pass 0.48/0.74)",
+        "cutId": "c9"
+      },
+      {
+        "severity": "review",
+        "message": "props 미확정(pass 0.83/0.91)",
+        "cutId": "c39"
+      },
+      {
+        "severity": "review",
+        "message": "props 미확정(pass 0.83/0.92)",
+        "cutId": "c40"
+      }
+    ]
+  }
+}

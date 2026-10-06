@@ -1,0 +1,78 @@
+{
+  "gate": "dialogue-judge",
+  "stage": "episode",
+  "ok": true,
+  "fingerprint": "60ad19fa1b1c7637",
+  "findings": [
+    {
+      "severity": "review",
+      "message": "JEV 미확정: context, voice, natural, reaction — 문구 수정 후 재판정 또는 사람 승인",
+      "cutId": "c39",
+      "lineIndex": 1,
+      "evidence": "그 무전기, 반장님 거죠?"
+    },
+    {
+      "severity": "review",
+      "message": "JEV 미확정: context, natural, reaction — 문구 수정 후 재판정 또는 사람 승인",
+      "cutId": "c40",
+      "lineIndex": 0,
+      "evidence": "반장님…? 지금 뭐 하신 거예요?"
+    },
+    {
+      "severity": "review",
+      "message": "JEV 미확정: context, voice, natural, reaction — 문구 수정 후 재판정 또는 사람 승인",
+      "cutId": "c40",
+      "lineIndex": 1,
+      "evidence": "박 반장, 당신 미쳤어?"
+    },
+    {
+      "severity": "review",
+      "message": "JEV 미확정: context, voice, natural, reaction — 문구 수정 후 재판정 또는 사람 승인",
+      "cutId": "c41",
+      "lineIndex": 0,
+      "evidence": "박 반장, 문 열렸어? 우리 앞에 와 있어."
+    },
+    {
+      "severity": "review",
+      "message": "JEV 미확정: context, voice, natural, reaction — 문구 수정 후 재판정 또는 사람 승인",
+      "cutId": "c42",
+      "lineIndex": 0,
+      "evidence": "밖에 사람이 있어요."
+    },
+    {
+      "severity": "review",
+      "message": "JEV 미확정: context, voice, reaction — 문구 수정 후 재판정 또는 사람 승인",
+      "cutId": "c42",
+      "lineIndex": 1,
+      "evidence": "좀비 말고… 사람?"
+    },
+    {
+      "severity": "review",
+      "message": "JEV 미확정: context, voice, natural — 문구 수정 후 재판정 또는 사람 승인",
+      "cutId": "c43",
+      "lineIndex": 0,
+      "evidence": "문은 안 열어. 돌아가."
+    },
+    {
+      "severity": "review",
+      "message": "JEV 미확정: voice, natural — 문구 수정 후 재판정 또는 사람 승인",
+      "cutId": "c44",
+      "lineIndex": 0,
+      "evidence": "그럼 우리가 열지."
+    },
+    {
+      "severity": "review",
+      "message": "JEV 미확정: context, voice, natural, reaction — 문구 수정 후 재판정 또는 사람 승인",
+      "cutId": "c45",
+      "lineIndex": 0,
+      "evidence": "늦었어. 저 사람들은 못 막아."
+    },
+    {
+      "severity": "review",
+      "message": "JEV 미확정: voice, natural — 문구 수정 후 재판정 또는 사람 승인",
+      "cutId": "c45",
+      "lineIndex": 1,
+      "evidence": "아니요. 이번엔 안 늦었어요."
+    }
+  ]
+}

@@ -1,0 +1,562 @@
+{
+  "sshExit": 0,
+  "events": [
+    {
+      "event": "ready",
+      "alias": "drama-series-jev-1791277182",
+      "policy": {
+        "models": [
+          "jev-1.13.0"
+        ],
+        "allowed_routes": [
+          "/typesafe/v1/systemone"
+        ],
+        "duration": "1h",
+        "max_budget": 0.01,
+        "budget_duration": "1d",
+        "rpm_limit": 10
+      },
+      "maxRequests": 1,
+      "startedUtc": "2026-10-06T08:59:42.777429+00:00"
+    },
+    {
+      "event": "response",
+      "status": 200,
+      "elapsedMs": 273,
+      "body": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "c27__0__context": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.44,
+            "probabilities": {
+              "fail": 0.28,
+              "pass": 0.72
+            }
+          },
+          "c27__0__voice": {
+            "type": "choice",
+            "choice": "fail",
+            "confidence": 0.06,
+            "probabilities": {
+              "fail": 0.53,
+              "pass": 0.47
+            }
+          },
+          "c27__0__natural": {
+            "type": "choice",
+            "choice": "fail",
+            "confidence": 0.09,
+            "probabilities": {
+              "fail": 0.54,
+              "pass": 0.46
+            }
+          },
+          "c27__0__reaction": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.05,
+            "probabilities": {
+              "fail": 0.48,
+              "pass": 0.52
+            }
+          },
+          "c29__0__context": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.94,
+            "probabilities": {
+              "fail": 0.03,
+              "pass": 0.97
+            }
+          },
+          "c29__0__voice": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.88,
+            "probabilities": {
+              "fail": 0.06,
+              "pass": 0.94
+            }
+          },
+          "c29__0__natural": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.92,
+            "probabilities": {
+              "fail": 0.04,
+              "pass": 0.96
+            }
+          },
+          "c29__0__reaction": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.55,
+            "probabilities": {
+              "fail": 0.23,
+              "pass": 0.77
+            }
+          },
+          "c30__0__context": {
+            "type": "choice",
+            "choice": "fail",
+            "confidence": 0.36,
+            "probabilities": {
+              "fail": 0.68,
+              "pass": 0.32
+            }
+          },
+          "c30__0__voice": {
+            "type": "choice",
+            "choice": "fail",
+            "confidence": 0.24,
+            "probabilities": {
+              "fail": 0.62,
+              "pass": 0.38
+            }
+          },
+          "c30__0__natural": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.17,
+            "probabilities": {
+              "fail": 0.41,
+              "pass": 0.59
+            }
+          },
+          "c30__0__reaction": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.1,
+            "probabilities": {
+              "fail": 0.45,
+              "pass": 0.55
+            }
+          },
+          "c31__0__context": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.67,
+            "probabilities": {
+              "fail": 0.16,
+              "pass": 0.84
+            }
+          },
+          "c31__0__voice": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.9,
+            "probabilities": {
+              "fail": 0.05,
+              "pass": 0.95
+            }
+          },
+          "c31__0__natural": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.89,
+            "probabilities": {
+              "fail": 0.06,
+              "pass": 0.94
+            }
+          },
+          "c31__0__reaction": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.28,
+            "probabilities": {
+              "fail": 0.36,
+              "pass": 0.64
+            }
+          },
+          "c31__1__context": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.78,
+            "probabilities": {
+              "fail": 0.11,
+              "pass": 0.89
+            }
+          },
+          "c31__1__voice": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.34,
+            "probabilities": {
+              "fail": 0.33,
+              "pass": 0.67
+            }
+          },
+          "c31__1__natural": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.66,
+            "probabilities": {
+              "fail": 0.17,
+              "pass": 0.83
+            }
+          },
+          "c31__1__reaction": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.8,
+            "probabilities": {
+              "fail": 0.1,
+              "pass": 0.9
+            }
+          },
+          "c34__0__context": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.77,
+            "probabilities": {
+              "fail": 0.11,
+              "pass": 0.89
+            }
+          },
+          "c34__0__voice": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.64,
+            "probabilities": {
+              "fail": 0.18,
+              "pass": 0.82
+            }
+          },
+          "c34__0__natural": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.92,
+            "probabilities": {
+              "fail": 0.04,
+              "pass": 0.96
+            }
+          },
+          "c34__0__reaction": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.94,
+            "probabilities": {
+              "fail": 0.03,
+              "pass": 0.97
+            }
+          },
+          "c35__0__context": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.22,
+            "probabilities": {
+              "fail": 0.39,
+              "pass": 0.61
+            }
+          },
+          "c35__0__voice": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.72,
+            "probabilities": {
+              "fail": 0.14,
+              "pass": 0.86
+            }
+          },
+          "c35__0__natural": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.5,
+            "probabilities": {
+              "fail": 0.25,
+              "pass": 0.75
+            }
+          },
+          "c35__0__reaction": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.91,
+            "probabilities": {
+              "fail": 0.05,
+              "pass": 0.95
+            }
+          },
+          "c35__1__context": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.76,
+            "probabilities": {
+              "fail": 0.12,
+              "pass": 0.88
+            }
+          },
+          "c35__1__voice": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.28,
+            "probabilities": {
+              "fail": 0.36,
+              "pass": 0.64
+            }
+          },
+          "c35__1__natural": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.63,
+            "probabilities": {
+              "fail": 0.18,
+              "pass": 0.82
+            }
+          },
+          "c35__1__reaction": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.76,
+            "probabilities": {
+              "fail": 0.12,
+              "pass": 0.88
+            }
+          },
+          "c36__0__context": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.78,
+            "probabilities": {
+              "fail": 0.11,
+              "pass": 0.89
+            }
+          },
+          "c36__0__voice": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.42,
+            "probabilities": {
+              "fail": 0.29,
+              "pass": 0.71
+            }
+          },
+          "c36__0__natural": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.75,
+            "probabilities": {
+              "fail": 0.12,
+              "pass": 0.88
+            }
+          },
+          "c36__0__reaction": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.83,
+            "probabilities": {
+              "fail": 0.09,
+              "pass": 0.91
+            }
+          },
+          "c36__1__context": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.47,
+            "probabilities": {
+              "fail": 0.26,
+              "pass": 0.74
+            }
+          },
+          "c36__1__voice": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.08,
+            "probabilities": {
+              "fail": 0.46,
+              "pass": 0.54
+            }
+          },
+          "c36__1__natural": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.89,
+            "probabilities": {
+              "fail": 0.06,
+              "pass": 0.94
+            }
+          },
+          "c36__1__reaction": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.84,
+            "probabilities": {
+              "fail": 0.08,
+              "pass": 0.92
+            }
+          },
+          "c37__0__context": {
+            "type": "choice",
+            "choice": "fail",
+            "confidence": 0.2,
+            "probabilities": {
+              "fail": 0.6,
+              "pass": 0.4
+            }
+          },
+          "c37__0__voice": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.26,
+            "probabilities": {
+              "fail": 0.37,
+              "pass": 0.63
+            }
+          },
+          "c37__0__natural": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.1,
+            "probabilities": {
+              "fail": 0.45,
+              "pass": 0.55
+            }
+          },
+          "c37__0__reaction": {
+            "type": "choice",
+            "choice": "fail",
+            "confidence": 0.31,
+            "probabilities": {
+              "fail": 0.65,
+              "pass": 0.35
+            }
+          },
+          "c38__0__context": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.56,
+            "probabilities": {
+              "fail": 0.22,
+              "pass": 0.78
+            }
+          },
+          "c38__0__voice": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.29,
+            "probabilities": {
+              "fail": 0.36,
+              "pass": 0.64
+            }
+          },
+          "c38__0__natural": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.42,
+            "probabilities": {
+              "fail": 0.29,
+              "pass": 0.71
+            }
+          },
+          "c38__0__reaction": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.83,
+            "probabilities": {
+              "fail": 0.08,
+              "pass": 0.92
+            }
+          },
+          "c38__1__context": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.4,
+            "probabilities": {
+              "fail": 0.3,
+              "pass": 0.7
+            }
+          },
+          "c38__1__voice": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.22,
+            "probabilities": {
+              "fail": 0.39,
+              "pass": 0.61
+            }
+          },
+          "c38__1__natural": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.52,
+            "probabilities": {
+              "fail": 0.24,
+              "pass": 0.76
+            }
+          },
+          "c38__1__reaction": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.84,
+            "probabilities": {
+              "fail": 0.08,
+              "pass": 0.92
+            }
+          },
+          "c39__0__context": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.27,
+            "probabilities": {
+              "fail": 0.36,
+              "pass": 0.64
+            }
+          },
+          "c39__0__voice": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.25,
+            "probabilities": {
+              "fail": 0.38,
+              "pass": 0.62
+            }
+          },
+          "c39__0__natural": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.83,
+            "probabilities": {
+              "fail": 0.08,
+              "pass": 0.92
+            }
+          },
+          "c39__0__reaction": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.44,
+            "probabilities": {
+              "fail": 0.28,
+              "pass": 0.72
+            }
+          }
+        },
+        "usage": {
+          "input_tokens": 23489,
+          "output_tokens": 1907
+        }
+      }
+    },
+    {
+      "event": "cleanup",
+      "alias": "drama-series-jev-1791277182",
+      "requests": 1,
+      "revoked": true,
+      "policyAndSpend": {
+        "models": [
+          "jev-1.13.0"
+        ],
+        "allowed_routes": [
+          "/typesafe/v1/systemone"
+        ],
+        "spend": 0,
+        "max_budget": 0.01,
+        "budget_duration": "1d",
+        "rpm_limit": 10,
+        "expires": "2026-10-06T09:59:42.768000Z"
+      },
+      "afterRevokeStatus": 401,
+      "finishedUtc": "2026-10-06T08:59:43.694112+00:00"
+    }
+  ]
+}

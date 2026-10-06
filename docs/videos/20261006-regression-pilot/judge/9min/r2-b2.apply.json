@@ -1,0 +1,110 @@
+{
+  "ok": true,
+  "report": {
+    "gate": "dialogue-judge",
+    "stage": "episode",
+    "ok": true,
+    "fingerprint": "60ad19fa1b1c7637",
+    "findings": [
+      {
+        "severity": "review",
+        "message": "JEV 미확정: context, voice, natural, reaction — 문구 수정 후 재판정 또는 사람 승인",
+        "cutId": "c9",
+        "lineIndex": 0,
+        "evidence": "문 열고 다 같이 튀자. 차 있잖아."
+      },
+      {
+        "severity": "review",
+        "message": "JEV 미확정: voice, natural, reaction — 문구 수정 후 재판정 또는 사람 승인",
+        "cutId": "c10",
+        "lineIndex": 0,
+        "evidence": "삼십 분 뒤에 전기가 나가요."
+      },
+      {
+        "severity": "review",
+        "message": "JEV 미확정: voice — 문구 수정 후 재판정 또는 사람 승인",
+        "cutId": "c10",
+        "lineIndex": 1,
+        "evidence": "네가 그걸 어떻게 알아?"
+      },
+      {
+        "severity": "review",
+        "message": "JEV 미확정: context, voice, natural, reaction — 문구 수정 후 재판정 또는 사람 승인",
+        "cutId": "c11",
+        "lineIndex": 0,
+        "evidence": "다들 서윤 씨 말 들어 보자."
+      },
+      {
+        "severity": "review",
+        "message": "JEV 미확정: context, natural, reaction — 문구 수정 후 재판정 또는 사람 승인",
+        "cutId": "c12",
+        "lineIndex": 0,
+        "evidence": "손전등이랑 물부터 챙겨요."
+      },
+      {
+        "severity": "review",
+        "message": "JEV 미확정: context, voice, natural, reaction — 문구 수정 후 재판정 또는 사람 승인",
+        "cutId": "c12",
+        "lineIndex": 1,
+        "evidence": "민재 씨는 저랑 식량부터 확인해요."
+      },
+      {
+        "severity": "review",
+        "message": "JEV 미확정: voice — 문구 수정 후 재판정 또는 사람 승인",
+        "cutId": "c13",
+        "lineIndex": 0,
+        "evidence": "와… 이거면 몇 달은 버티겠는데요?"
+      },
+      {
+        "severity": "review",
+        "message": "JEV 미확정: natural — 문구 수정 후 재판정 또는 사람 승인",
+        "cutId": "c13",
+        "lineIndex": 1,
+        "evidence": "아껴야 해요. 구조는 안 와요."
+      },
+      {
+        "severity": "review",
+        "message": "JEV 미확정: context, voice, reaction — 문구 수정 후 재판정 또는 사람 승인",
+        "cutId": "c15",
+        "lineIndex": 0,
+        "evidence": "진짜… 전기가 나갔어."
+      },
+      {
+        "severity": "review",
+        "message": "JEV 미확정: reaction — 문구 수정 후 재판정 또는 사람 승인",
+        "cutId": "c16",
+        "lineIndex": 0,
+        "evidence": "서윤 씨, 이제 어떻게 해요?"
+      },
+      {
+        "severity": "review",
+        "message": "JEV 미확정: context, voice, natural, reaction — 문구 수정 후 재판정 또는 사람 승인",
+        "cutId": "c16",
+        "lineIndex": 1,
+        "evidence": "누나 말이 맞았어요. 진짜로."
+      },
+      {
+        "severity": "review",
+        "message": "JEV 미확정: context, voice, natural, reaction — 문구 수정 후 재판정 또는 사람 승인",
+        "cutId": "c17",
+        "lineIndex": 0,
+        "evidence": "식량 창고, 우리가 먼저 챙긴다."
+      },
+      {
+        "severity": "review",
+        "message": "JEV 미확정: reaction — 문구 수정 후 재판정 또는 사람 승인",
+        "cutId": "c17",
+        "lineIndex": 1,
+        "evidence": "알겠습니다, 형님."
+      },
+      {
+        "severity": "review",
+        "message": "JEV 미확정: voice, natural — 문구 수정 후 재판정 또는 사람 승인",
+        "cutId": "c18",
+        "lineIndex": 0,
+        "evidence": "거기서 손 떼요."
+      }
+    ]
+  },
+  "verifiedLines": 3
+}

@@ -1,0 +1,23 @@
+{
+  "gate": "dialogue-lint",
+  "stage": "episode",
+  "ok": true,
+  "fingerprint": "60ad19fa1b1c7637",
+  "findings": [
+    {
+      "severity": "review",
+      "message": "컷당 대사 3줄(권장 2줄 이하)",
+      "cutId": "c2"
+    },
+    {
+      "severity": "review",
+      "message": "컷당 대사 3줄(권장 2줄 이하)",
+      "cutId": "c3"
+    },
+    {
+      "severity": "review",
+      "message": "컷당 대사 3줄(권장 2줄 이하)",
+      "cutId": "c5"
+    }
+  ]
+}

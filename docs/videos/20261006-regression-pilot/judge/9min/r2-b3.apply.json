@@ -1,0 +1,110 @@
+{
+  "ok": true,
+  "report": {
+    "gate": "dialogue-judge",
+    "stage": "episode",
+    "ok": true,
+    "fingerprint": "60ad19fa1b1c7637",
+    "findings": [
+      {
+        "severity": "review",
+        "message": "JEV 미확정: context, natural — 문구 수정 후 재판정 또는 사람 승인",
+        "cutId": "c18",
+        "lineIndex": 1,
+        "evidence": "도끼 없으면 너도 그냥 알바야."
+      },
+      {
+        "severity": "review",
+        "message": "JEV 미확정: context, voice, natural, reaction — 문구 수정 후 재판정 또는 사람 승인",
+        "cutId": "c19",
+        "lineIndex": 0,
+        "evidence": "실장님도 해 보실래요?"
+      },
+      {
+        "severity": "review",
+        "message": "JEV 미확정: context, voice, reaction — 문구 수정 후 재판정 또는 사람 승인",
+        "cutId": "c20",
+        "lineIndex": 0,
+        "evidence": "알았어, 알았다고!"
+      },
+      {
+        "severity": "review",
+        "message": "JEV 미확정: context, voice, natural, reaction — 문구 수정 후 재판정 또는 사람 승인",
+        "cutId": "c20",
+        "lineIndex": 1,
+        "evidence": "실장님 몫도 똑같이 드릴게요."
+      },
+      {
+        "severity": "review",
+        "message": "JEV 미확정: natural, reaction — 문구 수정 후 재판정 또는 사람 승인",
+        "cutId": "c21",
+        "lineIndex": 0,
+        "evidence": "고마워요. 서윤 씨 아니었으면…"
+      },
+      {
+        "severity": "review",
+        "message": "JEV 미확정: voice, natural, reaction — 문구 수정 후 재판정 또는 사람 승인",
+        "cutId": "c21",
+        "lineIndex": 1,
+        "evidence": "하루 두 병씩이에요. 아껴요."
+      },
+      {
+        "severity": "review",
+        "message": "JEV 미확정: natural, reaction — 문구 수정 후 재판정 또는 사람 승인",
+        "cutId": "c22",
+        "lineIndex": 0,
+        "evidence": "딸한테 전화가 안 돼요…"
+      },
+      {
+        "severity": "review",
+        "message": "JEV 미확정: context, voice, natural, reaction — 문구 수정 후 재판정 또는 사람 승인",
+        "cutId": "c22",
+        "lineIndex": 1,
+        "evidence": "날 밝으면 같이 찾아봐요."
+      },
+      {
+        "severity": "review",
+        "message": "JEV 미확정: context, voice, natural — 문구 수정 후 재판정 또는 사람 승인",
+        "cutId": "c23",
+        "lineIndex": 0,
+        "evidence": "누나! 살려 줘요!"
+      },
+      {
+        "severity": "review",
+        "message": "JEV 미확정: voice, natural — 문구 수정 후 재판정 또는 사람 승인",
+        "cutId": "c24",
+        "lineIndex": 0,
+        "evidence": "물린 데 없어요?"
+      },
+      {
+        "severity": "review",
+        "message": "JEV 미확정: reaction — 문구 수정 후 재판정 또는 사람 승인",
+        "cutId": "c25",
+        "lineIndex": 0,
+        "evidence": "형님, 저 여자 뭔가 이상합니다."
+      },
+      {
+        "severity": "review",
+        "message": "JEV 미확정: context, voice, natural, reaction — 문구 수정 후 재판정 또는 사람 승인",
+        "cutId": "c25",
+        "lineIndex": 1,
+        "evidence": "그러니까 써먹어야지."
+      },
+      {
+        "severity": "review",
+        "message": "JEV 미확정: voice, natural, reaction — 문구 수정 후 재판정 또는 사람 승인",
+        "cutId": "c26",
+        "lineIndex": 0,
+        "evidence": "민재 구해 줘서 고마워. 물 좀 마셔."
+      },
+      {
+        "severity": "review",
+        "message": "JEV 미확정: context, voice, natural, reaction — 문구 수정 후 재판정 또는 사람 승인",
+        "cutId": "c26",
+        "lineIndex": 1,
+        "evidence": "괜찮아요. 반장님 드세요."
+      }
+    ]
+  },
+  "verifiedLines": 3
+}

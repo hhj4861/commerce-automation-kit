@@ -92,6 +92,50 @@
           "refAssetId": "57a5bd33-d886-4eff-92a4-9a0dc5f6c0a8"
         }
       ]
+    },
+    {
+      "id": "taesu",
+      "name": "곽태수",
+      "profile": "30대 초반, 오창식의 부하. 덩치가 크고 말수가 적다. 오창식이 시키는 대로 움직인다.",
+      "speech": {
+        "default": "짧은 반말",
+        "toSuperior": "오창식에게 깍듯한 존댓말(형님)"
+      },
+      "looks": [
+        {
+          "id": "base",
+          "description": "Korean man in his early 30s, very large build, buzz cut, black t-shirt under an open dark grey work jacket"
+        }
+      ]
+    },
+    {
+      "id": "misuk",
+      "name": "정미숙",
+      "profile": "45세 야간 작업자. 겁은 많지만 눈치가 빠르고 정이 많다. 처음으로 서윤을 믿고 따른다.",
+      "speech": {
+        "default": "존댓말",
+        "toSubordinate": "다정한 반말"
+      },
+      "looks": [
+        {
+          "id": "base",
+          "description": "45-year-old Korean woman, short permed hair, round face, beige work jumper over a floral blouse, arm sleeves"
+        }
+      ]
+    },
+    {
+      "id": "radio",
+      "name": "무전 속 남자",
+      "profile": "정체를 알 수 없는 외부 무리의 우두머리. 박반장과 미리 짜고 물류센터의 식량을 노린다. 화면에 나오지 않고 무전기 목소리로만 등장한다.",
+      "speech": {
+        "default": "느긋하고 위협적인 반말"
+      },
+      "looks": [
+        {
+          "id": "voice",
+          "description": "never shown on screen; only a calm, menacing male voice through a handheld radio"
+        }
+      ]
     }
   ],
   "locations": [
@@ -109,7 +153,11 @@
         "벽시계",
         "스마트폰",
         "소방도끼",
-        "소화함"
+        "소화함",
+        "비상등",
+        "손전등",
+        "쪽문",
+        "생수 팩"
       ],
       "refAssetId": "2ae41641-0ebc-45ea-ae47-f785e1c5b8f3"
     },
@@ -122,6 +170,36 @@
         "버려진 차"
       ],
       "refAssetId": "04791338-f545-4f9b-a5c1-9e8cc3e07322"
+    },
+    {
+      "id": "storage",
+      "name": "물류센터 식량 창고",
+      "anchorText": "Same continuous location in every cut: a locked food storage room inside the warehouse - a heavy grey steel door with a padlock, tall grey steel shelves packed with bottled water packs, instant noodle boxes and canned food, bare concrete floor, one caged ceiling lamp, cold white light. Keep the same layout and lighting.",
+      "props": [
+        "철문",
+        "자물쇠",
+        "철제 선반",
+        "생수 팩",
+        "라면 박스",
+        "통조림",
+        "손전등",
+        "창고 열쇠 꾸러미"
+      ]
+    },
+    {
+      "id": "control",
+      "name": "물류센터 관제실",
+      "anchorText": "Same continuous location in every cut: a small warehouse control room - a wall-mounted grey shutter control panel with large green and red buttons, a breaker box with a hinged cover below it, a desk with three CCTV monitors showing the dark loading dock, an office chair, a handheld two-way radio on the desk, red emergency light. Keep the same layout and lighting.",
+      "props": [
+        "셔터 제어반",
+        "전원 차단기",
+        "CCTV 모니터",
+        "무전기",
+        "책상",
+        "의자",
+        "비상등",
+        "손전등"
+      ]
     }
   ],
   "episodes": [
