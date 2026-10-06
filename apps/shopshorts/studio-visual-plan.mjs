@@ -1,3 +1,4 @@
+import {hybridPlan} from './public/hybrid-plan.js';
 import {suggestedDescription} from './public/shorts-policy.js';
 // CLI and web use the same scene validator and visual-direction compiler. No paid calls.
 import {readFile,writeFile} from 'node:fs/promises';
@@ -9,5 +10,5 @@ if(!args.includes('--project')||!args.includes('--out'))throw Error('Usage: node
 const project=JSON.parse(await readFile(get('--project'),'utf8'));
 const brief={...project.brief,visualQuality:VISUAL_QUALITY};
 const result=scenarioResult(project,brief);const job={...project,...result,brief};
-await writeFile(get('--out'),JSON.stringify({...result,brief,suggestedDescription:suggestedDescription(job),renderPrompts:result.scenes.map(scene=>({id:scene.id,renderer:scene.motion?'motion-hyperframes':brief.productionStyle==='animation'?'animation-svg':'configured-media-provider',prompt:sceneMediaPrompt(job,scene)}))},null,2));
+await writeFile(get('--out'),JSON.stringify({...result,brief,suggestedDescription:suggestedDescription(job),hybridPlan:hybridPlan(job),renderPrompts:result.scenes.map(scene=>({id:scene.id,renderer:hybridPlan(job)?.scenes.find(s=>s.sceneId===scene.id)?.renderer||(scene.motion?'motion-hyperframes':brief.productionStyle==='animation'?'animation-svg':'configured-media-provider'),prompt:sceneMediaPrompt(job,scene)}))},null,2));
 console.log(JSON.stringify({ok:true,scenes:result.scenes.length,quality:result.visualQuality.version,paidCalls:0}));

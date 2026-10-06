@@ -1,3 +1,5 @@
+import {isHybrid,sceneRoute,hybridPlan} from './public/hybrid-plan.js';
+import {renderHybridScene,checkHybridRuntime} from './studio-hybrid-render.mjs';
 import {createHash} from 'node:crypto';
 import {writeFile} from 'node:fs/promises';
 import {join} from 'node:path';
@@ -39,18 +41,22 @@ export function webtoonSvg(scene,aspect,time,art){
 }
 export async function checkWebtoonReview(job){
  webtoonScenes(job.scenes);
+ hybridPlan(job);
  const review=await validateDepthReview(job.depthReview,job.brief,job);
  if(!review.passed)throw depthFailure();
 }
 // All planned cost is checked before either narration or the first paid request.
-export async function prepareWebtoon(job,env,work,io,checkpoint,{run=args=>higgsfieldCommand(args,env),fetcher=fetch,generate=generateHiggsfieldScene,render=renderSvgScene}={}){
+export async function prepareWebtoon(job,env,work,io,checkpoint,{run=args=>higgsfieldCommand(args,env),fetcher=fetch,generate=generateHiggsfieldScene,render=renderSvgScene,renderHybrid=renderHybridScene,hybridReady=checkHybridRuntime}={}){
  await checkWebtoonReview(job);
  const cap=job.brief.maxCredits;
  if(!Number.isInteger(cap)||cap<1||cap>1000)throw Error('웹툰 제작의 총 크레딧 상한을 먼저 설정해 주세요.');
  const wanted=job.scenes.filter(s=>!job.assets[s.id]&&(!job.task.sceneIds||job.task.sceneIds.includes(s.id)));
+ const route=s=>isHybrid(job.brief)?sceneRoute(s,job.scenes.indexOf(s)).renderer:'webtoon';
+ const needsArt=s=>!isHybrid(job.brief)||['higgsfield','webtoon'].includes(route(s));
+ if(wanted.some(s=>['motion','3d'].includes(route(s)))&&!await hybridReady(env))throw Error('자동 혼합 모션 렌더러를 사용할 수 없습니다. 제작 워커의 Node 22와 HyperFrames를 확인하세요.');
  const plans=[];
  for(const s of wanted){
-  if(job.assets[s.id+'-art']?.signature!==signature(job,s))plans.push({scene:paidArt(job,s),job});
+  if(needsArt(s)&&job.assets[s.id+'-art']?.signature!==signature(job,s))plans.push({scene:paidArt(job,s),job});
   if(s===job.scenes[0])plans.push({scene:paidOpening(job,s),job});
  }
  let additional=0;const estimates=new Map();
@@ -65,6 +71,7 @@ export async function prepareWebtoon(job,env,work,io,checkpoint,{run=args=>higgs
  const spent=Object.values(job.mediaJobs||{}).reduce((n,r)=>n+(Number.isFinite(r.credits)?r.credits:0),0);
  if(spent+additional>cap)throw Error(`웹툰 제작은 원화 포함 약 ${spent+additional}크레딧으로, 설정한 ${cap}크레딧을 초과합니다. 새 기획에서 예산 또는 장면 수를 조정해 주세요. 아직 새 생성은 시작하지 않았습니다.`);
  if(additional){const status=await run(['account','status']);if(!Number.isFinite(status.credits)||status.credits<additional)throw Error('Higgsfield 크레딧 잔액이 부족하거나 확인되지 않았습니다.');}
+ if(isHybrid(job.brief))await checkpoint({productionPlan:{...hybridPlan(job),cost:{...hybridPlan(job).cost,status:'quoted',credits:spent+additional,additionalCredits:additional,spentCredits:spent,checkedAt:new Date().toISOString()}}});
  let assets={...job.assets};
  const persist=async delta=>{if(delta.mediaJobs)job.mediaJobs=delta.mediaJobs;await checkpoint(delta);};
  // Recheck each individual estimate and never automatically retry a failed paid job.
@@ -75,6 +82,7 @@ export async function prepareWebtoon(job,env,work,io,checkpoint,{run=args=>higgs
  }
  return {
   async scene(s,duration){
+   if(!needsArt(s))return renderHybrid(job,{...s,duration},work,env,route(s));
    const id=s.id+'-art',sig=signature(job,s);let original=assets[id],data;
    if(original?.signature===sig)data=await io.readAsset(original.key);
    else {
