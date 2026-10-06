@@ -67,10 +67,11 @@ export function applyTopicVerdicts(topics: DramaTopic[], genre: GenrePack, expec
       if (!(v.decided && v.choice === 'pass'))
         findings.push({ severity: 'block', message: `수위 안전 ${v.decided ? '확정 fail' : '미확정'}: ${k} — 표현을 고쳐 재판정` });
     }
-    const report = toReport(topicGateId(t.id), 'topic', findings, topicFingerprint(t));
+    const judged = { ...t, verifiedElements: confirmed };
+    const report = toReport(topicGateId(t.id), 'topic', findings, topicFingerprint(judged, genre.id));
     reports.push(report);
     ranking.push({ topicId: t.id, passed: report.ok, elements: confirmed, elementScore: Math.round(els.reduce((n, x) => n + passProb(x.v), 0) * 100) / 100 });
-    return { ...t, verifiedElements: confirmed };
+    return judged;
   });
   ranking.sort((a, b) => Number(b.passed) - Number(a.passed) || b.elements.length - a.elements.length || b.elementScore - a.elementScore);
   return { reports, topics: updated, ranking };

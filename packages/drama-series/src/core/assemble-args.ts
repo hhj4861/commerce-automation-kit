@@ -75,7 +75,7 @@ export function buildAssembleArgs(s: AssembleSpec): string[] {
   let k = 0;
   const draw = (textFile: string, size: number, x: string, y: string, enable: string) => {
     const next = `t${k++}`;
-    parts.push(`[${label}]drawtext=fontfile='${font}':textfile='${escapeFilterValue(textFile)}':fontsize=${size}:fontcolor=white:borderw=3:bordercolor=black:x=${x}:y=${y}:enable='${enable}'[${next}]`);
+    parts.push(`[${label}]drawtext=fontfile='${font}':textfile='${escapeFilterValue(textFile)}':fontsize=${size}:fontcolor=white:borderw=3:bordercolor=black:expansion=none:x=${x}:y=${y}:enable='${enable}'[${next}]`);
     label = next;
   };
   for (const c of s.cues)

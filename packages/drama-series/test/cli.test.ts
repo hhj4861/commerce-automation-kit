@@ -34,7 +34,12 @@ function fakeResponse(req: string, res: string, pick: Pick = allPass) {
   }));
   writeFileSync(res, JSON.stringify({ answers }));
 }
-function topics(w: ReturnType<typeof workspace>, pick: Pick = allPass) {
+/** night-shift 가 fixture series.topic 과 같은 요소(갈등·정체)만 확정되게 한다. */
+const realisticTopics: Pick = (id) => {
+  if (id.includes('__safe__') || id.endsWith('__genre')) return ['pass', 0.95, 0.97];
+  return /__el__(strong-conflict|hidden-identity)$/.test(id) ? ['pass', 0.95, 0.97] : ['fail', 0.95, 0.97];
+};
+function topics(w: ReturnType<typeof workspace>, pick: Pick = realisticTopics) {
   expect(cli(['topic-build', '--topics', w.p('topics.json'), '--out', w.p('topic-req.json')]).code).toBe(0);
   fakeResponse(w.p('topic-req.json'), w.p('topic-res.json'), pick);
   return cli(['topic-apply', '--topics', w.p('topics.json'), '--request', w.p('topic-req.json'), '--response', w.p('topic-res.json'), '--gates', w.p('gates')]);
@@ -76,6 +81,23 @@ describe('drama-series CLI', { timeout: 180_000 }, () => {
     expect(stale.code).toBe(1);
     expect(JSON.stringify(stale.json)).toMatch(/현재 대본과 다름/);
     expect(JSON.parse(readFileSync(w.p('plan.json'), 'utf8')).ok).toBe(false);
+    // 관문을 다시 돌려도 바뀐 대사는 다시 판정받기 전까지 막힌다.
+    cli(['validate', ...w.base, '--gates', w.p('gates')]);
+    judge(w, 'scenario');
+    judge(w, 'props');
+    expect(cli(['judge-build', '--kind', 'dialogue', ...w.base, '--out', w.p('again2.json')]).json.questions).toBe(3);
+    const still = plan(w);
+    expect(still.code).toBe(1);
+    expect(JSON.stringify(still.json)).toMatch(/검증 이후 대사·장면이 바뀜/);
+    expect(judge(w, 'dialogue').code).toBe(0);
+    expect(plan(w).code).toBe(0);
+  });
+
+  it('assemble refuses cuts without a passing transcript check', () => {
+    const w = workspace();
+    const r = cli(['assemble', ...w.base, '--gates', w.p('gates'), '--clips', w.p('clips'), '--out', w.p('out/ep.mp4'), '--font', '/System/Library/Fonts/AppleSDGothicNeo.ttc']);
+    expect(r.code).toBe(1);
+    expect(JSON.stringify(r.json)).toMatch(/받아쓰기 대조 기록 없음: c2/);
   });
 
   it('refuses a plan when the topic gate was never passed', () => {

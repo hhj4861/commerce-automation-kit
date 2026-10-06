@@ -32,6 +32,7 @@ describe('assemble args', () => {
     expect(graph).toContain('fade=t=in:st=0:d=0.4:color=white[v1]');
     expect(graph).toContain("enable='lt(t,2)'");
     expect(graph).toContain('loudnorm=I=-14');
+    expect(graph.match(/drawtext=/g)!.length).toBe(graph.match(/expansion=none/g)!.length);
     expect(args.at(-1)).toBe('o.mp4');
   });
   it('refuses an empty clip list', () => {

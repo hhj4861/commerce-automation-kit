@@ -4,6 +4,7 @@ import { lineFindings } from './gates/dialogue-lint.js';
 import type { GateContext } from './gates/types.js';
 import { JUDGE_GATE_ID, JudgeError, type ChoiceQuestion, type EpisodeJudgeKind, type ExpectedQuestion, type JudgeQuestion, type JudgeVerdict } from './judge-types.js';
 import { toReport } from './report.js';
+import { isLineCleared, lineHash } from './line-hash.js';
 
 type Check = readonly [task: string, pass: string, fail: string];
 
@@ -73,7 +74,7 @@ export function buildQuestions(kind: EpisodeJudgeKind, ctx: GateContext): JudgeQ
   if (kind === 'dialogue') {
     return ctx.episode.cuts.flatMap((cut) =>
       cut.lines.flatMap((line, i) =>
-        line.verification.status !== 'unverified'
+        isLineCleared(cut, line)
           ? []
           : LINE_CHECK_KEYS.map((k) => choiceQ(`${cut.id}__${i}__${k}`, LINE_CHECKS[k], {
               speaker: nameOf(ctx, line.speaker), speakerProfile: speakerProfile(ctx, line.speaker), sceneSoFar: sceneSoFar(ctx, cut, i), line: line.text,
@@ -140,7 +141,7 @@ export function applyVerdicts(kind: EpisodeJudgeKind, ctx: GateContext, expected
       if (failed.length) findings.push({ severity: 'block', message: `JEV 확정 fail: ${failed.join(', ')}`, cutId, lineIndex: i, evidence: line.text });
       else if (pending.length) findings.push({ severity: 'review', message: `JEV 미확정: ${pending.join(', ')} — 문구 수정 후 재판정 또는 사람 승인`, cutId, lineIndex: i, evidence: line.text });
       else if (lint.length) findings.push(...lint);
-      else if (line.verification.status === 'unverified') line.verification = { status: 'verified', judgeRef, at: now };
+      else if (!isLineCleared(cut, line)) line.verification = { status: 'verified', judgeRef, at: now, lineHash: lineHash(cut, line) };
     }
   } else {
     for (const v of ordered) {

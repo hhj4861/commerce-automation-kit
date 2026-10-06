@@ -5,6 +5,7 @@ import { fingerprintOf, topicFingerprint } from './fingerprint.js';
 import type { GateContext } from './gates/types.js';
 import { toReport } from './report.js';
 import { topicGateId } from './topic-gates.js';
+import { isLineCleared } from './line-hash.js';
 
 /** 생성 명세 전에 같은 대본 지문으로 통과해야 하는 관문(주제 관문은 주제 지문으로 따로 확인). */
 export const REQUIRED_GATES = ['schema', 'dialogue-lint', 'continuity', 'props', 'scenario'] as const;
@@ -37,14 +38,16 @@ export function buildPlan(input: PlanInput): PlanResult {
   const topicGate = topicGateId(ctx.series.topic.id);
   const tr = input.reports.filter((x) => x.gate === topicGate).at(-1);
   if (!tr) required.push({ severity: 'block', message: `주제 관문 기록 없음: ${topicGate}` });
-  else if (tr.fingerprint !== topicFingerprint(ctx.series.topic)) required.push({ severity: 'block', message: `주제 관문 기록이 시리즈의 주제와 다름: ${topicGate}` });
+  else if (tr.fingerprint !== topicFingerprint(ctx.series.topic, ctx.series.genreId)) required.push({ severity: 'block', message: `주제 관문 기록이 시리즈의 주제와 다름: ${topicGate}` });
   else if (!tr.ok) required.push({ severity: 'block', message: `주제 관문 미통과: ${topicGate}` });
 
   const lines: DramaFinding[] = [];
   for (const cut of ctx.episode.cuts)
     cut.lines.forEach((l, i) => {
-      if (l.verification.status !== 'verified' && l.verification.status !== 'human-approved')
-        lines.push({ severity: 'block', message: `검증되지 않은 대사(${l.verification.status})`, cutId: cut.id, lineIndex: i, evidence: l.text });
+      if (isLineCleared(cut, l)) return;
+      const s = l.verification.status;
+      const message = s === 'verified' || s === 'human-approved' ? `검증 이후 대사·장면이 바뀜(재판정 필요, ${s})` : `검증되지 않은 대사(${s})`;
+      lines.push({ severity: 'block', message, cutId: cut.id, lineIndex: i, evidence: l.text });
     });
 
   const backend: DramaFinding[] = [];

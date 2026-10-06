@@ -30,11 +30,14 @@ export function fingerprintOf(series: DramaSeries, episode: DramaEpisode): strin
   return sha16(canonical({ series: { ...series, topic: stripTopic(series.topic) }, episode: stripped }));
 }
 
-/** 주제 지문. 관문이 채우는 verifiedElements 는 뺀다. */
-export function topicFingerprint(topic: DramaTopic): string {
-  return sha16(canonical(stripTopic(topic)));
+/**
+ * 주제 지문. 확정 요소(verifiedElements)와 판정한 장르까지 묶는다 — 시리즈로 옮긴 주제의
+ * 요소를 지우거나 다른 장르로 바꾸면 주제 관문 기록과 맞지 않게 된다.
+ */
+export function topicFingerprint(topic: DramaTopic, genreId: string): string {
+  return sha16(canonical({ genreId, topic }));
 }
 
-export function topicsFingerprint(topics: DramaTopic[]): string {
-  return sha16(topics.map(topicFingerprint).join(','));
+export function topicsFingerprint(topics: DramaTopic[], genreId: string): string {
+  return sha16(canonical({ genreId, topics }));
 }

@@ -6,6 +6,7 @@ import { applyVerdicts, buildQuestions } from '../src/core/judge-gates.js';
 import { JudgeError, type ExpectedQuestion, type JudgeQuestion, type JudgeVerdict } from '../src/core/judge-types.js';
 import { buildJevRequest, parseJevResponse } from '../src/adapters/judge/jev.js';
 import type { GateContext } from '../src/core/gates/types.js';
+import { lineHash } from '../src/core/line-hash.js';
 
 const fx = (name: string): any => JSON.parse(readFileSync(new URL(`./fixtures/${name}`, import.meta.url), 'utf8'));
 function ctx(mutate?: (s: any, e: any) => void): GateContext {
@@ -37,8 +38,17 @@ describe('buildQuestions', () => {
     expect(String(voice.candidate.speakerProfile)).toMatch(/윗사람에게 깍듯한 존댓말/);
   });
   it('skips lines already verified or approved', () => {
-    const qs = buildQuestions('dialogue', ctx((_, e) => { e.cuts[1].lines[0].verification = { status: 'human-approved', approvedBy: 'u' }; }));
-    expect(qs).toHaveLength(12);
+    const c = ctx();
+    const cut = c.episode.cuts[1]!;
+    cut.lines[0]!.verification = { status: 'human-approved', approvedBy: 'u', lineHash: lineHash(cut, cut.lines[0]!) };
+    expect(buildQuestions('dialogue', c)).toHaveLength(12);
+  });
+  it('asks again for a verified line whose text changed after verification', () => {
+    const c = ctx();
+    const cut = c.episode.cuts[1]!;
+    cut.lines[0]!.verification = { status: 'verified', lineHash: lineHash(cut, cut.lines[0]!) };
+    cut.lines[0]!.text = '야, 막내. 돈 내놔.';
+    expect(buildQuestions('dialogue', c)).toHaveLength(15);
   });
   it('builds scenario structure, topic-element carry, safety and fun-score questions', () => {
     const ids = buildQuestions('scenario', ctx()).map((q) => `${q.id}:${q.type}`);
@@ -101,6 +111,7 @@ describe('applyVerdicts', () => {
     expect(report.ok).toBe(true);
     expect(episode.cuts.flatMap((x) => x.lines).every((l) => l.verification.status === 'verified')).toBe(true);
     expect(episode.cuts[1]!.lines[0]!.verification.judgeRef).toBe('r1.json');
+    expect(episode.cuts[1]!.lines[0]!.verification.lineHash).toBe(lineHash(episode.cuts[1]!, episode.cuts[1]!.lines[0]!));
     expect(c.episode.cuts[1]!.lines[0]!.verification.status).toBe('unverified');
   });
   it('blocks a decided fail and leaves undecided lines for review', () => {

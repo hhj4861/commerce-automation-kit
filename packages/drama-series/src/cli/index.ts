@@ -10,7 +10,7 @@
  *   approve-line --episode e.json --cut c2 --line 1 --by <승인자> --note <사유>
  *   plan         --series --episode --gates dir --budget <크레딧> [--resolution 480p] [--draft] [--aspect 16:9] --out plan.json
  *   verify-clip  --series --episode --cut c2 --gates dir (--transcript whisper.json | --media clip.mp4 [--work dir])
- *   assemble     --episode e.json --clips <dir: cutId.mp4> --out ep.mp4 --font <ttc> [--work dir] [--no-ai-label]
+ *   assemble     --series s.json --episode e.json --gates dir --clips <dir: cutId.mp4> --out ep.mp4 --font <ttc> [--work dir] [--no-ai-label]
  *
  * stdout = JSON. 종료 코드 0 정상 / 1 차단·검증 실패 / 2 사용법 오류.
  */
@@ -29,7 +29,8 @@ import { applyTopicVerdicts, buildTopicQuestions } from '../core/topic-gates.js'
 import { buildJevRequest, parseJevResponse } from '../adapters/judge/jev.js';
 import { buildPlan } from '../core/plan.js';
 import type { VideoOptions } from '../adapters/video/seedance-2-5.js';
-import { transcriptGate } from '../core/transcript.js';
+import { transcriptGate, transcriptReadiness } from '../core/transcript.js';
+import { isLineCleared, lineHash } from '../core/line-hash.js';
 import { parseWhisperJson, transcribe } from '../adapters/transcribe/whisper.js';
 import { assembleEpisode } from '../adapters/assemble.js';
 
@@ -104,7 +105,7 @@ function main(argv: string[]): number {
       const set = parseTopicSet(readJson(req(o, 'topics')));
       const genre = loadGenre(set.genreId);
       const questions = buildTopicQuestions(set.topics, genre);
-      writeRequest(target, 'topic', topicsFingerprint(set.topics), { genre: genre.name, genrePromise: genre.promise }, questions);
+      writeRequest(target, 'topic', topicsFingerprint(set.topics, set.genreId), { genre: genre.name, genrePromise: genre.promise }, questions);
       out({ ok: true, kind: 'topic', topics: set.topics.length, questions: questions.length, out: abs(target), meta: abs(metaPath(target)) });
       return 0;
     }
@@ -115,7 +116,7 @@ function main(argv: string[]): number {
       const gates = req(o, 'gates');
       const set = parseTopicSet(readJson(path));
       const meta = readMeta(req(o, 'request'), 'topic');
-      if (meta.fingerprint !== topicsFingerprint(set.topics)) {
+      if (meta.fingerprint !== topicsFingerprint(set.topics, set.genreId)) {
         out({ ok: false, problem: '판정 요청 이후 주제가 바뀜 — topic-build 부터 다시 실행' });
         return 1;
       }
@@ -180,11 +181,11 @@ function main(argv: string[]): number {
       const cut = episode.cuts.find((c) => c.id === req(o, 'cut'));
       const line = Number.isInteger(i) ? cut?.lines[i] : undefined;
       if (!cut || !line) throw new UsageError('해당 컷·대사 없음');
-      if (line.verification.status !== 'unverified') {
+      if (isLineCleared(cut, line)) {
         out({ ok: false, problem: `이미 ${line.verification.status} 상태인 대사는 승인할 수 없음` });
         return 1;
       }
-      line.verification = { status: 'human-approved', approvedBy: req(o, 'by'), at: new Date().toISOString(), note: req(o, 'note') };
+      line.verification = { status: 'human-approved', approvedBy: req(o, 'by'), at: new Date().toISOString(), note: req(o, 'note'), lineHash: lineHash(cut, line) };
       writeJson(path, episode);
       out({ ok: true, cut: cut.id, line: i, text: line.text });
       return 0;
@@ -225,8 +226,14 @@ function main(argv: string[]): number {
     }
 
     case 'assemble': {
-      const o = opts(rest, { episode: 'string', clips: 'string', out: 'string', font: 'string', work: 'string', 'no-ai-label': 'boolean' });
-      const episode = parseEpisode(readJson(req(o, 'episode')));
+      const o = opts(rest, { series: 'string', episode: 'string', gates: 'string', clips: 'string', out: 'string', font: 'string', work: 'string', 'no-ai-label': 'boolean' });
+      const ctx = loadCtx(o);
+      const notReady = transcriptReadiness(ctx, loadReports(req(o, 'gates')));
+      if (notReady.length) {
+        out({ ok: false, problem: '받아쓰기 대조를 통과하지 않은 컷이 있어 조립하지 않음', findings: notReady });
+        return 1;
+      }
+      const episode = ctx.episode;
       const dir = abs(req(o, 'clips'));
       const target = abs(req(o, 'out'));
       const result = assembleEpisode({

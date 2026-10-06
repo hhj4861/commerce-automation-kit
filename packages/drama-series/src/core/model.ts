@@ -9,6 +9,7 @@ const verification = z.object({
   approvedBy: z.string().optional(),
   at: z.string().optional(),
   note: z.string().optional(),
+  lineHash: z.string().optional(),
 });
 
 const line = z.object({

@@ -7,19 +7,21 @@ import { runEpisodeGates } from '../src/core/gates/registry.js';
 import { fingerprintOf, topicFingerprint } from '../src/core/fingerprint.js';
 import { toReport } from '../src/core/report.js';
 import { buildPlan } from '../src/core/plan.js';
+import { lineHash } from '../src/core/line-hash.js';
 import type { GateContext } from '../src/core/gates/types.js';
 
 const fx = (name: string): any => JSON.parse(readFileSync(new URL(`./fixtures/${name}`, import.meta.url), 'utf8'));
 function ctx(mutate?: (s: any, e: any) => void, verify = true): GateContext {
   const s = fx('series.json');
   const e = fx('episode.json');
-  if (verify) for (const c of e.cuts) for (const l of c.lines) l.verification = { status: 'verified', judgeRef: 'r.json' };
   mutate?.(s, e);
-  return { series: parseSeries(s), episode: parseEpisode(e), genre: loadGenre(s.genreId) };
+  const episode = parseEpisode(e);
+  if (verify) for (const c of episode.cuts) for (const l of c.lines) l.verification = { status: 'verified', judgeRef: 'r.json', lineHash: lineHash(c, l) };
+  return { series: parseSeries(s), episode, genre: loadGenre(s.genreId) };
 }
 function passingReports(c: GateContext): DramaGateReport[] {
   const fp = fingerprintOf(c.series, c.episode);
-  return [...runEpisodeGates(c), toReport('props', 'episode', [], fp), toReport('scenario', 'episode', [], fp), toReport('topic-night-shift', 'topic', [], topicFingerprint(c.series.topic))];
+  return [...runEpisodeGates(c), toReport('props', 'episode', [], fp), toReport('scenario', 'episode', [], fp), toReport('topic-night-shift', 'topic', [], topicFingerprint(c.series.topic, c.series.genreId))];
 }
 const video = { resolution: '480p' as const, draft: true, aspectRatio: '16:9' as const };
 const plan = (c: GateContext, reports = passingReports(c), budgetCredits = 200, v = video) =>
@@ -47,8 +49,23 @@ describe('buildPlan', () => {
     expect(blocked(r, 'verified-lines')).toMatch(/검증되지 않은 대사/);
   });
   it('accepts human-approved lines', () => {
-    const r = plan(ctx((_, e) => { e.cuts[1].lines[1].verification = { status: 'human-approved', approvedBy: 'user' }; }));
-    expect(r.ok).toBe(true);
+    const c = ctx();
+    const cut = c.episode.cuts[1]!;
+    const line = cut.lines[1]!;
+    line.verification = { status: 'human-approved', approvedBy: 'user', lineHash: lineHash(cut, line) };
+    expect(plan(c).ok).toBe(true);
+  });
+  it('refuses a verified line whose text changed after verification, even with fresh gate reports', () => {
+    const c = ctx();
+    c.episode.cuts[2]!.lines[0]!.text = '그 손 놓으세요.';
+    const r = plan(c, passingReports(c));
+    expect(r.ok).toBe(false);
+    expect(blocked(r, 'verified-lines')).toMatch(/검증 이후 대사·장면이 바뀜/);
+  });
+  it('refuses a hand-written verified status without a line hash', () => {
+    const c = ctx();
+    c.episode.cuts[1]!.lines[0]!.verification = { status: 'verified' };
+    expect(blocked(plan(c), 'verified-lines')).toMatch(/검증 이후 대사·장면이 바뀜/);
   });
   it('refuses gate reports made for an older script (stale fingerprint)', () => {
     const old = ctx();
@@ -72,6 +89,10 @@ describe('buildPlan', () => {
     expect(blocked(plan(c, noTopic), 'required-gates')).toMatch(/주제 관문 기록 없음: topic-night-shift/);
     const edited = ctx((s) => { s.topic.logline = '물류센터 알바생이 사실은 재벌 상속녀였다.'; });
     expect(blocked(plan(edited, passingReports(c)), 'required-gates')).toMatch(/주제와 다름/);
+    const trimmed = ctx((s) => { s.topic.verifiedElements = []; });
+    expect(blocked(plan(trimmed, passingReports(c)), 'required-gates')).toMatch(/주제와 다름/);
+    const otherGenre = ctx((s) => { s.genreId = 'regression-apocalypse'; });
+    expect(blocked(plan(otherGenre, passingReports(c)), 'required-gates')).toMatch(/주제와 다름/);
   });
   it('rejects durations outside 4–30 seconds and a missing reference image', () => {
     expect(blocked(plan(ctx((_, e) => { e.cuts[3].durationSec = 3; })), 'backend')).toMatch(/3초/);

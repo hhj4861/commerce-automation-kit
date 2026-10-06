@@ -41,6 +41,20 @@ export function scoreTranscript(lines: string[], transcript: string): LineScore[
   });
 }
 
+/** 조립 전 확인: 대사가 있는 모든 컷에 현재 대본 기준으로 통과한 받아쓰기 대조 기록이 있어야 한다. */
+export function transcriptReadiness(ctx: GateContext, reports: DramaGateReport[]): DramaFinding[] {
+  const fp = fingerprintOf(ctx.series, ctx.episode);
+  return ctx.episode.cuts
+    .filter((c) => c.lines.some((l) => l.kind === 'dialogue'))
+    .flatMap((c): DramaFinding[] => {
+      const r = reports.filter((x) => x.gate === `transcript-${c.id}`).at(-1);
+      if (!r) return [{ severity: 'block', message: `받아쓰기 대조 기록 없음: ${c.id}`, cutId: c.id }];
+      if (r.fingerprint !== fp) return [{ severity: 'block', message: `받아쓰기 대조 기록이 현재 대본과 다름: ${c.id}`, cutId: c.id }];
+      if (!r.ok) return [{ severity: 'block', message: `받아쓰기 대조 미통과: ${c.id}`, cutId: c.id }];
+      return [];
+    });
+}
+
 export function transcriptGate(ctx: GateContext, cutId: string, transcript: string, maxCer = MAX_LINE_CER): DramaGateReport {
   const cut = ctx.episode.cuts.find((c) => c.id === cutId);
   if (!cut) throw new Error(`컷 없음: ${cutId}`);

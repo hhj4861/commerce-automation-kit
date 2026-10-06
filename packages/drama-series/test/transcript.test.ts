@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { parseEpisode, parseSeries } from '../src/core/model.js';
 import { loadGenre } from '../src/core/genre.js';
-import { bestSubstringDistance, normalizeKo, scoreTranscript, transcriptGate } from '../src/core/transcript.js';
+import { bestSubstringDistance, normalizeKo, scoreTranscript, transcriptGate, transcriptReadiness } from '../src/core/transcript.js';
 import { TranscribeError, parseWhisperJson } from '../src/adapters/transcribe/whisper.js';
 import type { GateContext } from '../src/core/gates/types.js';
 
@@ -43,6 +43,17 @@ describe('transcript gate', () => {
     const r = transcriptGate(ctx(), 'c1', '');
     expect(r.ok).toBe(true);
     expect(r.findings[0]!.severity).toBe('info');
+  });
+  it('readiness requires a passing, current transcript report for every dialogue cut', () => {
+    const c = ctx();
+    const missing = transcriptReadiness(c, []);
+    expect(missing.map((f) => f.cutId)).toEqual(['c2', 'c3', 'c4']);
+    const ok = ['c2', 'c3', 'c4'].map((id) => transcriptGate(c, id, c.episode.cuts.find((x) => x.id === id)!.lines.map((l) => l.text).join(' ')));
+    expect(transcriptReadiness(c, ok)).toEqual([]);
+    const bad = transcriptGate(c, 'c2', '완전히 다른 말');
+    expect(transcriptReadiness(c, [...ok, bad]).map((f) => f.message)).toEqual([expect.stringMatching(/미통과: c2/)]);
+    const edited = ctx((e) => { e.cuts[2].lines[0].text = '그 손 놓으세요.'; });
+    expect(transcriptReadiness(edited, ok).some((f) => /현재 대본과 다름/.test(f.message))).toBe(true);
   });
   it('parses whisper JSON output', () => {
     expect(parseWhisperJson({ text: ' 넌 또 뭐야? ', segments: [] })).toBe('넌 또 뭐야?');

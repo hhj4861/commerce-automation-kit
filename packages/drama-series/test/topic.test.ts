@@ -46,7 +46,7 @@ describe('topic gate', () => {
     const lunch = r.reports.find((x) => x.gate === 'topic-lunch-break')!;
     expect(lunch.ok).toBe(false);
     expect(lunch.findings.map((f) => f.message).join('\n')).toMatch(/조회 유발 요소 확정 0개 — 최소 2개[\s\S]*장르 약속 확정 fail/);
-    expect(r.reports[0]!.fingerprint).toBe(topicFingerprint(topics[0]!));
+    expect(r.reports[0]!.fingerprint).toBe(topicFingerprint(r.topics[0]!, genre.id));
   });
   it('blocks a topic whose safety check is undecided even if every element passes', () => {
     const topics = set().topics;

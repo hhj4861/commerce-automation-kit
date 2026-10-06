@@ -15,6 +15,8 @@ export interface DramaLineVerification {
   /** ISO 8601 */
   at?: string | undefined;
   note?: string | undefined;
+  /** 판정·승인 당시의 대사 지문(컷·화자·문구·종류·장면). 대사가 바뀌면 검증이 무효가 된다 */
+  lineHash?: string | undefined;
 }
 
 export interface DramaLine {

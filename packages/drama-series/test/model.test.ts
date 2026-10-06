@@ -38,12 +38,13 @@ describe('fingerprint', () => {
     expect(fingerprintOf(s, edited)).not.toBe(base);
     expect(base).toMatch(/^[0-9a-f]{16}$/);
   });
-  it('topic fingerprint ignores verifiedElements and matches the topic set entry', () => {
+  it('topic fingerprint binds content, confirmed elements and genre', () => {
     const s = parseSeries(fx('series.json'));
     const set = parseTopicSet(fx('topics.json'));
-    expect(topicFingerprint(s.topic)).toBe(topicFingerprint(set.topics[0]!));
-    const changed = structuredClone(s.topic);
-    changed.logline = '다른 로그라인입니다.';
-    expect(topicFingerprint(changed)).not.toBe(topicFingerprint(s.topic));
+    const judged = { ...set.topics[0]!, verifiedElements: ['strong-conflict', 'hidden-identity'] };
+    expect(topicFingerprint(s.topic, s.genreId)).toBe(topicFingerprint(judged, set.genreId));
+    expect(topicFingerprint({ ...s.topic, verifiedElements: [] }, s.genreId)).not.toBe(topicFingerprint(s.topic, s.genreId));
+    expect(topicFingerprint(s.topic, 'regression-apocalypse')).not.toBe(topicFingerprint(s.topic, s.genreId));
+    expect(topicFingerprint({ ...s.topic, logline: '다른 로그라인입니다.' }, s.genreId)).not.toBe(topicFingerprint(s.topic, s.genreId));
   });
 });
