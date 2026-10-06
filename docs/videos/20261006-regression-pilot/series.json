@@ -104,7 +104,8 @@
       "looks": [
         {
           "id": "base",
-          "description": "Korean man in his early 30s, very large build, buzz cut, black t-shirt under an open dark grey work jacket"
+          "description": "Korean man in his early 30s, very large build, buzz cut, black t-shirt under an open dark grey work jacket",
+          "refAssetId": "f2a90d29-ef91-4710-831a-ec6e167a0e9f"
         }
       ]
     },
@@ -119,7 +120,8 @@
       "looks": [
         {
           "id": "base",
-          "description": "45-year-old Korean woman, short permed hair, round face, beige work jumper over a floral blouse, arm sleeves"
+          "description": "45-year-old Korean woman, short permed hair, round face, beige work jumper over a floral blouse, arm sleeves",
+          "refAssetId": "968c1c7a-4f5f-42b8-8f13-cf3168fa20c6"
         }
       ]
     },
@@ -184,7 +186,8 @@
         "통조림",
         "손전등",
         "창고 열쇠 꾸러미"
-      ]
+      ],
+      "refAssetId": "5a4f195b-359f-4fa4-83df-77c433191e3d"
     },
     {
       "id": "control",
@@ -199,7 +202,8 @@
         "의자",
         "비상등",
         "손전등"
-      ]
+      ],
+      "refAssetId": "465fe94b-0e52-4d9e-b4e3-5a4054fb0e85"
     }
   ],
   "episodes": [

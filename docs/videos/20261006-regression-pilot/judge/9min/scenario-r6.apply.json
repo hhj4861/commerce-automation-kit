@@ -1,0 +1,43 @@
+{
+  "ok": true,
+  "report": {
+    "gate": "scenario",
+    "stage": "episode",
+    "ok": true,
+    "fingerprint": "04b55b8a2ad10acb",
+    "findings": [
+      {
+        "severity": "review",
+        "message": "hook 미확정(pass 0.66/0.83)"
+      },
+      {
+        "severity": "review",
+        "message": "payoff 미확정(fail 0.35/0.67)"
+      },
+      {
+        "severity": "review",
+        "message": "carry__revenge 미확정(pass 0.42/0.71)"
+      },
+      {
+        "severity": "info",
+        "message": "fun__surprise 2/5 (확신도 0.46, 참고용)"
+      },
+      {
+        "severity": "info",
+        "message": "fun__tension-curve 5/5 (확신도 0.99, 참고용)"
+      },
+      {
+        "severity": "info",
+        "message": "fun__protagonist-appeal 5/5 (확신도 0.95, 참고용)"
+      },
+      {
+        "severity": "info",
+        "message": "fun__freshness 3/5 (확신도 0.32, 참고용)"
+      },
+      {
+        "severity": "info",
+        "message": "fun__emotional-peak 5/5 (확신도 0.77, 참고용)"
+      }
+    ]
+  }
+}

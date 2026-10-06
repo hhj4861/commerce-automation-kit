@@ -2,7 +2,7 @@
   "gate": "dialogue-lint",
   "stage": "episode",
   "ok": true,
-  "fingerprint": "60ad19fa1b1c7637",
+  "fingerprint": "04b55b8a2ad10acb",
   "findings": [
     {
       "severity": "review",
