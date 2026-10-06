@@ -64,11 +64,11 @@ test('worker audio account reaches config with billing and secrets stripped',asy
  assert.equal(capabilities.audioAccount.remaining,88);assert.equal(capabilities.audioAccount.apiKey,undefined);assert.equal(capabilities.audioAccount.open_invoices,undefined);
 });
 
- test('Pages preserves strict animation and webtoon capability booleans',async()=>{
+ test('Pages preserves strict animation, webtoon and hybrid capability booleans',async()=>{
   const request=fixture();
   for(const [value,expected] of [[true,true],[false,false],['true',false],[undefined,false]]){
-    await request('PUT','worker',{animation:value,webtoon:value});
+    await request('PUT','worker',{animation:value,webtoon:value,hybrid:value});
     const {capabilities}=await(await request('GET','config')).json();
-    assert.equal(capabilities.animation,expected);assert.equal(capabilities.webtoon,expected);
+    assert.equal(capabilities.animation,expected);assert.equal(capabilities.webtoon,expected);assert.equal(capabilities.hybrid,expected);
   }
  });
