@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<style>
+@font-face{font-family:K;src:url(assets/font.ttf)}
+body{margin:0;width:1920px;height:1080px;overflow:hidden;background:#182c3c}
+#composition{position:relative;width:1920px;height:1080px;overflow:hidden;font-family:K}
+svg{position:absolute;left:0;top:0}
+.lab{font-family:K;fill:#f3ead6;paint-order:stroke;stroke:#0b1620;stroke-width:5px;stroke-linejoin:round}
+#band{position:absolute;left:0;right:0;top:850px;bottom:0;background:linear-gradient(rgba(11,22,32,0),rgba(11,22,32,.78) 28%,rgba(11,22,32,.9))}
+.cap{position:absolute;left:110px;right:110px;top:865px;height:120px;display:flex;align-items:center;justify-content:center;text-align:center;color:#f3efe4;font-size:48px;line-height:1.25;opacity:0;text-shadow:0 2px 6px rgba(0,0,0,.6)}
+</style>
+</head>
+<body>
+<div id="composition" data-composition-id="glass-motion" data-start="0" data-duration="23.208333" data-width="1920" data-height="1080">
+<svg id="s" width="1920" height="1080" viewBox="0 0 1920 1080">
+<defs>
+<radialGradient id="vig" cx="50%" cy="42%" r="70%"><stop offset="0" stop-color="#24405a"/><stop offset="1" stop-color="#0f1d28"/></radialGradient>
+<pattern id="dots" width="9" height="9" patternUnits="userSpaceOnUse"><circle cx="2" cy="2" r="1.1" fill="#f3ead6"/></pattern>
+<linearGradient id="glassG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#a6e3e4"/><stop offset=".45" stop-color="#75c9ce"/><stop offset="1" stop-color="#3f8a94"/></linearGradient>
+<linearGradient id="chipG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#34495a"/><stop offset="1" stop-color="#1a2a35"/></linearGradient>
+<radialGradient id="cuG" cx="35%" cy="30%" r="75%"><stop offset="0" stop-color="#ffe0b0"/><stop offset=".45" stop-color="#df9c4c"/><stop offset="1" stop-color="#7d4a1c"/></radialGradient>
+<linearGradient id="padG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f5c27e"/><stop offset="1" stop-color="#b06d2a"/></linearGradient>
+</defs>
+<rect width="1920" height="1080" fill="#182c3c"/>
+<rect width="1920" height="1080" fill="url(#vig)"/>
+<rect width="1920" height="1080" fill="url(#dots)" opacity=".045"/>
+<g id="cam" transform="translate(0,-60) scale(1)">
+  <ellipse cx="970" cy="722" rx="780" ry="26" fill="#060e14" opacity=".45"/>
+  <path id="top" fill="#8fd6d8" stroke="#0b1620" stroke-width="3" stroke-linejoin="round"/>
+  <path id="cu" fill="#df9c4c" stroke="#0b1620" stroke-width="3" stroke-linejoin="round"/>
+  <path id="core" fill="url(#glassG)" stroke="#0b1620" stroke-width="3" stroke-linejoin="round" opacity=".96"/>
+  <path id="base" fill="#2e4a5a" stroke="#0b1620" stroke-width="3" stroke-linejoin="round"/>
+  <path id="hl" fill="none" stroke="#f3ead6" stroke-width="2.5" opacity=".55"/>
+  <path d="M1680 580 L1704 540 L1704 636 L1680 676 Z" fill="#2d6670" stroke="#0b1620" stroke-width="3" stroke-linejoin="round"/>
+  <g id="pads"></g>
+  <path id="ghost" fill="none" stroke="#bff3f2" stroke-width="3" stroke-dasharray="14 10" opacity="0"/>
+  <g id="chip" transform="translate(0,-14)">
+    <path id="tplane" d="M380 562 L404 532 L1604 532 L1580 562 Z" fill="#75c9ce" opacity="0"/>
+    <rect id="tband" x="380" y="550" width="1200" height="12" fill="#75c9ce" stroke="#bff3f2" stroke-width="2" opacity="0"/>
+    <g id="bumps"></g>
+    <path d="M360 418 L384 388 L1584 388 L1560 418 Z" fill="#3e5668" stroke="#0b1620" stroke-width="4" stroke-linejoin="round"/>
+    <rect x="360" y="418" width="1200" height="100" fill="url(#chipG)" stroke="#0b1620" stroke-width="4"/>
+    <path d="M1560 418 L1584 388 L1584 488 L1560 518 Z" fill="#13212b" stroke="#0b1620" stroke-width="4" stroke-linejoin="round"/>
+    <path d="M384 438 H1536 M384 498 H1536" stroke="#75c9ce" stroke-width="2" opacity=".28"/>
+    <path d="M366 422 H1554" stroke="#f3ead6" stroke-width="2" opacity=".35"/>
+    <line id="datum" x1="380" y1="550" x2="1580" y2="550" stroke="#f3ead6" stroke-width="2.5" stroke-dasharray="10 8" opacity="0"/>
+    <g id="marks"></g>
+    <text id="lChip" class="lab" x="250" y="532" font-size="24">칩 접점</text>
+    <text id="lDatum" class="lab" x="1524" y="545" font-size="13" opacity="0">같은 기준선</text>
+    <text id="lGap" class="lab" x="1524" y="586" font-size="13" fill="#ff8a7a" opacity="0" style="fill:#ff8a7a">간격</text>
+    <text id="lTol" class="lab" x="1592" y="574" font-size="16" opacity="0">허용 범위</text>
+  </g>
+  <text id="lSub" class="lab" x="240" y="716" font-size="24">기판</text>
+  <text id="lOrig" class="lab" x="960" y="612" font-size="22" text-anchor="middle" opacity="0">원래 평면</text>
+  <text id="lGoal" class="lab" x="250" y="508" font-size="22" opacity="0">목표 형상</text>
+  <g id="beam" transform="translate(940,0)" opacity="0"><line x1="0" y1="300" x2="0" y2="640" stroke="#bff3f2" stroke-width="3"/><line x1="0" y1="300" x2="0" y2="640" stroke="#75c9ce" stroke-width="12" opacity=".25"/></g>
+  <g id="dial" transform="translate(0,20)" opacity="0">
+    <circle cx="1700" cy="250" r="72" fill="#10202b" stroke="#0b1620" stroke-width="5"/>
+    <circle cx="1700" cy="250" r="66" fill="none" stroke="#f3ead6" stroke-width="2" opacity=".4"/>
+    <g id="arcs"></g>
+    <line id="needle" x1="1700" y1="250" x2="1700" y2="196" stroke="#f3ead6" stroke-width="5" stroke-linecap="round" transform="rotate(0 1700 250)"/>
+    <circle cx="1700" cy="250" r="8" fill="#df9c4c" stroke="#0b1620" stroke-width="3"/>
+    <text class="lab" x="1700" y="350" font-size="20" text-anchor="middle">정렬 게이지</text>
+  </g>
+</g>
+<text x="60" y="72" font-family="K" font-size="30" fill="#f3ead6" opacity=".88">작은 휨, 달라지는 접점</text>
+<text x="1860" y="72" font-family="K" font-size="22" fill="#f3ead6" opacity=".55" text-anchor="end">개념도 · 변형 확대</text>
+<text id="endL" class="lab" x="960" y="196" font-size="60" text-anchor="middle" opacity="0" transform="translate(0,14)">정밀한 연결은 모양을 지키는 것부터</text>
+</svg>
+<div id="band"></div>
+<div class="cap" style="opacity:1">여기 바닥을 조금 휘어 보겠습니다.</div>
+<div class="cap">이해를 돕기 위해 실제보다 변형을 크게 표현했습니다.</div>
+<div class="cap">바닥이 휘면 위쪽 부품과 아래쪽 접점의 높이가 고르지 않게 됩니다.</div>
+<div class="cap">미세한 부품들을 정확하게 조립할 때, 이런 차이를 관리해야 합니다.</div>
+<div class="cap">단순히 바닥이 단단한가를 넘어서, 필요한 모양과 치수를 얼마나</div>
+<div class="cap">안정적으로 유지하느냐가 중요해지는 겁니다.</div>
+</div>
+<script src="assets/gsap.min.js"></script>
+<script>
+const NS='http://www.w3.org/2000/svg',$=id=>document.getElementById(id);
+const el=(t,a,p)=>{const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);p.appendChild(e);return e};
+const Y0=580,XS=[],CX=[440,620,800,960,1120,1300,1480],MK=[4,5,6];
+for(let x=240;x<=1680;x+=60)XS.push(x);
+const u2=x=>((x-960)/720)**2,sf=(x,B)=>Y0-B*(1-u2(x)),f=n=>n.toFixed(1);
+const line=(B,o,dx=0)=>XS.map(x=>f(x+dx)+' '+f(sf(x,B)+o));
+const band=(B,a,b,dx=0)=>'M'+line(B,a).join(' L')+' L'+line(B,b,dx).reverse().join(' L')+' Z';
+const P={top:B=>band(B,0,-40,24),cu:B=>band(B,0,8),core:B=>band(B,8,78),base:B=>band(B,78,96),hl:B=>'M'+line(B,3).join(' L')};
+const padT=(x,B)=>`translate(0,${f(-B*(1-u2(x)))})`;
+const mk=(x,B)=>{const g=f(550+B*u2(x)),m=x+26;return `M${m} 550 L${m+10} 550 L${m+10} ${g} L${m} ${g}`};
+const pads=$('pads'),bumps=$('bumps'),marks=$('marks'),B0=14;
+CX.forEach((x,i)=>{
+  const g=el('g',{id:'pg'+i,transform:padT(x,B0)},pads);
+  el('rect',{x:x-4,y:Y0+8,width:8,height:70,fill:'#df9c4c',opacity:.55},g);
+  el('rect',{x:x-22,y:Y0-30,width:44,height:10,rx:3,fill:'url(#padG)',stroke:'#0b1620','stroke-width':3},g);
+  el('ellipse',{id:'ok'+i,cx:x,cy:Y0-25,rx:36,ry:13,fill:'none',stroke:'#bff3f2','stroke-width':4,opacity:0},g);
+  if(i>4)el('ellipse',{id:'bad'+i,cx:x,cy:Y0-25,rx:36,ry:13,fill:'none',stroke:'#ff5a4f','stroke-width':4,opacity:0},g);
+  el('circle',{cx:x,cy:534,r:16,fill:'url(#cuG)',stroke:'#0b1620','stroke-width':3},bumps);
+  el('circle',{cx:x-5,cy:528,r:4,fill:'#fff3dc',opacity:.7},bumps);
+});
+MK.forEach(i=>el('path',{id:'mk'+i,d:mk(CX[i],B0),fill:'none',stroke:'#ff5a4f','stroke-width':5,'stroke-linejoin':'round',opacity:0},marks));
+for(const k in P)$(k).setAttribute('d',P[k](B0));
+$('ghost').setAttribute('d',P.top(0)+' M240 580 L240 676 L1680 676 L1680 580');
+const pt=(a,r=58)=>f(1700+r*Math.sin(a*Math.PI/180))+' '+f(250-r*Math.cos(a*Math.PI/180));
+[[-80,-18,'#ff5a4f'],[-18,18,'#75c9ce'],[18,80,'#ff5a4f']].forEach(([a,b,c])=>el('path',{d:`M${pt(a)} A58 58 0 0 1 ${pt(b)}`,fill:'none',stroke:c,'stroke-width':10,opacity:.85},$('arcs')));
+
+window.__timelines=window.__timelines||{};
+const tl=gsap.timeline({paused:true});window.__timelines['glass-motion']=tl;
+function bow(B,pos,dur,ease){
+  for(const k in P)tl.to($(k),{attr:{d:P[k](B)},duration:dur,ease},pos);
+  CX.forEach((x,i)=>tl.to($('pg'+i),{attr:{transform:padT(x,B)},duration:dur,ease},pos));
+  tl.to($('chip'),{attr:{transform:`translate(0,${f(-B)})`},duration:dur,ease},pos);
+  MK.forEach(i=>tl.to($('mk'+i),{attr:{d:mk(CX[i],B)},duration:dur,ease},pos));
+}
+const cam=$('cam'),camTo=(t,pos,dur,ease)=>tl.to(cam,{attr:{transform:t},duration:dur,ease},pos);
+const op=(id,o,pos,dur=.5)=>tl.to(typeof id==='string'?$(id):id,{opacity:o,duration:dur,ease:'sine.inOut'},pos);
+
+// 0–6.48 : slight bow → deliberate exaggerated bow, wide composition
+bow(30,0,2.42,'sine.in');
+bow(110,2.42,4.0,'sine.inOut');
+camTo('translate(-48,-34) scale(1.05)',0.1,6.2,'sine.inOut');
+op('ghost',.9,2.5,.8);op('lOrig',1,5.0,.6);
+op('lChip',0,6.0,.4);op('lSub',0,6.0,.4);op('lOrig',0,6.3,.4);op('ghost',.35,6.6,.6);
+
+// 6.48–11.5 : push in, same datum, staggered gap markers
+camTo('translate(-1620,-490) scale(2)',6.55,2.4,'power2.inOut');
+op('datum',.9,7.2,.6);op('lDatum',1,7.7,.5);
+MK.forEach((i,k)=>op('mk'+i,1,8.4+k*.6,.45));
+op('lGap',1,9.9,.5);
+op(['lDatum','lGap'].map($),0,11.15,.3);
+
+// 11.5–15.68 : target plane + alignment gauge sweep
+camTo('translate(-896,-159) scale(1.45)',11.55,1.6,'power2.inOut');
+op('tplane',.14,11.6,.6);op('tband',.3,11.7,.6);op('lTol',1,12.2,.5);
+tl.to($('dial'),{opacity:1,attr:{transform:'translate(0,0)'},duration:.7,ease:'power2.out'},11.75);
+op('beam',1,11.95,.3);
+tl.to($('beam'),{attr:{transform:'translate(1500,0)'},duration:2.8,ease:'none'},12.0);
+const nd=$('needle'),rot=a=>({attr:{transform:`rotate(${a} 1700 250)`}});
+[[12.1,0],[12.9,6],[13.8,32],[14.7,64]].forEach(([t,a],k,arr)=>{if(k)tl.to(nd,{...rot(a),duration:t-arr[k-1][0]-.15,ease:'power2.inOut'},arr[k-1][0]+.15)});
+op('ok3',1,12.1,.3);op('ok4',1,12.9,.3);op('bad5',1,13.8,.3);op('bad6',1,14.7,.3);
+op('beam',0,14.85,.3);
+op(['dial','tplane','tband','lTol','datum','ok3','ok4','bad5','bad6',...MK.map(i=>'mk'+i)].map($),0,15.2,.45);
+
+// 15.68–20.04 : wide again, ghost target outline, controlled shape as design goal
+camTo('translate(0,-50) scale(1)',15.75,2.6,'power2.inOut');
+op('ghost',1,15.75,.6);op('lGoal',1,16.3,.6);
+bow(0,15.8,3.8,'power2.inOut');
+op('lGoal',0,19.7,.3);
+
+// 20.04–23.21 : settled, aligned contacts, end label
+CX.forEach((x,i)=>op('ok'+i,1,20.2+i*.1,.35));
+op('ghost',.3,20.6,.8);
+tl.to($('endL'),{opacity:1,attr:{transform:'translate(0,0)'},duration:.9,ease:'power2.out'},20.45);
+camTo('translate(-19,-58) scale(1.02)',20.1,2.9,'sine.inOut');
+
+// captions (exact windows)
+const caps=document.querySelectorAll('.cap'),T=[[0,2.42],[2.42,6.48],[6.48,11.5],[11.5,15.68],[15.68,20.04],[20.04,23.12]];
+caps.forEach((c,i)=>{if(i)tl.set(c,{opacity:1},T[i][0]);tl.set(c,{opacity:0},T[i][1])});
+tl.set({},{},23.208333);
+</script>
+</body>
+</html>
