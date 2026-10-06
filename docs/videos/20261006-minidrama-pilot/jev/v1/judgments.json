@@ -1,0 +1,402 @@
+[
+  {
+    "line": "c2b",
+    "check": "natural",
+    "text": "그건 제 일당이잖아요…",
+    "choice": "pass",
+    "conf": 0.62,
+    "p": 0.81,
+    "verdict": "review",
+    "expected": null
+  },
+  {
+    "line": "c5",
+    "check": "context",
+    "text": "너… 두고 보자.",
+    "choice": "pass",
+    "conf": 0.84,
+    "p": 0.92,
+    "verdict": "review",
+    "expected": null
+  },
+  {
+    "line": "c5",
+    "check": "natural",
+    "text": "너… 두고 보자.",
+    "choice": "pass",
+    "conf": 0.84,
+    "p": 0.92,
+    "verdict": "review",
+    "expected": null
+  },
+  {
+    "line": "k1",
+    "check": "voice",
+    "text": "막내야, 이번 주 수수료 안 냈지?",
+    "choice": "pass",
+    "conf": 0.62,
+    "p": 0.81,
+    "verdict": "review",
+    "expected": "pass"
+  },
+  {
+    "line": "c2a",
+    "check": "natural",
+    "text": "막내야, 이번 주 돈 안 냈지?",
+    "choice": "pass",
+    "conf": 0.83,
+    "p": 0.92,
+    "verdict": "review",
+    "expected": null
+  },
+  {
+    "line": "c2b",
+    "check": "voice",
+    "text": "그건 제 일당이잖아요…",
+    "choice": "pass",
+    "conf": 0.9,
+    "p": 0.95,
+    "verdict": "pass",
+    "expected": null
+  },
+  {
+    "line": "c3a",
+    "check": "context",
+    "text": "작업 방해하지 마세요.",
+    "choice": "fail",
+    "conf": 0.18,
+    "p": 0.59,
+    "verdict": "review",
+    "expected": null
+  },
+  {
+    "line": "c3a",
+    "check": "pronounce",
+    "text": "작업 방해하지 마세요.",
+    "choice": "pass",
+    "conf": 0.55,
+    "p": 0.77,
+    "verdict": "review",
+    "expected": null
+  },
+  {
+    "line": "c3b",
+    "check": "pronounce",
+    "text": "넌 또 뭐야?",
+    "choice": "pass",
+    "conf": 0.8,
+    "p": 0.9,
+    "verdict": "review",
+    "expected": null
+  },
+  {
+    "line": "k1",
+    "check": "pronounce",
+    "text": "막내야, 이번 주 수수료 안 냈지?",
+    "choice": "fail",
+    "conf": 0.76,
+    "p": 0.88,
+    "verdict": "review",
+    "expected": "fail"
+  },
+  {
+    "line": "c2a",
+    "check": "voice",
+    "text": "막내야, 이번 주 돈 안 냈지?",
+    "choice": "pass",
+    "conf": 0.6,
+    "p": 0.8,
+    "verdict": "review",
+    "expected": null
+  },
+  {
+    "line": "c5",
+    "check": "pronounce",
+    "text": "너… 두고 보자.",
+    "choice": "pass",
+    "conf": 0.8,
+    "p": 0.9,
+    "verdict": "review",
+    "expected": null
+  },
+  {
+    "line": "k3",
+    "check": "context",
+    "text": "당신은 작업을 방해하는 것을 멈추어야 합니다.",
+    "choice": "fail",
+    "conf": 0.13,
+    "p": 0.57,
+    "verdict": "review",
+    "expected": null
+  },
+  {
+    "line": "c2a",
+    "check": "context",
+    "text": "막내야, 이번 주 돈 안 냈지?",
+    "choice": "pass",
+    "conf": 0.61,
+    "p": 0.8,
+    "verdict": "review",
+    "expected": null
+  },
+  {
+    "line": "c2a",
+    "check": "pronounce",
+    "text": "막내야, 이번 주 돈 안 냈지?",
+    "choice": "pass",
+    "conf": 0.63,
+    "p": 0.82,
+    "verdict": "review",
+    "expected": null
+  },
+  {
+    "line": "c3a",
+    "check": "natural",
+    "text": "작업 방해하지 마세요.",
+    "choice": "pass",
+    "conf": 0.59,
+    "p": 0.79,
+    "verdict": "review",
+    "expected": null
+  },
+  {
+    "line": "c5",
+    "check": "voice",
+    "text": "너… 두고 보자.",
+    "choice": "pass",
+    "conf": 0.86,
+    "p": 0.93,
+    "verdict": "pass",
+    "expected": null
+  },
+  {
+    "line": "k2",
+    "check": "context",
+    "text": "오늘 날씨 좋네요, 커피 한잔 하실래요?",
+    "choice": "fail",
+    "conf": 1,
+    "p": 1,
+    "verdict": "fail",
+    "expected": "fail"
+  },
+  {
+    "line": "k2",
+    "check": "voice",
+    "text": "오늘 날씨 좋네요, 커피 한잔 하실래요?",
+    "choice": "fail",
+    "conf": 0.83,
+    "p": 0.91,
+    "verdict": "review",
+    "expected": null
+  },
+  {
+    "line": "k3",
+    "check": "voice",
+    "text": "당신은 작업을 방해하는 것을 멈추어야 합니다.",
+    "choice": "fail",
+    "conf": 0.33,
+    "p": 0.66,
+    "verdict": "review",
+    "expected": null
+  },
+  {
+    "line": "k3",
+    "check": "natural",
+    "text": "당신은 작업을 방해하는 것을 멈추어야 합니다.",
+    "choice": "fail",
+    "conf": 0.99,
+    "p": 1,
+    "verdict": "fail",
+    "expected": "fail"
+  },
+  {
+    "line": "c3b",
+    "check": "context",
+    "text": "넌 또 뭐야?",
+    "choice": "pass",
+    "conf": 0.88,
+    "p": 0.94,
+    "verdict": "pass",
+    "expected": null
+  },
+  {
+    "line": "c3b",
+    "check": "voice",
+    "text": "넌 또 뭐야?",
+    "choice": "pass",
+    "conf": 0.84,
+    "p": 0.92,
+    "verdict": "review",
+    "expected": null
+  },
+  {
+    "line": "c6",
+    "check": "context",
+    "text": "부사장님, 센터에 웬 여자 하나가 판을 깼습니다.",
+    "choice": "pass",
+    "conf": 0.69,
+    "p": 0.84,
+    "verdict": "review",
+    "expected": null
+  },
+  {
+    "line": "c6",
+    "check": "voice",
+    "text": "부사장님, 센터에 웬 여자 하나가 판을 깼습니다.",
+    "choice": "pass",
+    "conf": 0.01,
+    "p": 0.5,
+    "verdict": "review",
+    "expected": null
+  },
+  {
+    "line": "k2",
+    "check": "pronounce",
+    "text": "오늘 날씨 좋네요, 커피 한잔 하실래요?",
+    "choice": "pass",
+    "conf": 0.39,
+    "p": 0.7,
+    "verdict": "review",
+    "expected": null
+  },
+  {
+    "line": "c3a",
+    "check": "voice",
+    "text": "작업 방해하지 마세요.",
+    "choice": "pass",
+    "conf": 0.67,
+    "p": 0.83,
+    "verdict": "review",
+    "expected": null
+  },
+  {
+    "line": "c4",
+    "check": "context",
+    "text": "다치기 싫으면 가세요.",
+    "choice": "pass",
+    "conf": 0.95,
+    "p": 0.97,
+    "verdict": "pass",
+    "expected": null
+  },
+  {
+    "line": "c4",
+    "check": "voice",
+    "text": "다치기 싫으면 가세요.",
+    "choice": "pass",
+    "conf": 0.81,
+    "p": 0.9,
+    "verdict": "review",
+    "expected": null
+  },
+  {
+    "line": "c4",
+    "check": "pronounce",
+    "text": "다치기 싫으면 가세요.",
+    "choice": "pass",
+    "conf": 0.77,
+    "p": 0.88,
+    "verdict": "review",
+    "expected": null
+  },
+  {
+    "line": "k1",
+    "check": "context",
+    "text": "막내야, 이번 주 수수료 안 냈지?",
+    "choice": "pass",
+    "conf": 0.34,
+    "p": 0.67,
+    "verdict": "review",
+    "expected": "pass"
+  },
+  {
+    "line": "k2",
+    "check": "natural",
+    "text": "오늘 날씨 좋네요, 커피 한잔 하실래요?",
+    "choice": "fail",
+    "conf": 0.36,
+    "p": 0.68,
+    "verdict": "review",
+    "expected": null
+  },
+  {
+    "line": "c2b",
+    "check": "pronounce",
+    "text": "그건 제 일당이잖아요…",
+    "choice": "pass",
+    "conf": 0.17,
+    "p": 0.58,
+    "verdict": "review",
+    "expected": null
+  },
+  {
+    "line": "c3b",
+    "check": "natural",
+    "text": "넌 또 뭐야?",
+    "choice": "pass",
+    "conf": 0.94,
+    "p": 0.97,
+    "verdict": "pass",
+    "expected": null
+  },
+  {
+    "line": "c6",
+    "check": "pronounce",
+    "text": "부사장님, 센터에 웬 여자 하나가 판을 깼습니다.",
+    "choice": "pass",
+    "conf": 0.2,
+    "p": 0.6,
+    "verdict": "review",
+    "expected": null
+  },
+  {
+    "line": "k3",
+    "check": "pronounce",
+    "text": "당신은 작업을 방해하는 것을 멈추어야 합니다.",
+    "choice": "pass",
+    "conf": 0.14,
+    "p": 0.57,
+    "verdict": "review",
+    "expected": null
+  },
+  {
+    "line": "c2b",
+    "check": "context",
+    "text": "그건 제 일당이잖아요…",
+    "choice": "pass",
+    "conf": 0.93,
+    "p": 0.96,
+    "verdict": "pass",
+    "expected": null
+  },
+  {
+    "line": "c4",
+    "check": "natural",
+    "text": "다치기 싫으면 가세요.",
+    "choice": "pass",
+    "conf": 0.87,
+    "p": 0.94,
+    "verdict": "pass",
+    "expected": null
+  },
+  {
+    "line": "c6",
+    "check": "natural",
+    "text": "부사장님, 센터에 웬 여자 하나가 판을 깼습니다.",
+    "choice": "pass",
+    "conf": 0.56,
+    "p": 0.78,
+    "verdict": "review",
+    "expected": null
+  },
+  {
+    "line": "k1",
+    "check": "natural",
+    "text": "막내야, 이번 주 수수료 안 냈지?",
+    "choice": "pass",
+    "conf": 0.74,
+    "p": 0.87,
+    "verdict": "review",
+    "expected": "pass"
+  }
+]

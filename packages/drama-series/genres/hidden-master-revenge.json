@@ -1,0 +1,17 @@
+{
+  "id": "hidden-master-revenge",
+  "name": "숨은 실력자 참교육",
+  "promise": "힘을 숨긴 주인공이 약자를 괴롭히는 악당을 압도적으로 제압한다",
+  "hookRules": ["첫 10초 안에 주인공의 숨긴 힘을 암시하는 구체적 행동을 보여준다"],
+  "scenarioChecks": {
+    "hook": { "task": "Do the first 10 seconds (cut 1) show something unusual about the protagonist that makes a viewer want to keep watching?", "pass": "Cut 1 shows a concrete unusual hint or tension within 10 seconds.", "fail": "Cut 1 is ordinary scenery or routine with no hint or tension." },
+    "conflict": { "task": "Is there a clear injustice or conflict that a viewer immediately understands and wants resolved?", "pass": "A clear wrongdoer harms a sympathetic person early.", "fail": "There is no clear conflict, or it is vague or late." },
+    "payoff": { "task": "Does the protagonist deliver a satisfying reversal (the catharsis this genre promises) within the clip?", "pass": "The protagonist visibly turns the situation around against the wrongdoer.", "fail": "No reversal or catharsis happens." },
+    "cliffhanger": { "task": "Does the ending raise a new question that makes the viewer want the next episode?", "pass": "The ending introduces a new threat or secret.", "fail": "The ending closes everything or is flat." },
+    "genre": { "task": "For Korean YouTube viewers of hidden-master revenge dramas, does this clip deliver the genre's core promise without needing extra explanation?", "pass": "Hidden strength, injustice and reversal are all present and readable.", "fail": "The genre promise is missing or unreadable." }
+  },
+  "dialogueStyle": ["주인공은 짧은 존댓말로 말한다", "악당은 상대에 따라 반말·존댓말이 바뀐다"],
+  "actionRules": ["한 번에 1~2명, 짧은 한 동작으로 끝낸다", "유혈·부상 묘사 금지", "넘어지는 동작은 장소에 실제로 있는 물체로 받는다"],
+  "bannedWords": ["씨발", "개새끼", "병신", "이년", "저년"],
+  "structure": { "pilotCuts": 6, "episodeMinutes": [3, 8] }
+}

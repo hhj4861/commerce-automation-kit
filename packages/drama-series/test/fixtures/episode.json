@@ -1,0 +1,46 @@
+{
+  "seriesId": "night-shift",
+  "no": 1,
+  "title": "야간 상하차 시험분",
+  "cuts": [
+    {
+      "id": "c1", "locationId": "aisle", "durationSec": 10,
+      "cast": [{ "characterId": "seoyun", "lookId": "v2" }],
+      "action": "서윤이 무거운 박스를 아무렇지 않게 든다.",
+      "visualEn": "Medium shot of {seoyun} lifting a heavy box with ease in {location}.",
+      "sfx": "conveyor hum, scanner beep", "caption": "새벽 2시, 경기 남부 물류센터",
+      "propState": { "빈 박스 더미": "쌓여 있음" },
+      "lines": []
+    },
+    {
+      "id": "c2", "locationId": "aisle", "durationSec": 10,
+      "cast": [{ "characterId": "changsik", "lookId": "base" }, { "characterId": "minjae", "lookId": "base" }],
+      "action": "오창식이 민재의 멱살을 잡는다.",
+      "visualEn": "{changsik} grabs the collar of {minjae}.",
+      "propState": { "빈 박스 더미": "쌓여 있음" },
+      "lines": [
+        { "speaker": "changsik", "text": "야, 막내. 이번 주 몫 내놔.", "kind": "dialogue" },
+        { "speaker": "minjae", "text": "제 일당이에요. 제발요…", "kind": "dialogue" }
+      ]
+    },
+    {
+      "id": "c3", "locationId": "aisle", "durationSec": 10,
+      "cast": [{ "characterId": "seoyun", "lookId": "v2" }, { "characterId": "changsik", "lookId": "base" }],
+      "action": "서윤이 오창식의 손목을 잡고, 달려든 조직원을 빈 박스 더미 위로 넘어뜨린다.",
+      "visualEn": "{seoyun} grips the wrist of {changsik}, then throws a henchman onto the pile of empty boxes.",
+      "propState": { "빈 박스 더미": "무너짐" },
+      "lines": [
+        { "speaker": "seoyun", "text": "그 사람 놔주세요.", "kind": "dialogue" },
+        { "speaker": "changsik", "text": "넌 또 뭐야?", "kind": "dialogue" }
+      ]
+    },
+    {
+      "id": "c4", "locationId": "parking", "durationSec": 6,
+      "cast": [{ "characterId": "changsik", "lookId": "base" }],
+      "transitionIn": "fade-black",
+      "action": "오창식이 차 안에서 부사장에게 전화한다.",
+      "visualEn": "{changsik} sits in a dark sedan holding a phone.",
+      "lines": [{ "speaker": "changsik", "text": "부사장님, 일이 좀 꼬였습니다.", "kind": "dialogue" }]
+    }
+  ]
+}

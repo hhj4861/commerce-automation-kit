@@ -1,0 +1,28 @@
+{
+  "id": "regression-apocalypse",
+  "name": "회귀자 먼치킨 아포칼립스",
+  "promise": "미래를 아는 압도적 주인공이 모두가 무너질 때 혼자 정답을 실행한다",
+  "hookRules": [
+    "첫 10초 안에 회귀 사실이나 주인공의 비정상적 우위를 보여준다",
+    "회귀 전환은 생성하지 않고 편집(섬광·암전)으로 처리한다"
+  ],
+  "scenarioChecks": {
+    "hook": { "task": "Do the first 10 seconds show the protagonist's abnormal advantage or the fact that she has returned from the future, so a viewer wants to keep watching?", "pass": "Within 10 seconds the clip shows a concrete sign of regression or overwhelming advantage.", "fail": "The opening is ordinary scenery or routine with no sign of regression or advantage." },
+    "conflict": { "task": "Is there an immediate threat or injustice that a viewer understands without explanation?", "pass": "A concrete threat (the outbreak, a hostile person) is visible early and stakes are clear.", "fail": "There is no clear threat, or it is vague or late." },
+    "payoff": { "task": "Does the protagonist decisively overpower the threat in a way that shows a huge gap in ability?", "pass": "The protagonist ends the threat calmly and overwhelmingly while others are stunned.", "fail": "No decisive action, or the protagonist struggles like everyone else." },
+    "cliffhanger": { "task": "Does the ending raise a new threat or a future-knowledge question that makes the viewer want the next episode?", "pass": "The ending points to what is coming next (a countdown, a known future event, a new threat).", "fail": "The ending closes everything or is flat." },
+    "genre": { "task": "For Korean viewers of regression munchkin apocalypse stories, does this clip deliver the genre's core promise: a returner who knows the future acts calmly and overwhelmingly while others panic?", "pass": "Regression, future knowledge and overwhelming calm action are all present and readable.", "fail": "The genre promise is missing or unreadable." }
+  },
+  "dialogueStyle": [
+    "독백은 짧게, 미래 지식을 드러내되 설명하지 않는다",
+    "다른 인물은 상황을 모르고 주인공을 의심하거나 비웃는다"
+  ],
+  "actionRules": [
+    "한 번에 1~2명(또는 좀비 1~2구), 한 동작으로 끝낸다",
+    "좀비 떼는 셔터 너머·어둠 속 실루엣으로 거리를 두고 보여준다",
+    "유혈·절단·부상 묘사 금지",
+    "무기와 도구는 장소에 실제로 있는 물건만 쓴다"
+  ],
+  "bannedWords": ["씨발", "개새끼", "병신", "이년", "저년"],
+  "structure": { "pilotCuts": 7, "episodeMinutes": [3, 8] }
+}

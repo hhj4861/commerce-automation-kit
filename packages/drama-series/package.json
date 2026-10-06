@@ -1,0 +1,24 @@
+{
+  "name": "@cak/drama-series",
+  "version": "0.1.0",
+  "private": true,
+  "description": "원자 #15 — 장르를 모르는 AI 미니시리즈 제작 엔진: 시리즈·회차·컷 검증, 대사·장소·시나리오 관문(JEV 판정 요청/해석), 생성 명세·견적, 받아쓰기 대조, ffmpeg 조립. 외부 호출은 하지 않는다(실행자는 스킬·앱).",
+  "type": "module",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "cli": "tsx src/cli/index.ts"
+  },
+  "dependencies": {
+    "@cak/contracts": "*",
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.0",
+    "tsx": "^4.16.0",
+    "vitest": "^2.0.0",
+    "@types/node": "^20.14.0"
+  }
+}
