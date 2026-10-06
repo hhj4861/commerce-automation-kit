@@ -39,7 +39,8 @@
         },
         {
           "id": "future",
-          "description": "the same Korean woman ten years older, gaunt, short rough-cut hair, thin scar across the left eyebrow, worn dark military-style coat"
+          "description": "the same Korean woman ten years older, gaunt, short rough-cut hair, thin scar across the left eyebrow, worn dark military-style coat",
+          "refAssetId": "156424a3-a1a3-4def-8db0-5c79e5a0e162"
         }
       ]
     },
@@ -87,7 +88,8 @@
       "looks": [
         {
           "id": "base",
-          "description": "54-year-old Korean man, short graying hair, thick forearms, worn navy padded vest, warm kind smile"
+          "description": "54-year-old Korean man, short graying hair, thick forearms, worn navy padded vest, warm kind smile",
+          "refAssetId": "57a5bd33-d886-4eff-92a4-9a0dc5f6c0a8"
         }
       ]
     }
@@ -115,7 +117,8 @@
       "props": [
         "무너진 건물",
         "버려진 차"
-      ]
+      ],
+      "refAssetId": "04791338-f545-4f9b-a5c1-9e8cc3e07322"
     }
   ],
   "episodes": [

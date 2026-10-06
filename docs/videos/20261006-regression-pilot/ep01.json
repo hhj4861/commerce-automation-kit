@@ -22,7 +22,11 @@
           "text": "결국… 아무도 못 지켰네.",
           "kind": "dialogue",
           "verification": {
-            "status": "unverified"
+            "status": "human-approved",
+            "approvedBy": "user",
+            "at": "2026-10-06T06:10:24.384Z",
+            "note": "JEV r2 미확정(context p .78/.89, voice p .76/.88, natural p .90/.95) — 사용자 추천안 승인 2026-10-06",
+            "lineHash": "8a39f5300724fab3"
           }
         }
       ]
@@ -51,7 +55,11 @@
           "text": "돌아왔어…",
           "kind": "dialogue",
           "verification": {
-            "status": "unverified"
+            "status": "human-approved",
+            "approvedBy": "user",
+            "at": "2026-10-06T06:10:24.782Z",
+            "note": "JEV r2 미확정(context p .87/.94, voice p .83/.91, natural p .96/.98) — 사용자 추천안 승인",
+            "lineHash": "58c8c30e05dc1497"
           }
         }
       ]
@@ -83,7 +91,11 @@
           "text": "다들 셔터부터 내려요!",
           "kind": "dialogue",
           "verification": {
-            "status": "unverified"
+            "status": "human-approved",
+            "approvedBy": "user",
+            "at": "2026-10-06T06:10:25.255Z",
+            "note": "JEV r2 미확정(context p .76/.88, voice p .53/.76, natural p .85/.93) — 사용자 추천안 승인",
+            "lineHash": "a2898c5994a3e891"
           }
         },
         {
@@ -91,7 +103,11 @@
           "text": "알바 주제에 어디서 명령이야?",
           "kind": "dialogue",
           "verification": {
-            "status": "unverified"
+            "status": "human-approved",
+            "approvedBy": "user",
+            "at": "2026-10-06T06:10:25.756Z",
+            "note": "JEV r2 미확정(context p .95/.97, voice p .95/.98, natural p .79/.89) — 사용자 추천안 승인",
+            "lineHash": "28d5db11a7b39c00"
           }
         }
       ]
@@ -124,10 +140,14 @@
       "lines": [
         {
           "speaker": "changsik",
-          "text": "열쇠 이리 내.",
+          "text": "그 열쇠, 내가 가진다.",
           "kind": "dialogue",
           "verification": {
-            "status": "unverified"
+            "status": "human-approved",
+            "approvedBy": "user",
+            "at": "2026-10-06T06:10:26.233Z",
+            "note": "r2 원문 '열쇠 이리 내.' context f .37/.69 → '그 열쇠, 내가 가진다.'로 수정, 재판정 상한 초과로 사용자 승인",
+            "lineHash": "595481574ee99f43"
           }
         },
         {
@@ -171,7 +191,11 @@
           "text": "다들 뒤로 가요!",
           "kind": "dialogue",
           "verification": {
-            "status": "unverified"
+            "status": "human-approved",
+            "approvedBy": "user",
+            "at": "2026-10-06T06:10:26.684Z",
+            "note": "JEV r2 미확정(context p .87/.94, voice p .67/.83, natural p .85/.93) — 사용자 추천안 승인",
+            "lineHash": "b9c577021f2b7e91"
           }
         }
       ]
@@ -207,7 +231,11 @@
           "text": "이거 놔!",
           "kind": "dialogue",
           "verification": {
-            "status": "unverified"
+            "status": "human-approved",
+            "approvedBy": "user",
+            "at": "2026-10-06T06:10:27.122Z",
+            "note": "JEV r2 미확정(context p .72/.86, voice p .65/.82, natural p .84/.92) — 사용자 추천안 승인",
+            "lineHash": "3085327131a9c48d"
           }
         },
         {
@@ -215,7 +243,11 @@
           "text": "서윤 씨, 어디서 그런 걸 배웠어?",
           "kind": "dialogue",
           "verification": {
-            "status": "unverified"
+            "status": "human-approved",
+            "approvedBy": "user",
+            "at": "2026-10-06T06:10:27.585Z",
+            "note": "JEV r2 voice f .02/.51(반반), context p .75/.88, natural p .76/.88 — 의심 표출 의도에 맞아 사용자 승인",
+            "lineHash": "f8dfe8866d084b6b"
           }
         }
       ]
@@ -262,10 +294,14 @@
       "lines": [
         {
           "speaker": "seoyun",
-          "text": "이번엔 당신 차례야.",
+          "text": "이번엔… 내가 먼저야.",
           "kind": "dialogue",
           "verification": {
-            "status": "unverified"
+            "status": "human-approved",
+            "approvedBy": "user",
+            "at": "2026-10-06T06:10:28.185Z",
+            "note": "r2 원문 '이번엔 당신 차례야.' context f .19/.59·voice f .65/.82 → '이번엔… 내가 먼저야.'로 수정, 사용자 승인",
+            "lineHash": "9ea5cd739f2bedd8"
           }
         }
       ]

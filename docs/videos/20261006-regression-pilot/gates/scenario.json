@@ -2,27 +2,31 @@
   "gate": "scenario",
   "stage": "episode",
   "ok": true,
-  "fingerprint": "5a1e9a1105a86246",
+  "fingerprint": "9776cf538efc10d5",
   "findings": [
     {
-      "severity": "info",
-      "message": "fun__surprise 2/5 (확신도 0.60, 참고용)"
+      "severity": "review",
+      "message": "carry__revenge 미확정(pass 0.53/0.77)"
     },
     {
       "severity": "info",
-      "message": "fun__tension-curve 5/5 (확신도 0.98, 참고용)"
+      "message": "fun__surprise 2/5 (확신도 0.64, 참고용)"
     },
     {
       "severity": "info",
-      "message": "fun__protagonist-appeal 5/5 (확신도 0.92, 참고용)"
+      "message": "fun__tension-curve 5/5 (확신도 0.99, 참고용)"
     },
     {
       "severity": "info",
-      "message": "fun__freshness 3/5 (확신도 0.15, 참고용)"
+      "message": "fun__protagonist-appeal 5/5 (확신도 0.90, 참고용)"
     },
     {
       "severity": "info",
-      "message": "fun__emotional-peak 5/5 (확신도 0.73, 참고용)"
+      "message": "fun__freshness 3/5 (확신도 0.09, 참고용)"
+    },
+    {
+      "severity": "info",
+      "message": "fun__emotional-peak 5/5 (확신도 0.68, 참고용)"
     }
   ]
 }
