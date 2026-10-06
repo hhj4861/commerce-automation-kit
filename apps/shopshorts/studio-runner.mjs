@@ -1,3 +1,5 @@
+import {webtoon} from './lib/webtoon-plan.js';
+import {prepareWebtoon,checkWebtoonReview} from './studio-webtoon.mjs';
 import {explainer} from './lib/explainer-production.js';
 import {narrationAsset} from './public/narration-audio.js';
 import {animated} from './lib/animation-plan.js';
@@ -20,7 +22,7 @@ import { FPS, FONTS, normalizeEdit, frameCount, clipSpans } from './public/edito
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const GOOGLE = 'https://generativelanguage.googleapis.com/v1beta';
-export const capabilities = env => ({ workerAt: new Date().toISOString(), scenario: false, animation: true, motion: motionCapability(env), image: env.SHOPSHORTS_MEDIA_PROVIDER === 'higgsfield' || !!env.GEMINI_API_KEY, video: env.SHOPSHORTS_MEDIA_PROVIDER === 'higgsfield' || !!env.GEMINI_API_KEY, mediaProvider: env.SHOPSHORTS_MEDIA_PROVIDER === 'higgsfield' ? 'higgsfield' : 'google', voice: !!env.ELEVENLABS_API_KEY, shortsUpload: !!(env.UPLOAD_POST_API_KEY && env.UPLOAD_POST_USER), longUpload: !!env.YOUTUBE_CLIENT_SECRET });
+export const capabilities = env => ({ workerAt: new Date().toISOString(), scenario: false, animation: true, webtoon: env.SHOPSHORTS_MEDIA_PROVIDER === 'higgsfield' && !!env.ELEVENLABS_API_KEY, motion: motionCapability(env), image: env.SHOPSHORTS_MEDIA_PROVIDER === 'higgsfield' || !!env.GEMINI_API_KEY, video: env.SHOPSHORTS_MEDIA_PROVIDER === 'higgsfield' || !!env.GEMINI_API_KEY, mediaProvider: env.SHOPSHORTS_MEDIA_PROVIDER === 'higgsfield' ? 'higgsfield' : 'google', voice: !!env.ELEVENLABS_API_KEY, shortsUpload: !!(env.UPLOAD_POST_API_KEY && env.UPLOAD_POST_USER), longUpload: !!env.YOUTUBE_CLIENT_SECRET });
 export function command(bin, args, env, timeout = 600000) {
   return new Promise((resolveP, reject) => {
     const child = spawn(bin, args, { cwd: ROOT, env: { ...process.env, ...env }, stdio: ['ignore', 'pipe', 'pipe'] });
@@ -119,7 +121,7 @@ async function renderProject(job, work, env, io) {
     }
     // PCM intermediates avoid AAC padding changing frame boundaries during concatenation.
     const target = join(work, `${"segment-"+segments.length}.${job.edit.version===2?'mov':'mp4'}`);
-    await command('ffmpeg', sceneFfmpegArgs(source, target, scene, job.edit, job.brief.aspect, vo, voDuration, job.brief.category === '상품광고', job.edit.version===2?clip:null,captionFilters,cinematic(job.brief),animated(job.brief)), env);
+    await command('ffmpeg', sceneFfmpegArgs(source, target, scene, job.edit, job.brief.aspect, vo, voDuration, job.brief.category === '상품광고', job.edit.version===2?clip:null,captionFilters,cinematic(job.brief),animated(job.brief)||webtoon(job.brief)), env);
     segments.push(target);
   }
   await gap(frameCount(timeline)-cursor);
@@ -147,10 +149,12 @@ export async function executeStudioTask(job, env, io, checkpoint, { fetcher = fe
   const work = join(io.workDir, job.id);
   await mkdir(work, { recursive: true });
   await lintProject(job, work, env, action === 'publish');
+  if(webtoon(job.brief)&&['media','narration','render'].includes(action))await checkWebtoonReview(job);
   if (action === 'narration') return generateNarration(job, work, env, io, checkpoint, { runCli, command });
   if (action === 'media') {
     let assets = { ...job.assets };
-    if(explainer(job.brief)&&job.automation&&!job.edit){
+    const hybrid=webtoon(job.brief)?await prepareWebtoon(job,env,work,io,checkpoint,{...(runHiggsfield?{run:runHiggsfield}:{}),fetcher}):null;
+    if(explainer(job.brief)&&(job.automation||hybrid)&&!job.edit){
       const prepared={...job,assets,edit:normalizeEdit(job)};
       assets=(await generateNarration(prepared,work,env,io,checkpoint,{runCli,command})).assets;
     }
@@ -158,7 +162,12 @@ export async function executeStudioTask(job, env, io, checkpoint, { fetcher = fe
       if (assets[scene.id] || (job.task.sceneIds && !job.task.sceneIds.includes(scene.id))) continue;
       const mediaPrompt=sceneMediaPrompt(job,scene);
       let data, type, providerInfo = {};
-      if (scene.motion) {
+      if(hybrid){
+        hybrid.merge(assets);
+        const duration=Math.max(scene===job.scenes[0]?6:1,Math.ceil(((narrationAsset({...job,assets},scene,normalizeEdit(job).voice)?.duration||scene.duration)+.3)*FPS)/FPS);
+        const result=await hybrid.scene(scene,duration);({data,type}=result);providerInfo={provider:result.provider,providerJobId:result.providerJobId};
+        assets=hybrid.merge(assets);
+      } else if (scene.motion) {
         // Whitelisted body motion template rendered on this local worker; no paid provider call.
         const result=await renderMotionScene(job,scene,work,env);
         ({data,type}=result);providerInfo={provider:result.provider,motionTemplate:result.template};
@@ -198,7 +207,7 @@ export async function executeStudioTask(job, env, io, checkpoint, { fetcher = fe
     }
     // Measure/cache speech before the automatic timeline is built. Resume uses
     // persisted voice+text assets and never pays for already-completed speech.
-    if(job.automation && (cinematic(job.brief)||animated(job.brief)) && !job.edit) {
+    if((job.automation||hybrid) && (cinematic(job.brief)||animated(job.brief)||hybrid) && !job.edit) {
       const prepared={...job,assets,edit:normalizeEdit(job)};
       const result=prepared.edit.voice!=='none'?await generateNarration(prepared,work,env,io,checkpoint,{runCli,command}):{assets};
       // Fail in the executing worker, where the exact corrective message is

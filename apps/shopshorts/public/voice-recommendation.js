@@ -6,6 +6,7 @@ export const VOICE_PROFILES = [
  {id:'BbsagRO6ohd8MKPS2Ob0',name:'진건',tone:'차분한 남성 내레이션'},
  {id:'sf8Bpb1IU97NI9BHSMRf',name:'Rumi',tone:'부드러운 대화'},
  {id:'none',name:'내레이션 없음',tone:'사용자가 음성 없는 영상을 명시한 경우'},
+ {id:'RU7aSi6lT4uQBXMLgDxK',name:'Kyle',tone:'사용자가 선택한 자연스러운 설명 목소리'},
 ];
 
 // A freshness key, not a security boundary. Visual-only edits don't change casting.

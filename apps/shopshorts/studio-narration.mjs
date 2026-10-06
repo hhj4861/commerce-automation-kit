@@ -7,7 +7,7 @@ import { normalizeEdit } from './public/editor-model.js';
 export async function narrationFile(job, scene, work, env, io, { runCli, command }) {
   const voice = job.edit.voice;
   const rate=narrationRate(job);
-  if(![1,1.15,1.25].includes(rate))throw Error('음성 속도를 확인해 주세요.');
+  if(![1,1.1,1.15,1.25].includes(rate))throw Error('음성 속도를 확인해 주세요.');
   const rawHash=createHash('sha256').update(`${voice}:${scene.narration}`).digest('hex').slice(0,24);
   const hash=rate===1?rawHash:createHash('sha256').update(`${rawHash}:${rate}`).digest('hex').slice(0,24);
   const file = join(work, `${hash}.mp3`);

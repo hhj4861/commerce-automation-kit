@@ -4,7 +4,7 @@ export const ANIMATION_MOTIONS = ['enter','float','pulse','shake','walk','wave',
 export const animated = brief => brief?.productionStyle === 'animation';
 
 export function productionStyle(input) {
-  if (input !== undefined && !['cinematic','animation'].includes(input)) throw Object.assign(new Error('지원하지 않는 영상 연출입니다.'), {status:400});
+  if (input !== undefined && !['cinematic','animation','webtoon'].includes(input)) throw Object.assign(new Error('지원하지 않는 영상 연출입니다.'), {status:400});
   return input ? {productionStyle:input} : {};
 }
 
