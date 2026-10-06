@@ -17,6 +17,8 @@
 | R-7 | "shopShorts 프로젝트에 하나의 기능(드라마생성)을 추가" / "codex '영상제작실-편집-개선'에서 수정중이라 협업" | 2단계 Studio 연동, Codex 작업 머지 후 착수 (§9) |
 | R-8 | "아포칼립스인데 먼치킨" + 회귀자 선택 | 첫 장르 팩 `regression-apocalypse` (§5) |
 | R-9 | "영상 저장위치를 /Users/admin/Downloads/vedio/drama 하위에 생성" | 산출물 루트 기본값 (§10) |
+| R-10 | "시나리오에 대한 흥미?재미? 도 판단할수 있나?" | 재미 요소 점수(참고용) (§6) |
+| R-11 | "주제 및 시나리오를 생성할때 jev를 통해 판정을 추가해줘, 조회수를 유발시킬수 있는 요소(강한갈등이나 선정적인 퇴폐미등)가 포함되어 있어야 하고 이걸 통과하는 주제를 대상으로 시나리오를 검수해서 작성하게 하고 각 씬별 대사검증도 jev가 하고" | 주제 관문(조회 유발 요소 2개 이상) → 통과 주제로만 시나리오 작성 → 요소 반영·안전·구조 판정 → 컷별 대사 판정 (§3, §6) |
 
 ## 2. 범위
 
@@ -27,8 +29,9 @@
 ## 3. 전체 흐름
 
 ```
-로그라인 + 장르 팩
-  → ① 시리즈 설정(bible) ──────── 시나리오 관문(JEV) → [사람 승인 1: 기획]
+주제 후보 N개(로그라인·줄거리) + 장르 팩
+  → ⓪ 주제 관문(JEV): 조회 유발 요소·장르 약속·수위 안전 → 통과 주제만 순위 정리
+  → ① 통과 주제로 시리즈 설정(bible)·회차 대본 → 시나리오 관문(JEV: 구조·요소 반영·안전·재미 점수) → [사람 승인 1: 기획]
   → ② 회차 대본(episode: 장소·컷·대사)
        ├ 구조·길이 검사(결정적)
        ├ 장소 연속성·소품 개연성(결정적 + JEV)
@@ -70,7 +73,8 @@ packages/drama-series/
 
 ### 계약 (`packages/contracts/src/drama-series.ts`, 추가 전용)
 
-- `DramaSeries`: `id, title, logline, genreId, characters[], locations[], episodes[]{no,title,summary}, safety{nonGraphic:true}`
+- `DramaTopic`: `id, logline, synopsis, claimedElements[](작성자가 노린 조회 유발 요소), verifiedElements?[](주제 관문이 확정한 요소)`
+- `DramaSeries`: `id, title, logline, genreId, topic(통과한 DramaTopic), characters[], locations[], episodes[]{no,title,summary}, safety{nonGraphic:true}`
 - `DramaCharacter`: `id, name, profile, speech{default, toSuperior?, toSubordinate?}, looks[]{id, description, refAssetId?}`. 같은 인물의 다른 모습(예: 회귀 전·후)은 `looks`로 구분한다.
 - `DramaLocation`: `id, name, anchorText(장소 고정 문구), props[](이 장소에 실제로 있는 소품), refAssetId?`
 - `DramaEpisode`: `seriesId, no, cuts[]`
@@ -97,6 +101,11 @@ packages/drama-series/
 
 - 1단계 팩 2개: `regression-apocalypse`(R-8), `hidden-master-revenge`(지금까지의 「야간 상하차」. 회귀 테스트용 고정 자료).
 - 시나리오 판정 질문은 팩에서 온다. 장르마다 문구만 바꾸면 같은 관문 코드를 쓴다.
+- 팩에 추가되는 항목(R-10, R-11):
+  - `hookElements`: 조회 유발 요소별 판정 문구. 강한 갈등(`strong-conflict`), 복수(`revenge`), 배신(`betrayal`), 금기 관계(`taboo-relationship`), 숨겨진 정체·비밀(`hidden-identity`), 계층 격차(`class-gap`), 관능적·퇴폐적 분위기(`sensual-decadence`). 퇴폐미는 선택 요소 중 하나이며 필수가 아니다.
+  - `minHookElements`: 주제 통과에 필요한 확정 요소 수(기본 2).
+  - `funChecks`: 재미 요소 점수(1~5단계): 의외성, 긴장 곡선, 주인공 매력, 신선함, 감정 정점. **참고용이며 차단하지 않는다.**
+  - `safetyChecks`: 수위 경계. 성적 표현은 분위기·암시까지(시선·긴장·옷차림·조명), 노출·성행위·성폭력 묘사 금지, 성적 긴장 장면의 인물은 모두 성인, 미성년자가 관련된 성적 맥락은 어떤 형태로도 금지, 유혈·잔혹 묘사 금지.
 
 ## 6. 관문 (등록부, 단계별)
 
@@ -104,8 +113,9 @@ packages/drama-series/
 
 | 관문 | 단계 | 종류 | 막는 것 | 근거 |
 |---|---|---|---|---|
+| `topic-<id>` | topic | judge | 확정 포함된 조회 유발 요소가 `minHookElements` 미만, 장르 약속 미달, 수위 안전 확정 fail(미확정이면 통과로 보지 않음) | R-11 |
 | `schema` | 전체 | 결정적 | 필수 필드 누락, 존재하지 않는 인물·장소 참조 | — |
-| `scenario` | bible/episode | judge | 장르 팩 기준(훅·갈등·사이다·다음 화 장치·장르 약속) 미달 | 시험분: 약한 대조 시나리오 5/5 확정 실패, 실제 5/5 확정 통과 |
+| `scenario` | episode | judge | 장르 팩 기준(훅·갈등·사이다·다음 화 장치·장르 약속) 미달, 주제가 확정한 조회 유발 요소가 대본에서 사라짐, 수위 안전 확정 fail. 재미 점수는 info로만 기록 | 시험분: 약한 대조 시나리오 5/5 확정 실패, 실제 5/5 확정 통과 |
 | `dialogue-lint` | episode | 결정적 | 같은 음절 반복(수수료·똑똑히), 컷 길이 대비 과다 음절, 장르 팩 금칙어 | "수수료→수술이" 실제 오발음 |
 | `dialogue-judge` | episode | judge | 문맥·말투·자연스러움 중 확정 fail | 시험분: 문맥 이탈·번역투 대조군 확정 fail |
 | `continuity` | episode | 결정적 | 같은 장소 연속 컷의 참조·고정 문구 불일치, 한 컷 두 장소, 앞 컷 소품 변화 미반영 | R-4 |
@@ -113,6 +123,8 @@ packages/drama-series/
 | `verified-lines` | plan | 결정적 | `verified`·`human-approved`가 아닌 대사가 있으면 생성 명세 발급 거부 | R-3 |
 | `budget` | plan | 결정적 | 견적 합계가 승인 상한 초과, 미실측 단가(null) | 프로젝트 규칙: 지어내지 않음 |
 | `transcript` | clip | 결정적 | whisper 전사와 대본 대사 불일치(정규화 후 문자 오류율 기준) | 시험분 2컷 |
+
+생성 명세는 시리즈에 담긴 주제의 `topic-<id>` 기록이 그 주제 내용과 같은 지문으로 통과했을 때만 발급된다. 판정 질문은 선택형(통과/실패)과 점수형(1~5단계, JEV `score` 형식) 두 가지다. 점수형은 차단에 쓰지 않는다.
 
 판정 규칙(기본값, 설정 가능): JEV `confidence ≥ 0.85` 그리고 선택 확률 `≥ 0.90`이면 확정. 확정 fail은 `block`, 미확정은 `review`. 대사는 세 항목 모두 확정 pass이고 발음 검사가 깨끗해야 `verified`가 된다. 아니면 후보를 바꿔 재판정하고(기본 최대 2회), 그래도 안 되면 사람 승인(`human-approved`, 승인자·시각 기록)만 남는다. **실패를 조용히 통과로 바꾸지 않는다.**
 
@@ -167,5 +179,7 @@ packages/drama-series/
 
 - JEV가 멀쩡한 대사를 확정 통과시키는 비율이 낮다(시험분 7줄 중 4줄). 사람 승인 경로가 자주 쓰일 수 있다. 회차 전체로 다시 측정한다.
 - `@ImageN` 문법, Seedance 음성 참조로 독백 목소리를 맞추는 방법, 액션 품질은 미확인이다. 시험분에서 확인한다.
+- 재미 점수와 조회 유발 요소 판정은 조회수 예측이 아니다. 실제 업로드 후 시청 유지율과 비교해 쓸모를 다시 판단한다.
+- 퇴폐미 등 선정적 연출이 강할수록 YouTube 광고 제한(노란 아이콘) 가능성이 커진다. 수위 경계로 줄이되 위험은 남는다.
 - 단가는 2026-10-06 조회값이다(2.5 480p 초안 3크레딧/초). 생성 직전에 다시 조회한다.
 - 2단계는 Codex 작업 일정에 따라 늦어질 수 있다.
