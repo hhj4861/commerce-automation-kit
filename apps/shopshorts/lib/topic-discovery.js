@@ -1,7 +1,7 @@
 import {createDiscoveryClient} from '../../../services/topic-discovery/client.mjs';
 import {accountFailureCode,accountFailureMessage} from './llm-account-errors.js';
 const unavailable=reason=>{
-  const code=['no_accepted_candidates','no_grounded_candidates','search_evidence_missing','no_research_leads','research_evidence_missing'].includes(reason)?'DISCOVERY_NO_ACCEPTED_CANDIDATES':reason==='skipped_by_budget'?'DISCOVERY_BUDGET_LIMIT':reason==='discovery_in_progress'?'DISCOVERY_IN_PROGRESS':'DISCOVERY_UNAVAILABLE';
+  const code=reason==='unsubstantiated_research_entity'?'DISCOVERY_RESEARCH_UNGROUNDED':['no_accepted_candidates','no_grounded_candidates','search_evidence_missing','no_research_leads','research_evidence_missing'].includes(reason)?'DISCOVERY_NO_ACCEPTED_CANDIDATES':reason==='skipped_by_budget'?'DISCOVERY_BUDGET_LIMIT':reason==='discovery_in_progress'?'DISCOVERY_IN_PROGRESS':'DISCOVERY_UNAVAILABLE';
   return Object.assign(new Error(accountFailureMessage('codex',{code})),{status:503,code});
 };
 export async function discoverRecommendations(brief,env,{generate,signal,provider,history,subject,requestId,assertConnection,now=new Date(),fetch}={}) {

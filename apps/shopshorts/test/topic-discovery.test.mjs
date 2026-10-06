@@ -117,3 +117,22 @@ for(const provider of ['codex','claude'])for(const revoke of [false,true])test(`
   }
  }finally{child.kill('SIGTERM');await closed;await rm(root,{recursive:true,force:true});}
 });
+
+// Production returns HTTP 200 + held here, not an upstream transport failure.
+for (const provider of ['codex','claude']) test(`ungrounded research explains the hold without generation or retry: ${provider}`,async()=>{
+ const {accountFailureCode,accountFailureMessage}=await import('../lib/llm-account-errors.js');
+ let network=0,generation=0;
+ await assert.rejects(recommendBrief(brief,{...env,DISCOVERY_REVIEW_MODE:'native-llm-v1'},{
+  subject:'a'.repeat(64),requestId:'research-hold-001',provider,history:[],assertConnection:async()=>{},
+  generate:async()=>{generation++;throw Error('must not generate');},
+  fetch:async()=>{network++;return Response.json({requestId:'held-request',state:'held',rubricVersion:'discovery-v2.6',candidates:[],evidence:[],action:null,
+   reasonCodes:['unsubstantiated_research_entity'],usage:{generationClaims:1,jevCalls:0,searchCalls:1}});},
+ }),error=>{
+  assert.equal(accountFailureCode(error),'DISCOVERY_RESEARCH_UNGROUNDED');
+  assert.equal(accountFailureMessage(provider,error),error.message);
+  assert.match(error.message,/대상명을 인용된 검색 자료에서 확인하지 못해 추천을 보류/);
+  assert.doesNotMatch(error.message,/unsubstantiated|운영자|계정을 다시 연결/);
+  return true;
+ });
+ assert.equal(network,1);assert.equal(generation,0);
+});
