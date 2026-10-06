@@ -25,6 +25,13 @@ describe('transcript gate', () => {
     expect(normalizeKo('그건 제 일당이잖아요…')).toBe('그건제일당이잖아요');
     expect(bestSubstringDistance('abc', 'xxabcxx')).toBe(0);
   });
+  it('reads Arabic numerals as Sino-Korean so whisper digits match scripted 한글 numbers', () => {
+    // 2026-10-06 9분판 c2: 대사 "날짜가… 십 년 전이야." 를 whisper 가 "날짜가 10년 전이야." 로 적었다.
+    expect(normalizeKo('날짜가 10년 전이야.')).toBe(normalizeKo('날짜가… 십 년 전이야.'));
+    expect(normalizeKo('30분 뒤에')).toBe(normalizeKo('삼십 분 뒤에'));
+    expect(normalizeKo('5분도 못 버텨요')).toBe(normalizeKo('오 분도 못 버텨요'));
+    expect(normalizeKo('2,013원')).toBe(normalizeKo('이천십삼 원'));
+  });
   it('blocks the pilot mispronunciation 수수료 → 수술이', () => {
     const r = transcriptGate(ctx(pilot), 'c2', PILOT_WHISPER);
     expect(r.gate).toBe('transcript-c2');

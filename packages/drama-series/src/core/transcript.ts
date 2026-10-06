@@ -6,8 +6,34 @@ import { toReport } from './report.js';
 /** 대사별 문자 오류율 한도. 12음절 대사에서 2글자 변형(수수료→수술이)이 0.167로 걸린다. */
 export const MAX_LINE_CER = 0.15;
 
+const DIGIT = ['', '일', '이', '삼', '사', '오', '육', '칠', '팔', '구'];
+const UNIT = ['', '십', '백', '천'];
+
+/** 0~9999 를 한자어 수 읽기로("10"→"십", "2013"→"이천십삼"). 더 큰 수는 그대로 둔다. */
+export function sinoKorean(n: number): string {
+  if (n === 0) return '영';
+  if (!Number.isInteger(n) || n < 0 || n > 9999) return String(n);
+  return [...String(n)]
+    .map((d, i, a) => {
+      const v = Number(d);
+      const u = UNIT[a.length - 1 - i] ?? '';
+      if (v === 0) return '';
+      return (v === 1 && u ? '' : DIGIT[v]) + u;
+    })
+    .join('');
+}
+
+/**
+ * 대본과 받아쓰기 비교용 정규화. whisper 는 "십 년"을 "10년"으로 적으므로 아라비아 숫자는 한자어 읽기로 바꾼다.
+ * 고유어 읽기("두 시")는 바꾸지 않는다 — 대본에 시각을 쓸 땐 자막으로 넣고 대사에는 피한다.
+ */
 export function normalizeKo(s: string): string {
-  return s.normalize('NFC').replace(/[^가-힣a-zA-Z0-9]/g, '').toLowerCase();
+  return s
+    .normalize('NFC')
+    .replace(/(\d),(?=\d{3})/g, '$1')
+    .replace(/\d+/g, (m) => sinoKorean(Number(m)))
+    .replace(/[^가-힣a-zA-Z0-9]/g, '')
+    .toLowerCase();
 }
 
 /** pattern 이 text 의 어느 부분 문자열과 가장 가깝게 맞는지의 편집 거리(semi-global). */
