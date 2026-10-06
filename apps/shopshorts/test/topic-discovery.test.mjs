@@ -4,6 +4,7 @@ import {spawn} from 'node:child_process';
 import {once} from 'node:events';
 import {mkdtemp,rm} from 'node:fs/promises';
 import {join} from 'node:path';
+import {tmpdir} from 'node:os';
 import {fileURLToPath} from 'node:url';
 import {recommendBrief} from '../lib/studio-recommendations.js';
 const brief={category:'건축학',format:'short',duration:60,focus:'topic',topic:'국내 건축물',direction:'그림 중심'};
@@ -75,7 +76,7 @@ test('invalid native-review configuration fails before network or generation',as
 });
 
 for(const provider of ['codex','claude'])for(const revoke of [false,true])test(`studio native review over real HTTP: ${provider}${revoke?' revoked before review':' replay'}`,async()=>{
- const root=await mkdtemp(join(process.env.DISCOVERY_TEST_DIR,'studio-review-http-'));
+ const root=await mkdtemp(join(process.env.DISCOVERY_TEST_DIR || tmpdir(),'studio-review-http-'));
  const code="from server import make_server\nfrom service import Discovery,Store\nfrom test_service import SOURCE\nfrom test_native_review import low_result\nimport sys\ns=make_server(('127.0.0.1',0),Discovery(Store(sys.argv[1]),lambda q:[{**SOURCE,'title':'회전교 공식 설명'}],low_result),{'shopshorts':'k'*40})\nprint(s.server_port,flush=True)\ns.serve_forever()";
  const child=spawn('python3',['-u','-c',code,join(root,'state.sqlite')],{cwd:fileURLToPath(new URL('../../../services/topic-discovery/',import.meta.url)),env:{...process.env,PYTHONDONTWRITEBYTECODE:'1'},stdio:['ignore','pipe','pipe']});
  const closed=once(child,'close');let errors='';child.stderr.on('data',d=>errors+=d);
