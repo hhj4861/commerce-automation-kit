@@ -23,3 +23,8 @@
 - Cloudflare CI 전용 `CAK_DEPLOY_CLOUDFLARE_API_TOKEN` 미등록; broker GITHUB_DEPLOY_ALLOWED_REFS에도 Shorts 미포함. 기존 Wrangler OAuth는 로컬 배포에만 사용했고 GitHub/CI로 복사하지 않음. 사용자에게 Pages Edit 계정 한정 토큰 준비 안내. 이후 Secrets Store 등록, binding/정책 검토, 보호된 브랜치 workflow_dispatch 첫 실행 검증 필요.
 - 운영 heartbeat API 허용 목록이 `hybrid` 필드를 버리는 결함 발견. 워커 자체 capabilities.hybrid=true, 실제 실행/화면 경로는 해당 flag에 의존하지 않음. 이 표시 누락과 DISCOVERY_TEST_DIR 기본값 보완을 `fix/shopshorts-deploy-verification`(202e52e)에 분리, 관련 16검사 통과. 후속 [PR #158](https://github.com/hhj4861/commerce-automation-kit/pull/158)은 별도 사용자 머지 승인 전 운영 미반영.
 - audioAccount.state=unavailable는 기존 상태로 관찰됨. voice capability=true와 구분하며 실제 유료 음성 계정 잔액·결제 검증으로 보고하지 않음.
+
+## 추가 외부 연결 점검
+- ElevenLabs 공식 subscription 읽기 요청은 HTTP 응답 이전 TLS 검증에서 `UNABLE_TO_VERIFY_LEAF_SIGNATURE`로 실패. Node 20, Node 22 --use-system-ca, curl에서 재현.
+- 반환된 공개 인증서 발급자가 Fortinet 장비 CA로 확인되어 현재 네트워크의 HTTPS 검사 경로와 관련됨. API 키 오류나 구독 한도라고 단정하지 않음. 인증서 검증 비활성화/우회/임의 CA 신뢰 등록은 수행하지 않음.
+- 따라서 화면·워커 배포 및 fixture 기반 실제 렌더 검증과 별개로, 현재 네트워크에서 ElevenLabs 실통신 검증은 미완료. 네트워크 관리자가 제공하는 정식 신뢰 체인/정책 확인이 필요함.
