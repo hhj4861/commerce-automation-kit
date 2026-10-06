@@ -34,8 +34,8 @@
       "looks": [
         {
           "id": "present",
-          "description": "29-year-old Korean woman, curvy figure, low ponytail, black cap, fitted grey work vest, white cotton gloves",
-          "refAssetId": "0fc5b969-2257-476a-b5a2-cdd3a04af627"
+          "description": "29-year-old Korean woman, glamorous curvy figure, low ponytail, black cap, grey work vest worn open over a fitted black deep V-neck t-shirt, white cotton gloves",
+          "refAssetId": "9bce7912-8cbc-49bf-8215-70574032305f"
         },
         {
           "id": "future",
@@ -113,7 +113,7 @@
     {
       "id": "ruin",
       "name": "10년 후 폐허 도시",
-      "anchorText": "Ruined Korean city street ten years after the outbreak, dusk, collapsed buildings, rusted abandoned cars, overgrown weeds, cold grey-orange light, no people.",
+      "anchorText": "Ruined Korean city street ten years after the outbreak, dusk, collapsed buildings, rusted abandoned cars, overgrown weeds, cold grey-orange light, no people. Any shop signs are weathered and illegible; no readable brand names.",
       "props": [
         "무너진 건물",
         "버려진 차"
