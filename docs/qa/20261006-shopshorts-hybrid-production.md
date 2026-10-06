@@ -36,3 +36,11 @@
 - 운영 worker heartbeat → `/api/studio/config`: hybrid=true, motion=true, webtoon=true 확인. 위 ‘후속 PR 승인 대기’는 이 절로 해소됨.
 - Higgsfield 공식 `account status` 비과금 조회 성공(확인 시 503.9크레딧). 앞선 `account` 부모 명령은 도움말을 반환하므로 계정 상태 검증 근거로 사용하지 않음.
 - ElevenLabs TLS 및 GitOps 자격·보호 설정 미완료는 계속 남아 있음. 테스트용 TTS fixture와 실제 서비스 호출을 구분함.
+
+## GitOps 후속 확인 — 브랜치 보호 해결, PR #159 준비
+- 기존 소유자 `hhj4861`의 저장된 인증으로 호출 범위를 한정해 브랜치 보호 설정에 성공했다. 전역 활성 GitHub 로그인은 변경하지 않았다. 앞선 admin=false/404는 당시 활성 계정의 결과이며 현재 보호 미설정 상태를 뜻하지 않는다.
+- `deploy/shopshorts`: PR 필수, `Platform GitOps verification` required/strict, enforce_admins=true, force push=false, deletion=false. 이 시점 이후 승격은 PR을 사용한다.
+- [PR #159](https://github.com/hhj4861/commerce-automation-kit/pull/159), `8474545d1116c95f04b6016731e9b675ef711678`: Shopshorts ref와 Cloudflare Secret binding 추가, broker에서도 protected ref 강제. 본인 변경 5개 파일만 커밋·작업 upstream으로 push했다. main·운영 broker에는 아직 미반영이다.
+- Node 22 broker/배포 117검사, Python 배포 8검사 통과. GitHub `Platform GitOps verification`(37419838431)과 `contract`(37419838457) 모두 통과. 임시 node_modules 참조는 제거했다.
+- 남은 순서: 사용자 PR #159 머지 승인, CI 전용 Cloudflare 토큰 등록, 검토된 broker 배포, 보호된 배포 브랜치에서 Actions 첫 실배포 검증. Secret 없는 binding만 운영 배포하지 않는다.
+- ElevenLabs는 공식 Fortinet 신뢰 체인 안내 대기. 키 오류로 단정하거나 TLS 검증을 해제하지 않았다.
