@@ -1218,6 +1218,19 @@ function showAutomaticErrors() {
   host.innerHTML=messages.length?`<div class="content-error" role="alert"><strong>최신 작업 상태를 확인하지 못했어요.</strong><p>${messages.map(escapeHtml).join('<br>')}<br>표시된 작업은 마지막으로 조회한 상태입니다.</p><button data-auto-retry>다시 불러오기</button></div>`:'';
   host.querySelector('[data-auto-retry]')?.addEventListener('click',()=>{load(true);loadHot();});
 }
+async function updateStudioWorkerStatus() {
+  const status=document.getElementById('systemStatus'),note=document.getElementById('systemNote');
+  try {
+    const config=await api('/api/studio/config');
+    const age=Date.now()-Date.parse(config?.capabilities?.workerAt);
+    const online=config.execution==='local' || (config.execution==='cloud-worker' && Number.isFinite(age) && age>=0 && age<90000);
+    status.innerHTML=`<span class="online" style="${online?'':'background:#8d9189;box-shadow:none'}"></span> 제작 워커 ${online?'온라인':'오프라인'}`;
+    note.textContent=online?'새 영상 제작 요청을 처리할 수 있어요':'새 영상 제작은 워커 연결까지 대기합니다';
+  } catch {
+    status.innerHTML='<span class="online" style="background:#8d9189;box-shadow:none"></span> 제작 워커 확인 필요';
+    note.textContent='연결 상태를 불러오지 못했어요. 잠시 후 다시 확인합니다';
+  }
+}
 async function load(keepSelection=false) {
   try {
     const data = await api('/api/jobs');
@@ -1226,12 +1239,7 @@ async function load(keepSelection=false) {
     delete state.autoErrors.jobs;showAutomaticErrors();
     state.isCloud = Object.prototype.hasOwnProperty.call(data, 'workerAt');
     state.workerAt = data.workerAt || null;
-    const workerFresh = state.workerAt && Date.now() - new Date(state.workerAt).getTime() < 90000;
-    document.getElementById('systemStatus').innerHTML = state.isCloud
-      ? `<span class="online" style="${workerFresh ? '' : 'background:#8d9189;box-shadow:none'}"></span> 워커 ${workerFresh ? '온라인' : '오프라인'}`
-      : '<span class="online"></span> 로컬 자동화 정상';
-    document.getElementById('systemNote').textContent = state.isCloud
-      ? (workerFresh ? 'Mac 실행 워커 연결됨' : '작업은 워커 연결까지 대기합니다') : '마지막 동기화 · 방금 전';
+    await updateStudioWorkerStatus();
   } catch (e) { state.autoErrors.jobs='자동 작업: '+e.message;showAutomaticErrors();showToast('작업 목록을 불러오지 못했어요: ' + e.message);return; }
   if (!keepSelection || !state.jobs.some(j => j.brief.id === state.selected)) {
     const requestedJob=new URLSearchParams(location.search).get('job');
