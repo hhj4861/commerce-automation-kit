@@ -37,10 +37,15 @@ export async function startAutomatic(request, env, store, input, call) {
 }
 
 export function continueAutomatic(project) {
-  if (!project.automation || project.task?.action !== 'media' || project.task.state !== 'done') return project;
+  if (project.task?.action !== 'media' || project.task.state !== 'done') return project;
+  if (!project.automation) {
+    // Manual hybrid editing starts with measured speech/captions but never auto-renders.
+    if (project.brief.productionStyle!=='webtoon' || project.edit || !project.approved || project.scenes.some(s=>!project.assets[s.id])) return project;
+    return {...project,edit:validateEdit(cinematicEdit(project),project)};
+  }
   if (!project.approved || project.scenes.some(scene => !project.assets[scene.id])) fail('완료되지 않은 장면이 있어 영상을 조립할 수 없습니다.', 409);
   const next = structuredClone(project);
-  if(!next.edit && ['cinematic','animation'].includes(next.brief.productionStyle))next.edit=validateEdit(cinematicEdit(next),next);
+  if(!next.edit && ['cinematic','animation','webtoon'].includes(next.brief.productionStyle))next.edit=validateEdit(cinematicEdit(next),next);
   if (!next.edit) {
     const edit = normalizeEdit(next);
     for (const clip of edit.clips) {

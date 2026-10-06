@@ -81,6 +81,11 @@ export function animationSvg(scene,aspect,time) {
 export async function renderAnimationScene(job,scene,work,env={}, {width}={}) {
   animationPlan(scene.animation);
   if(!Number.isFinite(scene.duration)||scene.duration<1||scene.duration>30)throw Error('애니메이션 장면 길이를 확인해 주세요.');
+  return renderSvgScene(job,scene,work,env,{width,svg:animationSvg});
+}
+
+export async function renderSvgScene(job,scene,work,env={}, {width,svg}={}) {
+  if(!Number.isFinite(scene.duration)||scene.duration<1||scene.duration>30)throw Error('장면 길이를 확인해 주세요.');
   const target=join(work,`${scene.id}-animation.mp4`),fps=30,outputWidth=width||(job.brief.aspect==='9:16'?1080:1920);
   const child=spawn('ffmpeg',['-y','-v','error','-f','image2pipe','-framerate',String(fps),'-vcodec','png','-i','pipe:0','-an','-c:v','libx264','-preset','veryfast','-crf','19','-pix_fmt','yuv420p','-movflags','+faststart',target],{env:{...process.env,...env},stdio:['pipe','ignore','pipe']});
   let stderr='',failure;
@@ -92,7 +97,7 @@ export async function renderAnimationScene(job,scene,work,env={}, {width}={}) {
   try {
     for(let frame=0;frame<Math.round(scene.duration*fps);frame++){
       if(failure)throw failure;
-      const png=new Resvg(animationSvg(scene,job.brief.aspect,frame/fps),{fitTo:{mode:'width',value:outputWidth},font:{fontFiles:[font],loadSystemFonts:false,defaultFontFamily:'NanumGothic'}}).render().asPng();
+      const png=new Resvg(svg(scene,job.brief.aspect,frame/fps),{fitTo:{mode:'width',value:outputWidth},font:{fontFiles:[font],loadSystemFonts:false,defaultFontFamily:'NanumGothic'}}).render().asPng();
       if(!child.stdin.write(png))await Promise.race([once(child.stdin,'drain'),done.then(()=>{throw Error('애니메이션 출력이 일찍 종료되었습니다.');})]);
       if(frame%30===0)await new Promise(r=>setImmediate(r));
     }

@@ -38,7 +38,7 @@ export function directScenario(scenes,brief){
  for(const scene of result){
   // The model cannot provide arbitrary template IDs/code. Only the final, bounded summary
   // is translated to our existing allow-listed template after full plan validation.
-  if(scene.visualDirection.treatment==='summary'&&brief.productionStyle!=='animation'){
+  if(scene.visualDirection.treatment==='summary'&&!['animation','webtoon'].includes(brief.productionStyle)){
    const [label1,label2,label3]=scene.visualDirection.labels;
    scene.kind='video';scene.motion=motionSpec({template:'summary',vars:{heading:'핵심을 연결하면',icon1:'layers',label1,icon2:'ring',label2,icon3:'shield',label3}});
   }

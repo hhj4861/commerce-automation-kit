@@ -1,3 +1,4 @@
+import {webtoon,webtoonPlan,webtoonScenes} from './webtoon-plan.js';
 import {relatedVideoUrl} from '../public/shorts-policy.js';
 import {VISUAL_QUALITY,visualDirection} from './visual-direction.js';
 import {productionOptions} from './explainer-production.js';
@@ -11,6 +12,7 @@ export const CATEGORIES = ['심리학', '건축학', '상품광고', '막장드�
 export const VOICES = [{ id: 'none', name: '내레이션 없음' }, { id: 'n2fbxG88jqAoaVPUy3IG', name: 'Yooni · 밝고 또렷한 한국어', previewUrl: 'https://storage.googleapis.com/eleven-public-prod/database/workspace/dc9d42698272443c82f44e26ea1c9263/voices/n2fbxG88jqAoaVPUy3IG/kVgVODaebcaz7AEHhgDo.mp3' }, { id: 'ZRJMGKt2Okf3o9C38eSq', name: 'Claire · 차분한 한국어', previewUrl: 'https://storage.googleapis.com/eleven-public-prod/database/workspace/87db1f27d31f4bdd85e5e0c1028eae76/voices/ZRJMGKt2Okf3o9C38eSq/V7F37Ap0MTHMEuvlf9be.mp3' }];
 // Korean professional voices verified in this workspace via the official /v2/voices API.
 VOICES.push(
+ {id:'RU7aSi6lT4uQBXMLgDxK',name:'Kyle · 자연스러운 설명'},
  {id:'Kndx0DUJ5HQE1HQgiMY8',name:'Jin · 선명한 대화',previewUrl:'https://storage.googleapis.com/eleven-public-prod/database/workspace/5ebca019390f44df9102d572ef84b583/voices/Kndx0DUJ5HQE1HQgiMY8/7f3c92c2-303f-48fd-b67d-a8f94b840d5b.mp3'},
  {id:'BbsagRO6ohd8MKPS2Ob0',name:'진건 · 차분한 남성',previewUrl:'https://storage.googleapis.com/eleven-public-prod/database/user/DKto1gNuG4avSK2jIgvUZCcuJqG2/voices/BbsagRO6ohd8MKPS2Ob0/sHiGQcmygSSDVUTzuKjA.mp3'},
  {id:'sf8Bpb1IU97NI9BHSMRf',name:'Rumi · 부드러운 대화',previewUrl:'https://storage.googleapis.com/eleven-public-prod/database/workspace/71cd013d832b49ffbeb355d480d5353a/voices/sf8Bpb1IU97NI9BHSMRf/5Emj4Ccmi1oZzFWx7g20.mp3'}
@@ -42,7 +44,7 @@ export function validateScenes(scenes, {animationStyle = false, stripMotion = fa
     if(scene.camera!==undefined&&!CAMERAS.includes(scene.camera))fail('지원하지 않는 카메라 움직임입니다.');
     if(scene.shot!==undefined&&!SHOTS.includes(scene.shot))fail('지원하지 않는 장면 구도입니다.');
     const motion=stripMotion?undefined:validateMotionScene(scene,i,{animationStyle});
-    return { id, narration: scene.narration.trim(), prompt: scene.prompt.trim(), duration: scene.duration, kind: scene.kind, ...(scene.camera?{camera:scene.camera}:{}), ...(scene.shot?{shot:scene.shot}:{}), ...(scene.animation!==undefined?{animation:animationPlan(scene.animation)}:{}), ...(motion?{motion}:{}), ...(scene.visualDirection!==undefined?{visualDirection:visualDirection(scene.visualDirection)}:{}) };
+    return { id, narration: scene.narration.trim(), prompt: scene.prompt.trim(), duration: scene.duration, kind: scene.kind, ...(scene.camera?{camera:scene.camera}:{}), ...(scene.shot?{shot:scene.shot}:{}), ...(scene.animation!==undefined?{animation:animationPlan(scene.animation)}:{}), ...(motion?{motion}:{}), ...(scene.webtoon!==undefined?{webtoon:webtoonPlan(scene.webtoon)}:{}), ...(scene.visualDirection!==undefined?{visualDirection:visualDirection(scene.visualDirection)}:{}) };
   });
 }
 export function validateEdit(input, job) {
@@ -97,7 +99,8 @@ export function validateTimeline(input, job) {
   return {version:2,fps:FPS,clips,captions,voice:input.voice,music:input.music||null,musicVolume:input.musicVolume,...(musicClips!==undefined?{musicClips}:{}),...(hiddenAudioAssets!==undefined?{hiddenAudioAssets}:{})};
 }
 export function createProject(input) {
-  return { id: crypto.randomUUID(), revision: 0, title: input.topic?.slice(0, 100), brief: validateBrief({...input,visualQuality:VISUAL_QUALITY}), scenes: [], assets: {}, edit: null, approved: false, render: null, upload: null, task: null, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+  const brief=validateBrief({...input,visualQuality:VISUAL_QUALITY});
+  return { id: crypto.randomUUID(), revision: 0, title: input.topic?.slice(0, 100), brief, ...(webtoon(brief)?{voicePreference:brief.voiceId}:{}), scenes: [], assets: {}, edit: null, approved: false, render: null, upload: null, task: null, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
 }
 export function changeProject(original, action, body) {
   const job = structuredClone(original);
@@ -108,8 +111,9 @@ export function changeProject(original, action, body) {
     const scenes = validateScenes(body.scenes,{animationStyle:animated(job.brief)});
     if (scenes.reduce((sum, s) => sum + s.duration, 0) > (job.brief.format === 'short' ? 180 : 600)) fail('장면의 전체 길이가 형식의 최대 길이를 넘었습니다.');
     if(animated(job.brief) && scenes.some(s=>s.kind!=='video'||!s.animation))fail('애니메이션 장면은 영상과 장면별 동작 구성이 필요합니다.');
+    if(webtoon(job.brief))webtoonScenes(scenes);
     const old = Object.fromEntries(job.scenes.map(s => [s.id, s]));
-    for (const s of scenes) if (old[s.id]?.prompt !== s.prompt || old[s.id]?.kind !== s.kind || old[s.id]?.camera !== s.camera || old[s.id]?.shot !== s.shot || JSON.stringify(old[s.id]?.animation)!==JSON.stringify(s.animation) || JSON.stringify(old[s.id]?.motion)!==JSON.stringify(s.motion) || JSON.stringify(old[s.id]?.visualDirection)!==JSON.stringify(s.visualDirection) || ((animated(job.brief)||s.motion)&&old[s.id]?.duration!==s.duration) || (old[s.id]?.narration !== s.narration && job.assets[s.id]?.source === 'ai')) delete job.assets[s.id];
+    for (const s of scenes) if (old[s.id]?.prompt !== s.prompt || old[s.id]?.kind !== s.kind || old[s.id]?.camera !== s.camera || old[s.id]?.shot !== s.shot || JSON.stringify(old[s.id]?.animation)!==JSON.stringify(s.animation) || JSON.stringify(old[s.id]?.webtoon)!==JSON.stringify(s.webtoon) || JSON.stringify(old[s.id]?.motion)!==JSON.stringify(s.motion) || JSON.stringify(old[s.id]?.visualDirection)!==JSON.stringify(s.visualDirection) || ((animated(job.brief)||webtoon(job.brief)||s.motion)&&old[s.id]?.duration!==s.duration) || (old[s.id]?.narration !== s.narration && job.assets[s.id]?.source === 'ai')) delete job.assets[s.id];
     for (const id of Object.keys(old)) if (!scenes.some(s => s.id === id)) delete job.assets[id];
     if(job.edit?.voice!==undefined)job.voicePreference=job.edit.voice;
     job.scenes = scenes; job.title = String(body.title || job.title).slice(0, 100); job.edit = null; invalidate();
