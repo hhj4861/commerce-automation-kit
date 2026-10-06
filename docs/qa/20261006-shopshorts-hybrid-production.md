@@ -28,3 +28,11 @@
 - ElevenLabs 공식 subscription 읽기 요청은 HTTP 응답 이전 TLS 검증에서 `UNABLE_TO_VERIFY_LEAF_SIGNATURE`로 실패. Node 20, Node 22 --use-system-ca, curl에서 재현.
 - 반환된 공개 인증서 발급자가 Fortinet 장비 CA로 확인되어 현재 네트워크의 HTTPS 검사 경로와 관련됨. API 키 오류나 구독 한도라고 단정하지 않음. 인증서 검증 비활성화/우회/임의 CA 신뢰 등록은 수행하지 않음.
 - 따라서 화면·워커 배포 및 fixture 기반 실제 렌더 검증과 별개로, 현재 네트워크에서 ElevenLabs 실통신 검증은 미완료. 네트워크 관리자가 제공하는 정식 신뢰 체인/정책 확인이 필요함.
+
+## PR #158 승인 후 최종 반영
+- 사용자가 PR #158 머지·재배포를 명시 승인. main merge SHA `7e03f5a2e15261c06d09740bab5fb12890260217`, 2026-10-06T05:25:37Z.
+- 승인된 네 파일 차이만 확인하고 deploy/shopshorts를 해당 SHA로 정상 fast-forward. force/보호 우회 없음. 현재 보호·CI 토큰 미설정은 여전히 미완료이며 이번 배포는 승인된 Wrangler 수동 배포.
+- 운영 checkout 동일 SHA, 영향 검사 16 pass/0 fail. Pages production deployment `2196032c-326a-4aa5-92a6-ee544abd0e0a` 성공, 운영 SHA 일치 확인.
+- 운영 worker heartbeat → `/api/studio/config`: hybrid=true, motion=true, webtoon=true 확인. 위 ‘후속 PR 승인 대기’는 이 절로 해소됨.
+- Higgsfield 공식 `account status` 비과금 조회 성공(확인 시 503.9크레딧). 앞선 `account` 부모 명령은 도움말을 반환하므로 계정 상태 검증 근거로 사용하지 않음.
+- ElevenLabs TLS 및 GitOps 자격·보호 설정 미완료는 계속 남아 있음. 테스트용 TTS fixture와 실제 서비스 호출을 구분함.
