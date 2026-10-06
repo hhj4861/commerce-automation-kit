@@ -1,0 +1,629 @@
+{
+  "thresholds": {
+    "confidence": 0.85,
+    "probability": 0.9
+  },
+  "slots": {
+    "c2a": {
+      "chosen": null,
+      "chosenId": null,
+      "candidates": [
+        {
+          "id": "c2av0",
+          "line": "막내야, 이번 주 돈 안 냈지?",
+          "verified": false,
+          "minConf": 0.39,
+          "lint": [],
+          "checks": {
+            "context": {
+              "choice": "pass",
+              "conf": 0.92,
+              "p": 0.96,
+              "verdict": "pass"
+            },
+            "voice": {
+              "choice": "pass",
+              "conf": 0.39,
+              "p": 0.7,
+              "verdict": "review"
+            },
+            "natural": {
+              "choice": "pass",
+              "conf": 0.81,
+              "p": 0.91,
+              "verdict": "review"
+            }
+          }
+        },
+        {
+          "id": "c2av1",
+          "line": "막내야, 이번 주 몫은 어딨어?",
+          "verified": false,
+          "minConf": 0.43,
+          "lint": [],
+          "checks": {
+            "context": {
+              "choice": "pass",
+              "conf": 0.95,
+              "p": 0.98,
+              "verdict": "pass"
+            },
+            "voice": {
+              "choice": "pass",
+              "conf": 0.43,
+              "p": 0.71,
+              "verdict": "review"
+            },
+            "natural": {
+              "choice": "pass",
+              "conf": 0.87,
+              "p": 0.94,
+              "verdict": "pass"
+            }
+          }
+        },
+        {
+          "id": "c2av2",
+          "line": "막내야, 이번 주 거 왜 안 내?",
+          "verified": false,
+          "minConf": 0.53,
+          "lint": [],
+          "checks": {
+            "context": {
+              "choice": "pass",
+              "conf": 0.95,
+              "p": 0.97,
+              "verdict": "pass"
+            },
+            "voice": {
+              "choice": "pass",
+              "conf": 0.53,
+              "p": 0.76,
+              "verdict": "review"
+            },
+            "natural": {
+              "choice": "pass",
+              "conf": 0.83,
+              "p": 0.92,
+              "verdict": "review"
+            }
+          }
+        }
+      ]
+    },
+    "c2b": {
+      "chosen": null,
+      "chosenId": null,
+      "candidates": [
+        {
+          "id": "c2bv0",
+          "line": "그건 제 일당이잖아요…",
+          "verified": false,
+          "minConf": 0.69,
+          "lint": [],
+          "checks": {
+            "context": {
+              "choice": "pass",
+              "conf": 0.87,
+              "p": 0.94,
+              "verdict": "pass"
+            },
+            "voice": {
+              "choice": "pass",
+              "conf": 0.95,
+              "p": 0.98,
+              "verdict": "pass"
+            },
+            "natural": {
+              "choice": "pass",
+              "conf": 0.69,
+              "p": 0.84,
+              "verdict": "review"
+            }
+          }
+        },
+        {
+          "id": "c2bv1",
+          "line": "그거 제 일당이에요…",
+          "verified": false,
+          "minConf": 0.78,
+          "lint": [],
+          "checks": {
+            "context": {
+              "choice": "pass",
+              "conf": 0.86,
+              "p": 0.93,
+              "verdict": "pass"
+            },
+            "voice": {
+              "choice": "pass",
+              "conf": 0.95,
+              "p": 0.97,
+              "verdict": "pass"
+            },
+            "natural": {
+              "choice": "pass",
+              "conf": 0.78,
+              "p": 0.89,
+              "verdict": "review"
+            }
+          }
+        },
+        {
+          "id": "c2bv2",
+          "line": "그 돈 없으면 저 굶어요…",
+          "verified": false,
+          "minConf": 0.2,
+          "lint": [],
+          "checks": {
+            "context": {
+              "choice": "pass",
+              "conf": 0.84,
+              "p": 0.92,
+              "verdict": "review"
+            },
+            "voice": {
+              "choice": "pass",
+              "conf": 0.29,
+              "p": 0.65,
+              "verdict": "review"
+            },
+            "natural": {
+              "choice": "pass",
+              "conf": 0.2,
+              "p": 0.6,
+              "verdict": "review"
+            }
+          }
+        }
+      ]
+    },
+    "c3a": {
+      "chosen": "그 사람 놔주세요.",
+      "chosenId": "c3av2",
+      "candidates": [
+        {
+          "id": "c3av0",
+          "line": "작업 방해하지 마세요.",
+          "verified": false,
+          "minConf": 0,
+          "lint": [],
+          "checks": {
+            "context": {
+              "choice": "fail",
+              "conf": 0.37,
+              "p": 0.69,
+              "verdict": "review"
+            },
+            "voice": {
+              "choice": "pass",
+              "conf": 0.86,
+              "p": 0.93,
+              "verdict": "pass"
+            },
+            "natural": {
+              "choice": "pass",
+              "conf": 0.64,
+              "p": 0.82,
+              "verdict": "review"
+            }
+          }
+        },
+        {
+          "id": "c3av1",
+          "line": "그 손 놓으세요.",
+          "verified": true,
+          "minConf": 0.91,
+          "lint": [],
+          "checks": {
+            "context": {
+              "choice": "pass",
+              "conf": 0.98,
+              "p": 0.99,
+              "verdict": "pass"
+            },
+            "voice": {
+              "choice": "pass",
+              "conf": 0.96,
+              "p": 0.98,
+              "verdict": "pass"
+            },
+            "natural": {
+              "choice": "pass",
+              "conf": 0.91,
+              "p": 0.96,
+              "verdict": "pass"
+            }
+          }
+        },
+        {
+          "id": "c3av2",
+          "line": "그 사람 놔주세요.",
+          "verified": true,
+          "minConf": 0.92,
+          "lint": [],
+          "checks": {
+            "context": {
+              "choice": "pass",
+              "conf": 0.96,
+              "p": 0.98,
+              "verdict": "pass"
+            },
+            "voice": {
+              "choice": "pass",
+              "conf": 0.94,
+              "p": 0.97,
+              "verdict": "pass"
+            },
+            "natural": {
+              "choice": "pass",
+              "conf": 0.92,
+              "p": 0.96,
+              "verdict": "pass"
+            }
+          }
+        }
+      ]
+    },
+    "c3b": {
+      "chosen": "넌 또 뭐야?",
+      "chosenId": "c3bv0",
+      "candidates": [
+        {
+          "id": "c3bv0",
+          "line": "넌 또 뭐야?",
+          "verified": true,
+          "minConf": 0.92,
+          "lint": [],
+          "checks": {
+            "context": {
+              "choice": "pass",
+              "conf": 0.92,
+              "p": 0.96,
+              "verdict": "pass"
+            },
+            "voice": {
+              "choice": "pass",
+              "conf": 0.94,
+              "p": 0.97,
+              "verdict": "pass"
+            },
+            "natural": {
+              "choice": "pass",
+              "conf": 0.95,
+              "p": 0.97,
+              "verdict": "pass"
+            }
+          }
+        },
+        {
+          "id": "c3bv1",
+          "line": "넌 뭔데 끼어들어?",
+          "verified": true,
+          "minConf": 0.92,
+          "lint": [],
+          "checks": {
+            "context": {
+              "choice": "pass",
+              "conf": 0.98,
+              "p": 0.99,
+              "verdict": "pass"
+            },
+            "voice": {
+              "choice": "pass",
+              "conf": 0.97,
+              "p": 0.99,
+              "verdict": "pass"
+            },
+            "natural": {
+              "choice": "pass",
+              "conf": 0.92,
+              "p": 0.96,
+              "verdict": "pass"
+            }
+          }
+        }
+      ]
+    },
+    "c4": {
+      "chosen": null,
+      "chosenId": null,
+      "candidates": [
+        {
+          "id": "c4v0",
+          "line": "다치기 싫으면 가세요.",
+          "verified": false,
+          "minConf": 0.8,
+          "lint": [],
+          "checks": {
+            "context": {
+              "choice": "pass",
+              "conf": 0.95,
+              "p": 0.97,
+              "verdict": "pass"
+            },
+            "voice": {
+              "choice": "pass",
+              "conf": 0.8,
+              "p": 0.9,
+              "verdict": "review"
+            },
+            "natural": {
+              "choice": "pass",
+              "conf": 0.92,
+              "p": 0.96,
+              "verdict": "pass"
+            }
+          }
+        },
+        {
+          "id": "c4v1",
+          "line": "더 다치기 전에 가세요.",
+          "verified": false,
+          "minConf": 0.71,
+          "lint": [],
+          "checks": {
+            "context": {
+              "choice": "pass",
+              "conf": 0.83,
+              "p": 0.91,
+              "verdict": "review"
+            },
+            "voice": {
+              "choice": "pass",
+              "conf": 0.71,
+              "p": 0.85,
+              "verdict": "review"
+            },
+            "natural": {
+              "choice": "pass",
+              "conf": 0.8,
+              "p": 0.9,
+              "verdict": "review"
+            }
+          }
+        },
+        {
+          "id": "c4v2",
+          "line": "그만하고 가세요.",
+          "verified": false,
+          "minConf": 0.78,
+          "lint": [],
+          "checks": {
+            "context": {
+              "choice": "pass",
+              "conf": 0.8,
+              "p": 0.9,
+              "verdict": "review"
+            },
+            "voice": {
+              "choice": "pass",
+              "conf": 0.78,
+              "p": 0.89,
+              "verdict": "review"
+            },
+            "natural": {
+              "choice": "pass",
+              "conf": 0.82,
+              "p": 0.91,
+              "verdict": "review"
+            }
+          }
+        }
+      ]
+    },
+    "c5": {
+      "chosen": null,
+      "chosenId": null,
+      "candidates": [
+        {
+          "id": "c5v0",
+          "line": "너… 두고 보자.",
+          "verified": false,
+          "minConf": 0.83,
+          "lint": [],
+          "checks": {
+            "context": {
+              "choice": "pass",
+              "conf": 0.91,
+              "p": 0.95,
+              "verdict": "pass"
+            },
+            "voice": {
+              "choice": "pass",
+              "conf": 0.83,
+              "p": 0.92,
+              "verdict": "review"
+            },
+            "natural": {
+              "choice": "pass",
+              "conf": 0.91,
+              "p": 0.95,
+              "verdict": "pass"
+            }
+          }
+        },
+        {
+          "id": "c5v1",
+          "line": "너, 얼굴 기억해 둔다.",
+          "verified": false,
+          "minConf": 0.83,
+          "lint": [],
+          "checks": {
+            "context": {
+              "choice": "pass",
+              "conf": 0.9,
+              "p": 0.95,
+              "verdict": "pass"
+            },
+            "voice": {
+              "choice": "pass",
+              "conf": 0.92,
+              "p": 0.96,
+              "verdict": "pass"
+            },
+            "natural": {
+              "choice": "pass",
+              "conf": 0.83,
+              "p": 0.92,
+              "verdict": "review"
+            }
+          }
+        }
+      ]
+    },
+    "c6": {
+      "chosen": "부사장님, 일이 좀 꼬였습니다. 웬 여자가 끼어들어서요.",
+      "chosenId": "c6v2",
+      "candidates": [
+        {
+          "id": "c6v0",
+          "line": "부사장님, 센터에 웬 여자 하나가 판을 깼습니다.",
+          "verified": false,
+          "minConf": 0.62,
+          "lint": [],
+          "checks": {
+            "context": {
+              "choice": "pass",
+              "conf": 0.7,
+              "p": 0.85,
+              "verdict": "review"
+            },
+            "voice": {
+              "choice": "pass",
+              "conf": 0.89,
+              "p": 0.95,
+              "verdict": "pass"
+            },
+            "natural": {
+              "choice": "pass",
+              "conf": 0.62,
+              "p": 0.81,
+              "verdict": "review"
+            }
+          }
+        },
+        {
+          "id": "c6v1",
+          "line": "부사장님, 센터에 골치 아픈 여자가 하나 있습니다.",
+          "verified": false,
+          "minConf": 0.8,
+          "lint": [],
+          "checks": {
+            "context": {
+              "choice": "pass",
+              "conf": 0.87,
+              "p": 0.93,
+              "verdict": "pass"
+            },
+            "voice": {
+              "choice": "pass",
+              "conf": 0.8,
+              "p": 0.9,
+              "verdict": "review"
+            },
+            "natural": {
+              "choice": "pass",
+              "conf": 0.85,
+              "p": 0.93,
+              "verdict": "pass"
+            }
+          }
+        },
+        {
+          "id": "c6v2",
+          "line": "부사장님, 일이 좀 꼬였습니다. 웬 여자가 끼어들어서요.",
+          "verified": true,
+          "minConf": 0.85,
+          "lint": [],
+          "checks": {
+            "context": {
+              "choice": "pass",
+              "conf": 0.89,
+              "p": 0.94,
+              "verdict": "pass"
+            },
+            "voice": {
+              "choice": "pass",
+              "conf": 0.89,
+              "p": 0.94,
+              "verdict": "pass"
+            },
+            "natural": {
+              "choice": "pass",
+              "conf": 0.85,
+              "p": 0.92,
+              "verdict": "pass"
+            }
+          }
+        }
+      ]
+    }
+  },
+  "scenarios": {
+    "S": {
+      "hook": {
+        "choice": "pass",
+        "conf": 0.93,
+        "p": 0.96,
+        "verdict": "pass"
+      },
+      "conflict": {
+        "choice": "pass",
+        "conf": 1,
+        "p": 1,
+        "verdict": "pass"
+      },
+      "payoff": {
+        "choice": "pass",
+        "conf": 0.99,
+        "p": 1,
+        "verdict": "pass"
+      },
+      "cliffhanger": {
+        "choice": "pass",
+        "conf": 1,
+        "p": 1,
+        "verdict": "pass"
+      },
+      "genre": {
+        "choice": "pass",
+        "conf": 0.98,
+        "p": 0.99,
+        "verdict": "pass"
+      }
+    },
+    "W": {
+      "hook": {
+        "choice": "fail",
+        "conf": 0.99,
+        "p": 1,
+        "verdict": "fail"
+      },
+      "conflict": {
+        "choice": "fail",
+        "conf": 1,
+        "p": 1,
+        "verdict": "fail"
+      },
+      "payoff": {
+        "choice": "fail",
+        "conf": 1,
+        "p": 1,
+        "verdict": "fail"
+      },
+      "cliffhanger": {
+        "choice": "fail",
+        "conf": 0.98,
+        "p": 0.99,
+        "verdict": "fail"
+      },
+      "genre": {
+        "choice": "fail",
+        "conf": 1,
+        "p": 1,
+        "verdict": "fail"
+      }
+    }
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "note": "대조군 기대값. JEV 요청에는 포함하지 않는다. 판정 후 비교용.",
+  "k1": { "line": "막내야, 이번 주 수수료 안 냈지?", "expected": { "context": "pass", "voice": "pass", "natural": "pass", "pronounce": "fail" }, "why": "실제 생성에서 '수술이'로 발음됨(2026-10-06)" },
+  "k2": { "line": "오늘 날씨 좋네요, 커피 한잔 하실래요?", "expected": { "context": "fail" }, "why": "손목을 잡는 대치 상황과 맞지 않음" },
+  "k3": { "line": "당신은 작업을 방해하는 것을 멈추어야 합니다.", "expected": { "natural": "fail" }, "why": "번역투" }
+}
