@@ -1,0 +1,15 @@
+{
+  "gate": "transcript-c5",
+  "stage": "clip",
+  "ok": false,
+  "fingerprint": "04b55b8a2ad10acb",
+  "findings": [
+    {
+      "severity": "block",
+      "message": "대사 불일치 CER 0.67 > 0.15",
+      "cutId": "c5",
+      "lineIndex": 0,
+      "evidence": "기대 \"이거 놔!\" / 전사 \"아이씨. 열쇠는 제가 맡을게요. 서윤 씨, 어디서 그런 걸 배웠어?\""
+    }
+  ]
+}

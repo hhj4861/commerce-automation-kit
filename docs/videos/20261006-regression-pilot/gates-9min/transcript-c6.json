@@ -1,0 +1,13 @@
+{
+  "gate": "transcript-c6",
+  "stage": "clip",
+  "ok": true,
+  "fingerprint": "04b55b8a2ad10acb",
+  "findings": [
+    {
+      "severity": "info",
+      "message": "대사 없는 컷 — 받아쓰기 대조 생략",
+      "cutId": "c6"
+    }
+  ]
+}
