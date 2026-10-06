@@ -1,0 +1,131 @@
+{
+  "id": "day-zero",
+  "title": "사태 0일",
+  "logline": "좀비 사태 10년 끝에 죽은 한서윤이 사태 3시간 전 물류센터로 돌아온다. 창고를 장악하려는 실장, 그리고 모두가 믿는 배신자 반장 사이에서 미래를 아는 사람은 그녀뿐이다.",
+  "genreId": "regression-apocalypse",
+  "topic": {
+    "id": "returner-traitor-tyrant",
+    "logline": "좀비 사태 10년 끝에 죽은 한서윤이 사태 3시간 전 물류센터로 돌아온다. 창고를 장악하려는 실장, 그리고 모두가 믿는 배신자 반장 사이에서 미래를 아는 사람은 그녀뿐이다.",
+    "synopsis": "새벽 2시, 서윤은 셔터를 내리라고 외치지만 하청 실장 오창식은 비웃으며 식량 창고 열쇠를 빼앗아 알바생들을 굴복시키려 한다. 첫 감염자가 들이닥치자 서윤은 단 한 동작으로 그것을 쓰러뜨리고, 오창식의 손목을 꺾어 열쇠를 되찾는다. 사람들은 다정한 박반장을 따르지만, 서윤은 10년 전 그가 몰래 문을 열어 생존자 전원을 죽게 만든 장본인임을 기억한다. 이번 생에서는 그 배신을 그대로 되갚아 주겠다고, 서윤은 조용히 그를 지켜본다.",
+    "claimedElements": [
+      "strong-conflict",
+      "betrayal",
+      "hidden-identity",
+      "revenge",
+      "class-gap"
+    ],
+    "verifiedElements": [
+      "strong-conflict",
+      "revenge",
+      "betrayal",
+      "class-gap"
+    ]
+  },
+  "styleEn": "Cinematic Korean TV drama, photorealistic, cold blue-white fluorescent light with warm amber accents, shallow depth of field, subtle film grain, non-graphic.",
+  "characters": [
+    {
+      "id": "seoyun",
+      "name": "한서윤",
+      "profile": "회귀자 주인공. 좀비 사태 10년을 살아남은 기억을 가지고 사태 3시간 전으로 돌아왔다. 침착하고 말수가 적다. 압도적인 생존 전투 경험이 있다.",
+      "speech": {
+        "default": "동료에게는 짧은 존댓말, 혼잣말은 짧은 반말",
+        "toSubordinate": "짧고 단호한 존댓말"
+      },
+      "looks": [
+        {
+          "id": "present",
+          "description": "29-year-old Korean woman, curvy figure, low ponytail, black cap, fitted grey work vest, white cotton gloves",
+          "refAssetId": "0fc5b969-2257-476a-b5a2-cdd3a04af627"
+        },
+        {
+          "id": "future",
+          "description": "the same Korean woman ten years older, gaunt, short rough-cut hair, thin scar across the left eyebrow, worn dark military-style coat"
+        }
+      ]
+    },
+    {
+      "id": "changsik",
+      "name": "오창식",
+      "profile": "40대 하청 조직 실장. 사태가 터지자 식량 창고를 장악해 알바생들을 굴복시키려 한다. 비열하고 위협적이다.",
+      "speech": {
+        "default": "반말",
+        "toSubordinate": "반말로 위협",
+        "toSuperior": "깍듯한 존댓말"
+      },
+      "looks": [
+        {
+          "id": "base",
+          "description": "Korean man in his 40s, slicked-back hair, thin mustache, black leather jacket, gold chain",
+          "refAssetId": "9fe9d5b0-da4a-4400-8a6d-91244eb0fb60"
+        }
+      ]
+    },
+    {
+      "id": "minjae",
+      "name": "최민재",
+      "profile": "21세 막내 알바. 겁이 많다. 창고 열쇠를 맡고 있었다.",
+      "speech": {
+        "default": "존댓말"
+      },
+      "looks": [
+        {
+          "id": "base",
+          "description": "21-year-old thin Korean man, messy black hair, neon yellow safety vest over a grey hoodie",
+          "refAssetId": "09f1b75b-cff9-477d-a8a7-061d8885e6dd"
+        }
+      ]
+    },
+    {
+      "id": "parkys",
+      "name": "박용수(박반장)",
+      "profile": "54세 15년차 반장. 겉으로는 다정하게 모두를 다독여 신뢰를 얻는다. 서윤의 기억 속에서는 10년 전 몰래 문을 열어 생존자 전원을 죽게 만든 배신자다.",
+      "speech": {
+        "default": "다정한 반말",
+        "toSubordinate": "다정한 반말",
+        "toSuperior": "존댓말"
+      },
+      "looks": [
+        {
+          "id": "base",
+          "description": "54-year-old Korean man, short graying hair, thick forearms, worn navy padded vest, warm kind smile"
+        }
+      ]
+    }
+  ],
+  "locations": [
+    {
+      "id": "aisle",
+      "name": "물류센터 야간 작업 통로",
+      "anchorText": "Same continuous location in every cut: the night-shift aisle of the warehouse shown in the location reference - a roller conveyor on the left, tall blue pallet racks stacked with cardboard boxes on the right, polished grey epoxy floor with yellow lane lines, amber safety lamps, a wide roll-up loading shutter at the far end, a wall clock, and a waist-high pile of empty cardboard boxes beside the conveyor. Keep the same layout, lighting and time of night.",
+      "props": [
+        "컨베이어",
+        "팔레트",
+        "박스",
+        "빈 박스 더미",
+        "셔터",
+        "창고 열쇠 꾸러미",
+        "벽시계"
+      ],
+      "refAssetId": "2ae41641-0ebc-45ea-ae47-f785e1c5b8f3"
+    },
+    {
+      "id": "ruin",
+      "name": "10년 후 폐허 도시",
+      "anchorText": "Ruined Korean city street ten years after the outbreak, dusk, collapsed buildings, rusted abandoned cars, overgrown weeds, cold grey-orange light, no people.",
+      "props": [
+        "무너진 건물",
+        "버려진 차"
+      ]
+    }
+  ],
+  "episodes": [
+    {
+      "no": 1,
+      "title": "사태 0일",
+      "summary": "새벽 2시, 서윤은 셔터를 내리라고 외치지만 하청 실장 오창식은 비웃으며 식량 창고 열쇠를 빼앗아 알바생들을 굴복시키려 한다. 첫 감염자가 들이닥치자 서윤은 단 한 동작으로 그것을 쓰러뜨리고, 오창식의 손목을 꺾어 열쇠를 되찾는다. 사람들은 다정한 박반장을 따르지만, 서윤은 10년 전 그가 몰래 문을 열어 생존자 전원을 죽게 만든 장본인임을 기억한다. 이번 생에서는 그 배신을 그대로 되갚아 주겠다고, 서윤은 조용히 그를 지켜본다."
+    }
+  ],
+  "safety": {
+    "nonGraphic": true
+  }
+}

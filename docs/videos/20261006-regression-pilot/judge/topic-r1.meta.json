@@ -1,0 +1,207 @@
+{
+  "kind": "topic",
+  "fingerprint": "503566c06ba1772e",
+  "questions": [
+    {
+      "id": "day-zero-warehouse__el__strong-conflict",
+      "type": "choice"
+    },
+    {
+      "id": "day-zero-warehouse__el__revenge",
+      "type": "choice"
+    },
+    {
+      "id": "day-zero-warehouse__el__betrayal",
+      "type": "choice"
+    },
+    {
+      "id": "day-zero-warehouse__el__taboo-relationship",
+      "type": "choice"
+    },
+    {
+      "id": "day-zero-warehouse__el__hidden-identity",
+      "type": "choice"
+    },
+    {
+      "id": "day-zero-warehouse__el__class-gap",
+      "type": "choice"
+    },
+    {
+      "id": "day-zero-warehouse__el__sensual-decadence",
+      "type": "choice"
+    },
+    {
+      "id": "day-zero-warehouse__genre",
+      "type": "choice"
+    },
+    {
+      "id": "day-zero-warehouse__safe__sexual-boundary",
+      "type": "choice"
+    },
+    {
+      "id": "day-zero-warehouse__safe__violence-boundary",
+      "type": "choice"
+    },
+    {
+      "id": "tyrant-of-storage__el__strong-conflict",
+      "type": "choice"
+    },
+    {
+      "id": "tyrant-of-storage__el__revenge",
+      "type": "choice"
+    },
+    {
+      "id": "tyrant-of-storage__el__betrayal",
+      "type": "choice"
+    },
+    {
+      "id": "tyrant-of-storage__el__taboo-relationship",
+      "type": "choice"
+    },
+    {
+      "id": "tyrant-of-storage__el__hidden-identity",
+      "type": "choice"
+    },
+    {
+      "id": "tyrant-of-storage__el__class-gap",
+      "type": "choice"
+    },
+    {
+      "id": "tyrant-of-storage__el__sensual-decadence",
+      "type": "choice"
+    },
+    {
+      "id": "tyrant-of-storage__genre",
+      "type": "choice"
+    },
+    {
+      "id": "tyrant-of-storage__safe__sexual-boundary",
+      "type": "choice"
+    },
+    {
+      "id": "tyrant-of-storage__safe__violence-boundary",
+      "type": "choice"
+    },
+    {
+      "id": "traitor-foreman__el__strong-conflict",
+      "type": "choice"
+    },
+    {
+      "id": "traitor-foreman__el__revenge",
+      "type": "choice"
+    },
+    {
+      "id": "traitor-foreman__el__betrayal",
+      "type": "choice"
+    },
+    {
+      "id": "traitor-foreman__el__taboo-relationship",
+      "type": "choice"
+    },
+    {
+      "id": "traitor-foreman__el__hidden-identity",
+      "type": "choice"
+    },
+    {
+      "id": "traitor-foreman__el__class-gap",
+      "type": "choice"
+    },
+    {
+      "id": "traitor-foreman__el__sensual-decadence",
+      "type": "choice"
+    },
+    {
+      "id": "traitor-foreman__genre",
+      "type": "choice"
+    },
+    {
+      "id": "traitor-foreman__safe__sexual-boundary",
+      "type": "choice"
+    },
+    {
+      "id": "traitor-foreman__safe__violence-boundary",
+      "type": "choice"
+    },
+    {
+      "id": "vip-room-shelter__el__strong-conflict",
+      "type": "choice"
+    },
+    {
+      "id": "vip-room-shelter__el__revenge",
+      "type": "choice"
+    },
+    {
+      "id": "vip-room-shelter__el__betrayal",
+      "type": "choice"
+    },
+    {
+      "id": "vip-room-shelter__el__taboo-relationship",
+      "type": "choice"
+    },
+    {
+      "id": "vip-room-shelter__el__hidden-identity",
+      "type": "choice"
+    },
+    {
+      "id": "vip-room-shelter__el__class-gap",
+      "type": "choice"
+    },
+    {
+      "id": "vip-room-shelter__el__sensual-decadence",
+      "type": "choice"
+    },
+    {
+      "id": "vip-room-shelter__genre",
+      "type": "choice"
+    },
+    {
+      "id": "vip-room-shelter__safe__sexual-boundary",
+      "type": "choice"
+    },
+    {
+      "id": "vip-room-shelter__safe__violence-boundary",
+      "type": "choice"
+    },
+    {
+      "id": "seventy-two-hours__el__strong-conflict",
+      "type": "choice"
+    },
+    {
+      "id": "seventy-two-hours__el__revenge",
+      "type": "choice"
+    },
+    {
+      "id": "seventy-two-hours__el__betrayal",
+      "type": "choice"
+    },
+    {
+      "id": "seventy-two-hours__el__taboo-relationship",
+      "type": "choice"
+    },
+    {
+      "id": "seventy-two-hours__el__hidden-identity",
+      "type": "choice"
+    },
+    {
+      "id": "seventy-two-hours__el__class-gap",
+      "type": "choice"
+    },
+    {
+      "id": "seventy-two-hours__el__sensual-decadence",
+      "type": "choice"
+    },
+    {
+      "id": "seventy-two-hours__genre",
+      "type": "choice"
+    },
+    {
+      "id": "seventy-two-hours__safe__sexual-boundary",
+      "type": "choice"
+    },
+    {
+      "id": "seventy-two-hours__safe__violence-boundary",
+      "type": "choice"
+    }
+  ],
+  "createdAt": "2026-10-06T05:28:47.030Z"
+}

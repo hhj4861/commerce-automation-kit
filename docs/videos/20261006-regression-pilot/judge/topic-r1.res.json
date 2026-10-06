@@ -1,0 +1,508 @@
+{
+  "sshExit": 0,
+  "events": [
+    {
+      "event": "ready",
+      "alias": "drama-series-jev-1791264640",
+      "policy": {
+        "models": [
+          "jev-1.13.0"
+        ],
+        "allowed_routes": [
+          "/typesafe/v1/systemone"
+        ],
+        "duration": "1h",
+        "max_budget": 0.01,
+        "budget_duration": "1d",
+        "rpm_limit": 10
+      },
+      "maxRequests": 1,
+      "startedUtc": "2026-10-06T05:30:40.350544+00:00"
+    },
+    {
+      "event": "response",
+      "status": 200,
+      "elapsedMs": 363,
+      "body": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "traitor-foreman__safe__sexual-boundary": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.98,
+            "probabilities": {
+              "fail": 0.01,
+              "pass": 0.99
+            }
+          },
+          "vip-room-shelter__el__revenge": {
+            "type": "choice",
+            "choice": "fail",
+            "confidence": 0.98,
+            "probabilities": {
+              "fail": 0.99,
+              "pass": 0.01
+            }
+          },
+          "vip-room-shelter__el__taboo-relationship": {
+            "type": "choice",
+            "choice": "fail",
+            "confidence": 0.45,
+            "probabilities": {
+              "fail": 0.72,
+              "pass": 0.28
+            }
+          },
+          "day-zero-warehouse__el__strong-conflict": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.99,
+            "probabilities": {
+              "fail": 0.01,
+              "pass": 0.99
+            }
+          },
+          "traitor-foreman__el__hidden-identity": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.92,
+            "probabilities": {
+              "fail": 0.04,
+              "pass": 0.96
+            }
+          },
+          "vip-room-shelter__el__betrayal": {
+            "type": "choice",
+            "choice": "fail",
+            "confidence": 0.41,
+            "probabilities": {
+              "fail": 0.71,
+              "pass": 0.29
+            }
+          },
+          "vip-room-shelter__safe__sexual-boundary": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 1,
+            "probabilities": {
+              "fail": 0,
+              "pass": 1
+            }
+          },
+          "seventy-two-hours__el__taboo-relationship": {
+            "type": "choice",
+            "choice": "fail",
+            "confidence": 0.99,
+            "probabilities": {
+              "fail": 1,
+              "pass": 0
+            }
+          },
+          "seventy-two-hours__genre": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.98,
+            "probabilities": {
+              "fail": 0.01,
+              "pass": 0.99
+            }
+          },
+          "day-zero-warehouse__el__betrayal": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.82,
+            "probabilities": {
+              "fail": 0.09,
+              "pass": 0.91
+            }
+          },
+          "tyrant-of-storage__safe__sexual-boundary": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.96,
+            "probabilities": {
+              "fail": 0.02,
+              "pass": 0.98
+            }
+          },
+          "traitor-foreman__genre": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.06,
+            "probabilities": {
+              "fail": 0.47,
+              "pass": 0.53
+            }
+          },
+          "vip-room-shelter__el__strong-conflict": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.41,
+            "probabilities": {
+              "fail": 0.29,
+              "pass": 0.71
+            }
+          },
+          "vip-room-shelter__el__hidden-identity": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.88,
+            "probabilities": {
+              "fail": 0.06,
+              "pass": 0.94
+            }
+          },
+          "seventy-two-hours__el__revenge": {
+            "type": "choice",
+            "choice": "fail",
+            "confidence": 0.99,
+            "probabilities": {
+              "fail": 1,
+              "pass": 0
+            }
+          },
+          "seventy-two-hours__el__hidden-identity": {
+            "type": "choice",
+            "choice": "fail",
+            "confidence": 0.63,
+            "probabilities": {
+              "fail": 0.82,
+              "pass": 0.18
+            }
+          },
+          "seventy-two-hours__el__class-gap": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.29,
+            "probabilities": {
+              "fail": 0.36,
+              "pass": 0.64
+            }
+          },
+          "tyrant-of-storage__el__taboo-relationship": {
+            "type": "choice",
+            "choice": "fail",
+            "confidence": 0.99,
+            "probabilities": {
+              "fail": 0.99,
+              "pass": 0.01
+            }
+          },
+          "traitor-foreman__el__betrayal": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.95,
+            "probabilities": {
+              "fail": 0.02,
+              "pass": 0.98
+            }
+          },
+          "traitor-foreman__el__taboo-relationship": {
+            "type": "choice",
+            "choice": "fail",
+            "confidence": 0.97,
+            "probabilities": {
+              "fail": 0.98,
+              "pass": 0.02
+            }
+          },
+          "traitor-foreman__safe__violence-boundary": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.96,
+            "probabilities": {
+              "fail": 0.02,
+              "pass": 0.98
+            }
+          },
+          "seventy-two-hours__el__sensual-decadence": {
+            "type": "choice",
+            "choice": "fail",
+            "confidence": 1,
+            "probabilities": {
+              "fail": 1,
+              "pass": 0
+            }
+          },
+          "day-zero-warehouse__el__hidden-identity": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.5,
+            "probabilities": {
+              "fail": 0.25,
+              "pass": 0.75
+            }
+          },
+          "day-zero-warehouse__genre": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.95,
+            "probabilities": {
+              "fail": 0.02,
+              "pass": 0.98
+            }
+          },
+          "tyrant-of-storage__safe__violence-boundary": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 1,
+            "probabilities": {
+              "fail": 0,
+              "pass": 1
+            }
+          },
+          "vip-room-shelter__el__sensual-decadence": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.94,
+            "probabilities": {
+              "fail": 0.03,
+              "pass": 0.97
+            }
+          },
+          "vip-room-shelter__genre": {
+            "type": "choice",
+            "choice": "fail",
+            "confidence": 0.14,
+            "probabilities": {
+              "fail": 0.57,
+              "pass": 0.43
+            }
+          },
+          "tyrant-of-storage__el__betrayal": {
+            "type": "choice",
+            "choice": "fail",
+            "confidence": 0.5,
+            "probabilities": {
+              "fail": 0.75,
+              "pass": 0.25
+            }
+          },
+          "traitor-foreman__el__sensual-decadence": {
+            "type": "choice",
+            "choice": "fail",
+            "confidence": 1,
+            "probabilities": {
+              "fail": 1,
+              "pass": 0
+            }
+          },
+          "vip-room-shelter__safe__violence-boundary": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 1,
+            "probabilities": {
+              "fail": 0,
+              "pass": 1
+            }
+          },
+          "seventy-two-hours__safe__sexual-boundary": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 1,
+            "probabilities": {
+              "fail": 0,
+              "pass": 1
+            }
+          },
+          "seventy-two-hours__safe__violence-boundary": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.97,
+            "probabilities": {
+              "fail": 0.02,
+              "pass": 0.98
+            }
+          },
+          "day-zero-warehouse__el__revenge": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.3,
+            "probabilities": {
+              "fail": 0.35,
+              "pass": 0.65
+            }
+          },
+          "tyrant-of-storage__el__hidden-identity": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.26,
+            "probabilities": {
+              "fail": 0.37,
+              "pass": 0.63
+            }
+          },
+          "tyrant-of-storage__genre": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.85,
+            "probabilities": {
+              "fail": 0.08,
+              "pass": 0.92
+            }
+          },
+          "seventy-two-hours__el__strong-conflict": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.96,
+            "probabilities": {
+              "fail": 0.02,
+              "pass": 0.98
+            }
+          },
+          "seventy-two-hours__el__betrayal": {
+            "type": "choice",
+            "choice": "fail",
+            "confidence": 0.88,
+            "probabilities": {
+              "fail": 0.94,
+              "pass": 0.06
+            }
+          },
+          "day-zero-warehouse__el__sensual-decadence": {
+            "type": "choice",
+            "choice": "fail",
+            "confidence": 1,
+            "probabilities": {
+              "fail": 1,
+              "pass": 0
+            }
+          },
+          "day-zero-warehouse__safe__violence-boundary": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.97,
+            "probabilities": {
+              "fail": 0.01,
+              "pass": 0.99
+            }
+          },
+          "tyrant-of-storage__el__strong-conflict": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.97,
+            "probabilities": {
+              "fail": 0.01,
+              "pass": 0.99
+            }
+          },
+          "tyrant-of-storage__el__revenge": {
+            "type": "choice",
+            "choice": "fail",
+            "confidence": 0.85,
+            "probabilities": {
+              "fail": 0.92,
+              "pass": 0.08
+            }
+          },
+          "tyrant-of-storage__el__class-gap": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.99,
+            "probabilities": {
+              "fail": 0,
+              "pass": 1
+            }
+          },
+          "tyrant-of-storage__el__sensual-decadence": {
+            "type": "choice",
+            "choice": "fail",
+            "confidence": 0.99,
+            "probabilities": {
+              "fail": 0.99,
+              "pass": 0.01
+            }
+          },
+          "traitor-foreman__el__class-gap": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.4,
+            "probabilities": {
+              "fail": 0.3,
+              "pass": 0.7
+            }
+          },
+          "vip-room-shelter__el__class-gap": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.88,
+            "probabilities": {
+              "fail": 0.06,
+              "pass": 0.94
+            }
+          },
+          "day-zero-warehouse__el__taboo-relationship": {
+            "type": "choice",
+            "choice": "fail",
+            "confidence": 0.99,
+            "probabilities": {
+              "fail": 1,
+              "pass": 0
+            }
+          },
+          "day-zero-warehouse__el__class-gap": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.85,
+            "probabilities": {
+              "fail": 0.08,
+              "pass": 0.92
+            }
+          },
+          "day-zero-warehouse__safe__sexual-boundary": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 1,
+            "probabilities": {
+              "fail": 0,
+              "pass": 1
+            }
+          },
+          "traitor-foreman__el__strong-conflict": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.97,
+            "probabilities": {
+              "fail": 0.01,
+              "pass": 0.99
+            }
+          },
+          "traitor-foreman__el__revenge": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.63,
+            "probabilities": {
+              "fail": 0.19,
+              "pass": 0.81
+            }
+          }
+        },
+        "usage": {
+          "input_tokens": 14914,
+          "output_tokens": 1913
+        }
+      }
+    },
+    {
+      "event": "cleanup",
+      "alias": "drama-series-jev-1791264640",
+      "requests": 1,
+      "revoked": true,
+      "policyAndSpend": {
+        "models": [
+          "jev-1.13.0"
+        ],
+        "allowed_routes": [
+          "/typesafe/v1/systemone"
+        ],
+        "spend": 0,
+        "max_budget": 0.01,
+        "budget_duration": "1d",
+        "rpm_limit": 10,
+        "expires": "2026-10-06T06:30:40.306000Z"
+      },
+      "afterRevokeStatus": 401,
+      "finishedUtc": "2026-10-06T05:30:41.291083+00:00"
+    }
+  ]
+}

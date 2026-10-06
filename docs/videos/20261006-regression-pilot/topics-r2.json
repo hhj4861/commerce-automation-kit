@@ -1,0 +1,40 @@
+{
+  "genreId": "regression-apocalypse",
+  "topics": [
+    {
+      "id": "returner-and-traitor",
+      "logline": "좀비 사태 10년 끝에 죽은 한서윤이 사태 3시간 전 물류센터로 돌아온다. 모두가 믿는 박반장이 그날 문을 열어 모두를 죽인 배신자라는 것은 그녀만 안다.",
+      "synopsis": "새벽 2시, 서윤은 셔터를 내리라고 외치지만 하청 실장 오창식은 비웃는다. 첫 감염자가 들이닥치자 서윤은 겁에 질린 사람들 앞에서 단 한 동작으로 그것을 쓰러뜨리고, 모두가 얼어붙는다. 사람들은 다정한 박반장을 따르지만, 서윤은 10년 전 그가 몰래 문을 열어 생존자 전원을 죽게 만든 장본인임을 기억한다. 이번에는 그 문을 열게 두지 않겠다고, 서윤은 조용히 그를 지켜본다.",
+      "claimedElements": [
+        "strong-conflict",
+        "betrayal",
+        "hidden-identity",
+        "revenge"
+      ],
+      "verifiedElements": [
+        "strong-conflict",
+        "revenge",
+        "betrayal",
+        "hidden-identity"
+      ]
+    },
+    {
+      "id": "returner-traitor-tyrant",
+      "logline": "좀비 사태 10년 끝에 죽은 한서윤이 사태 3시간 전 물류센터로 돌아온다. 창고를 장악하려는 실장, 그리고 모두가 믿는 배신자 반장 사이에서 미래를 아는 사람은 그녀뿐이다.",
+      "synopsis": "새벽 2시, 서윤은 셔터를 내리라고 외치지만 하청 실장 오창식은 비웃으며 식량 창고 열쇠를 빼앗아 알바생들을 굴복시키려 한다. 첫 감염자가 들이닥치자 서윤은 단 한 동작으로 그것을 쓰러뜨리고, 오창식의 손목을 꺾어 열쇠를 되찾는다. 사람들은 다정한 박반장을 따르지만, 서윤은 10년 전 그가 몰래 문을 열어 생존자 전원을 죽게 만든 장본인임을 기억한다. 이번 생에서는 그 배신을 그대로 되갚아 주겠다고, 서윤은 조용히 그를 지켜본다.",
+      "claimedElements": [
+        "strong-conflict",
+        "betrayal",
+        "hidden-identity",
+        "revenge",
+        "class-gap"
+      ],
+      "verifiedElements": [
+        "strong-conflict",
+        "revenge",
+        "betrayal",
+        "class-gap"
+      ]
+    }
+  ]
+}

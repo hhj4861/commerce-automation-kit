@@ -1,0 +1,71 @@
+{
+  "gate": "dialogue-judge",
+  "stage": "episode",
+  "ok": true,
+  "fingerprint": "5a1e9a1105a86246",
+  "findings": [
+    {
+      "severity": "review",
+      "message": "JEV 미확정: context, voice — 문구 수정 후 재판정 또는 사람 승인",
+      "cutId": "c1",
+      "lineIndex": 0,
+      "evidence": "결국… 아무도 못 지켰네."
+    },
+    {
+      "severity": "review",
+      "message": "JEV 미확정: voice — 문구 수정 후 재판정 또는 사람 승인",
+      "cutId": "c2",
+      "lineIndex": 0,
+      "evidence": "돌아왔어…"
+    },
+    {
+      "severity": "review",
+      "message": "JEV 미확정: context, voice — 문구 수정 후 재판정 또는 사람 승인",
+      "cutId": "c3",
+      "lineIndex": 0,
+      "evidence": "다들 셔터부터 내려요!"
+    },
+    {
+      "severity": "review",
+      "message": "JEV 미확정: natural — 문구 수정 후 재판정 또는 사람 승인",
+      "cutId": "c3",
+      "lineIndex": 1,
+      "evidence": "알바 주제에 어디서 명령이야?"
+    },
+    {
+      "severity": "review",
+      "message": "JEV 미확정: context, voice — 문구 수정 후 재판정 또는 사람 승인",
+      "cutId": "c4",
+      "lineIndex": 0,
+      "evidence": "열쇠 이리 내."
+    },
+    {
+      "severity": "review",
+      "message": "JEV 미확정: voice — 문구 수정 후 재판정 또는 사람 승인",
+      "cutId": "c5",
+      "lineIndex": 0,
+      "evidence": "다들 뒤로 가요!"
+    },
+    {
+      "severity": "review",
+      "message": "JEV 미확정: context, voice, natural — 문구 수정 후 재판정 또는 사람 승인",
+      "cutId": "c6",
+      "lineIndex": 0,
+      "evidence": "이거 놔!"
+    },
+    {
+      "severity": "review",
+      "message": "JEV 미확정: context, voice, natural — 문구 수정 후 재판정 또는 사람 승인",
+      "cutId": "c6",
+      "lineIndex": 1,
+      "evidence": "서윤 씨, 어디서 그런 걸 배웠어?"
+    },
+    {
+      "severity": "review",
+      "message": "JEV 미확정: context, voice, natural — 문구 수정 후 재판정 또는 사람 승인",
+      "cutId": "c8",
+      "lineIndex": 0,
+      "evidence": "이번엔 당신 차례야."
+    }
+  ]
+}

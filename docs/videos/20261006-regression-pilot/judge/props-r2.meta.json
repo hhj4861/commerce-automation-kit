@@ -1,0 +1,71 @@
+{
+  "kind": "props",
+  "fingerprint": "5a1e9a1105a86246",
+  "questions": [
+    {
+      "id": "c1__props",
+      "type": "choice"
+    },
+    {
+      "id": "c1__single-location",
+      "type": "choice"
+    },
+    {
+      "id": "c2__props",
+      "type": "choice"
+    },
+    {
+      "id": "c2__single-location",
+      "type": "choice"
+    },
+    {
+      "id": "c3__props",
+      "type": "choice"
+    },
+    {
+      "id": "c3__single-location",
+      "type": "choice"
+    },
+    {
+      "id": "c4__props",
+      "type": "choice"
+    },
+    {
+      "id": "c4__single-location",
+      "type": "choice"
+    },
+    {
+      "id": "c5__props",
+      "type": "choice"
+    },
+    {
+      "id": "c5__single-location",
+      "type": "choice"
+    },
+    {
+      "id": "c6__props",
+      "type": "choice"
+    },
+    {
+      "id": "c6__single-location",
+      "type": "choice"
+    },
+    {
+      "id": "c7__props",
+      "type": "choice"
+    },
+    {
+      "id": "c7__single-location",
+      "type": "choice"
+    },
+    {
+      "id": "c8__props",
+      "type": "choice"
+    },
+    {
+      "id": "c8__single-location",
+      "type": "choice"
+    }
+  ],
+  "createdAt": "2026-10-06T05:38:40.327Z"
+}

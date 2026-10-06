@@ -1,0 +1,12 @@
+{
+  "gate": "continuity",
+  "stage": "episode",
+  "ok": true,
+  "fingerprint": "5a1e9a1105a86246",
+  "findings": [
+    {
+      "severity": "review",
+      "message": "장소 참조 이미지 없음: 10년 후 폐허 도시 (컷 간 배경 일관성을 보장할 수 없음)"
+    }
+  ]
+}

@@ -1,0 +1,127 @@
+{
+  "kind": "dialogue",
+  "fingerprint": "f877e8c7e814dd72",
+  "questions": [
+    {
+      "id": "c1__0__context",
+      "type": "choice"
+    },
+    {
+      "id": "c1__0__voice",
+      "type": "choice"
+    },
+    {
+      "id": "c1__0__natural",
+      "type": "choice"
+    },
+    {
+      "id": "c2__0__context",
+      "type": "choice"
+    },
+    {
+      "id": "c2__0__voice",
+      "type": "choice"
+    },
+    {
+      "id": "c2__0__natural",
+      "type": "choice"
+    },
+    {
+      "id": "c3__0__context",
+      "type": "choice"
+    },
+    {
+      "id": "c3__0__voice",
+      "type": "choice"
+    },
+    {
+      "id": "c3__0__natural",
+      "type": "choice"
+    },
+    {
+      "id": "c3__1__context",
+      "type": "choice"
+    },
+    {
+      "id": "c3__1__voice",
+      "type": "choice"
+    },
+    {
+      "id": "c3__1__natural",
+      "type": "choice"
+    },
+    {
+      "id": "c4__0__context",
+      "type": "choice"
+    },
+    {
+      "id": "c4__0__voice",
+      "type": "choice"
+    },
+    {
+      "id": "c4__0__natural",
+      "type": "choice"
+    },
+    {
+      "id": "c4__1__context",
+      "type": "choice"
+    },
+    {
+      "id": "c4__1__voice",
+      "type": "choice"
+    },
+    {
+      "id": "c4__1__natural",
+      "type": "choice"
+    },
+    {
+      "id": "c5__0__context",
+      "type": "choice"
+    },
+    {
+      "id": "c5__0__voice",
+      "type": "choice"
+    },
+    {
+      "id": "c5__0__natural",
+      "type": "choice"
+    },
+    {
+      "id": "c6__0__context",
+      "type": "choice"
+    },
+    {
+      "id": "c6__0__voice",
+      "type": "choice"
+    },
+    {
+      "id": "c6__0__natural",
+      "type": "choice"
+    },
+    {
+      "id": "c6__1__context",
+      "type": "choice"
+    },
+    {
+      "id": "c6__1__voice",
+      "type": "choice"
+    },
+    {
+      "id": "c6__1__natural",
+      "type": "choice"
+    },
+    {
+      "id": "c7__0__context",
+      "type": "choice"
+    },
+    {
+      "id": "c7__0__voice",
+      "type": "choice"
+    },
+    {
+      "id": "c7__0__natural",
+      "type": "choice"
+    }
+  ],
+  "createdAt": "2026-10-06T05:35:50.188Z"
+}

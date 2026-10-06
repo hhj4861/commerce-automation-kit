@@ -1,0 +1,252 @@
+{
+  "sshExit": 0,
+  "events": [
+    {
+      "event": "ready",
+      "alias": "drama-series-jev-1791264939",
+      "policy": {
+        "models": [
+          "jev-1.13.0"
+        ],
+        "allowed_routes": [
+          "/typesafe/v1/systemone"
+        ],
+        "duration": "1h",
+        "max_budget": 0.01,
+        "budget_duration": "1d",
+        "rpm_limit": 10
+      },
+      "maxRequests": 1,
+      "startedUtc": "2026-10-06T05:35:39.561359+00:00"
+    },
+    {
+      "event": "response",
+      "status": 200,
+      "elapsedMs": 308,
+      "body": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "scenario__hook": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.99,
+            "probabilities": {
+              "fail": 0.01,
+              "pass": 0.99
+            }
+          },
+          "scenario__conflict": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.99,
+            "probabilities": {
+              "fail": 0,
+              "pass": 1
+            }
+          },
+          "scenario__payoff": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.99,
+            "probabilities": {
+              "fail": 0,
+              "pass": 1
+            }
+          },
+          "scenario__cliffhanger": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 1,
+            "probabilities": {
+              "fail": 0,
+              "pass": 1
+            }
+          },
+          "scenario__genre": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.99,
+            "probabilities": {
+              "fail": 0,
+              "pass": 1
+            }
+          },
+          "scenario__carry__strong-conflict": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.97,
+            "probabilities": {
+              "fail": 0.02,
+              "pass": 0.98
+            }
+          },
+          "scenario__carry__revenge": {
+            "type": "choice",
+            "choice": "fail",
+            "confidence": 0.91,
+            "probabilities": {
+              "fail": 0.95,
+              "pass": 0.05
+            }
+          },
+          "scenario__carry__betrayal": {
+            "type": "choice",
+            "choice": "fail",
+            "confidence": 0.29,
+            "probabilities": {
+              "fail": 0.65,
+              "pass": 0.35
+            }
+          },
+          "scenario__carry__class-gap": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.83,
+            "probabilities": {
+              "fail": 0.08,
+              "pass": 0.92
+            }
+          },
+          "scenario__safe__sexual-boundary": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 1,
+            "probabilities": {
+              "fail": 0,
+              "pass": 1
+            }
+          },
+          "scenario__safe__violence-boundary": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.97,
+            "probabilities": {
+              "fail": 0.02,
+              "pass": 0.98
+            }
+          },
+          "scenario__fun__surprise": {
+            "type": "score",
+            "score": 1.1,
+            "confidence": 0.68,
+            "legend": {
+              "0": "Entirely predictable",
+              "1": "Mostly predictable",
+              "2": "One mild surprise",
+              "3": "A clear surprise",
+              "4": "A genuine twist that recontextualizes the story"
+            },
+            "probabilities": {
+              "0": 0.14,
+              "1": 0.67,
+              "2": 0.13,
+              "3": 0.06,
+              "4": 0
+            }
+          },
+          "scenario__fun__tension-curve": {
+            "type": "score",
+            "score": 3.97,
+            "confidence": 0.98,
+            "legend": {
+              "0": "Flat",
+              "1": "Slight rise",
+              "2": "Rises then stalls",
+              "3": "Builds steadily to a peak",
+              "4": "Builds sharply to a strong peak and leaves a hook"
+            },
+            "probabilities": {
+              "0": 0,
+              "1": 0,
+              "2": 0,
+              "3": 0.02,
+              "4": 0.98
+            }
+          },
+          "scenario__fun__protagonist-appeal": {
+            "type": "score",
+            "score": 3.82,
+            "confidence": 0.85,
+            "legend": {
+              "0": "Passive and unclear",
+              "1": "Some want, little action",
+              "2": "Clear want and some action",
+              "3": "Clear want, decisive and likable",
+              "4": "Magnetic: decisive, distinctive and satisfying to watch"
+            },
+            "probabilities": {
+              "0": 0,
+              "1": 0,
+              "2": 0,
+              "3": 0.17,
+              "4": 0.83
+            }
+          },
+          "scenario__fun__freshness": {
+            "type": "score",
+            "score": 2.08,
+            "confidence": 0.42,
+            "legend": {
+              "0": "Pure cliché",
+              "1": "Mostly cliché",
+              "2": "Familiar with one fresh detail",
+              "3": "Several fresh choices",
+              "4": "A distinctive take that still keeps the genre promise"
+            },
+            "probabilities": {
+              "0": 0.01,
+              "1": 0.28,
+              "2": 0.37,
+              "3": 0.3,
+              "4": 0.04
+            }
+          },
+          "scenario__fun__emotional-peak": {
+            "type": "score",
+            "score": 3.42,
+            "confidence": 0.59,
+            "legend": {
+              "0": "None",
+              "1": "Weak",
+              "2": "Noticeable",
+              "3": "Strong",
+              "4": "A moment viewers would replay or share"
+            },
+            "probabilities": {
+              "0": 0,
+              "1": 0,
+              "2": 0.03,
+              "3": 0.51,
+              "4": 0.46
+            }
+          }
+        },
+        "usage": {
+          "input_tokens": 11443,
+          "output_tokens": 467
+        }
+      }
+    },
+    {
+      "event": "cleanup",
+      "alias": "drama-series-jev-1791264939",
+      "requests": 1,
+      "revoked": true,
+      "policyAndSpend": {
+        "models": [
+          "jev-1.13.0"
+        ],
+        "allowed_routes": [
+          "/typesafe/v1/systemone"
+        ],
+        "spend": 0,
+        "max_budget": 0.01,
+        "budget_duration": "1d",
+        "rpm_limit": 10,
+        "expires": "2026-10-06T06:35:39.550000Z"
+      },
+      "afterRevokeStatus": 401,
+      "finishedUtc": "2026-10-06T05:35:40.381278+00:00"
+    }
+  ]
+}
