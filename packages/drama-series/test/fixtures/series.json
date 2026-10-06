@@ -1,0 +1,45 @@
+{
+  "id": "night-shift",
+  "title": "야간 상하차",
+  "logline": "물류센터 야간 상하차 알바생 한서윤은 3년 전 사라진 VIP 경호팀 에이스였다.",
+  "genreId": "hidden-master-revenge",
+  "topic": {
+    "id": "night-shift",
+    "logline": "물류센터 야간 상하차 알바생 한서윤은 3년 전 사라진 VIP 경호팀 에이스였다.",
+    "synopsis": "하청 조직이 막내 알바의 일당을 뜯자 정체를 숨기던 서윤이 나서고, 조직 뒤의 재벌 부사장이 그녀의 과거와 얽혀 있음이 드러난다.",
+    "claimedElements": ["strong-conflict", "hidden-identity"],
+    "verifiedElements": ["strong-conflict", "hidden-identity"]
+  },
+  "styleEn": "Cinematic Korean TV drama, photorealistic, cold blue-white fluorescent light with warm amber accents, shallow depth of field, subtle film grain.",
+  "characters": [
+    {
+      "id": "seoyun", "name": "한서윤", "profile": "주인공. 말수가 적고 차분하다. 약자가 당하면 참지 않는다.",
+      "speech": { "default": "짧은 존댓말" },
+      "looks": [{ "id": "v2", "description": "29-year-old Korean woman, low ponytail, black cap, fitted grey work vest", "refAssetId": "img-seoyun" }]
+    },
+    {
+      "id": "changsik", "name": "오창식", "profile": "40대 하청 조직 실장. 알바 일당을 뜯는다.",
+      "speech": { "default": "반말", "toSuperior": "깍듯한 존댓말", "toSubordinate": "반말로 위협" },
+      "looks": [{ "id": "base", "description": "Korean man in his 40s, black leather jacket, gold chain", "refAssetId": "img-changsik" }]
+    },
+    {
+      "id": "minjae", "name": "최민재", "profile": "21세 막내 알바. 겁이 많고 일당이 절실하다.",
+      "speech": { "default": "존댓말" },
+      "looks": [{ "id": "base", "description": "21-year-old thin Korean man, neon yellow safety vest", "refAssetId": "img-minjae" }]
+    }
+  ],
+  "locations": [
+    {
+      "id": "aisle", "name": "물류센터 야간 작업 통로",
+      "anchorText": "Same continuous location: warehouse night-shift aisle with a roller conveyor on the left and blue pallet racks on the right.",
+      "props": ["컨베이어", "팔레트", "박스", "빈 박스 더미"], "refAssetId": "img-warehouse"
+    },
+    {
+      "id": "parking", "name": "센터 주차장",
+      "anchorText": "Outdoor parking lot of the logistics center at night, sodium lamps, parked cars.",
+      "props": ["세단", "휴대폰"], "refAssetId": "img-parking"
+    }
+  ],
+  "episodes": [{ "no": 1, "title": "야간 상하차", "summary": "조직이 막내의 일당을 뜯으려다 서윤에게 제압당한다." }],
+  "safety": { "nonGraphic": true }
+}

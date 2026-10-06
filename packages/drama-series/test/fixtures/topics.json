@@ -1,0 +1,17 @@
+{
+  "genreId": "hidden-master-revenge",
+  "topics": [
+    {
+      "id": "night-shift",
+      "logline": "물류센터 야간 상하차 알바생 한서윤은 3년 전 사라진 VIP 경호팀 에이스였다.",
+      "synopsis": "하청 조직이 막내 알바의 일당을 뜯자 정체를 숨기던 서윤이 나서고, 조직 뒤의 재벌 부사장이 그녀의 과거와 얽혀 있음이 드러난다.",
+      "claimedElements": ["strong-conflict", "hidden-identity"]
+    },
+    {
+      "id": "lunch-break",
+      "logline": "물류센터 직원들이 점심 메뉴를 정한다.",
+      "synopsis": "직원들이 구내식당과 배달 중에서 점심 메뉴를 고르고 함께 식사한다.",
+      "claimedElements": ["strong-conflict"]
+    }
+  ]
+}
