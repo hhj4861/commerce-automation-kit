@@ -1,0 +1,193 @@
+{
+  "final": "/Users/admin/Downloads/vedio/elbphilharmonie-webtoon-short.mp4",
+  "duration": 75.83333333333333,
+  "resolution": [
+    1080,
+    1920
+  ],
+  "fps": 24,
+  "frames": 1820,
+  "bytes": 20134831,
+  "sha256": "97e4ce6d0e40bb424da3f4e0b43066c5aaa443bb970704c8d97b5d801d68f5d9",
+  "checks": {
+    "fullDecode": true,
+    "audioVideoDuration": true,
+    "captionTextCoverage": true,
+    "captionLayout": true,
+    "sixScenesPresent": true,
+    "completeFinalSpeech": true,
+    "endingHoldSeconds": 2.7173356009070204
+  },
+  "captionCount": 21,
+  "voiceId": "RU7aSi6lT4uQBXMLgDxK",
+  "speed": 1.1,
+  "limitations": [
+    "Artistic reconstruction, not an as-built engineering simulation.",
+    "Forced alignment is not independent speech recognition.",
+    "No audience popularity experiment performed."
+  ],
+  "depthReview": {
+    "version": "explanation-depth-v1",
+    "digest": "e61ccb0fb3cd6274935f0a9701f29d8503bd29fde49cb98af3787a4df6e22133",
+    "checks": {
+      "focus": {
+        "pass": true,
+        "reason": "중심 질문은 '왜 공연장을 스프링 위에 받치는가'로 일관된다. 구조를 통한 진동 전달, 탄성 지지의 작동, 적용 조건을 설명한 뒤 질문에 답한다. 공기음과 이중 벽은 별도 주제로 확장되지 않고 스프링의 역할을 구분하는 데 쓰인다.",
+        "evidence": [
+          {
+            "sceneId": "hook",
+            "field": "narration",
+            "quote": "무거운 방을 왜 이렇게 만들었을까요?"
+          },
+          {
+            "sceneId": "payoff",
+            "field": "narration",
+            "quote": "바깥의 흔들림이 음악에 끼어드는 걸 줄이려는 거죠."
+          }
+        ]
+      },
+      "why": {
+        "pass": true,
+        "reason": "항구라는 장소만 제시하는 데 그치지 않고, 소음 대책이 필요한 이유를 구조를 통한 진동 전달로 설명한다. 단단한 받침에서는 안쪽 방까지 함께 움직인다는 비교가 있어 지지 방식을 바꾸는 필요성이 납득된다.",
+        "evidence": [
+          {
+            "sceneId": "problem",
+            "field": "narration",
+            "quote": "문제는 소음이 공기로만 들어오는 게 아니라는 거예요. 진동은 건물의 구조를 타고도 전달될 수 있죠."
+          },
+          {
+            "sceneId": "mechanism",
+            "field": "narration",
+            "quote": "단단한 받침은 안쪽 방도 함께 밀어 올립니다."
+          }
+        ]
+      },
+      "mechanism": {
+        "pass": true,
+        "reason": "바깥 바닥의 상하 진동→받침의 반응→안쪽 방의 움직임이라는 순서가 이어진다. 스프링의 변형뿐 아니라 무거운 방의 관성을 함께 설명해 '스프링이라 소음이 줄어든다'는 단정에서 벗어난다. 효과가 진동의 빠르기와 하중에 따른 설계에 좌우된다는 조건도 내레이션에 있다.",
+        "evidence": [
+          {
+            "sceneId": "mechanism",
+            "field": "narration",
+            "quote": "스프링은 그 사이에서 눌렸다 펴지며, 안쪽 방이 바깥 움직임을 그대로 따라가지 않게 해요. 무거운 방이 움직임의 변화를 버티는 성질과, 스프링의 탄성이 함께 작용하는 거죠."
+          },
+          {
+            "sceneId": "limit",
+            "field": "narration",
+            "quote": "다만 진동이 얼마나 빠른지에 따라 효과가 달라서, 공연장 무게에 맞춘 정밀한 설계가 필요합니다."
+          }
+        ]
+      },
+      "example": {
+        "pass": true,
+        "reason": "엘프필하모니의 안쪽 공연장을 계속 따라가며, 바깥 바닥이 위아래로 진동하는 구체적 상황에 두 지지 방식을 대입한다. 단단한 받침과 스프링에서 같은 방의 움직임이 어떻게 달라지는지 비교하므로 건물 이름이나 비유만 제시한 사례가 아니다. 비교는 실제 개조 전후가 아닌 설명용 모형으로 구분되어 있다.",
+        "evidence": [
+          {
+            "sceneId": "separate",
+            "field": "narration",
+            "quote": "대공연장 아래에는 스프링 묶음이 삼백예순두 개나 들어갑니다."
+          },
+          {
+            "sceneId": "mechanism",
+            "field": "narration",
+            "quote": "바깥 바닥이 빠르게 위아래로 떨리는 상황을 보세요. 단단한 받침은 안쪽 방도 함께 밀어 올립니다. 스프링은 그 사이에서 눌렸다 펴지며, 안쪽 방이 바깥 움직임을 그대로 따라가지 않게 해요."
+          }
+        ]
+      },
+      "payoff": {
+        "pass": true,
+        "reason": "스프링의 목적을 외부 흔들림의 전달 감소로 답하고 관객의 청취 경험과 연결한다. 주파수와 설계에 따른 효과 차이, 공기음에 별도 차음 구조가 필요하다는 한계가 먼저 설명되어 완전한 무음이나 보편적 효과를 보장하지 않는다. 마지막은 첫 장면의 스프링을 다시 이해하게 하는 완결된 답이다.",
+        "evidence": [
+          {
+            "sceneId": "limit",
+            "field": "narration",
+            "quote": "또 공기를 타고 오는 소음은 이중 벽 같은 차음 구조가 함께 막아야 하죠. 소리가 들어오는 길마다 대책이 다른 겁니다."
+          },
+          {
+            "sceneId": "payoff",
+            "field": "narration",
+            "quote": "그 덕분에 항구 한복판에서도 관객은 작은 연주 소리에 집중할 수 있습니다."
+          },
+          {
+            "sceneId": "payoff",
+            "field": "narration",
+            "quote": "이 공연장을 스프링 위에 올린 이유는 흔들리게 하려는 게 아닙니다. 바깥의 흔들림이 음악에 끼어드는 걸 줄이려는 거죠."
+          }
+        ]
+      },
+      "pacing": {
+        "pass": true,
+        "reason": "첫 문장부터 의외의 지지 방식에 대한 질문을 제시하고, 문제→분리→작동 비교→한계→답으로 진행해 설명상의 인과 점프나 결말 절단이 없다. 장면 합계 89초는 사용자가 허용한 70~100초 안이지만 이것만으로 발화 적합성을 확정하지는 않는다. 실제 TTS에서는 특히 마지막 13초에 세 문장과 발화 후 2초 여유가 들어가는지 확인해야 한다.",
+        "evidence": [
+          {
+            "sceneId": "hook",
+            "field": "narration",
+            "quote": "공연장을 스프링 위에 올린다고요?"
+          },
+          {
+            "sceneId": "limit",
+            "field": "narration",
+            "quote": "소리가 들어오는 길마다 대책이 다른 겁니다."
+          },
+          {
+            "sceneId": "payoff",
+            "field": "narration",
+            "quote": "이 공연장을 스프링 위에 올린 이유는 흔들리게 하려는 게 아닙니다. 바깥의 흔들림이 음악에 끼어드는 걸 줄이려는 거죠."
+          }
+        ]
+      },
+      "visuals": {
+        "pass": true,
+        "reason": "첫 화면에 안쪽 공연장·스프링·질문을 함께 배치해 무음으로도 대상을 식별할 수 있다. 핵심 설명은 같은 바닥 입력에 대한 받침의 변형과 방의 이동 차이를 보여주며, 공기와 구조의 전달 경로도 구분한다. 단순 확대나 용어 나열에 의존하지 않는다. 합격은 화면 계획에 대한 판정이며 실제 렌더의 움직임과 자막 가독성은 별도 검증 대상이다.",
+        "evidence": [
+          {
+            "sceneId": "hook",
+            "field": "prompt",
+            "quote": "첫 프레임부터 항구 건물 안의 독립 공연장과 그 밑 스프링 묶음을 동시에 드러낸 웹툰 단면. 즉시 큰 질문 자막 “공연장이 스프링 위에?” 표시. 건물 전체가 아니라 안쪽 방임이 분명하게 보인다."
+          },
+          {
+            "sceneId": "mechanism",
+            "field": "prompt",
+            "quote": "동일한 두 방을 좌우 비교. 같은 주기로 바닥이 수직 진동하는 설명용 모형. 왼쪽 단단한 받침은 바닥과 안쪽 방이 함께 상하 이동. 오른쪽 스프링은 눌렸다 펴지며 안쪽 방은 훨씬 작게 이동."
+          },
+          {
+            "sceneId": "limit",
+            "field": "prompt",
+            "quote": "좌우 비교를 다시 하나의 방으로 합쳐 공기 경로는 이중 벽에서 약해지는 파형, 구조 경로는 스프링에서 약해지는 파형을 분리해 애니메이션."
+          }
+        ]
+      }
+    },
+    "passed": true
+  },
+  "higgsfield": {
+    "state": "downloaded",
+    "credits": 54,
+    "at": "2026-10-07T05:20:50.682Z",
+    "id": "e5849e6b-23f1-40b5-a8ad-6b4d110d7a9e"
+  },
+  "tts": {
+    "state": "downloaded",
+    "at": "2026-10-07T05:18:12.129541+00:00",
+    "reviewDigest": "e61ccb0fb3cd6274935f0a9701f29d8503bd29fde49cb98af3787a4df6e22133",
+    "runId": 37575640693,
+    "url": "https://github.com/hhj4861/commerce-automation-kit/actions/runs/37575640693"
+  },
+  "visualInspection": {
+    "openingSampleSeconds": [
+      0,
+      0.9,
+      1.9,
+      2.9,
+      3.9,
+      5.7
+    ],
+    "finalContactSheet": "qa/final-review.jpg",
+    "findings": "Inner hall remains inside outer building; no whole-building bounce. Six scene layouts and final sentence visible. Artistic schematic, not measured geometry."
+  },
+  "independentAsr": {
+    "model": "Whisper base",
+    "endingRecovered": true,
+    "limitations": "Proper-name and technical-word transcription errors; not a claim of perfect pronunciation or subjective listening."
+  }
+}

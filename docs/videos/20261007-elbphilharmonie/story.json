@@ -1,0 +1,108 @@
+{
+  "id": "elbphilharmonie-webtoon",
+  "title": "이 공연장, 스프링 위에 있다고?",
+  "brief": {
+    "category": "건축학",
+    "topic": "엘프필하모니의 방 안의 방과 스프링 방진 구조",
+    "format": "short",
+    "duration": 85,
+    "direction": "사용자는 이전 영상 결말이 잘리고 과도하게 압축됨을 지적. 45초 맞춤 금지. 필요한 인과 설명과 예시·한계·완결 답을 보존하고 실제 음성 길이에 따라 약 70~100초 허용. 시작→항구의 문제→분리 구조→연결 전후 비교→공기음과 구분→관객의 경험→처음 질문의 답. Kyle1.1 유지, 마지막 발화 이후 2초 이상 화면 여유. 웹툰 그림 중심.",
+    "voiceId": "RU7aSi6lT4uQBXMLgDxK",
+    "narrationSpeed": 1.1,
+    "productionStyle": "webtoon"
+  },
+  "voiceId": "RU7aSi6lT4uQBXMLgDxK",
+  "model": "eleven_multilingual_v2",
+  "speed": 1.1,
+  "maxHiggsfieldCredits": 54,
+  "scenes": [
+    {
+      "id": "hook",
+      "duration": 8,
+      "narration": "공연장을 스프링 위에 올린다고요? 독일에는 실제로 이렇게 받친 공연장이 있습니다. 무거운 방을 왜 이렇게 만들었을까요?",
+      "prompt": "첫 프레임부터 항구 건물 안의 독립 공연장과 그 밑 스프링 묶음을 동시에 드러낸 웹툰 단면. 즉시 큰 질문 자막 “공연장이 스프링 위에?” 표시. 건물 전체가 아니라 안쪽 방임이 분명하게 보인다. 설명용 단면·축척 아님 표기. Higgsfield6초는 카메라가 단면에 다가가며 물결과 선박만 움직인다. 거대 건물 바운스 금지.",
+      "kind": "video"
+    },
+    {
+      "id": "problem",
+      "duration": 13,
+      "narration": "독일 함부르크의 엘프필하모니는 배가 오가는 항구에 있습니다. 문제는 소음이 공기로만 들어오는 게 아니라는 거예요. 진동은 건물의 구조를 타고도 전달될 수 있죠.",
+      "prompt": "화물선과 항구를 보여준 뒤 외부 구조의 진동 경로를 주황색 입자와 파형으로 따라간다. 공기 중 소음 경로는 옅은 동심원으로 구분. 실제 특정 선박에서 측정한 진동 아님.",
+      "kind": "video"
+    },
+    {
+      "id": "separate",
+      "duration": 13,
+      "narration": "그래서 건물 속에 방을 하나 더 만들었습니다. 바깥 구조와 안쪽 공연장을 단단하게 이어 붙이지 않고, 그 사이를 분리한 거죠. 대공연장 아래에는 스프링 묶음이 삼백예순두 개나 들어갑니다.",
+      "prompt": "동일 건물의 설명용 단면으로 전환. 바깥 회색 철근콘크리트 구조 안에 앰버색 독립 공연장. 틈을 벌려 보이며 아래 탄성 지지장치 확대. 362는 스프링 낱개가 아니라 묶음이며 화면에 명시. 실제 배치와 축척 아님.",
+      "kind": "video"
+    },
+    {
+      "id": "mechanism",
+      "duration": 25,
+      "narration": "바깥 바닥이 빠르게 위아래로 떨리는 상황을 보세요. 단단한 받침은 안쪽 방도 함께 밀어 올립니다. 스프링은 그 사이에서 눌렸다 펴지며, 안쪽 방이 바깥 움직임을 그대로 따라가지 않게 해요. 무거운 방이 움직임의 변화를 버티는 성질과, 스프링의 탄성이 함께 작용하는 거죠.",
+      "prompt": "동일한 두 방을 좌우 비교. 같은 주기로 바닥이 수직 진동하는 설명용 모형. 왼쪽 단단한 받침은 바닥과 안쪽 방이 함께 상하 이동. 오른쪽 스프링은 눌렸다 펴지며 안쪽 방은 훨씬 작게 이동. 똑같은 바닥의 움직임을 먼저 보여주고 지지장치·방을 순차 강조. 무거운 방의 관성과 탄성으로 전달이 줄어드는 조건의 개념도이며 실측 아님. 수직 진동을 수평 흔들림으로 바꾸지 않는다. 파형/변형은 과장, 진동0이나 에너지소멸 표현 금지.",
+      "kind": "video"
+    },
+    {
+      "id": "limit",
+      "duration": 17,
+      "narration": "다만 진동이 얼마나 빠른지에 따라 효과가 달라서, 공연장 무게에 맞춘 정밀한 설계가 필요합니다. 또 공기를 타고 오는 소음은 이중 벽 같은 차음 구조가 함께 막아야 하죠. 소리가 들어오는 길마다 대책이 다른 겁니다.",
+      "prompt": "좌우 비교를 다시 하나의 방으로 합쳐 공기 경로는 이중 벽에서 약해지는 파형, 구조 경로는 스프링에서 약해지는 파형을 분리해 애니메이션. 글 나열 대신 경로와 소재 색을 일관되게 유지.",
+      "kind": "video"
+    },
+    {
+      "id": "payoff",
+      "duration": 13,
+      "narration": "그 덕분에 항구 한복판에서도 관객은 작은 연주 소리에 집중할 수 있습니다. 이 공연장을 스프링 위에 올린 이유는 흔들리게 하려는 게 아닙니다. 바깥의 흔들림이 음악에 끼어드는 걸 줄이려는 거죠.",
+      "prompt": "따뜻한 조명 아래 바이올린 연주자와 관객을 보여준 뒤 같은 건물 전경으로 돌아간다. 외부 항구 움직임은 지속, 내부 공연장 빛은 안정. 마지막 문장 자막을 유지하고 음성 끝난 뒤 2초 시각적 여운, 끝 0.6초만 자연스럽게 어두워짐. 새 질문·구독 강요·미완 문장 없이 답으로 닫는다.",
+      "kind": "video"
+    }
+  ],
+  "research": {
+    "sources": [
+      {
+        "id": "venue",
+        "title": "The Acoustics at the Elbphilharmonie",
+        "url": "https://www.elbphilharmonie.de/en/mediatheque/the-acoustics-at-the-elbphilharmonie/221"
+      },
+      {
+        "id": "architect",
+        "title": "Herzog & de Meuron — Elbphilharmonie Hamburg",
+        "url": "https://www.herzogdemeuron.com/projects/230-elbphilharmonie-hamburg/"
+      },
+      {
+        "id": "gerb",
+        "title": "GERB — Protecting Elbphilharmonie from sound transmissions",
+        "url": "https://www.gerb.com/protecting-elbphilharmonie-from-sound-transmissions/"
+      }
+    ],
+    "facts": [
+      {
+        "claim": "Both halls have double walls. Outer reinforced-concrete wall is part of building; inner shell rests on spring groups, separated from outer structure. Grand Hall: 362 GROUPS, Recital Hall: 56. Do not call these 362 individual springs.",
+        "sourceIds": [
+          "venue"
+        ]
+      },
+      {
+        "claim": "Venue says separation shields harbour sounds and prevents musical noise disturbing hotel guests/local residents. This film uses reduce rather than absolute silence.",
+        "sourceIds": [
+          "venue"
+        ]
+      },
+      {
+        "claim": "Supplier GERB describes independent room-in-room structures connected via helical steel spring isolators, 418 elements for both halls together. It identifies environmental structure-borne noise and frequency-specific design (Grand Hall support frequency 4.5Hz). No measured attenuation claim used.",
+        "sourceIds": [
+          "gerb"
+        ]
+      }
+    ],
+    "limitations": [
+      "Simplified conceptual diagrams; not surveyed geometry, measured transfer amplitudes or spring arrangement.",
+      "The inner hall is isolated, NOT the entire building raised on visible giant coils.",
+      "Elastic vibration isolation depends on frequency and load/design; no universal zero transmission or earthquake protection claim.",
+      "Airborne sound insulation and structure-borne vibration isolation are distinct. Springs store/return energy; do not claim springs alone dissipate all energy."
+    ]
+  },
+  "openingPrompt": "Six second refined Korean architectural webtoon animation, educational illustrative cutaway of Hamburg Elbphilharmonie at dusk. Keep the reference composition and geometry. The massive brick warehouse base and wavy blue glass outer building stay absolutely rigid. The cutaway reveals one warm amber concert hall as a separate inner shell inside the outer concrete structure, with a clear narrow separation gap and grouped steel spring isolators beneath the inner hall floor. Springs are diagrammatically exaggerated to be visible; they do not support the entire exterior building. Gentle camera push toward the inner hall, harbour water ripples and small vessel moves slowly. No large bouncing or morphing, no floating building, no text or labels, no voice or music. Fine detailed ink, painterly webtoon textures, warm hall against cool harbour."
+}
