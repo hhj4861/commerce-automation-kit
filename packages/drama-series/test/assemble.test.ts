@@ -3,7 +3,7 @@ import { existsSync, mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { parseEpisode } from '../src/core/model.js';
-import { buildAssembleArgs, cuesFromEpisode, escapeFilterValue } from '../src/core/assemble-args.js';
+import { buildAssembleArgs, cuesFromEpisode, escapeFilterValue, prependColdOpen } from '../src/core/assemble-args.js';
 import { assembleEpisode } from '../src/adapters/assemble.js';
 import { ffmpegAvailable, hasAudio, probeDuration, runFfmpeg } from '../src/adapters/ffmpeg.js';
 
@@ -90,6 +90,25 @@ describe('assemble args', () => {
     expect(seg('cue-1.txt')).toContain('box=1:boxcolor=black@0.55:boxborderw=14');
     const y = (file: string) => Number(/:y=(\d+)/.exec(seg(file))![1]);
     expect(y('kicker.txt')).toBeLessThan(y('title.txt'));
+  });
+  it('trims a clip input for a cold open', () => {
+    const args = buildAssembleArgs({
+      clips: [{ file: 'c7.mp4', durationSec: 2, transitionIn: 'cut', trimStartSec: 3.5 }, { file: 'c1.mp4', durationSec: 10, transitionIn: 'flash' }],
+      cues: [], aiLabelFile: null, fontFile: FONT, out: 'o.mp4', width: 1280, height: 720, fps: 24,
+    });
+    const i = args.indexOf('c7.mp4');
+    expect(args.slice(i - 5, i + 1)).toEqual(['-ss', '3.5', '-t', '2', '-i', 'c7.mp4']);
+    expect(args.slice(args.indexOf('c1.mp4') - 1, args.indexOf('c1.mp4') + 1)).toEqual(['-i', 'c1.mp4']);
+  });
+  it('shifts episode cues after a cold open and adds its caption', () => {
+    const bottom = { startSec: 0.2, endSec: 4.9, text: '민재 씨', position: 'bottom' as const };
+    // 첫 컷 장면 자막이 있으면 콜드 오픈 자막과 합쳐 한 줄로(같은 자리에 겹치지 않게)
+    const merged = prependColdOpen([{ startSec: 0.2, endSec: 2.9, text: '새벽 2시 20분', position: 'top' }, bottom], 2, '10분 전');
+    expect(merged).toHaveLength(2);
+    expect(merged[0]).toMatchObject({ text: '10분 전 · 새벽 2시 20분', position: 'top', startSec: 2.2, endSec: 4.9 });
+    expect(merged[1]).toMatchObject({ text: '민재 씨', startSec: 2.2, endSec: 6.9 });
+    const alone = prependColdOpen([bottom], 2, '10분 전');
+    expect(alone[0]).toMatchObject({ text: '10분 전', position: 'top', startSec: 2.1, endSec: 4.6 });
   });
   it('refuses an empty clip list', () => {
     expect(() => buildAssembleArgs({ clips: [], cues: [], aiLabelFile: null, fontFile: FONT, out: 'o.mp4', width: 1, height: 1, fps: 24 })).toThrow();

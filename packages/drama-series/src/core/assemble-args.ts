@@ -20,6 +20,8 @@ export interface AssembleCue {
 export interface AssembleClip {
   file: string;
   durationSec: number;
+  /** 주면 이 지점부터 durationSec 만큼만 쓴다(콜드 오픈) */
+  trimStartSec?: number;
   transitionIn: DramaTransition;
 }
 
@@ -74,6 +76,22 @@ export function cuesFromEpisode(episode: DramaEpisode, durations: number[]): Cue
   return cues;
 }
 
+/**
+ * 콜드 오픈(다른 컷 일부를 맨 앞에 붙임) 뒤로 자막을 민다. caption 은 본편 시작에 위쪽에 띄우되,
+ * 첫 컷에 장면 자막이 있으면 한 줄로 합친다("10분 전 · 새벽 2시 20분").
+ */
+export function prependColdOpen(cues: CueText[], durationSec: number, caption?: string): CueText[] {
+  const shifted = cues.map((c) => ({ ...c, startSec: r2(c.startSec + durationSec), endSec: r2(c.endSec + durationSec) }));
+  if (!caption) return shifted;
+  const first = shifted.findIndex((c) => c.position === 'top' && c.startSec < durationSec + 1);
+  if (first >= 0) {
+    const c = shifted[first]!;
+    shifted[first] = { ...c, text: `${caption} · ${c.text}` };
+    return shifted;
+  }
+  return [{ startSec: r2(durationSec + 0.1), endSec: r2(durationSec + 2.6), text: caption, position: 'top' }, ...shifted];
+}
+
 export function escapeFilterValue(s: string): string {
   return s.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/:/g, '\\:');
 }
@@ -91,6 +109,7 @@ export function buildAssembleArgs(s: AssembleSpec): string[] {
   const parts: string[] = [];
   const layout = s.layout ?? 'fit';
   s.clips.forEach((c, i) => {
+    if (c.trimStartSec !== undefined) inputs.push('-ss', `${c.trimStartSec}`, '-t', `${c.durationSec}`);
     inputs.push('-i', c.file);
     if (layout === 'blur-fill') {
       parts.push(`[${i}:v]split[s${i}a][s${i}b]`);
