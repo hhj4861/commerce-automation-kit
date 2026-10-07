@@ -21,7 +21,7 @@
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { basename, dirname, isAbsolute, join, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
-import type { DramaGateReport } from '@cak/contracts';
+import type { DramaFinding, DramaGateReport } from '@cak/contracts';
 import { parseEpisode, parseSeries, parseTopicSet } from '../core/model.js';
 import { listGenres, loadGenre } from '../core/genre.js';
 import { fingerprintOf, topicsFingerprint } from '../core/fingerprint.js';
@@ -244,7 +244,8 @@ function main(argv: string[]): number {
       const ctx = loadCtx(o);
       const dir = abs(req(o, 'clips'));
       const min = optStr(o, 'min') ? Number(optStr(o, 'min')) : JOIN_MIN_SSIM;
-      const joins = ctx.episode.cuts.flatMap((cut, i) => {
+      type Join = { prev: string; cut: string; ssim: number | null; finding: DramaFinding | null };
+      const joins = ctx.episode.cuts.flatMap((cut, i): Join[] => {
         const prev = ctx.episode.cuts[i - 1];
         if (!prev || !chainsFrom(prev, cut)) return [];
         const a = join(dir, `${prev.id}.mp4`);
