@@ -1,7 +1,7 @@
 {
   "seriesId": "day-zero",
   "episodeNo": 2,
-  "fingerprint": "af94eaee14bda347",
+  "fingerprint": "fc07c6e2ca982e92",
   "clips": [
     {
       "cutId": "c1",
@@ -46,68 +46,10 @@
       "cutId": "c2",
       "backend": "seedance-2-5",
       "model": "seedance_2_5",
-      "durationSec": 12,
+      "durationSec": 30,
       "params": {
         "mode": "omni_reference",
-        "duration": 12,
-        "resolution": "480p",
-        "draft": true,
-        "aspect_ratio": "16:9",
-        "generate_audio": true
-      },
-      "medias": [
-        {
-          "role": "image_references",
-          "assetId": "09f1b75b-cff9-477d-a8a7-061d8885e6dd",
-          "label": "최민재(base)"
-        },
-        {
-          "role": "image_references",
-          "assetId": "2ae41641-0ebc-45ea-ae47-f785e1c5b8f3",
-          "label": "물류센터 야간 작업 통로"
-        }
-      ],
-      "prompt": "In @Image2, @Image1 (21-year-old thin Korean man, messy black hair, neon yellow safety vest over a grey hoodie) walks to the small grey side door beside the shutter and tests the handle. A faint scratching sound comes from the other side. He hesitates, then slowly presses his ear to the door. Tense, quiet. @Image1 says in Korean: \"…무슨 소리지?\" One speaker at a time, accurate Korean lip sync. Sound: faint scratching on metal, low breathing outside. Same continuous location in every cut: the night-shift aisle of the warehouse shown in the location reference - a roller conveyor on the left, tall blue pallet racks stacked with cardboard boxes on the right, polished grey epoxy floor with yellow lane lines, amber safety lamps, a wide roll-up loading shutter at the far end with a small grey steel side door next to it, a wall clock, a red wall-mounted fire cabinet holding a fire axe, and a waist-high pile of empty cardboard boxes beside the conveyor. Keep the same layout, lighting and time of night. Cinematic Korean TV drama, photorealistic, cold blue-white fluorescent light with warm amber accents, shallow depth of field, subtle film grain, non-graphic.",
-      "voiceOver": [],
-      "estCredits": 36
-    },
-    {
-      "cutId": "c3",
-      "backend": "seedance-2-5",
-      "model": "seedance_2_5",
-      "durationSec": 10,
-      "params": {
-        "mode": "omni_reference",
-        "duration": 10,
-        "resolution": "480p",
-        "draft": true,
-        "aspect_ratio": "16:9",
-        "generate_audio": true
-      },
-      "medias": [
-        {
-          "role": "image_references",
-          "assetId": "09f1b75b-cff9-477d-a8a7-061d8885e6dd",
-          "label": "최민재(base)"
-        },
-        {
-          "role": "image_references",
-          "assetId": "2ae41641-0ebc-45ea-ae47-f785e1c5b8f3",
-          "label": "물류센터 야간 작업 통로"
-        }
-      ],
-      "prompt": "In @Image2, the side door jolts open a few inches; a grey hand shoots through the gap, seizes the forearm of @Image1 (21-year-old thin Korean man, messy black hair, neon yellow safety vest over a grey hoodie) and yanks his arm into the gap out of view; the shot cuts to his face as he screams. The bite itself is never shown. Non-graphic, no blood. @Image1 says in Korean: \"아악! 누나!\" One speaker at a time, accurate Korean lip sync. Sound: door slam, scream. Same continuous location in every cut: the night-shift aisle of the warehouse shown in the location reference - a roller conveyor on the left, tall blue pallet racks stacked with cardboard boxes on the right, polished grey epoxy floor with yellow lane lines, amber safety lamps, a wide roll-up loading shutter at the far end with a small grey steel side door next to it, a wall clock, a red wall-mounted fire cabinet holding a fire axe, and a waist-high pile of empty cardboard boxes beside the conveyor. Keep the same layout, lighting and time of night. Cinematic Korean TV drama, photorealistic, cold blue-white fluorescent light with warm amber accents, shallow depth of field, subtle film grain, non-graphic.",
-      "voiceOver": [],
-      "estCredits": 30
-    },
-    {
-      "cutId": "c4",
-      "backend": "seedance-2-5",
-      "model": "seedance_2_5",
-      "durationSec": 12,
-      "params": {
-        "mode": "omni_reference",
-        "duration": 12,
+        "duration": 30,
         "resolution": "480p",
         "draft": true,
         "aspect_ratio": "16:9",
@@ -135,12 +77,13 @@
           "label": "물류센터 야간 작업 통로"
         }
       ],
-      "prompt": "In @Image4, @Image1 (29-year-old Korean woman, glamorous curvy figure, low ponytail, black cap, grey work vest worn open over a fitted black deep V-neck t-shirt, white cotton gloves) sprints in, kicks the side door shut and locks it, then drags @Image2 (21-year-old thin Korean man, messy black hair, neon yellow safety vest over a grey hoodie) away. On his forearm is a faint bruise-like ring of tooth marks, no blood. @Image3 (45-year-old Korean woman, short permed hair, round face, beige work jumper over a floral blouse, arm sleeves) sees it and points, horrified. @Image3 says in Korean: \"물렸어… 저 팔 좀 봐요!\" One speaker at a time, accurate Korean lip sync. Same continuous location in every cut: the night-shift aisle of the warehouse shown in the location reference - a roller conveyor on the left, tall blue pallet racks stacked with cardboard boxes on the right, polished grey epoxy floor with yellow lane lines, amber safety lamps, a wide roll-up loading shutter at the far end with a small grey steel side door next to it, a wall clock, a red wall-mounted fire cabinet holding a fire axe, and a waist-high pile of empty cardboard boxes beside the conveyor. Keep the same layout, lighting and time of night. Cinematic Korean TV drama, photorealistic, cold blue-white fluorescent light with warm amber accents, shallow depth of field, subtle film grain, non-graphic.",
+      "prompt": "One continuous shot in @Image4. @Image2 (21-year-old thin Korean man, messy black hair, neon yellow safety vest over a grey hoodie) walks to the small grey side door beside the shutter and tests the handle; a faint scratching comes from the other side and he slowly presses his ear to the door. Suddenly the door jolts open a few inches: a pale grey infected worker in the gap grabs his forearm and bites down on the sleeve; he screams in pain and terror. Bite shown briefly, no blood. @Image1 (29-year-old Korean woman, glamorous curvy figure, low ponytail, black cap, grey work vest worn open over a fitted black deep V-neck t-shirt, white cotton gloves) sprints in, kicks the door shut, locks it and drags him away. On his forearm is a faint bruise-like ring of tooth marks, no blood. @Image3 (45-year-old Korean woman, short permed hair, round face, beige work jumper over a floral blouse, arm sleeves) sees it and points, horrified. @Image2 says in Korean: \"…무슨 소리지?\" @Image2 says in Korean: \"아악! 누나!\" @Image3 says in Korean: \"물렸어… 저 팔 좀 봐요!\" One speaker at a time, accurate Korean lip sync. Sound: faint scratching on metal, door slam, scream. Same continuous location in every cut: the night-shift aisle of the warehouse shown in the location reference - a roller conveyor on the left, tall blue pallet racks stacked with cardboard boxes on the right, polished grey epoxy floor with yellow lane lines, amber safety lamps, a wide roll-up loading shutter at the far end with a small grey steel side door next to it, a wall clock, a red wall-mounted fire cabinet holding a fire axe, and a waist-high pile of empty cardboard boxes beside the conveyor. Keep the same layout, lighting and time of night. Cinematic Korean TV drama, photorealistic, cold blue-white fluorescent light with warm amber accents, shallow depth of field, subtle film grain, non-graphic.",
       "voiceOver": [],
-      "estCredits": 36
+      "estCredits": 90,
+      "startFromCut": "c1"
     },
     {
-      "cutId": "c5",
+      "cutId": "c3",
       "backend": "seedance-2-5",
       "model": "seedance_2_5",
       "durationSec": 12,
@@ -181,10 +124,11 @@
       ],
       "prompt": "In @Image5, survivors scream and scatter back. @Image1 (Korean man in his 40s, slicked-back hair, thin mustache, black leather jacket, gold chain) yanks a steel pipe from the pallet rack and shouts at @Image3 (21-year-old thin Korean man, messy black hair, neon yellow safety vest over a grey hoodie), who is on the floor clutching his arm next to @Image4 (29-year-old Korean woman, glamorous curvy figure, low ponytail, black cap, grey work vest worn open over a fitted black deep V-neck t-shirt, white cotton gloves). @Image2 (Korean man in his early 30s, very large build, buzz cut, black t-shirt under an open dark grey work jacket) plants himself across the aisle, blocking the way out. @Image1 says in Korean: \"다들 떨어져! 저놈 곧 변해!\" One speaker at a time, accurate Korean lip sync. Same continuous location in every cut: the night-shift aisle of the warehouse shown in the location reference - a roller conveyor on the left, tall blue pallet racks stacked with cardboard boxes on the right, polished grey epoxy floor with yellow lane lines, amber safety lamps, a wide roll-up loading shutter at the far end with a small grey steel side door next to it, a wall clock, a red wall-mounted fire cabinet holding a fire axe, and a waist-high pile of empty cardboard boxes beside the conveyor. Keep the same layout, lighting and time of night. Cinematic Korean TV drama, photorealistic, cold blue-white fluorescent light with warm amber accents, shallow depth of field, subtle film grain, non-graphic.",
       "voiceOver": [],
-      "estCredits": 36
+      "estCredits": 36,
+      "startFromCut": "c2"
     },
     {
-      "cutId": "c6",
+      "cutId": "c4",
       "backend": "seedance-2-5",
       "model": "seedance_2_5",
       "durationSec": 12,
@@ -220,10 +164,11 @@
       ],
       "prompt": "In @Image4, @Image1 (29-year-old Korean woman, glamorous curvy figure, low ponytail, black cap, grey work vest worn open over a fitted black deep V-neck t-shirt, white cotton gloves) steps squarely between @Image3 (21-year-old thin Korean man, messy black hair, neon yellow safety vest over a grey hoodie) and @Image2 (Korean man in his 40s, slicked-back hair, thin mustache, black leather jacket, gold chain), arms slightly spread, calm. Behind her @Image3 (21-year-old thin Korean man, messy black hair, neon yellow safety vest over a grey hoodie) trembles, holding his bitten arm. @Image2 (Korean man in his 40s, slicked-back hair, thin mustache, black leather jacket, gold chain) grips the pipe, sneering. @Image1 says in Korean: \"이 사람은 안 변해요.\" @Image2 says in Korean: \"알바 주제에 네가 그걸 어떻게 알아?\" One speaker at a time, accurate Korean lip sync. Same continuous location in every cut: the night-shift aisle of the warehouse shown in the location reference - a roller conveyor on the left, tall blue pallet racks stacked with cardboard boxes on the right, polished grey epoxy floor with yellow lane lines, amber safety lamps, a wide roll-up loading shutter at the far end with a small grey steel side door next to it, a wall clock, a red wall-mounted fire cabinet holding a fire axe, and a waist-high pile of empty cardboard boxes beside the conveyor. Keep the same layout, lighting and time of night. Cinematic Korean TV drama, photorealistic, cold blue-white fluorescent light with warm amber accents, shallow depth of field, subtle film grain, non-graphic.",
       "voiceOver": [],
-      "estCredits": 36
+      "estCredits": 36,
+      "startFromCut": "c3"
     },
     {
-      "cutId": "c7",
+      "cutId": "c5",
       "backend": "seedance-2-5",
       "model": "seedance_2_5",
       "durationSec": 10,
@@ -254,10 +199,11 @@
       ],
       "prompt": "In @Image3, @Image2 (Korean man in his 40s, slicked-back hair, thin mustache, black leather jacket, gold chain) raises the steel pipe threateningly; before he can move, @Image1 (29-year-old Korean woman, glamorous curvy figure, low ponytail, black cap, grey work vest worn open over a fitted black deep V-neck t-shirt, white cotton gloves) grabs it with one bare hand and holds it still, eyes locked on his. Standoff, no strike, nobody is hurt. @Image1 says in Korean: \"십 년 동안 봤으니까요.\" One speaker at a time, accurate Korean lip sync. Sound: tense silence, grip on metal. Same continuous location in every cut: the night-shift aisle of the warehouse shown in the location reference - a roller conveyor on the left, tall blue pallet racks stacked with cardboard boxes on the right, polished grey epoxy floor with yellow lane lines, amber safety lamps, a wide roll-up loading shutter at the far end with a small grey steel side door next to it, a wall clock, a red wall-mounted fire cabinet holding a fire axe, and a waist-high pile of empty cardboard boxes beside the conveyor. Keep the same layout, lighting and time of night. Cinematic Korean TV drama, photorealistic, cold blue-white fluorescent light with warm amber accents, shallow depth of field, subtle film grain, non-graphic.",
       "voiceOver": [],
-      "estCredits": 30
+      "estCredits": 30,
+      "startFromCut": "c4"
     },
     {
-      "cutId": "c8",
+      "cutId": "c6",
       "backend": "seedance-2-5",
       "model": "seedance_2_5",
       "durationSec": 12,
@@ -298,10 +244,11 @@
       ],
       "prompt": "In @Image5, silence. @Image1 (29-year-old Korean woman, glamorous curvy figure, low ponytail, black cap, grey work vest worn open over a fitted black deep V-neck t-shirt, white cotton gloves) twists the pipe out of the grip of @Image2 (Korean man in his 40s, slicked-back hair, thin mustache, black leather jacket, gold chain) and tosses it onto the floor with a loud clang. She looks around at @Image3 (45-year-old Korean woman, short permed hair, round face, beige work jumper over a floral blouse, arm sleeves), @Image4 (Korean man in his early 30s, very large build, buzz cut, black t-shirt under an open dark grey work jacket) and the others, steady and commanding. @Image1 says in Korean: \"한 시간만 지켜봐요. 변하면 그때 내보내요.\" One speaker at a time, accurate Korean lip sync. Sound: metal pipe clattering on concrete. Same continuous location in every cut: the night-shift aisle of the warehouse shown in the location reference - a roller conveyor on the left, tall blue pallet racks stacked with cardboard boxes on the right, polished grey epoxy floor with yellow lane lines, amber safety lamps, a wide roll-up loading shutter at the far end with a small grey steel side door next to it, a wall clock, a red wall-mounted fire cabinet holding a fire axe, and a waist-high pile of empty cardboard boxes beside the conveyor. Keep the same layout, lighting and time of night. Cinematic Korean TV drama, photorealistic, cold blue-white fluorescent light with warm amber accents, shallow depth of field, subtle film grain, non-graphic.",
       "voiceOver": [],
-      "estCredits": 36
+      "estCredits": 36,
+      "startFromCut": "c5"
     },
     {
-      "cutId": "c9",
+      "cutId": "c7",
       "backend": "seedance-2-5",
       "model": "seedance_2_5",
       "durationSec": 12,
@@ -337,10 +284,11 @@
       ],
       "prompt": "In @Image4, @Image3 (45-year-old Korean woman, short permed hair, round face, beige work jumper over a floral blouse, arm sleeves) hesitates, then kneels with a first-aid kit and wraps a bandage around the forearm of @Image2 (21-year-old thin Korean man, messy black hair, neon yellow safety vest over a grey hoodie). His eyes fill with tears as he looks up at @Image1 (29-year-old Korean woman, glamorous curvy figure, low ponytail, black cap, grey work vest worn open over a fitted black deep V-neck t-shirt, white cotton gloves), who crouches beside him. @Image2 says in Korean: \"누나… 저 진짜 괜찮은 거예요?\" @Image1 says in Korean: \"괜찮아요. 제가 알아요.\" One speaker at a time, accurate Korean lip sync. Same continuous location in every cut: the night-shift aisle of the warehouse shown in the location reference - a roller conveyor on the left, tall blue pallet racks stacked with cardboard boxes on the right, polished grey epoxy floor with yellow lane lines, amber safety lamps, a wide roll-up loading shutter at the far end with a small grey steel side door next to it, a wall clock, a red wall-mounted fire cabinet holding a fire axe, and a waist-high pile of empty cardboard boxes beside the conveyor. Keep the same layout, lighting and time of night. Cinematic Korean TV drama, photorealistic, cold blue-white fluorescent light with warm amber accents, shallow depth of field, subtle film grain, non-graphic.",
       "voiceOver": [],
-      "estCredits": 36
+      "estCredits": 36,
+      "startFromCut": "c6"
     },
     {
-      "cutId": "c10",
+      "cutId": "c8",
       "backend": "seedance-2-5",
       "model": "seedance_2_5",
       "durationSec": 10,
@@ -376,10 +324,11 @@
       ],
       "prompt": "In @Image4, at a distance, @Image1 (54-year-old Korean man, short graying hair, thick forearms, worn navy padded vest, warm kind smile) pats a worker's shoulder with a kind smile, but his eyes stay fixed on the bandaged arm of @Image2 (21-year-old thin Korean man, messy black hair, neon yellow safety vest over a grey hoodie). He quietly backs away into a dark corridor. Across the aisle, @Image3 (29-year-old Korean woman, glamorous curvy figure, low ponytail, black cap, grey work vest worn open over a fitted black deep V-neck t-shirt, white cotton gloves) watches him go without moving, cold and patient, and murmurs to herself. @Image3 says in Korean: \"이번엔 놓치지 않아.\" One speaker at a time, accurate Korean lip sync. Same continuous location in every cut: the night-shift aisle of the warehouse shown in the location reference - a roller conveyor on the left, tall blue pallet racks stacked with cardboard boxes on the right, polished grey epoxy floor with yellow lane lines, amber safety lamps, a wide roll-up loading shutter at the far end with a small grey steel side door next to it, a wall clock, a red wall-mounted fire cabinet holding a fire axe, and a waist-high pile of empty cardboard boxes beside the conveyor. Keep the same layout, lighting and time of night. Cinematic Korean TV drama, photorealistic, cold blue-white fluorescent light with warm amber accents, shallow depth of field, subtle film grain, non-graphic.",
       "voiceOver": [],
-      "estCredits": 30
+      "estCredits": 30,
+      "startFromCut": "c7"
     },
     {
-      "cutId": "c11",
+      "cutId": "c9",
       "backend": "seedance-2-5",
       "model": "seedance_2_5",
       "durationSec": 12,
@@ -408,8 +357,8 @@
       "estCredits": 36
     }
   ],
-  "totalCredits": 372,
-  "budgetCredits": 500,
+  "totalCredits": 360,
+  "budgetCredits": 400,
   "rateMeasuredAt": "2026-10-06",
-  "createdAt": "2026-10-07T11:24:33.719Z"
+  "createdAt": "2026-10-07T12:39:18.692Z"
 }

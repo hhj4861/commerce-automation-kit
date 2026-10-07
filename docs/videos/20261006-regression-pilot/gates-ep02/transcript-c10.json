@@ -1,0 +1,15 @@
+{
+  "gate": "transcript-c10",
+  "stage": "clip",
+  "ok": false,
+  "fingerprint": "af94eaee14bda347",
+  "findings": [
+    {
+      "severity": "block",
+      "message": "대사 불일치 CER 0.25 > 0.15",
+      "cutId": "c10",
+      "lineIndex": 0,
+      "evidence": "기대 \"이번엔 놓치지 않아.\" / 전사 \"이번에는 놓치지 않아.\""
+    }
+  ]
+}

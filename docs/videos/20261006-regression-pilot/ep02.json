@@ -38,8 +38,8 @@
           "verification": {
             "status": "human-approved",
             "approvedBy": "user",
-            "at": "2026-10-07T11:24:01.984Z",
-            "note": "JEV ep02 r2 미확정(ctx p0.86 voice p0.70 nat p0.90 react p0.46) — 사용자 2화 대본 승인 2026-10-07",
+            "at": "2026-10-07T12:39:12.263Z",
+            "note": "문구는 2026-10-07 승인본과 동일, 컷 연결을 위해 2~4컷을 한 컷으로 합치고 물림 장면을 보이게 변경(사용자 지시)",
             "lineHash": "a41827ed98387174"
           }
         },
@@ -50,8 +50,8 @@
           "verification": {
             "status": "human-approved",
             "approvedBy": "user",
-            "at": "2026-10-07T11:24:02.540Z",
-            "note": "JEV ep02 r2 미확정(ctx p0.92 voice p0.84 nat p0.90 react p0.12) — 사용자 2화 대본 승인 2026-10-07",
+            "at": "2026-10-07T12:39:12.698Z",
+            "note": "문구는 2026-10-07 승인본과 동일, 컷 연결을 위해 2~4컷을 한 컷으로 합치고 물림 장면을 보이게 변경(사용자 지시)",
             "lineHash": "76a3155ee7acd2c3"
           }
         }
@@ -60,75 +60,7 @@
     {
       "id": "c2",
       "locationId": "aisle",
-      "durationSec": 12,
-      "cast": [
-        {
-          "characterId": "minjae",
-          "lookId": "base"
-        }
-      ],
-      "action": "민재가 셔터 옆 쪽문으로 가 손잡이를 확인한다. 문 너머에서 무언가 긁는 소리가 난다. 민재가 문에 귀를 가져다 댄다.",
-      "visualEn": "In {location}, {minjae} walks to the small grey side door beside the shutter and tests the handle. A faint scratching sound comes from the other side. He hesitates, then slowly presses his ear to the door. Tense, quiet.",
-      "sfx": "faint scratching on metal, low breathing outside",
-      "propState": {
-        "셔터": "끝까지 내려짐",
-        "창고 열쇠 꾸러미": "서윤이 쥠",
-        "쪽문": "닫힘",
-        "쇠파이프": "랙에 기대 있음"
-      },
-      "lines": [
-        {
-          "speaker": "minjae",
-          "text": "…무슨 소리지?",
-          "kind": "dialogue",
-          "verification": {
-            "status": "human-approved",
-            "approvedBy": "user",
-            "at": "2026-10-07T11:24:03.097Z",
-            "note": "JEV ep02 r2 미확정(ctx p0.94 voice p0.36 nat p0.70 react p0.86) — 사용자 2화 대본 승인 2026-10-07",
-            "lineHash": "8a0f6e268b95638d"
-          }
-        }
-      ]
-    },
-    {
-      "id": "c3",
-      "locationId": "aisle",
-      "durationSec": 10,
-      "cast": [
-        {
-          "characterId": "minjae",
-          "lookId": "base"
-        }
-      ],
-      "action": "쪽문이 덜컥 열리며 문틈으로 회색 손이 뻗어 나와 민재의 팔을 끌어당기고, 문틈 너머에서 민재의 팔이 물린다. 무는 순간은 보이지 않고 비명 지르는 민재의 얼굴로 넘어간다. 피는 없다.",
-      "visualEn": "In {location}, the side door jolts open a few inches; a grey hand shoots through the gap, seizes the forearm of {minjae} and yanks his arm into the gap out of view; the shot cuts to his face as he screams. The bite itself is never shown. Non-graphic, no blood.",
-      "sfx": "door slam, scream",
-      "propState": {
-        "셔터": "끝까지 내려짐",
-        "창고 열쇠 꾸러미": "서윤이 쥠",
-        "쪽문": "살짝 열림",
-        "쇠파이프": "랙에 기대 있음"
-      },
-      "lines": [
-        {
-          "speaker": "minjae",
-          "text": "아악! 누나!",
-          "kind": "dialogue",
-          "verification": {
-            "status": "human-approved",
-            "approvedBy": "user",
-            "at": "2026-10-07T11:24:03.823Z",
-            "note": "JEV ep02 r2 미확정(ctx p0.68 voice p0.44 nat p0.82 react p0.86) — 사용자 2화 대본 승인 2026-10-07",
-            "lineHash": "bdc421d75dbaccbf"
-          }
-        }
-      ]
-    },
-    {
-      "id": "c4",
-      "locationId": "aisle",
-      "durationSec": 12,
+      "durationSec": 30,
       "cast": [
         {
           "characterId": "seoyun",
@@ -143,8 +75,9 @@
           "lookId": "base"
         }
       ],
-      "action": "서윤이 달려와 쪽문을 발로 차 닫고 잠근 뒤 민재를 끌어낸다. 민재의 팔뚝에 멍 같은 흐린 이빨 자국이 보인다. 미숙이 그것을 보고 소리친다.",
-      "visualEn": "In {location}, {seoyun} sprints in, kicks the side door shut and locks it, then drags {minjae} away. On his forearm is a faint bruise-like ring of tooth marks, no blood. {misuk} sees it and points, horrified.",
+      "action": "민재가 셔터 옆 쪽문으로 가 손잡이를 확인한다. 문 너머에서 무언가 긁는 소리가 나고, 민재가 문에 귀를 가져다 댄다. 순간 쪽문이 덜컥 열리며 문틈의 감염자가 민재의 팔뚝을 붙잡아 문다(피 없음). 민재가 비명을 지른다. 서윤이 달려와 쪽문을 발로 차 닫고 잠근 뒤 민재를 끌어낸다. 팔뚝에 멍 같은 흐린 이빨 자국이 보이고, 이를 본 미숙이 소리친다.",
+      "visualEn": "One continuous shot in {location}. {minjae} walks to the small grey side door beside the shutter and tests the handle; a faint scratching comes from the other side and he slowly presses his ear to the door. Suddenly the door jolts open a few inches: a pale grey infected worker in the gap grabs his forearm and bites down on the sleeve; he screams in pain and terror. Bite shown briefly, no blood. {seoyun} sprints in, kicks the door shut, locks it and drags him away. On his forearm is a faint bruise-like ring of tooth marks, no blood. {misuk} sees it and points, horrified.",
+      "sfx": "faint scratching on metal, door slam, scream",
       "propState": {
         "셔터": "끝까지 내려짐",
         "창고 열쇠 꾸러미": "서윤이 쥠",
@@ -153,21 +86,45 @@
       },
       "lines": [
         {
+          "speaker": "minjae",
+          "text": "…무슨 소리지?",
+          "kind": "dialogue",
+          "verification": {
+            "status": "human-approved",
+            "approvedBy": "user",
+            "at": "2026-10-07T12:39:13.136Z",
+            "note": "문구는 2026-10-07 승인본과 동일, 컷 연결을 위해 2~4컷을 한 컷으로 합치고 물림 장면을 보이게 변경(사용자 지시)",
+            "lineHash": "2dafff28bc5f415a"
+          }
+        },
+        {
+          "speaker": "minjae",
+          "text": "아악! 누나!",
+          "kind": "dialogue",
+          "verification": {
+            "status": "human-approved",
+            "approvedBy": "user",
+            "at": "2026-10-07T12:39:13.566Z",
+            "note": "문구는 2026-10-07 승인본과 동일, 컷 연결을 위해 2~4컷을 한 컷으로 합치고 물림 장면을 보이게 변경(사용자 지시)",
+            "lineHash": "35d4065b47778d39"
+          }
+        },
+        {
           "speaker": "misuk",
           "text": "물렸어… 저 팔 좀 봐요!",
           "kind": "dialogue",
           "verification": {
             "status": "human-approved",
             "approvedBy": "user",
-            "at": "2026-10-07T11:24:04.701Z",
-            "note": "JEV ep02 r2 미확정(ctx p0.92 voice p0.82 nat p0.82 react p0.96) — 사용자 2화 대본 승인 2026-10-07",
-            "lineHash": "873f773a84369880"
+            "at": "2026-10-07T12:39:13.989Z",
+            "note": "문구는 2026-10-07 승인본과 동일, 컷 연결을 위해 2~4컷을 한 컷으로 합치고 물림 장면을 보이게 변경(사용자 지시)",
+            "lineHash": "f7e42d04fa93c528"
           }
         }
       ]
     },
     {
-      "id": "c5",
+      "id": "c3",
       "locationId": "aisle",
       "durationSec": 12,
       "cast": [
@@ -204,15 +161,15 @@
           "verification": {
             "status": "human-approved",
             "approvedBy": "user",
-            "at": "2026-10-07T11:24:05.644Z",
-            "note": "JEV ep02 r2 미확정(ctx p0.42 voice p0.88 nat p0.82 react p0.88) — 사용자 2화 대본 승인 2026-10-07",
-            "lineHash": "07faac070de101bf"
+            "at": "2026-10-07T12:39:14.414Z",
+            "note": "문구는 2026-10-07 승인본과 동일, 컷 연결을 위해 2~4컷을 한 컷으로 합치고 물림 장면을 보이게 변경(사용자 지시)",
+            "lineHash": "2f2e48bb883392e2"
           }
         }
       ]
     },
     {
-      "id": "c6",
+      "id": "c4",
       "locationId": "aisle",
       "durationSec": 12,
       "cast": [
@@ -245,9 +202,9 @@
           "verification": {
             "status": "human-approved",
             "approvedBy": "user",
-            "at": "2026-10-07T11:24:06.474Z",
-            "note": "JEV ep02 r2 미확정(ctx p0.72 voice p0.72 nat p0.68 react p0.96) — 사용자 2화 대본 승인 2026-10-07",
-            "lineHash": "2c57f168a00062df"
+            "at": "2026-10-07T12:39:14.842Z",
+            "note": "문구는 2026-10-07 승인본과 동일, 컷 연결을 위해 2~4컷을 한 컷으로 합치고 물림 장면을 보이게 변경(사용자 지시)",
+            "lineHash": "84095d0e6e62c4f4"
           }
         },
         {
@@ -257,15 +214,15 @@
           "verification": {
             "status": "human-approved",
             "approvedBy": "user",
-            "at": "2026-10-07T11:24:07.182Z",
-            "note": "JEV ep02 r2 미확정(ctx p0.86 voice p0.88 nat p0.72 react p0.96) — 사용자 2화 대본 승인 2026-10-07",
-            "lineHash": "46c60740812e2b2d"
+            "at": "2026-10-07T12:39:15.273Z",
+            "note": "문구는 2026-10-07 승인본과 동일, 컷 연결을 위해 2~4컷을 한 컷으로 합치고 물림 장면을 보이게 변경(사용자 지시)",
+            "lineHash": "7509fc1bd70ba9d1"
           }
         }
       ]
     },
     {
-      "id": "c7",
+      "id": "c5",
       "locationId": "aisle",
       "durationSec": 10,
       "cast": [
@@ -295,15 +252,15 @@
           "verification": {
             "status": "human-approved",
             "approvedBy": "user",
-            "at": "2026-10-07T11:24:07.783Z",
-            "note": "JEV ep02 r2 미확정(ctx p0.76 voice p0.70 nat p0.74 react p0.98) — 사용자 2화 대본 승인 2026-10-07",
-            "lineHash": "8e45504c9b638a8c"
+            "at": "2026-10-07T12:39:15.715Z",
+            "note": "문구는 2026-10-07 승인본과 동일, 컷 연결을 위해 2~4컷을 한 컷으로 합치고 물림 장면을 보이게 변경(사용자 지시)",
+            "lineHash": "7a368b007b9a84c1"
           }
         }
       ]
     },
     {
-      "id": "c8",
+      "id": "c6",
       "locationId": "aisle",
       "durationSec": 12,
       "cast": [
@@ -341,15 +298,15 @@
           "verification": {
             "status": "human-approved",
             "approvedBy": "user",
-            "at": "2026-10-07T11:24:08.349Z",
-            "note": "r2 이후 문구 수정(수위 완화·사용자 수정안), 재판정 상한 — 사용자 2화 대본 승인 2026-10-07",
-            "lineHash": "4f8c4c53c5f3984a"
+            "at": "2026-10-07T12:39:16.131Z",
+            "note": "문구는 2026-10-07 승인본과 동일, 컷 연결을 위해 2~4컷을 한 컷으로 합치고 물림 장면을 보이게 변경(사용자 지시)",
+            "lineHash": "7f1d85202d0fe7f7"
           }
         }
       ]
     },
     {
-      "id": "c9",
+      "id": "c7",
       "locationId": "aisle",
       "durationSec": 12,
       "cast": [
@@ -383,9 +340,9 @@
           "verification": {
             "status": "human-approved",
             "approvedBy": "user",
-            "at": "2026-10-07T11:24:09.003Z",
-            "note": "JEV ep02 r2 미확정(ctx p0.90 voice p0.96 nat p0.88 react p0.66) — 사용자 2화 대본 승인 2026-10-07",
-            "lineHash": "0dd4bd2ffeb9f36b"
+            "at": "2026-10-07T12:39:16.542Z",
+            "note": "문구는 2026-10-07 승인본과 동일, 컷 연결을 위해 2~4컷을 한 컷으로 합치고 물림 장면을 보이게 변경(사용자 지시)",
+            "lineHash": "f44f85ebd3561d1d"
           }
         },
         {
@@ -395,15 +352,15 @@
           "verification": {
             "status": "human-approved",
             "approvedBy": "user",
-            "at": "2026-10-07T11:24:09.600Z",
-            "note": "JEV ep02 r2 미확정(ctx p0.62 voice p0.74 nat p0.34 react p0.72) — 사용자 2화 대본 승인 2026-10-07",
-            "lineHash": "1db66c3c6580a1f5"
+            "at": "2026-10-07T12:39:16.951Z",
+            "note": "문구는 2026-10-07 승인본과 동일, 컷 연결을 위해 2~4컷을 한 컷으로 합치고 물림 장면을 보이게 변경(사용자 지시)",
+            "lineHash": "cd77286d37d0da85"
           }
         }
       ]
     },
     {
-      "id": "c10",
+      "id": "c8",
       "locationId": "aisle",
       "durationSec": 10,
       "cast": [
@@ -437,15 +394,15 @@
           "verification": {
             "status": "human-approved",
             "approvedBy": "user",
-            "at": "2026-10-07T11:24:10.196Z",
-            "note": "r2 이후 문구 수정(수위 완화·사용자 수정안), 재판정 상한 — 사용자 2화 대본 승인 2026-10-07",
-            "lineHash": "dc64c1cf82104d0f"
+            "at": "2026-10-07T12:39:17.397Z",
+            "note": "문구는 2026-10-07 승인본과 동일, 컷 연결을 위해 2~4컷을 한 컷으로 합치고 물림 장면을 보이게 변경(사용자 지시)",
+            "lineHash": "112406f62b13c234"
           }
         }
       ]
     },
     {
-      "id": "c11",
+      "id": "c9",
       "locationId": "control",
       "durationSec": 12,
       "cast": [
@@ -470,9 +427,9 @@
           "verification": {
             "status": "human-approved",
             "approvedBy": "user",
-            "at": "2026-10-07T11:24:10.820Z",
-            "note": "JEV ep02 r2 미확정(ctx p0.26 voice p0.28 nat p0.46 react f0.48) — 사용자 2화 대본 승인 2026-10-07",
-            "lineHash": "f04cc1cde36af901"
+            "at": "2026-10-07T12:39:17.819Z",
+            "note": "문구는 2026-10-07 승인본과 동일, 컷 연결을 위해 2~4컷을 한 컷으로 합치고 물림 장면을 보이게 변경(사용자 지시)",
+            "lineHash": "afd4635b215135f0"
           }
         },
         {
@@ -482,9 +439,9 @@
           "verification": {
             "status": "human-approved",
             "approvedBy": "user",
-            "at": "2026-10-07T11:24:11.565Z",
-            "note": "JEV ep02 r2 미확정(ctx p0.80 voice p0.46 nat p0.80 react p0.46) — 사용자 2화 대본 승인 2026-10-07",
-            "lineHash": "14fb2c6954d368ff"
+            "at": "2026-10-07T12:39:18.250Z",
+            "note": "문구는 2026-10-07 승인본과 동일, 컷 연결을 위해 2~4컷을 한 컷으로 합치고 물림 장면을 보이게 변경(사용자 지시)",
+            "lineHash": "543e1b37e34184fc"
           }
         }
       ]

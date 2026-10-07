@@ -1,0 +1,15 @@
+{
+  "gate": "transcript-c3",
+  "stage": "clip",
+  "ok": false,
+  "fingerprint": "af94eaee14bda347",
+  "findings": [
+    {
+      "severity": "block",
+      "message": "대사 불일치 CER 0.75 > 0.15",
+      "cutId": "c3",
+      "lineIndex": 0,
+      "evidence": "기대 \"아악! 누나!\" / 전사 \"누리!\""
+    }
+  ]
+}

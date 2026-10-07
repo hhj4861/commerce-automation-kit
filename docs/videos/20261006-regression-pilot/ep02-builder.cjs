@@ -47,21 +47,11 @@ cut("aisle", 10, [SY, P("minjae"), P("misuk")],
   "In {location}, the loading shutter is fully closed and survivors murmur in small groups. {seoyun}, gripping the key ring, turns to {minjae} and points at the small side door next to the shutter. {misuk} watches nervously in the background.",
   [L("seoyun", "민재 씨, 쪽문도 잠겼는지 봐 줘요."), L("minjae", "네, 누나.")],
   { caption: "새벽 2시 20분" });
-cut("aisle", 12, [P("minjae")],
-  "민재가 셔터 옆 쪽문으로 가 손잡이를 확인한다. 문 너머에서 무언가 긁는 소리가 난다. 민재가 문에 귀를 가져다 댄다.",
-  "In {location}, {minjae} walks to the small grey side door beside the shutter and tests the handle. A faint scratching sound comes from the other side. He hesitates, then slowly presses his ear to the door. Tense, quiet.",
-  [L("minjae", "…무슨 소리지?")],
-  { sfx: "faint scratching on metal, low breathing outside" });
-cut("aisle", 10, [P("minjae")],
-  "쪽문이 덜컥 열리며 문틈으로 회색 손이 뻗어 나와 민재의 팔을 끌어당기고, 문틈 너머에서 민재의 팔이 물린다. 무는 순간은 보이지 않고 비명 지르는 민재의 얼굴로 넘어간다. 피는 없다.",
-  "In {location}, the side door jolts open a few inches; a grey hand shoots through the gap, seizes the forearm of {minjae} and yanks his arm into the gap out of view; the shot cuts to his face as he screams. The bite itself is never shown. Non-graphic, no blood.",
-  [L("minjae", "아악! 누나!")],
-  { sfx: "door slam, scream", props: { "쪽문": "살짝 열림" } });
-cut("aisle", 12, [SY, P("minjae"), P("misuk")],
-  "서윤이 달려와 쪽문을 발로 차 닫고 잠근 뒤 민재를 끌어낸다. 민재의 팔뚝에 멍 같은 흐린 이빨 자국이 보인다. 미숙이 그것을 보고 소리친다.",
-  "In {location}, {seoyun} sprints in, kicks the side door shut and locks it, then drags {minjae} away. On his forearm is a faint bruise-like ring of tooth marks, no blood. {misuk} sees it and points, horrified.",
-  [L("misuk", "물렸어… 저 팔 좀 봐요!")],
-  { props: { "쪽문": "잠김" } });
+cut("aisle", 30, [SY, P("minjae"), P("misuk")],
+  "민재가 셔터 옆 쪽문으로 가 손잡이를 확인한다. 문 너머에서 무언가 긁는 소리가 나고, 민재가 문에 귀를 가져다 댄다. 순간 쪽문이 덜컥 열리며 문틈의 감염자가 민재의 팔뚝을 붙잡아 문다(피 없음). 민재가 비명을 지른다. 서윤이 달려와 쪽문을 발로 차 닫고 잠근 뒤 민재를 끌어낸다. 팔뚝에 멍 같은 흐린 이빨 자국이 보이고, 이를 본 미숙이 소리친다.",
+  "One continuous shot in {location}. {minjae} walks to the small grey side door beside the shutter and tests the handle; a faint scratching comes from the other side and he slowly presses his ear to the door. Suddenly the door jolts open a few inches: a pale grey infected worker in the gap grabs his forearm and bites down on the sleeve; he screams in pain and terror. Bite shown briefly, no blood. {seoyun} sprints in, kicks the door shut, locks it and drags him away. On his forearm is a faint bruise-like ring of tooth marks, no blood. {misuk} sees it and points, horrified.",
+  [L("minjae", "…무슨 소리지?"), L("minjae", "아악! 누나!"), L("misuk", "물렸어… 저 팔 좀 봐요!")],
+  { sfx: "faint scratching on metal, door slam, scream", props: { "쪽문": "잠김" } });
 cut("aisle", 12, [P("changsik"), P("taesu"), P("minjae"), SY],
   "사람들이 비명을 지르며 물러선다. 오창식이 랙에 기대 있던 쇠파이프를 뽑아 들고, 태수가 통로 출구를 막아선다.",
   "In {location}, survivors scream and scatter back. {changsik} yanks a steel pipe from the pallet rack and shouts at {minjae}, who is on the floor clutching his arm next to {seoyun}. {taesu} plants himself across the aisle, blocking the way out.",
