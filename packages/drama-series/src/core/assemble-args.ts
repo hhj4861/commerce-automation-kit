@@ -13,6 +13,8 @@ export interface AssembleCue {
   /** 자막 원문은 파일로 넘긴다(따옴표·쌍점이 섞인 한국어를 필터 문자열에 넣지 않기 위해) */
   textFile: string;
   position: 'top' | 'bottom';
+  /** 글자 수. 주면 화면 폭을 넘지 않게 글자 크기를 줄인다 */
+  chars?: number;
 }
 
 export interface AssembleClip {
@@ -103,7 +105,8 @@ export function buildAssembleArgs(s: AssembleSpec): string[] {
     layout === 'blur-fill'
       ? `${pos === 'top' ? bandTop - size - gap : bandTop + band + gap}`
       : pos === 'top' ? `${Math.round(H * 0.12)}` : `h-text_h-${Math.round(H * 0.08)}`;
-  for (const c of s.cues) draw(c.textFile, size, '(w-text_w)/2', cueY(c.position), `between(t,${c.startSec},${c.endSec})`);
+  const fit = (chars?: number) => (chars ? Math.min(size, Math.floor((W * 0.92) / chars)) : size);
+  for (const c of s.cues) draw(c.textFile, fit(c.chars), '(w-text_w)/2', cueY(c.position), `between(t,${c.startSec},${c.endSec})`);
   if (s.titleFile) draw(s.titleFile, Math.round(size * 1.3), '(w-text_w)/2', `${Math.round(H * 0.1)}`, 'gte(t,0)');
   if (s.aiLabelFile) draw(s.aiLabelFile, Math.round(H * 0.035), 'w-text_w-24', '24', 'lt(t,2)');
   parts.push(`[${label}]null[vout]`);

@@ -54,6 +54,16 @@ describe('assemble args', () => {
     // 세로 화면 글자 크기는 가로폭 기준(한 줄 20자가 1080 안에 들어가야 함)
     expect(graph).toContain('fontsize=54');
   });
+  it('shrinks a long cue so it fits the frame width', () => {
+    const args = buildAssembleArgs({
+      clips: [{ file: 'a.mp4', durationSec: 4, transitionIn: 'cut' }],
+      cues: [{ startSec: 0.2, endSec: 2.9, textFile: '/w/cue-0.txt', position: 'top', chars: 27 }],
+      aiLabelFile: null, layout: 'blur-fill', fontFile: FONT, out: 'o.mp4', width: 1080, height: 1920, fps: 24,
+    });
+    const graph = args[args.indexOf('-filter_complex') + 1]!;
+    const size = Number(/cue-0\.txt':fontsize=(\d+)/.exec(graph)![1]);
+    expect(size * 27).toBeLessThanOrEqual(1080 * 0.92);
+  });
   it('refuses an empty clip list', () => {
     expect(() => buildAssembleArgs({ clips: [], cues: [], aiLabelFile: null, fontFile: FONT, out: 'o.mp4', width: 1, height: 1, fps: 24 })).toThrow();
   });

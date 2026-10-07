@@ -33,7 +33,7 @@ export function assembleEpisode(input: AssembleEpisodeInput): { out: string; dur
   const cues = cuesFromEpisode(input.episode, durations).map((c, i) => {
     const textFile = join(input.workDir, `cue-${i}.txt`);
     writeFileSync(textFile, c.text);
-    return { startSec: c.startSec, endSec: c.endSec, position: c.position, textFile };
+    return { startSec: c.startSec, endSec: c.endSec, position: c.position, textFile, chars: [...c.text].length };
   });
   let aiLabelFile: string | null = null;
   if (input.aiLabel) {
