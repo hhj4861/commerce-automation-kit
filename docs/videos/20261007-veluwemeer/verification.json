@@ -1,0 +1,188 @@
+{
+  "final": "/Users/admin/Downloads/vedio/veluwemeer-webtoon-short.mp4",
+  "duration": 32.45833333333333,
+  "resolution": [
+    1080,
+    1920
+  ],
+  "fps": 24,
+  "frames": 779,
+  "bytes": 9038630,
+  "sha256": "6069bce9152b2836675f06f5a43d6dd267767daa53bcd6f6da738367226d96f5",
+  "checks": {
+    "fullDecode": true,
+    "audioVideoDuration": true,
+    "captionTextCoverage": true,
+    "captionLayout": true,
+    "fourScenesPresent": true,
+    "visualContactSheetReviewed": true,
+    "noBlackSegments": true,
+    "noSilenceAtLeast1_5Seconds": true,
+    "independentASRCoreAndEndingRecovered": true
+  },
+  "captionCount": 12,
+  "voiceId": "RU7aSi6lT4uQBXMLgDxK",
+  "speed": 1.1,
+  "limitations": [
+    "Artistic reconstruction, not an as-built engineering simulation.",
+    "Forced alignment is not independent speech recognition.",
+    "No audience popularity experiment performed."
+  ],
+  "tts": {
+    "provider": "ElevenLabs",
+    "execution": "existing GitHub tts-remote on main",
+    "runId": 37573183547,
+    "generatedBeats": 4,
+    "localTLSVerified": false,
+    "remoteTLSVerificationDisabled": false
+  },
+  "higgsfield": {
+    "state": "downloaded",
+    "credits": 54,
+    "prompt": "Six second sophisticated Korean architectural webtoon animation of a navigable aqueduct inspired by Veluwemeer, Netherlands. Preserve the reference composition and rigid concrete structure. A small white recreational boat moves slowly across the horizontal canal ABOVE the road. An amber compact car travels along the dry depressed road toward and under the concrete aqueduct, briefly occluded by its solid deck. The boat and car routes are perpendicular and vertically separated. Water remains inside the elevated concrete trough; subtle ripples, no flooding, no waterfalls, no bridge opening, no morphing. Fine detailed ink, painterly textures, warm sunset on concrete against cool teal water. Gentle camera push. No text, no music or voices, no explosions. An illustrative reconstruction, not actual footage.",
+    "reference": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261007-veluwemeer/art/hero.png",
+    "at": "2026-10-07T04:47:53.432Z",
+    "id": "23abd43f-d29c-4493-8815-b6c4b5c15142"
+  },
+  "depthReview": {
+    "version": "explanation-depth-v1",
+    "digest": "b8096541180d3fef98b664aed4f65f9ea3b7cad3ae04a287a4990bf199b6f3a4",
+    "checks": {
+      "focus": {
+        "pass": true,
+        "reason": "중심 질문은 ‘도로 위의 물이 왜 아래로 쏟아지지 않는가’다. 필요한 선행 설명인 물을 담는 구조, 그 구조를 받치는 지지벽, 차량이 지나는 공간을 한 사례 안에서 연결한다. 배수 등 별도 주제로 분산되지 않는다.",
+        "evidence": [
+          {
+            "sceneId": "hook",
+            "field": "narration",
+            "quote": "위의 물은 왜 아래로 안 쏟아질까요?"
+          },
+          {
+            "sceneId": "trough",
+            "field": "narration",
+            "quote": "여기선 물을 담는 콘크리트 바닥과 벽을 만들고, 도로를 그 밑으로 내려 보냈어요."
+          },
+          {
+            "sceneId": "separate",
+            "field": "narration",
+            "quote": "물의 무게는 이 바닥에서 양 끝과 가운데 지지벽으로 전달됩니다."
+          }
+        ]
+      },
+      "why": {
+        "pass": true,
+        "reason": "물길과 찻길이 만나는 구체적인 공간 문제를 제시하고, 상하로 분리한 결과 배 통과 때문에 차량을 세울 필요가 없어진다고 설명한다. 특정한 과거 시설이나 운행 방식을 꾸며내지 않고도 분리가 필요한 이유를 이해할 수 있다.",
+        "evidence": [
+          {
+            "sceneId": "trough",
+            "field": "narration",
+            "quote": "네덜란드 벨뤼베이메르에서는 물길과 찻길이 만납니다."
+          },
+          {
+            "sceneId": "payoff",
+            "field": "narration",
+            "quote": "지나갈 배의 크기에는 제한이 있지만, 배가 올 때마다 차를 세울 필요는 없죠."
+          }
+        ]
+      },
+      "mechanism": {
+        "pass": true,
+        "reason": "콘크리트 바닥·벽이 물을 담고, 바닥에 작용하는 물의 무게가 양 끝·가운데 지지벽으로 전달되며, 차량은 아래 지지벽 사이를 통과한다는 순서가 이어진다. 물을 가두는 역할과 무게를 받치는 역할을 구분하며, 제공 근거의 수로·지지 구조와도 부합한다.",
+        "evidence": [
+          {
+            "sceneId": "trough",
+            "field": "narration",
+            "quote": "여기선 물을 담는 콘크리트 바닥과 벽을 만들고, 도로를 그 밑으로 내려 보냈어요."
+          },
+          {
+            "sceneId": "separate",
+            "field": "narration",
+            "quote": "물의 무게는 이 바닥에서 양 끝과 가운데 지지벽으로 전달됩니다. 위에는 물이 담겨 있고, 자동차는 그 아래 벽 사이의 빈 공간을 통과하는 거죠."
+          }
+        ]
+      },
+      "example": {
+        "pass": true,
+        "reason": "벨뤼베이메르라는 하나의 실제 교차점을 끝까지 따라간다. 첫 장면의 배와 자동차가 각각 수로 위와 바닥 아래 공간을 지나는 과정으로 연결되어, 사례명이 설명을 대신하지 않는다. 마지막 동시 통과가 구조 설명의 구체적인 결과가 된다.",
+        "evidence": [
+          {
+            "sceneId": "hook",
+            "field": "narration",
+            "quote": "배가 자동차 머리 위로 지나가요."
+          },
+          {
+            "sceneId": "trough",
+            "field": "narration",
+            "quote": "네덜란드 벨뤼베이메르에서는 물길과 찻길이 만납니다."
+          },
+          {
+            "sceneId": "separate",
+            "field": "narration",
+            "quote": "위에는 물이 담겨 있고, 자동차는 그 아래 벽 사이의 빈 공간을 통과하는 거죠."
+          }
+        ]
+      },
+      "payoff": {
+        "pass": true,
+        "reason": "물을 담고 지지하는 구조로 첫 질문에 답한 뒤, 배 통과에 따른 차량 정지가 필요 없다는 이용상의 의미와 선박 크기 제한을 함께 말한다. 전체 정체 해소나 모든 배의 통과까지 보장하지 않는다. ‘물길 자체가 다리를 건넌다’는 완결된 문장이 첫 장면을 구조적으로 다시 이해하게 한다.",
+        "evidence": [
+          {
+            "sceneId": "payoff",
+            "field": "narration",
+            "quote": "지나갈 배의 크기에는 제한이 있지만, 배가 올 때마다 차를 세울 필요는 없죠. 자동차만 다리를 건너는 게 아닙니다. 여기서는 물길 자체가 다리를 건너요."
+          }
+        ]
+      },
+      "pacing": {
+        "pass": true,
+        "reason": "시작부터 배가 자동차 위로 이동하는 의외의 현상을 제시하며, 첫 화면의 질문이 즉시 궁금증을 만든다. 이후 물을 담는 구조→하중 전달→차량 통과→결론으로 진행한다. 위아래 관계의 재언급은 구조와 통행을 연결하는 기능이 있고, 별도 예고나 결말 절단은 없다. 다만 지정된 40초와 장면별 발화 시간의 적합성은 실제 TTS 측정 전에는 확정할 수 없다.",
+        "evidence": [
+          {
+            "sceneId": "hook",
+            "field": "narration",
+            "quote": "배가 자동차 머리 위로 지나가요. 위의 물은 왜 아래로 안 쏟아질까요?"
+          },
+          {
+            "sceneId": "separate",
+            "field": "narration",
+            "quote": "물의 무게는 이 바닥에서 양 끝과 가운데 지지벽으로 전달됩니다."
+          },
+          {
+            "sceneId": "payoff",
+            "field": "narration",
+            "quote": "자동차만 다리를 건너는 게 아닙니다. 여기서는 물길 자체가 다리를 건너요."
+          }
+        ]
+      },
+      "visuals": {
+        "pass": true,
+        "reason": "계획상 첫 화면은 짧은 질문과 배·자동차의 교차 움직임으로 무음에서도 대상을 드러낸다. 같은 교차점의 단면으로 전환하여 바닥, 지지벽, 하중 이동, 차량 통과를 보여주고 처음 전경으로 돌아온다. 물과 힘의 표시도 구분해 자막 나열이나 정지 그림 확대에 의존하지 않는다. 이는 화면 계획의 합격이며 실제 렌더의 구현 여부는 별도 검증이 필요하다.",
+        "evidence": [
+          {
+            "sceneId": "hook",
+            "field": "prompt",
+            "quote": "웹툰 사선 항공뷰. 물길이 도로 위를 가로지르는 수로교. 배와 자동차가 서로 수직인 길을 따라 동시에 이동한다. 첫 자막: 도로 위로 배가?"
+          },
+          {
+            "sceneId": "trough",
+            "field": "prompt",
+            "quote": "같은 교차점의 단면 개념도로 전환. 위에는 물이 담긴 콘크리트 수로 바닥, 아래에는 건조한 도로 공간."
+          },
+          {
+            "sceneId": "separate",
+            "field": "prompt",
+            "quote": "앞 장면의 같은 단면을 유지한다. 위의 물 무게를 나타내는 하향 화살표가 콘크리트 바닥에 닿고, 끝과 중간 지지벽을 따라 아래로 내려간다. 자동차는 지지벽 사이 통행 공간을 지나간다. 물 흐름은 청록 입자, 힘 화살표는 앰버로 구분."
+          },
+          {
+            "sceneId": "payoff",
+            "field": "prompt",
+            "quote": "처음 웹툰 전경으로 돌아가 배와 자동차가 멈추지 않고 교차하는 움직임을 동시에 보여준다."
+          }
+        ]
+      }
+    },
+    "passed": true
+  },
+  "assetCache": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261007-veluwemeer",
+  "visualReview": "Boat moves in upper waterway and car enters underpass; body uses simplified orthogonal cutaway and load arrows. Fixed car-over-wall draw order before final rendering."
+}

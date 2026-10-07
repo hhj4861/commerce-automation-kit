@@ -1,0 +1,101 @@
+{
+  "id": "veluwemeer-webtoon-short",
+  "title": "자동차 위로 배가 지나가는 도로의 비밀",
+  "brief": {
+    "category": "건축학",
+    "topic": "벨뤼베이메르 수로교: 물길과 찻길의 입체 교차",
+    "format": "short",
+    "duration": 40,
+    "direction": "한 사례·한 원리. 콘크리트 수로 바닥·벽의 물 containment, 지지벽으로 하중 전달, 하부 차량 통과. 빗물 배수 부주제는 제외. 웹툰 동적 단면, Kyle1.1배. 40초 안팎이나 인과·결말을 보존.",
+    "voiceId": "RU7aSi6lT4uQBXMLgDxK",
+    "narrationSpeed": 1.1,
+    "productionStyle": "webtoon"
+  },
+  "voiceId": "RU7aSi6lT4uQBXMLgDxK",
+  "model": "eleven_multilingual_v2",
+  "speed": 1.1,
+  "maxHiggsfieldCredits": 54,
+  "scenes": [
+    {
+      "id": "hook",
+      "duration": 5,
+      "narration": "배가 자동차 머리 위로 지나가요. 위의 물은 왜 아래로 안 쏟아질까요?",
+      "prompt": "웹툰 사선 항공뷰. 물길이 도로 위를 가로지르는 수로교. 배와 자동차가 서로 수직인 길을 따라 동시에 이동한다. 첫 자막: 도로 위로 배가?",
+      "kind": "video"
+    },
+    {
+      "id": "trough",
+      "duration": 12,
+      "narration": "네덜란드 벨뤼베이메르에서는 물길과 찻길이 만납니다. 여기선 물을 담는 콘크리트 바닥과 벽을 만들고, 도로를 그 밑으로 내려 보냈어요.",
+      "prompt": "같은 교차점의 단면 개념도로 전환. 위에는 물이 담긴 콘크리트 수로 바닥, 아래에는 건조한 도로 공간. 물과 도로 사이의 바닥을 밝게 강조하고 양쪽 지지벽과 중앙 지지벽으로 하중이 전달되는 화살표를 애니메이션. 자동차는 바닥 아래로 이동. 실제 축척 아님.",
+      "kind": "video"
+    },
+    {
+      "id": "separate",
+      "duration": 12,
+      "narration": "물의 무게는 이 바닥에서 양 끝과 가운데 지지벽으로 전달됩니다. 위에는 물이 담겨 있고, 자동차는 그 아래 벽 사이의 빈 공간을 통과하는 거죠.",
+      "prompt": "앞 장면의 같은 단면을 유지한다. 위의 물 무게를 나타내는 하향 화살표가 콘크리트 바닥에 닿고, 끝과 중간 지지벽을 따라 아래로 내려간다. 자동차는 지지벽 사이 통행 공간을 지나간다. 물 흐름은 청록 입자, 힘 화살표는 앰버로 구분. 실제 치수나 하중 크기는 제시하지 않는다.",
+      "kind": "video"
+    },
+    {
+      "id": "payoff",
+      "duration": 11,
+      "narration": "지나갈 배의 크기에는 제한이 있지만, 배가 올 때마다 차를 세울 필요는 없죠. 자동차만 다리를 건너는 게 아닙니다. 여기서는 물길 자체가 다리를 건너요.",
+      "prompt": "처음 웹툰 전경으로 돌아가 배와 자동차가 멈추지 않고 교차하는 움직임을 동시에 보여준다. 완결 문장 이후 짧은 여운. 수로의 운항 제한은 존재하며 모든 크기의 배가 통과한다고 암시하지 않는다.",
+      "kind": "video"
+    }
+  ],
+  "research": {
+    "sources": [
+      {
+        "id": "engineering",
+        "title": "Aquaduct Veluwemeer — erop en eronder, Cement 1998/3 design account",
+        "url": "https://www.cementonline.nl/artikelen/aquaduct-veluwemeer-erop-en-eronder"
+      },
+      {
+        "id": "rws",
+        "title": "Rijkswaterstaat: Wat en waarom aquaduct Muiden (general aqueduct principle)",
+        "url": "https://bezoekerscentrum.rijkswaterstaat.nl/SchipholAmsterdamAlmere/waarom-aquaduct-muiden/"
+      },
+      {
+        "id": "navigation",
+        "title": "Varen doe je Samen: Harderwijk, Veluwemeer aqueduct",
+        "url": "https://www.varendoejesamen.nl/knooppunten/knooppunt-5-13-harderwijk"
+      }
+    ],
+    "facts": [
+      {
+        "claim": "Veluwemeer has a cast-in-place water trough supported at its ends and middle; those supports form walls of the traffic portion.",
+        "sourceIds": [
+          "engineering"
+        ]
+      },
+      {
+        "claim": "The design report describes approach roads and a cycle path. The cycle path is higher than the adjacent vehicle road. The SPACE UNDER the cycle path houses the pump cellar and pipes FOR INTERNAL DRAINAGE; it does not say the facilities only drain the cycle path. It then explicitly states ALL RAINWATER is drained to the existing sewerage of Harderwijk and Flevopolder. Do not claim exact pipe routing.",
+        "sourceIds": [
+          "engineering"
+        ],
+        "sourceExcerpt": "Het fietspad wordt in het aquaduct en in de toeritten hoger aangelegd dan de naastliggende rijweg. Met een betonnen keerwand wordt dit hoogteverschil gerealiseerd. In de ruimte onder het fietspad worden voorzieningen opgenomen, zoals de pompkelder en de leidingen voor de interne waterafvoer. Al het regenwater wordt afgevoerd op de bestaande riolering van Harderwijk en van de Flevopolder."
+      },
+      {
+        "claim": "An aqueduct carries a waterway in a concrete trough over the road; Muiden is used only for this general explanation, not as Veluwemeer dimensions.",
+        "sourceIds": [
+          "rws"
+        ]
+      },
+      {
+        "claim": "Navigation guidance identifies the aqueduct Veluwemeer at Harderwijk for recreational boats.",
+        "sourceIds": [
+          "navigation"
+        ]
+      }
+    ],
+    "limitations": [
+      "Simplified webtoon reconstruction, not a surveyed engineering drawing.",
+      "Do not claim invulnerability to floods or all-size vessel passage.",
+      "No unverified construction dimensions or completion date.",
+      "Rainwater drainage is separate from lake-water containment."
+    ]
+  },
+  "openingPrompt": "Six second sophisticated Korean architectural webtoon animation of a navigable aqueduct inspired by Veluwemeer, Netherlands. Preserve the reference composition and rigid concrete structure. A small white recreational boat moves slowly across the horizontal canal ABOVE the road. An amber compact car travels along the dry depressed road toward and under the concrete aqueduct, briefly occluded by its solid deck. The boat and car routes are perpendicular and vertically separated. Water remains inside the elevated concrete trough; subtle ripples, no flooding, no waterfalls, no bridge opening, no morphing. Fine detailed ink, painterly textures, warm sunset on concrete against cool teal water. Gentle camera push. No text, no music or voices, no explosions. An illustrative reconstruction, not actual footage."
+}
