@@ -1,150 +1,227 @@
-# drama-series 키프레임 우선 파이프라인 — 설계
+# drama-series 키프레임 우선 파이프라인 — 설계 (r2)
 
 - 날짜: 2026-10-08
-- 상태: 설계 승인 대기(사용자 2026-10-08 방향 승인: "응 그렇게 진행해")
-- 대상: `packages/drama-series`, `packages/contracts`(append-only), `.claude/skills/drama-series`
+- 상태: r2 — Codex 리뷰(`to-claude/20261008T082354-codex-keyframe-design-review.md`) 반영. 사용자 검토 대기
+- 대상(담당 범위): `packages/contracts/src/drama-series.ts`(append-only), `packages/drama-series`, `.claude/skills/drama-series`, 관련 spec·test. `apps/shopshorts` 는 건드리지 않는다
 - 선행 설계: `2026-10-06-drama-series-design.md`
 
-## 1. 왜 바꾸나 (2화 「문밖」 생성에서 실측한 문제)
+## 1. 왜 바꾸나 (2화 「문밖」 생성 실측)
 
 | # | 증상 | 원인 |
 |---|---|---|
-| 1 | 컷마다 쪽문 주변 배경이 바뀜(큰 회색 문 → 시계·빨간 패널 → 창문 벽) | 장소 참조 그림은 넓은 통로뿐. 쪽문·잠금쇠·방화문은 **글로만** 지시 → 매번 새로 지어냄 |
-| 2 | 앞 컷 마지막 프레임으로 이어도 배경이 재창작됨(연결 SSIM 0.92인데 배경 불일치) | start_image 는 첫 프레임만 고정. 카메라가 물러나는 순간 모델이 세트를 다시 만든다 |
-| 3 | 팔 꺾기 행동 누락, 박반장 위치 이상 | 17초 컷에 인물 4·대사 5·행동 4. 요구가 많으면 일부만 반영된다 |
-| 4 | 동작 참조 영상의 음성("누리!")까지 따라 함 | video_references 에 소리가 있는 클립을 그대로 넣음 |
-| 5 | 일부 프레임에서 의상(조끼) 누락 | 얼굴·의상을 한 장 참조로만 지정 |
+| 1 | 컷마다 쪽문 주변 배경이 바뀜 | 장소 참조 그림은 넓은 통로뿐. 쪽문·잠금쇠·방화문은 글로만 지시 → 매번 새로 지어냄 |
+| 2 | 앞 컷 마지막 프레임으로 이어도 배경 재창작(연결 SSIM 0.92인데 배경 불일치) | start_image 는 첫 프레임만 고정. 카메라가 물러나면 세트를 다시 만든다 |
+| 3 | 팔 꺾기 행동 누락, 박반장 위치 이상 | 17초 컷에 인물 4·대사 5·행동 4 |
+| 4 | 동작 참조 영상의 음성("누리!")까지 따라 함 | 소리가 있는 클립을 video_references 로 넣음 |
+| 5 | 일부 프레임 의상(조끼) 누락 | 얼굴·의상을 한 장 참조로만 지정 |
 
-참고 자료 조사(사용자 제공 영상 5편 + Higgsfield 공식 Seedance 2.5 프롬프트 가이드 등 6건, 2026-10-08)의 공통 공정은 **"이미지로 장면을 먼저 확정하고 영상은 마지막"** 이다. 이 설계는 그 공정을 결정적 관문과 프롬프트 자동 조립으로 박아, 컷별 시행착오(=크레딧 소모) 없이 첫 생성에서 맞추는 것이 목표다.
+참고 자료(사용자 제공 영상 5편, Higgsfield 공식 Seedance 2.5 가이드 등 6건)의 공통 공정은 "이미지로 장면을 먼저 확정하고 영상은 마지막"이다. 이 설계는 그 공정을 **결정적 관문 + 구조화 필드 기반 프롬프트 조립 + 실행 경계의 사람 승인**으로 코드에 박는다. 재생성을 줄이는 것이 목적이며, 첫 생성 성공을 보장하지 않는다.
 
 ## 2. 목표 / 비목표
 
 **목표**
-- 생성 전(0크레딧) 결정적 관문이 문제 1·3을 대본 단계에서 차단한다.
-- 컷마다 시작 키프레임 이미지(장당 약 0.25크레딧)를 사람이 승인한 뒤에만 영상 명세를 만든다.
-- 프롬프트는 사람이 손으로 쓰지 않고, 구조화된 필드(구도·블로킹·비트·대사)에서 자동 조립한다.
-- 생성 직후 자동 점검(0크레딧)이 어긋난 컷 위에 다음 컷을 쌓지 못하게 멈춘다.
+- 생성 전(0크레딧) 결정적 관문이 문제 1·3의 구조적 원인을 대본 단계에서 걸러낸다.
+- 신규 정책 회차는 컷마다 사람이 승인한 키프레임 없이는 영상 명세를 만들지 않는다.
+- 프롬프트는 구조화 필드(구도·블로킹·비트·대사)에서 자동 조립한다.
+- **실행 경계**: 파일럿 컷과 이어지는 컷의 선행 출력이 사람 승인되지 않으면 다음 생성 작업이 '제출 가능' 목록에 나오지 않는다(review 경고가 아니라 코드상 차단).
 
 **비목표**
-- 코드가 힉스필드 MCP 를 직접 호출하지 않는다(MCP 는 세션에서만 호출 — 기존과 동일).
-- 업스케일 단가·참조 강도 조절은 다루지 않는다(미확인, TODO(D1)).
+- 코드가 힉스필드 MCP 를 직접 호출하지 않는다(세션이 호출 — 기존과 동일).
+- SSIM 같은 픽셀 지표로 자동 승인하지 않는다.
+- 업스케일 단가·참조 강도 조절은 다루지 않는다(TODO(D1)).
 - 판정 기준(JEV 장르 관문)을 낮추지 않는다.
 
-## 3. 계약 변경 (`packages/contracts/src/drama.ts`, append-only)
+## 3. 정책 버전 — legacy / shot-v1
+
+- `DramaEpisode.shotPolicy?: { version: 'shot-v1'; strict: true }` (append).
+- **없으면 legacy**: 현행 동작 그대로(새 관문은 info 만, plan 은 키프레임을 요구하지 않음, chainsFrom 기존 의미). 1화·2화 기존 기록이 validate·plan 모두 그대로 통과하는 회귀 테스트를 둔다.
+- **shot-v1**: §4 관문 block, §6 keyframes 필수 관문, §8 연결 규칙, §10 실행 경계가 모두 적용된다. 신규 회차의 기본값이며 CLI 외 진입점(라이브러리 함수 `buildPlan`)도 같은 규칙을 적용한다 — 정책은 에피소드 데이터에 저장되므로 진입점과 무관하다.
+- 아래 경계값은 **잠정 제작 품질 정책**이며 제공자 제한이 아니다(Seedance 2.5 API 는 4~30초). 상수는 `core/shot-policy.ts` 에 `SHOT_V1` 으로 모으고 출처(2026-10-08 2화 실측 + 가이드 주장)를 주석에 남긴다.
+
+## 4. 계약 변경 (`packages/contracts/src/drama-series.ts`, append-only)
 
 ```ts
-/** (2026-10-08) 장소 안의 고정 구도. 구도마다 배경 그림 1장 — 그림에 실제로 보이는 소품만 지문에 쓸 수 있다 */
+/** 장소 안의 고정 구도. 구도마다 배경 그림 1장 */
 export interface DramaSetup {
-  id: string;                 // 예: 'side-door'
-  name: string;               // 예: '쪽문 정면'
-  /** 카메라 구도 문구(영어). 예: 'static eye-level medium-wide shot facing the side door' */
+  id: string;
+  name: string;
+  /** 카메라 구도(영어). 예: 'static eye-level medium-wide shot facing the side door' */
   cameraEn: string;
   refAssetId?: string | undefined;
-  /** 이 배경 그림에 실제로 보이는 소품(장소 props 의 부분집합) */
-  visibleProps: string[];
+  /** 배경 그림에 그려 넣었다고 '선언한' 소품 id(장소 props 의 부분집합). 이미지 인식 검증이 아니다 */
+  visiblePropIds: string[];
 }
-// DramaLocation 에 추가
+// DramaLocation
 setups?: DramaSetup[] | undefined;
+
+export interface DramaShotPolicy { version: 'shot-v1'; strict: true }
+// DramaEpisode
+shotPolicy?: DramaShotPolicy | undefined;
 
 export type DramaScreenSide = 'left' | 'center' | 'right';
 export interface DramaBlocking { characterId: string; side: DramaScreenSide; depth?: 'front' | 'mid' | 'back' | undefined }
 export type DramaCameraMove = 'static' | 'push-in' | 'pull-out' | 'pan' | 'follow';
 
-/** 사람이 승인한 컷 시작 키프레임. fingerprint 는 승인 당시 컷의 시각 필드 해시 */
-export interface DramaKeyframe { assetId: string; approvedBy: string; at: string; fingerprint: string }
+/** 시간 순 행동 단위. sec 를 주면 그 길이, 없으면 남은 시간을 발화량 비례로 배분. lines 는 이 비트에서 말하는 대사 인덱스 */
+export interface DramaBeat { en: string; sec?: number | undefined; lines?: number[] | undefined }
 
-// DramaCut 에 추가
+/** 사람 승인 증거. 내용 지문(fingerprintOf)에서 제외한다 */
+export interface DramaKeyframe {
+  assetId: string;
+  /** 승인 당시 내려받은 파일의 sha256 — 같은 assetId 로 파일이 바뀌어도 감지 */
+  fileSha256: string;
+  /** 승인 당시 keyframeDigest(§7) */
+  digest: string;
+  approvedBy: string;
+  at: string;
+}
+
+// DramaCut (모두 선택)
 setupId?: string | undefined;
 blocking?: DramaBlocking[] | undefined;
-cameraMove?: DramaCameraMove | undefined;   // 생략 = 'static'
-/** 시간 순 행동(영어) 1~2개. 있으면 visualEn 대신 시간 구간 프롬프트로 조립 */
-beatsEn?: string[] | undefined;
+/** 앞 컷과 좌우가 바뀌는 이유를 명시(이동·리버스샷). 없으면 반전은 review */
+blockingChange?: 'move' | 'reverse' | undefined;
+cameraMove?: DramaCameraMove | undefined;        // 생략 = 'static'
+beats?: DramaBeat[] | undefined;
+/** 이 컷이 화면에 쓰는 장소 소품 id */
+usedPropIds?: string[] | undefined;
+/** shot-v1: 앞 컷 마지막 프레임에서 바로 이어진다고 명시(§8). 없으면 자체 키프레임으로 시작 */
+continuesFromPrev?: boolean | undefined;
 keyframe?: DramaKeyframe | undefined;
 
-// DramaCharacterLook 에 추가
-/** 의상 전신 참조(얼굴 참조와 분리). 있으면 얼굴 다음 순서로 넣는다 */
+// DramaCutCast
+/** 이 인물이 들고 들어오는 소품 id(배경 그림에 없어도 됨) */
+carriesPropIds?: string[] | undefined;
+
+// DramaCharacterLook
+/** 의상 전신 참조(얼굴 참조와 분리) */
 outfitRefAssetId?: string | undefined;
 
-// DramaClipSpec 에 추가
-/** 시작 키프레임 자산 id. 이어지는 컷(startFromCut)이면 구도 참조로만 쓴다 */
+// DramaClipSpec — medias(image_references 전용)의 의미는 바꾸지 않는다
+/** 시작 이미지. keyframe = 승인 키프레임, prev-clip = 앞 컷 승인 출력의 실제 마지막 프레임(생성 시점에 세션이 채움) */
+startImage?: { source: 'keyframe'; assetId: string } | { source: 'prev-clip'; fromCut: string } | undefined;
+/** 승인 키프레임 자산 id(실행 명세 사본). plan 이 cut.keyframe.assetId 와 같은지 검사 */
 keyframeAssetId?: string;
 ```
 
-기존 대본(1화, 2화 c1~c2)은 새 필드가 없어도 그대로 유효하다. 새 관문은 새 필드가 **없을 때 review(경고)**, 있는데 규칙을 어기면 block 으로 동작해 옛 회차를 깨지 않는다. 단, `--strict-shots` (새 회차 기본)에서는 누락도 block.
+- `DramaClipMedia.role` 은 계속 `'image_references'` 만 받는다. 시작 이미지는 `startImage` 로 분리한다.
+- `@ImageN` 번호는 어댑터 한 곳(`referenceMap()`)에서 **실제 백엔드에 보낼 image_references 순서**로 한 번만 계산한다. start_image 가 번호에 포함되는지는 미확인(TODO(D1)) — 파일럿에서 확인하고 그 결과를 상수와 테스트로 고정한다. 견적(get_cost) 성공을 근거로 확정하지 않는다.
+- contracts 에는 해시·파일 IO·원자 import 를 넣지 않는다(타입만).
 
-## 4. 결정적 관문 `shot` (validate 에 추가, 0크레딧)
+## 5. 결정적 관문 `shot` (validate, 0크레딧, shot-v1 에서 block)
 
 | 규칙 | block | review |
 |---|---|---|
 | 컷 길이 | > 12초 | > 10초 |
-| 대사 줄 수(dialogue) | > 3 | > 2 (기존 dialogue-lint 와 중복 메시지 없이 이 관문으로 이관) |
-| 화면 속 인물(cast) | > 3 | — |
-| 비트(beatsEn) | > 2 | 없음(strict 에선 block) |
-| 카메라 이동 | — (필드가 하나라 구조상 1개) | — |
+| **발화+동작 시간** | 추정 발화 시간(대사 음절 ÷ 2.2음절/초, 기존 dialogue-lint 상수) + 비트당 동작 여유 1.5초 > 컷 길이 | 여유 < 1초 |
+| 대사 줄 | > 3 | > 2 |
+| 화면 인물 | > 3 | — |
+| 비트 | 없음, 또는 > 2, 또는 sec 합 > 길이, 또는 lines 인덱스가 범위 밖·중복·누락 | — |
 | 구도 | 장소에 setups 가 있는데 setupId 없음 / 없는 setupId | — |
-| **보이지 않는 소품** | 컷 action·beatsEn 에 등장한 장소 소품이 구도 `visibleProps`(구도 없으면 장소 `props`)에 없음 | — |
-| 블로킹 | cast ≥ 2 인데 blocking 없음(strict), blocking 의 인물이 cast 에 없음, 같은 인물 중복 | cast ≥ 2 인데 blocking 없음(비strict) |
-| 좌우 일관성(180도 규칙) | 같은 구도의 연속 컷에서 같은 두 인물의 좌우가 뒤바뀜(transitionIn 없이) | — |
+| **소품(구조화)** | `usedPropIds` 중 (구도 visiblePropIds ∪ 출연진 carriesPropIds ∪ 직전 같은 장소 컷 propState 로 들어온 소품) 어디에도 없는 것 | — |
+| 소품(문자열 보조) | — | 장소 소품명·별칭이 action/beats 에 보이는데 usedPropIds 에 없음 |
+| 블로킹 | cast 와 blocking 인물 집합 불일치(누락·미등록), 같은 인물 중복 | — |
+| 좌우 반전 | — | 같은 구도 연속 컷에서 같은 두 인물의 좌우가 뒤바뀌었는데 blockingChange 가 없음(transitionIn 만으로 면제하지 않음) |
 
-소품 등장 판정: 장소 `props` 의 한국어 소품명이 action 문자열에, 또는 소품의 영어 별칭(`setup` 그림 생성 시 함께 기록하는 `visibleProps` 와 같은 이름)이 beatsEn 에 포함되는지 문자열 일치로 본다. 오탐보다 누락이 비싸므로 단순 포함 검사로 시작한다.
+legacy 에서는 같은 규칙을 info 로만 낸다(보고서에는 남김). 기존 dialogue-lint 의 줄 수 review 와 중복되지 않도록 shot-v1 에서는 dialogue-lint 가 줄 수 메시지를 내지 않는다.
 
-## 5. 키프레임 단계 (새 사람 게이트)
+## 6. 키프레임 단계 (사람 게이트)
 
-1. `ds keyframe-build --series --episode --out <dir>/keyframes/requests.json`
-   - 컷마다 이미지 요청 1건: 모델 `gpt_image_2_5`, 16:9. medias = 구도 배경 그림 → 인물 얼굴 → 의상 순.
-   - 프롬프트 = 구도 cameraEn + 블로킹(좌·중·우, 앞·뒤) + **첫 비트의 시작 상태** + 의상 고정 문구 + "Same set as the reference, do not add or remove set pieces" + 스타일.
-   - 이어지는 컷도 키프레임을 만든다(구도·블로킹 확인용).
-2. 세션이 `generate_image_batch` 로 생성 → 내려받아 `<media>/keyframes/<cut>.png`.
-3. `ds keyframe-sheet --episode --images <dir> --out sheet.jpg` — 회차 전 컷을 한 장(컷 id·대사 첫 줄 라벨)으로 모아 사람에게 보여 준다.
-4. 사람이 승인한 컷만 `ds approve-keyframe --episode --cut --asset <job_id> --by user` → `cut.keyframe` 기록(컷 시각 필드 fingerprint 포함).
-5. `plan` 의 필수 관문에 `keyframes` 추가: 모든 컷에 keyframe 이 있고 fingerprint 가 현재 컷과 같아야 한다(장면을 고치면 키프레임 재승인).
+1. `ds keyframe-build --series --episode --aspect <16:9|9:16> --out <dir>/keyframes/requests.json`
+   - 컷마다 이미지 요청 1건(gpt_image_2_5). **화면비는 `--aspect`(= plan 의 VideoOptions.aspectRatio)** 이고 digest 에 들어간다.
+   - medias = 구도 배경 → 인물 얼굴 → 의상. 프롬프트 = 구도 cameraEn + 블로킹 + 첫 비트 시작 상태 + 사용 소품 + 의상 고정 + "Same set as the reference; do not add or remove set pieces" + 스타일.
+   - `continuesFromPrev` 컷도 키프레임을 만든다(구도·블로킹 확인용, 영상에서는 image_references 로만 사용).
+2. 세션이 `generate_image_batch` 로 생성 → `<media>/keyframes/<cut>.png` 로 내려받는다.
+3. `ds keyframe-sheet --episode --images <dir> --out sheet.jpg` — 회차 전 컷을 한 장(컷 id·첫 대사 라벨)으로.
+4. 사람이 승인한 컷만 `ds approve-keyframe --series --episode --cut --asset <job_id> --file <png> --aspect <..> --by user` → `cut.keyframe`(assetId, fileSha256, digest) 기록.
+5. shot-v1 plan 필수 관문 `keyframes`: 모든 컷에 keyframe 이 있고, 현재 keyframeDigest 와 같고, 기록된 파일이 존재하면 sha256 이 같아야 한다. 생성된 명세의 `keyframeAssetId` 는 `cut.keyframe.assetId` 와 같아야 한다.
 
-## 6. 프롬프트 자동 조립 (`toSeedanceClip` 개편)
+## 7. 지문(fingerprint) 분리
 
-medias 순서: [start_image: 키프레임 — 이어지지 않는 컷] → 인물 얼굴 → 의상 → 구도 배경 그림 → [이어지는 컷: 키프레임을 image_references 로 추가]. 이어지는 컷의 start_image(앞 컷 마지막 프레임)는 생성 시점에 세션이 넣는다(기존과 동일).
+- **내용 지문 `fingerprintOf`**: 기존처럼 대본 전체를 해시하되 `cut.keyframe`(승인 증거)을 대사 verification 과 같은 방식으로 **제외**한다. → 키프레임 승인 저장만으로 다른 관문 기록이 무효화되지 않는다(테스트로 고정).
+- **`keyframeDigest(series, episode, cut, aspect)`** (`core/keyframe-digest.ts`, 버전 'kf-v1'): 정지 그림에 영향을 주는 입력만.
+  - version, cutId, aspectRatio
+  - 해석된 장소 anchorText·구도(cameraEn, refAssetId, visiblePropIds)
+  - cast 의 character id, look id, look description, refAssetId, outfitRefAssetId, carriesPropIds
+  - blocking, blockingChange, cameraMove, 첫 비트 en, action, visualEn, usedPropIds
+  - 입력 연속성: 직전 같은 장소 컷의 propState
+  - series.styleEn
+  - 대사는 **화자 목록과 줄 수**만 포함(감정·시선이 바뀌는 연기 지시는 action/beats 로 쓰도록 지침화). 순수 문구 변경은 키프레임 재승인을 요구하지 않지만, 기존 대사 검증(line-hash)과 내용 지문이 영상 계획·대사 판정 재실행을 요구한다.
+  - 참조 자산의 '버전'은 assetId 로 대표한다(힉스필드 job_id 는 불변 결과). 로컬 키프레임 파일 교체는 fileSha256 으로 감지한다.
 
-프롬프트 순서(필수 조건을 앞에, 공식 가이드 권장):
-1. **참조 역할**: `@Image1 = face of X. @Image2 = outfit of X (keep every garment in every frame). @Image5 = the set and camera framing — keep it identical.`
-2. **연속성**: 시작 프레임이 있으면 `Start exactly from the start image; background, lighting and wardrobe stay identical to it for the whole shot.`
-3. **카메라**: cameraEn + 이동(static → `Locked-off camera, no camera movement, no cut.`)
-4. **블로킹**: `X stays screen-left, Y screen-right for the whole shot.`
-5. **비트**(beatsEn 있을 때): 길이를 비트 수로 균등 분할 — `0–5s: … 5–10s: …`. 없으면 기존 visualEn.
-6. **대사**: `Exactly N spoken lines, nothing else is said:` + 줄마다 화자·대사(비트 구간 안에 배치).
-7. **소리**: sfx + 항상 `No background music.`
-8. 구도 배경 문구(장소 anchorText 대신 구도가 있으면 cameraEn+visibleProps 요약) + 스타일.
+## 8. 연결(continuation) 규칙
 
-## 7. 생성 직후 자동 점검 `frame-check` (0크레딧)
+- legacy: 기존 `chainsFrom`(같은 장소 + transitionIn cut) 그대로. 의미를 바꾸지 않는다.
+- shot-v1: `chainsFromV1(prev, cut)` = `cut.continuesFromPrev === true` **그리고** 같은 setupId **그리고** 블로킹 인물 집합이 호환(같거나 blockingChange 명시) **그리고** transitionIn 이 cut. 하나라도 어긋나는데 continuesFromPrev 가 true 면 shot 관문 block. 연결되지 않는 컷은 자체 승인 키프레임을 startImage 로 시작한다.
 
-- `ds frame-check --clip <mp4> --keyframe <png> [--min <ssim>]` — 클립의 0·50·100% 프레임과 키프레임의 SSIM(640×360 회색조).
-- 결과는 기존 `join-check` 와 함께 보고. **기준값은 추측하지 않는다**: 이번 2화 클립(3컷=배경 유지, 폐기한 4컷=배경 붕괴)과 다음 파일럿으로 보정하기 전까지는 review(경고)만 낸다. 보정 근거는 `core/join.ts` 의 상수 주석에 실측값으로 남긴다.
-- 스킬 절차: 점검이 경고를 내면 다음 이어지는 컷을 생성하지 않고 사람에게 보인다.
+## 9. 프롬프트 자동 조립 (`toSeedanceClip`, shot-v1 분기)
 
-## 8. 스킬·지침 갱신
+image_references 순서: 인물 얼굴 → 의상 → 구도 배경 → (continuesFromPrev 컷이면) 승인 키프레임. startImage 는 §4 대로 별도.
 
-- `.claude/skills/drama-series/SKILL.md`: 2(기획) → **2.5 키프레임(사람 승인 1.5)** → 5(계획) → 6(생성: **파일럿 2컷** 먼저, frame-check 후 나머지) 순서로 개정.
-- 동작 참조 영상은 `ffmpeg -an` 으로 소리를 지운 파일만 업로드한다(음성 누출 대응 — 커뮤니티 근거, 미실측이라 효과는 다음 생성에서 확인).
-- `WRITING-GUIDE.md`: 컷 1개 = 행동 1~2개·대사 2줄 이하·5~10초, 블로킹·구도 지정법, 그림에 없는 세트 요소 금지.
+프롬프트 순서(필수 조건 앞):
+1. 참조 역할: `@Image1 = face of X. @Image2 = outfit of X (keep every garment in every frame). @Image5 = the set and camera framing — keep it identical.`
+2. 연속성: startImage 가 있으면 `Start exactly from the start image; background, lighting and wardrobe stay identical to it for the whole shot.`
+3. 카메라: cameraEn + 이동(static → `Locked-off camera, no camera movement, no cut.`)
+4. 블로킹: `X stays screen-left, Y screen-right for the whole shot.`(blockingChange 가 move 면 비트 안에 이동을 명시)
+5. 비트: sec 지정값 우선, 나머지는 각 비트 대사의 추정 발화 시간 + 1.5초 비례로 배분 → `0.0–4.5s: … 4.5–10.0s: …`
+6. 대사: `Exactly N spoken lines, nothing else is said:` + 비트 구간 안에 화자·대사 배치
+7. 소리: sfx + 항상 `No background music.`
+8. 구도 배경 요약 + 스타일
 
-## 9. 테스트 (TDD)
+legacy 회차는 기존 조립을 그대로 쓴다(회귀 테스트).
 
-- `shot` 관문: 규칙별 block/review 경계(10/12초, 2/3줄, 3/4명, 비트 2/3개), 보이지 않는 소품, 블로킹 누락·중복·좌우 반전, 비strict 하위호환(1화 대본 그대로 통과).
-- 키프레임: approve 기록, 장면 수정 후 fingerprint 불일치 → plan block.
-- 프롬프트 조립: medias 순서·@Image 번호, 비트 시간 분할, "Exactly N spoken lines", No background music, 이어지는 컷의 키프레임 배치.
-- keyframe-build: 요청 medias·프롬프트 구성.
-- frame-check: smptebars vs 노이즈로 판별력 확인(기존 join 테스트 방식).
-- 회귀: 기존 89개 테스트 + tsc.
+## 10. 실행 경계 — 사람 승인 없이는 다음 작업이 나오지 않는다
 
-## 10. 2화 적용 순서와 비용
+`DramaReport.ok` 는 block 이 없으면 true 이므로 review 로는 막을 수 없다. 그래서 생성 진행을 별도 상태로 관리한다.
 
-1. 구도 배경: `aisle/side-door`(1차 3컷 첫 장면 기반, 잠금쇠·방화문·소화함을 그림에 포함), `aisle/wide`(기존), `yard/door`(기존 하역장 그림) — 약 0.5크레딧.
-2. 2화 4~7컷을 규칙에 맞게 6컷 안팎으로 재구성 → validate·JEV(시나리오·소품·대사) 재판정.
-3. 키프레임 6~8장(약 2~4크레딧) → 시트로 사용자 승인.
-4. 파일럿 2컷 → frame-check·사람 확인 → 나머지 일괄 생성. 영상 약 180크레딧.
-5. 이미 만든 3컷(배경 유지)·8컷은 재사용, 폐기한 4컷 영상은 쓰지 않는다.
+- 실행 상태 파일 `<dir>/run-<ep>.json` (계약: `DramaRunState { planFingerprint; clips: { cutId; jobId?; assetId?; fileSha256?; frameCheck?; approvedBy?; at? }[] }`, append). 에피소드 파일과 분리해 내용 지문을 흔들지 않는다.
+- `ds approve-clip --run --cut --asset <job_id> --file <mp4> --by user` — 사람이 본 **그 출력 자산**(job_id + sha256)에 승인을 묶는다.
+- `ds next --plan --run` — 지금 제출 가능한 컷만 출력한다:
+  - shot-v1 은 처음 `PILOT_CUTS = 2` 컷만 나오고, 두 컷이 모두 승인되기 전에는 나머지가 나오지 않는다.
+  - `startImage.source = 'prev-clip'` 컷은 앞 컷 출력이 승인된 뒤에만 나오고, 그 승인 자산의 실제 마지막 디코딩 프레임을 쓰라고 명시한다.
+  - 승인 파일의 sha256 이 바뀌었으면 승인 무효.
+- 스킬은 `ds next` 출력에 있는 컷만 제출한다(스킬 문장만으로 끝내지 않고 이 명령이 경계다).
 
-## 11. 미확인 (TODO(D1))
+## 11. 생성 직후 점검 `frame-check` (참고 지표, 0크레딧)
 
-- start_image + end_image + image_references 동시 사용: `get_cost` 견적은 통과(2026-10-08, 8초 24크레딧) — 실제 생성 허용 여부는 파일럿에서 확인.
-- Seedance 2.5 의 참조 이미지 최대 개수와 참조 강도 조절 가능 여부: 미확인.
+- 정적(static) 컷: 실제 첫 프레임·**비트 경계 프레임**·실제 마지막 디코딩 프레임을 키프레임과 SSIM(640×360 회색조) 비교 → 보고서에 수치로 남김. 마지막 프레임은 `-sseof` 로 끝부분을 디코딩해 마지막으로 나온 프레임을 쓴다(길이 시각 seek 금지).
+- 카메라 이동 컷: 전역 SSIM 은 N/A 로 표시하고 사람 검토 대상으로 넘긴다.
+- SSIM 은 픽셀 유사도일 뿐 의상·배경·동작 정확성 판정이 아니다. 높은 값으로 자동 승인하지 않는다(실측: 0.92 인데 배경 틀림). 어떤 값이든 §10 의 사람 승인이 필요하다.
+- `frame-sheet` — 비트 경계 프레임을 키프레임 옆에 붙인 검토용 한 장을 만든다.
+- 임계값은 실제 좋은/나쁜 컷의 오탐·미탐 기록이 쌓이기 전까지 두지 않는다. 합성 bars/noise 테스트는 계산기 검증용으로만 쓴다.
+
+## 12. 참조 영상·비용 원칙 (스킬)
+
+- 동작 참조 영상: 사용권이 확인된 자체 생성물만. 원본 보존, `ffmpeg -an` 사본 생성 후 `ffprobe` 로 오디오 스트림 0개 확인한 사본만 업로드. 음성 누출이 사라지는지는 미실측.
+- 비용 수치(키프레임 장당 약 0.25, 영상 3크레딧/초)는 실제 모델·입력 조합의 get_cost 로 확인한 값만 쓰고, 승인 예산과 분리해 보고한다. 추가 크레딧 집행은 매번 사용자 승인.
+- `SKILL.md`: 2(기획) → 2.5 키프레임(사람 승인) → 5(계획) → 6(생성: `ds next` → 파일럿 2컷 → `approve-clip` → 나머지).
+- `WRITING-GUIDE.md`: 컷 1개 = 비트 1~2개·대사 2줄 이하·5~10초, 블로킹·구도·usedPropIds 작성법, 그림에 없는 세트 요소 금지, 감정·시선은 action/beats 에.
+
+## 13. 테스트 (TDD)
+
+- **legacy 회귀**: 1화(ep01-9min)·2화 기존 대본의 validate·plan 결과가 변경 전과 같다.
+- **정책**: shot-v1 경계값(10/12초, 2/3줄, 3/4명, 비트 0/2/3개, sec 합 초과), 발화+동작 시간 초과.
+- **소품**: usedPropIds 가 visible/carries/propState 어디에도 없으면 block, carries·propState 로 들어오면 통과, 문자열 보조 탐지는 review 만.
+- **블로킹**: 누락·미등록·중복 block, 좌우 반전 + blockingChange 없음 review, 있으면 통과.
+- **지문 변형**: keyframe 승인 저장 → fingerprintOf 불변(다른 관문 유효). 장면(action/blocking/setup/look/aspect) 변경 → keyframeDigest 변화 → plan block. 대사 문구만 변경 → keyframeDigest 불변, 대사 검증 재요구. 파일 sha256 변경 → block.
+- **참조 매핑**: image_references 순서와 @Image 번호, 의상 참조 위치, startImage 가 medias 에 들어가지 않음, keyframeAssetId 일치 검사.
+- **화면비**: keyframe-build 요청 화면비 = plan 화면비, 다르면 digest 불일치로 block.
+- **연결**: chainsFromV1 조건별(구도 변경·블로킹 비호환 시 continuesFromPrev block), legacy chainsFrom 불변.
+- **실행 경계**: ds next — 파일럿 2컷만 노출, 미승인 선행 컷 뒤 컷 비노출, 승인 후 노출, 파일 sha 변경 시 승인 무효.
+- **frame-check**: 계산기(bars/noise), 카메라 이동 컷 N/A, 실제 마지막 프레임 추출.
+- 기존 89개 + tsc.
+
+## 14. 2화 적용 (유료 단계는 별도 사용자 승인)
+
+1. 구도 배경 그림: `aisle/side-door`(1차 3컷 첫 장면 기반, 잠금쇠·방화문·소화함을 그림에 포함), `aisle/wide`(기존), `yard/door`(기존 하역장).
+2. 2화를 `shotPolicy: shot-v1` 로 올리고 4~7컷을 규칙에 맞게 재구성 → validate·JEV 재판정.
+3. 키프레임 생성 → 시트로 사용자 승인.
+4. `ds next` 파일럿 2컷 → 사람 승인 → 나머지.
+5. 이미 만든 3컷·8컷은 legacy 출력이므로 재사용 여부를 사용자와 정한다(키프레임 소급 승인 가능).
+
+## 15. 미확인 (TODO(D1))
+
+- start_image + end_image + image_references 동시 사용: get_cost 견적만 통과(8초 24크레딧) — 실제 생성 허용은 파일럿에서 확인.
+- `@ImageN` 이 start_image 를 세는지: 공식 문서 미확인.
+- 참조 이미지 최대 개수, 참조 강도 조절: 미확인.
 - 무음 참조 영상으로 음성 누출이 사라지는지: 미실측.
-- `@ImageN` 번호가 start_image 를 세는지: 지금까지 start_image 를 맨 앞에 넣고도 인물 번호가 맞게 동작한 생성 사례가 있으나 공식 문서 미확인 — 파일럿에서 확인.
