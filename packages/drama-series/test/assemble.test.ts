@@ -3,7 +3,7 @@ import { existsSync, mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { parseEpisode } from '../src/core/model.js';
-import { buildAssembleArgs, cuesFromEpisode, escapeFilterValue, prependColdOpen } from '../src/core/assemble-args.js';
+import { buildAssembleArgs, cuesFromEpisode, escapeFilterValue, parseTrimSpec, prependColdOpen, trimWindow } from '../src/core/assemble-args.js';
 import { assembleEpisode } from '../src/adapters/assemble.js';
 import { ffmpegAvailable, hasAudio, probeDuration, runFfmpeg } from '../src/adapters/ffmpeg.js';
 
@@ -109,6 +109,16 @@ describe('assemble args', () => {
     expect(merged[1]).toMatchObject({ text: '민재 씨', startSec: 2.2, endSec: 6.9 });
     const alone = prependColdOpen([bottom], 2, '10분 전');
     expect(alone[0]).toMatchObject({ text: '10분 전', position: 'top', startSec: 2.1, endSec: 4.6 });
+  });
+  it('parses per-cut trims and clamps them to the clip', () => {
+    // 2026-10-07: 생성 영상 끝이 빈 화면으로 흘러가 다음 컷과 이어지지 않았다 → 앞뒤를 잘라 잇는다
+    expect(parseTrimSpec('c2=0:27,c3=2:')).toEqual({ c2: { start: 0, end: 27 }, c3: { start: 2 } });
+    expect(() => parseTrimSpec('c2=5')).toThrow();
+    expect(() => parseTrimSpec('c2=9:3')).toThrow();
+    expect(trimWindow(30, { start: 0, end: 27 })).toEqual({ startSec: 0, durationSec: 27 });
+    expect(trimWindow(12, { start: 2 })).toEqual({ startSec: 2, durationSec: 10 });
+    expect(trimWindow(12, { start: 0, end: 40 })).toEqual({ startSec: 0, durationSec: 12 });
+    expect(trimWindow(12, undefined)).toEqual({ startSec: undefined, durationSec: 12 });
   });
   it('refuses an empty clip list', () => {
     expect(() => buildAssembleArgs({ clips: [], cues: [], aiLabelFile: null, fontFile: FONT, out: 'o.mp4', width: 1, height: 1, fps: 24 })).toThrow();

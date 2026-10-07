@@ -13,6 +13,7 @@
  *   join-check   --series s.json --episode e.json --clips <dir: cutId.mp4> [--min 0.45]   (이어지는 컷 경계 SSIM)
  *   assemble     --series s.json --episode e.json --gates dir --clips <dir: cutId.mp4> --out ep.mp4 --font <ttc> [--work dir] [--no-ai-label]
  *                [--cuts c1,c2,…(회차 일부만)] [--aspect 16:9|9:16(세로는 흐린 배경 채우기)] [--title <쇼츠 상단 고정 제목>] [--kicker <제목 위 머리글>]
+ *                [--trim c2=0:27,c3=2: (컷별로 쓸 구간)]
  *                [--cold-open <cutId>@<시작초>+<길이초> [--cold-open-caption "10분 전"]]
  *                [--style style.json({title,kicker,subtitle,caption}: {fontFile,color,borderW,borderColor,shadow,box:{color,pad},scale})]
  *
@@ -37,6 +38,7 @@ import { transcriptGate, transcriptReadiness } from '../core/transcript.js';
 import { isLineCleared, lineHash } from '../core/line-hash.js';
 import { parseWhisperJson, transcribe } from '../adapters/transcribe/whisper.js';
 import { assembleEpisode, type AssembleEpisodeInput } from '../adapters/assemble.js';
+import { parseTrimSpec } from '../core/assemble-args.js';
 import { joinSimilarity } from '../adapters/ffmpeg.js';
 import { JOIN_MIN_SSIM, chainsFrom, judgeJoin } from '../core/join.js';
 
@@ -260,7 +262,7 @@ function main(argv: string[]): number {
     }
 
     case 'assemble': {
-      const o = opts(rest, { series: 'string', episode: 'string', gates: 'string', clips: 'string', out: 'string', font: 'string', work: 'string', 'no-ai-label': 'boolean', cuts: 'string', aspect: 'string', title: 'string', kicker: 'string', style: 'string', 'cold-open': 'string', 'cold-open-caption': 'string' });
+      const o = opts(rest, { series: 'string', episode: 'string', gates: 'string', clips: 'string', out: 'string', font: 'string', work: 'string', 'no-ai-label': 'boolean', cuts: 'string', aspect: 'string', title: 'string', kicker: 'string', style: 'string', 'cold-open': 'string', 'cold-open-caption': 'string', trim: 'string' });
       const ctx = loadCtx(o);
       const cutIds = optStr(o, 'cuts')?.split(',').map((x) => x.trim()).filter(Boolean);
       const unknown = cutIds?.filter((id) => !ctx.episode.cuts.some((c) => c.id === id)) ?? [];
@@ -285,6 +287,7 @@ function main(argv: string[]): number {
         title: optStr(o, 'title') ?? null,
         kicker: optStr(o, 'kicker') ?? null,
         coldOpen: coldOpen(optStr(o, 'cold-open'), optStr(o, 'cold-open-caption'), dir),
+        ...(optStr(o, 'trim') ? { trims: parseTrimSpec(optStr(o, 'trim')!) } : {}),
         ...(optStr(o, 'style') ? { styles: readJson(abs(req(o, 'style'))) as NonNullable<AssembleEpisodeInput['styles']> } : {}),
         ...(aspect === '9:16' ? { layout: 'blur-fill' as const, width: 1080, height: 1920 } : {}),
       });

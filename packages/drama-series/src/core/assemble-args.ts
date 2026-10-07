@@ -92,6 +92,34 @@ export function prependColdOpen(cues: CueText[], durationSec: number, caption?: 
   return [{ startSec: r2(durationSec + 0.1), endSec: r2(durationSec + 2.6), text: caption, position: 'top' }, ...shifted];
 }
 
+export interface TrimSpec {
+  start?: number;
+  end?: number;
+}
+
+/** "c2=0:27,c3=2:" → { c2: {start:0,end:27}, c3: {start:2} } */
+export function parseTrimSpec(spec: string): Record<string, TrimSpec> {
+  const out: Record<string, TrimSpec> = {};
+  for (const part of spec.split(',').map((x) => x.trim()).filter(Boolean)) {
+    const m = /^([\w-]+)=(\d+(?:\.\d+)?)?:(\d+(?:\.\d+)?)?$/.exec(part);
+    if (!m) throw new Error(`잘라 쓰기 형식 오류: ${part} (예: c2=0:27, c3=2:)`);
+    const t: TrimSpec = {};
+    if (m[2] !== undefined) t.start = Number(m[2]);
+    if (m[3] !== undefined) t.end = Number(m[3]);
+    if (t.start !== undefined && t.end !== undefined && t.end <= t.start) throw new Error(`끝이 시작보다 앞섬: ${part}`);
+    out[m[1]!] = t;
+  }
+  return out;
+}
+
+/** 실제 클립 길이 안에서 쓸 구간 */
+export function trimWindow(clipSec: number, t: TrimSpec | undefined): { startSec: number | undefined; durationSec: number } {
+  if (!t) return { startSec: undefined, durationSec: clipSec };
+  const start = Math.min(t.start ?? 0, clipSec);
+  const end = Math.min(t.end ?? clipSec, clipSec);
+  return { startSec: start, durationSec: r2(end - start) };
+}
+
 export function escapeFilterValue(s: string): string {
   return s.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/:/g, '\\:');
 }

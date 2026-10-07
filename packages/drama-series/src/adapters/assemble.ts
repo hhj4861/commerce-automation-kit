@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import type { DramaEpisode } from '@cak/contracts';
-import { buildAssembleArgs, cuesFromEpisode, prependColdOpen, type AssembleLayout, type AssembleSpec } from '../core/assemble-args.js';
+import { buildAssembleArgs, cuesFromEpisode, prependColdOpen, trimWindow, type AssembleLayout, type AssembleSpec, type TrimSpec } from '../core/assemble-args.js';
 import { FfmpegError, hasAudio, probeDuration, runFfmpeg } from './ffmpeg.js';
 
 export interface AssembleEpisodeInput {
@@ -17,6 +17,8 @@ export interface AssembleEpisodeInput {
   title?: string | null;
   kicker?: string | null;
   /** 맨 앞에 붙일 다른 컷의 한 토막(쇼츠 콜드 오픈) */
+  /** cutId → 쓸 구간(앞뒤 잘라 쓰기) */
+  trims?: Record<string, TrimSpec>;
   coldOpen?: { file: string; startSec: number; durationSec: number; caption?: string } | null;
   layout?: AssembleLayout;
   styles?: AssembleSpec['styles'];
@@ -32,7 +34,8 @@ export function assembleEpisode(input: AssembleEpisodeInput): { out: string; dur
     if (!hasAudio(f)) throw new FfmpegError(`오디오 트랙 없음: ${c.id}`);
     return f;
   });
-  const durations = files.map(probeDuration);
+  const windows = input.episode.cuts.map((c, i) => trimWindow(probeDuration(files[i]!), input.trims?.[c.id]));
+  const durations = windows.map((w) => w.durationSec);
   mkdirSync(input.workDir, { recursive: true });
   const co = input.coldOpen ?? null;
   if (co && !existsSync(co.file)) throw new FfmpegError(`콜드 오픈 클립 없음: ${co.file}`);
@@ -61,7 +64,12 @@ export function assembleEpisode(input: AssembleEpisodeInput): { out: string; dur
   runFfmpeg(buildAssembleArgs({
     clips: [
       ...(co ? [{ file: co.file, durationSec: co.durationSec, transitionIn: 'cut' as const, trimStartSec: co.startSec }] : []),
-      ...input.episode.cuts.map((c, i) => ({ file: files[i] ?? '', durationSec: durations[i] ?? c.durationSec, transitionIn: (co && i === 0 ? 'flash' : c.transitionIn ?? 'cut') as 'cut' | 'flash' | 'fade-black' })),
+      ...input.episode.cuts.map((c, i) => ({
+        file: files[i] ?? '',
+        durationSec: durations[i] ?? c.durationSec,
+        transitionIn: (co && i === 0 ? 'flash' : c.transitionIn ?? 'cut') as 'cut' | 'flash' | 'fade-black',
+        ...(windows[i]?.startSec !== undefined ? { trimStartSec: windows[i]!.startSec! } : {}),
+      })),
     ],
     cues,
     aiLabelFile,
