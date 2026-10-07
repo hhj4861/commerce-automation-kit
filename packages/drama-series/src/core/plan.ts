@@ -6,6 +6,7 @@ import type { GateContext } from './gates/types.js';
 import { toReport } from './report.js';
 import { topicGateId } from './topic-gates.js';
 import { isLineCleared } from './line-hash.js';
+import { chainsFrom } from './join.js';
 
 /** 생성 명세 전에 같은 대본 지문으로 통과해야 하는 관문(주제 관문은 주제 지문으로 따로 확인). */
 export const REQUIRED_GATES = ['schema', 'dialogue-lint', 'continuity', 'props', 'scenario'] as const;
@@ -55,7 +56,7 @@ export function buildPlan(input: PlanInput): PlanResult {
   ctx.episode.cuts.forEach((cut, i) => {
     const prev = ctx.episode.cuts[i - 1];
     // 같은 장소에서 전환(섬광·암전) 없이 이어지면 앞 컷 마지막 프레임에서 시작한다
-    const chained = prev && prev.locationId === cut.locationId && (cut.transitionIn ?? 'cut') === 'cut';
+    const chained = prev && chainsFrom(prev, cut);
     try {
       const spec = toSeedanceClip(ctx, cut, input.video);
       clips.push({ ...spec, estCredits: creditsFor(spec.model, input.video.resolution, input.video.draft, spec.durationSec), ...(chained ? { startFromCut: prev.id } : {}) });

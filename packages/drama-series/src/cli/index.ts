@@ -10,6 +10,7 @@
  *   approve-line --episode e.json --cut c2 --line 1 --by <승인자> --note <사유>
  *   plan         --series --episode --gates dir --budget <크레딧> [--resolution 480p] [--draft] [--aspect 16:9] --out plan.json
  *   verify-clip  --series --episode --cut c2 --gates dir (--transcript whisper.json | --media clip.mp4 [--work dir])
+ *   join-check   --series s.json --episode e.json --clips <dir: cutId.mp4> [--min 0.45]   (이어지는 컷 경계 SSIM)
  *   assemble     --series s.json --episode e.json --gates dir --clips <dir: cutId.mp4> --out ep.mp4 --font <ttc> [--work dir] [--no-ai-label]
  *                [--cuts c1,c2,…(회차 일부만)] [--aspect 16:9|9:16(세로는 흐린 배경 채우기)] [--title <쇼츠 상단 고정 제목>] [--kicker <제목 위 머리글>]
  *                [--cold-open <cutId>@<시작초>+<길이초> [--cold-open-caption "10분 전"]]
@@ -36,6 +37,8 @@ import { transcriptGate, transcriptReadiness } from '../core/transcript.js';
 import { isLineCleared, lineHash } from '../core/line-hash.js';
 import { parseWhisperJson, transcribe } from '../adapters/transcribe/whisper.js';
 import { assembleEpisode, type AssembleEpisodeInput } from '../adapters/assemble.js';
+import { joinSimilarity } from '../adapters/ffmpeg.js';
+import { JOIN_MIN_SSIM, chainsFrom, judgeJoin } from '../core/join.js';
 
 class UsageError extends Error {}
 
@@ -234,6 +237,25 @@ function main(argv: string[]): number {
       saveReport(gates, report);
       out({ ok: report.ok, transcript: text, report });
       return report.ok ? 0 : 1;
+    }
+
+    case 'join-check': {
+      const o = opts(rest, { series: 'string', episode: 'string', clips: 'string', min: 'string' });
+      const ctx = loadCtx(o);
+      const dir = abs(req(o, 'clips'));
+      const min = optStr(o, 'min') ? Number(optStr(o, 'min')) : JOIN_MIN_SSIM;
+      const joins = ctx.episode.cuts.flatMap((cut, i) => {
+        const prev = ctx.episode.cuts[i - 1];
+        if (!prev || !chainsFrom(prev, cut)) return [];
+        const a = join(dir, `${prev.id}.mp4`);
+        const b = join(dir, `${cut.id}.mp4`);
+        if (!existsSync(a) || !existsSync(b)) return [{ prev: prev.id, cut: cut.id, ssim: null, finding: { severity: 'block' as const, cutId: cut.id, message: '클립 파일 없음' } }];
+        const ssim = joinSimilarity(a, b);
+        return [{ prev: prev.id, cut: cut.id, ssim: Math.round(ssim * 1000) / 1000, finding: judgeJoin(prev.id, cut.id, ssim, min) }];
+      });
+      const ok = joins.every((j) => !j.finding);
+      out({ ok, min, joins });
+      return ok ? 0 : 1;
     }
 
     case 'assemble': {
