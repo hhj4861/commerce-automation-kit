@@ -167,6 +167,11 @@ export interface DramaClipSpec {
   /** 영상 음성 대신 따로 입히는 독백 */
   voiceOver: DramaVoiceOver[];
   estCredits: number | null;
+  /**
+   * (2026-10-07 추가) 이 컷의 마지막 프레임을 시작 프레임(start_image)으로 쓴다.
+   * 같은 장소에서 전환 없이 이어지는 컷이면 앞 컷 id. 이 경우 앞 컷이 끝난 뒤에만 생성할 수 있다.
+   */
+  startFromCut?: string;
 }
 
 export interface DramaPlan {

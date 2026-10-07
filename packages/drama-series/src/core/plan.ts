@@ -52,15 +52,18 @@ export function buildPlan(input: PlanInput): PlanResult {
 
   const backend: DramaFinding[] = [];
   const clips: DramaClipSpec[] = [];
-  for (const cut of ctx.episode.cuts) {
+  ctx.episode.cuts.forEach((cut, i) => {
+    const prev = ctx.episode.cuts[i - 1];
+    // 같은 장소에서 전환(섬광·암전) 없이 이어지면 앞 컷 마지막 프레임에서 시작한다
+    const chained = prev && prev.locationId === cut.locationId && (cut.transitionIn ?? 'cut') === 'cut';
     try {
       const spec = toSeedanceClip(ctx, cut, input.video);
-      clips.push({ ...spec, estCredits: creditsFor(spec.model, input.video.resolution, input.video.draft, spec.durationSec) });
+      clips.push({ ...spec, estCredits: creditsFor(spec.model, input.video.resolution, input.video.draft, spec.durationSec), ...(chained ? { startFromCut: prev.id } : {}) });
     } catch (e) {
       if (!(e instanceof PlanError)) throw e;
       backend.push({ severity: 'block', message: e.message, cutId: e.cutId });
     }
-  }
+  });
 
   const budget: DramaFinding[] = [];
   const unknown = clips.filter((c) => c.estCredits === null);

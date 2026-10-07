@@ -42,6 +42,19 @@ describe('buildPlan', () => {
     expect(c2.params).toMatchObject({ mode: 'omni_reference', duration: 10, resolution: '480p', draft: true, generate_audio: true });
     expect(r.plan!.clips[0]!.prompt).toContain('No dialogue spoken on screen.');
   });
+  it('chains each cut to the last frame of the previous cut in the same place, unless a transition is intended', () => {
+    // 2026-10-07 2화: 컷을 따로따로 생성해 앞 컷 끝과 다음 컷 시작이 이어지지 않았다.
+    const c = ctx();
+    const r = plan(c);
+    const cuts = c.episode.cuts;
+    r.plan!.clips.forEach((clip, i) => {
+      const prev = cuts[i - 1];
+      const cut = cuts[i]!;
+      const chained = !!prev && prev.locationId === cut.locationId && (cut.transitionIn ?? 'cut') === 'cut';
+      expect(clip.startFromCut).toBe(chained ? prev!.id : undefined);
+    });
+    expect(r.plan!.clips.some((x) => x.startFromCut)).toBe(true);
+  });
   it('refuses unverified dialogue', () => {
     const r = plan(ctx(undefined, false));
     expect(r.ok).toBe(false);
