@@ -1,0 +1,6 @@
+{
+  "kicker":   { "fontFile": "/Users/admin/Downloads/vedio/drama/fonts/Pretendard-SemiBold.otf", "color": "white@0.92", "borderW": 3, "scale": 1.0 },
+  "title":    { "fontFile": "/Users/admin/Downloads/vedio/drama/fonts/BlackHanSans-Regular.ttf", "color": "0xFFE14D", "borderW": 7, "shadow": true, "scale": 1.15 },
+  "subtitle": { "fontFile": "/Users/admin/Downloads/vedio/drama/fonts/Pretendard-ExtraBold.otf", "color": "white", "borderW": 5, "shadow": true, "scale": 1.05 },
+  "caption":  { "fontFile": "/Users/admin/Downloads/vedio/drama/fonts/Pretendard-SemiBold.otf", "color": "white", "borderW": 0, "box": { "color": "black@0.55", "pad": 16 }, "scale": 0.85 }
+}

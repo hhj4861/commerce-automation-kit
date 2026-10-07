@@ -11,7 +11,8 @@
  *   plan         --series --episode --gates dir --budget <크레딧> [--resolution 480p] [--draft] [--aspect 16:9] --out plan.json
  *   verify-clip  --series --episode --cut c2 --gates dir (--transcript whisper.json | --media clip.mp4 [--work dir])
  *   assemble     --series s.json --episode e.json --gates dir --clips <dir: cutId.mp4> --out ep.mp4 --font <ttc> [--work dir] [--no-ai-label]
- *                [--cuts c1,c2,…(회차 일부만)] [--aspect 16:9|9:16(세로는 흐린 배경 채우기)] [--title <쇼츠 상단 고정 제목>]
+ *                [--cuts c1,c2,…(회차 일부만)] [--aspect 16:9|9:16(세로는 흐린 배경 채우기)] [--title <쇼츠 상단 고정 제목>] [--kicker <제목 위 머리글>]
+ *                [--style style.json({title,kicker,subtitle,caption}: {fontFile,color,borderW,borderColor,shadow,box:{color,pad},scale})]
  *
  * stdout = JSON. 종료 코드 0 정상 / 1 차단·검증 실패 / 2 사용법 오류.
  */
@@ -33,7 +34,7 @@ import type { VideoOptions } from '../adapters/video/seedance-2-5.js';
 import { transcriptGate, transcriptReadiness } from '../core/transcript.js';
 import { isLineCleared, lineHash } from '../core/line-hash.js';
 import { parseWhisperJson, transcribe } from '../adapters/transcribe/whisper.js';
-import { assembleEpisode } from '../adapters/assemble.js';
+import { assembleEpisode, type AssembleEpisodeInput } from '../adapters/assemble.js';
 
 class UsageError extends Error {}
 type Opts = Record<string, string | boolean | undefined>;
@@ -227,7 +228,7 @@ function main(argv: string[]): number {
     }
 
     case 'assemble': {
-      const o = opts(rest, { series: 'string', episode: 'string', gates: 'string', clips: 'string', out: 'string', font: 'string', work: 'string', 'no-ai-label': 'boolean', cuts: 'string', aspect: 'string', title: 'string' });
+      const o = opts(rest, { series: 'string', episode: 'string', gates: 'string', clips: 'string', out: 'string', font: 'string', work: 'string', 'no-ai-label': 'boolean', cuts: 'string', aspect: 'string', title: 'string', kicker: 'string', style: 'string' });
       const ctx = loadCtx(o);
       const cutIds = optStr(o, 'cuts')?.split(',').map((x) => x.trim()).filter(Boolean);
       const unknown = cutIds?.filter((id) => !ctx.episode.cuts.some((c) => c.id === id)) ?? [];
@@ -250,6 +251,8 @@ function main(argv: string[]): number {
         workDir: abs(optStr(o, 'work') ?? join(dirname(target), '.assemble')),
         aiLabel: o['no-ai-label'] === true ? null : 'AI로 생성된 영상입니다',
         title: optStr(o, 'title') ?? null,
+        kicker: optStr(o, 'kicker') ?? null,
+        ...(optStr(o, 'style') ? { styles: readJson(abs(req(o, 'style'))) as NonNullable<AssembleEpisodeInput['styles']> } : {}),
         ...(aspect === '9:16' ? { layout: 'blur-fill' as const, width: 1080, height: 1920 } : {}),
       });
       out({ ok: true, ...result });

@@ -64,6 +64,33 @@ describe('assemble args', () => {
     const size = Number(/cue-0\.txt':fontsize=(\d+)/.exec(graph)![1]);
     expect(size * 27).toBeLessThanOrEqual(1080 * 0.92);
   });
+  it('applies per-role text styles (title font/colour, subtitle font, caption box, kicker above title)', () => {
+    const args = buildAssembleArgs({
+      clips: [{ file: 'a.mp4', durationSec: 4, transitionIn: 'cut' }],
+      cues: [
+        { startSec: 0.2, endSec: 3.9, textFile: '/w/cue-0.txt', position: 'bottom' },
+        { startSec: 0.2, endSec: 2.9, textFile: '/w/cue-1.txt', position: 'top' },
+      ],
+      aiLabelFile: null, titleFile: '/w/title.txt', kickerFile: '/w/kicker.txt', layout: 'blur-fill', fontFile: FONT, out: 'o.mp4', width: 1080, height: 1920, fps: 24,
+      styles: {
+        title: { fontFile: '/f/BlackHanSans.ttf', color: '#FFE14D', borderW: 8, shadow: true },
+        kicker: { fontFile: '/f/Pretendard-SemiBold.otf', color: 'white' },
+        subtitle: { fontFile: '/f/Pretendard-ExtraBold.otf', borderW: 6 },
+        caption: { fontFile: '/f/Pretendard-SemiBold.otf', box: { color: 'black@0.55', pad: 14 } },
+      },
+    });
+    const graph = args[args.indexOf('-filter_complex') + 1]!;
+    const seg = (file: string) => graph.split(';').find((x) => x.includes(file))!;
+    expect(seg('title.txt')).toContain("fontfile='/f/BlackHanSans.ttf'");
+    expect(seg('title.txt')).toContain('fontcolor=#FFE14D');
+    expect(seg('title.txt')).toContain('borderw=8');
+    expect(seg('title.txt')).toContain('shadowx=');
+    expect(seg('cue-0.txt')).toContain("fontfile='/f/Pretendard-ExtraBold.otf'");
+    expect(seg('cue-0.txt')).toContain('borderw=6');
+    expect(seg('cue-1.txt')).toContain('box=1:boxcolor=black@0.55:boxborderw=14');
+    const y = (file: string) => Number(/:y=(\d+)/.exec(seg(file))![1]);
+    expect(y('kicker.txt')).toBeLessThan(y('title.txt'));
+  });
   it('refuses an empty clip list', () => {
     expect(() => buildAssembleArgs({ clips: [], cues: [], aiLabelFile: null, fontFile: FONT, out: 'o.mp4', width: 1, height: 1, fps: 24 })).toThrow();
   });

@@ -23,6 +23,20 @@ export interface AssembleClip {
   transitionIn: DramaTransition;
 }
 
+/** 글자 역할별 스타일. 비우면 기본값(fontFile, 흰 글자, 검은 테두리 3px) */
+export interface TextStyle {
+  fontFile?: string;
+  color?: string;
+  borderW?: number;
+  borderColor?: string;
+  shadow?: boolean;
+  /** 반투명 상자 배경(장면 자막 등) */
+  box?: { color: string; pad: number };
+  /** 기본 글자 크기 배율 */
+  scale?: number;
+}
+export type TextRole = 'title' | 'kicker' | 'subtitle' | 'caption' | 'label';
+
 /** fit = 비율 유지 + 검은 여백, blur-fill = 흐린 배경으로 채우고 원본은 가운데(가로 영상을 세로 쇼츠로) */
 export type AssembleLayout = 'fit' | 'blur-fill';
 
@@ -32,7 +46,10 @@ export interface AssembleSpec {
   aiLabelFile: string | null;
   /** 영상 내내 위쪽에 고정되는 제목(쇼츠용). 없으면 넣지 않는다 */
   titleFile?: string | null;
+  /** 제목 위의 작은 머리글(예: 시리즈명·회차) */
+  kickerFile?: string | null;
   layout?: AssembleLayout;
+  styles?: Partial<Record<TextRole, TextStyle>>;
   fontFile: string;
   out: string;
   width: number;
@@ -86,14 +103,20 @@ export function buildAssembleArgs(s: AssembleSpec): string[] {
     parts.push(`[${i}:a]aresample=48000,aformat=channel_layouts=stereo[a${i}]`);
   });
   parts.push(`${s.clips.map((_, i) => `[v${i}][a${i}]`).join('')}concat=n=${s.clips.length}:v=1:a=1[vc][ac]`);
-  const font = escapeFilterValue(s.fontFile);
   let label = 'vc';
   let k = 0;
-  const draw = (textFile: string, size: number, x: string, y: string, enable: string) => {
+  const draw = (role: TextRole, textFile: string, size: number, x: string, y: string, enable: string) => {
+    const st = s.styles?.[role] ?? {};
     const next = `t${k++}`;
-    parts.push(`[${label}]drawtext=fontfile='${font}':textfile='${escapeFilterValue(textFile)}':fontsize=${size}:fontcolor=white:borderw=3:bordercolor=black:expansion=none:x=${x}:y=${y}:enable='${enable}'[${next}]`);
+    const shadow = st.shadow ? `:shadowx=${Math.max(2, Math.round(size / 18))}:shadowy=${Math.max(2, Math.round(size / 18))}:shadowcolor=black@0.6` : '';
+    const box = st.box ? `:box=1:boxcolor=${st.box.color}:boxborderw=${st.box.pad}` : '';
+    parts.push(
+      `[${label}]drawtext=fontfile='${escapeFilterValue(st.fontFile ?? s.fontFile)}':textfile='${escapeFilterValue(textFile)}':fontsize=${size}` +
+        `:fontcolor=${st.color ?? 'white'}:borderw=${st.borderW ?? 3}:bordercolor=${st.borderColor ?? 'black'}${shadow}${box}:expansion=none:x=${x}:y=${y}:enable='${enable}'[${next}]`,
+    );
     label = next;
   };
+  const sized = (role: TextRole, base: number) => Math.round(base * (s.styles?.[role]?.scale ?? 1));
   const vertical = H > W;
   // 세로 화면은 가로폭 기준(한 줄 약 20자가 들어가게), 가로 화면은 높이 기준
   const size = vertical ? Math.round(W * 0.05) : Math.round(H * 0.055);
@@ -106,9 +129,18 @@ export function buildAssembleArgs(s: AssembleSpec): string[] {
       ? `${pos === 'top' ? bandTop - size - gap : bandTop + band + gap}`
       : pos === 'top' ? `${Math.round(H * 0.12)}` : `h-text_h-${Math.round(H * 0.08)}`;
   const fit = (chars?: number) => (chars ? Math.min(size, Math.floor((W * 0.92) / chars)) : size);
-  for (const c of s.cues) draw(c.textFile, fit(c.chars), '(w-text_w)/2', cueY(c.position), `between(t,${c.startSec},${c.endSec})`);
-  if (s.titleFile) draw(s.titleFile, Math.round(size * 1.3), '(w-text_w)/2', `${Math.round(H * 0.1)}`, 'gte(t,0)');
-  if (s.aiLabelFile) draw(s.aiLabelFile, Math.round(H * 0.035), 'w-text_w-24', '24', 'lt(t,2)');
+  for (const c of s.cues) {
+    const role = c.position === 'top' ? 'caption' : 'subtitle';
+    draw(role, c.textFile, Math.min(sized(role, size), fit(c.chars)), '(w-text_w)/2', cueY(c.position), `between(t,${c.startSec},${c.endSec})`);
+  }
+  const titleSize = sized('title', size * 1.3);
+  const titleY = Math.round(H * 0.1);
+  if (s.titleFile) draw('title', s.titleFile, titleSize, '(w-text_w)/2', `${titleY}`, 'gte(t,0)');
+  if (s.kickerFile) {
+    const kSize = sized('kicker', size * 0.7);
+    draw('kicker', s.kickerFile, kSize, '(w-text_w)/2', `${Math.max(0, titleY - kSize - Math.round(H * 0.012))}`, 'gte(t,0)');
+  }
+  if (s.aiLabelFile) draw('label', s.aiLabelFile, Math.round(H * 0.035), 'w-text_w-24', '24', 'lt(t,2)');
   parts.push(`[${label}]null[vout]`);
   parts.push('[ac]loudnorm=I=-14:TP=-1.5:LRA=11[aout]');
   return ['-y', ...inputs, '-filter_complex', parts.join(';'), '-map', '[vout]', '-map', '[aout]', '-c:v', 'libx264', '-preset', 'medium', '-crf', '20', '-c:a', 'aac', '-b:a', '192k', '-movflags', '+faststart', s.out];

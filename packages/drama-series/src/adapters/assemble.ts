@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import type { DramaEpisode } from '@cak/contracts';
-import { buildAssembleArgs, cuesFromEpisode, type AssembleLayout } from '../core/assemble-args.js';
+import { buildAssembleArgs, cuesFromEpisode, type AssembleLayout, type AssembleSpec } from '../core/assemble-args.js';
 import { FfmpegError, hasAudio, probeDuration, runFfmpeg } from './ffmpeg.js';
 
 export interface AssembleEpisodeInput {
@@ -15,7 +15,9 @@ export interface AssembleEpisodeInput {
   aiLabel: string | null;
   /** 쇼츠 상단 고정 제목. null/없음이면 넣지 않는다 */
   title?: string | null;
+  kicker?: string | null;
   layout?: AssembleLayout;
+  styles?: AssembleSpec['styles'];
   width?: number;
   height?: number;
   fps?: number;
@@ -45,12 +47,19 @@ export function assembleEpisode(input: AssembleEpisodeInput): { out: string; dur
     titleFile = join(input.workDir, 'title.txt');
     writeFileSync(titleFile, input.title);
   }
+  let kickerFile: string | null = null;
+  if (input.kicker) {
+    kickerFile = join(input.workDir, 'kicker.txt');
+    writeFileSync(kickerFile, input.kicker);
+  }
   mkdirSync(dirname(input.out), { recursive: true });
   runFfmpeg(buildAssembleArgs({
     clips: input.episode.cuts.map((c, i) => ({ file: files[i] ?? '', durationSec: durations[i] ?? c.durationSec, transitionIn: c.transitionIn ?? 'cut' })),
     cues,
     aiLabelFile,
     titleFile,
+    kickerFile,
+    ...(input.styles ? { styles: input.styles } : {}),
     layout: input.layout ?? 'fit',
     fontFile: input.fontFile,
     out: input.out,
