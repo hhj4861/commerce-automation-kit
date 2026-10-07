@@ -1,0 +1,39 @@
+{
+  "file": "/Users/admin/Downloads/vedio/hvdc-ai-longform.mp4",
+  "duration": 408.833008,
+  "size": 159437071,
+  "resolution": [
+    1920,
+    1080
+  ],
+  "fps": "24/1",
+  "voice": "RU7aSi6lT4uQBXMLgDxK",
+  "speed": 1,
+  "fullDecode": true,
+  "blackSegments": [],
+  "silences": [
+    "silence_duration: 2.97619"
+  ],
+  "maxVolume": [
+    "max_volume: -1.2 dB"
+  ],
+  "finalHold": 2.7322108843537407,
+  "sha256": "0545126d8d051253be3047e900d1e51e2f5dc64fcfc72ddf0fce23e897e4b2c5",
+  "visualReview": {
+    "status": "passed-representative-frame-review",
+    "coverage": "23 scene contact sheet, enlarged opening/cable/wave/switch states/chip/Jeju/final frame",
+    "switchStateTimes": [
+      12.5,
+      13.8,
+      15.1
+    ],
+    "lastFrameAt": 407.5,
+    "limitations": "Representative visual review and full technical decode; not a claim of engineering simulation accuracy or frame-by-frame human playback."
+  },
+  "captionCount": 142,
+  "captionOverlapCount": 0,
+  "audioNotes": "Only silence >=1.5s is the intentional final hold; spot ASR checked valves/chip/ending, full human listening not claimed.",
+  "renderExitCode": 0,
+  "assemblyExitCode": 0,
+  "validatedAt": "2026-10-07T16:26:09.970695+00:00"
+}
