@@ -1,0 +1,95 @@
+{
+  "kind": "props",
+  "fingerprint": "3bde23248fef69c1",
+  "questions": [
+    {
+      "id": "c1__props",
+      "type": "choice"
+    },
+    {
+      "id": "c1__single-location",
+      "type": "choice"
+    },
+    {
+      "id": "c2__props",
+      "type": "choice"
+    },
+    {
+      "id": "c2__single-location",
+      "type": "choice"
+    },
+    {
+      "id": "c3__props",
+      "type": "choice"
+    },
+    {
+      "id": "c3__single-location",
+      "type": "choice"
+    },
+    {
+      "id": "c4__props",
+      "type": "choice"
+    },
+    {
+      "id": "c4__single-location",
+      "type": "choice"
+    },
+    {
+      "id": "c5__props",
+      "type": "choice"
+    },
+    {
+      "id": "c5__single-location",
+      "type": "choice"
+    },
+    {
+      "id": "c6__props",
+      "type": "choice"
+    },
+    {
+      "id": "c6__single-location",
+      "type": "choice"
+    },
+    {
+      "id": "c7__props",
+      "type": "choice"
+    },
+    {
+      "id": "c7__single-location",
+      "type": "choice"
+    },
+    {
+      "id": "c8__props",
+      "type": "choice"
+    },
+    {
+      "id": "c8__single-location",
+      "type": "choice"
+    },
+    {
+      "id": "c9__props",
+      "type": "choice"
+    },
+    {
+      "id": "c9__single-location",
+      "type": "choice"
+    },
+    {
+      "id": "c10__props",
+      "type": "choice"
+    },
+    {
+      "id": "c10__single-location",
+      "type": "choice"
+    },
+    {
+      "id": "c11__props",
+      "type": "choice"
+    },
+    {
+      "id": "c11__single-location",
+      "type": "choice"
+    }
+  ],
+  "createdAt": "2026-10-07T09:21:52.393Z"
+}

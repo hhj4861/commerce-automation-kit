@@ -1,0 +1,256 @@
+{
+  "sshExit": 0,
+  "events": [
+    {
+      "event": "ready",
+      "alias": "drama-series-jev-1791364973",
+      "policy": {
+        "models": [
+          "jev-1.13.0"
+        ],
+        "allowed_routes": [
+          "/typesafe/v1/systemone"
+        ],
+        "duration": "1h",
+        "max_budget": 0.01,
+        "budget_duration": "1d",
+        "rpm_limit": 10
+      },
+      "maxRequests": 1,
+      "startedUtc": "2026-10-07T09:22:53.373652+00:00"
+    },
+    {
+      "event": "response",
+      "status": 200,
+      "elapsedMs": 253,
+      "body": {
+        "model": "jev-1.13.0",
+        "answers": {
+          "c1__props": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.96,
+            "probabilities": {
+              "pass": 0.98,
+              "fail": 0.02
+            }
+          },
+          "c1__single-location": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.92,
+            "probabilities": {
+              "pass": 0.96,
+              "fail": 0.04
+            }
+          },
+          "c2__props": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.98,
+            "probabilities": {
+              "pass": 0.99,
+              "fail": 0.01
+            }
+          },
+          "c2__single-location": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 1,
+            "probabilities": {
+              "pass": 1,
+              "fail": 0
+            }
+          },
+          "c3__props": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.94,
+            "probabilities": {
+              "pass": 0.97,
+              "fail": 0.03
+            }
+          },
+          "c3__single-location": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.9,
+            "probabilities": {
+              "pass": 0.95,
+              "fail": 0.05
+            }
+          },
+          "c4__props": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.94,
+            "probabilities": {
+              "pass": 0.97,
+              "fail": 0.03
+            }
+          },
+          "c4__single-location": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 1,
+            "probabilities": {
+              "pass": 1,
+              "fail": 0
+            }
+          },
+          "c5__props": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.92,
+            "probabilities": {
+              "pass": 0.96,
+              "fail": 0.04
+            }
+          },
+          "c5__single-location": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 1,
+            "probabilities": {
+              "pass": 1,
+              "fail": 0
+            }
+          },
+          "c6__props": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.96,
+            "probabilities": {
+              "pass": 0.98,
+              "fail": 0.02
+            }
+          },
+          "c6__single-location": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 1,
+            "probabilities": {
+              "pass": 1,
+              "fail": 0
+            }
+          },
+          "c7__props": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.92,
+            "probabilities": {
+              "pass": 0.96,
+              "fail": 0.04
+            }
+          },
+          "c7__single-location": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 1,
+            "probabilities": {
+              "pass": 1,
+              "fail": 0
+            }
+          },
+          "c8__props": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.96,
+            "probabilities": {
+              "pass": 0.98,
+              "fail": 0.02
+            }
+          },
+          "c8__single-location": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 1,
+            "probabilities": {
+              "pass": 1,
+              "fail": 0
+            }
+          },
+          "c9__props": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.96,
+            "probabilities": {
+              "pass": 0.98,
+              "fail": 0.02
+            }
+          },
+          "c9__single-location": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 1,
+            "probabilities": {
+              "pass": 1,
+              "fail": 0
+            }
+          },
+          "c10__props": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.94,
+            "probabilities": {
+              "pass": 0.97,
+              "fail": 0.03
+            }
+          },
+          "c10__single-location": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.96,
+            "probabilities": {
+              "pass": 0.98,
+              "fail": 0.02
+            }
+          },
+          "c11__props": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 0.96,
+            "probabilities": {
+              "pass": 0.98,
+              "fail": 0.02
+            }
+          },
+          "c11__single-location": {
+            "type": "choice",
+            "choice": "pass",
+            "confidence": 1,
+            "probabilities": {
+              "pass": 1,
+              "fail": 0
+            }
+          }
+        },
+        "usage": {
+          "input_tokens": 9079,
+          "output_tokens": 700
+        }
+      }
+    },
+    {
+      "event": "cleanup",
+      "alias": "drama-series-jev-1791364973",
+      "requests": 1,
+      "revoked": true,
+      "policyAndSpend": {
+        "models": [
+          "jev-1.13.0"
+        ],
+        "allowed_routes": [
+          "/typesafe/v1/systemone"
+        ],
+        "spend": 0,
+        "max_budget": 0.01,
+        "budget_duration": "1d",
+        "rpm_limit": 10,
+        "expires": "2026-10-07T10:22:53.359000Z"
+      },
+      "afterRevokeStatus": 401,
+      "finishedUtc": "2026-10-07T09:22:54.146088+00:00"
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "ok": true,
+  "report": {
+    "gate": "props",
+    "stage": "episode",
+    "ok": true,
+    "fingerprint": "7ad38aaa12ebb121",
+    "findings": []
+  }
+}

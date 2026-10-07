@@ -144,7 +144,7 @@
     {
       "id": "aisle",
       "name": "물류센터 야간 작업 통로",
-      "anchorText": "Same continuous location in every cut: the night-shift aisle of the warehouse shown in the location reference - a roller conveyor on the left, tall blue pallet racks stacked with cardboard boxes on the right, polished grey epoxy floor with yellow lane lines, amber safety lamps, a wide roll-up loading shutter at the far end, a wall clock, a red wall-mounted fire cabinet holding a fire axe, and a waist-high pile of empty cardboard boxes beside the conveyor. Keep the same layout, lighting and time of night.",
+      "anchorText": "Same continuous location in every cut: the night-shift aisle of the warehouse shown in the location reference - a roller conveyor on the left, tall blue pallet racks stacked with cardboard boxes on the right, polished grey epoxy floor with yellow lane lines, amber safety lamps, a wide roll-up loading shutter at the far end with a small grey steel side door next to it, a wall clock, a red wall-mounted fire cabinet holding a fire axe, and a waist-high pile of empty cardboard boxes beside the conveyor. Keep the same layout, lighting and time of night.",
       "props": [
         "컨베이어",
         "팔레트",
@@ -159,7 +159,9 @@
         "비상등",
         "손전등",
         "쪽문",
-        "생수 팩"
+        "생수 팩",
+        "쇠파이프",
+        "구급상자"
       ],
       "refAssetId": "2ae41641-0ebc-45ea-ae47-f785e1c5b8f3"
     },
@@ -201,7 +203,8 @@
         "책상",
         "의자",
         "비상등",
-        "손전등"
+        "손전등",
+        "책상 서랍"
       ],
       "refAssetId": "465fe94b-0e52-4d9e-b4e3-5a4054fb0e85"
     }
@@ -209,8 +212,53 @@
   "episodes": [
     {
       "no": 1,
-      "title": "사태 0일",
-      "summary": "새벽 2시, 서윤은 셔터를 내리라고 외치지만 하청 실장 오창식은 비웃으며 식량 창고 열쇠를 빼앗아 알바생들을 굴복시키려 한다. 첫 감염자가 들이닥치자 서윤은 단 한 동작으로 그것을 쓰러뜨리고, 오창식의 손목을 꺾어 열쇠를 되찾는다. 사람들은 다정한 박반장을 따르지만, 서윤은 10년 전 그가 몰래 문을 열어 생존자 전원을 죽게 만든 장본인임을 기억한다. 이번 생에서는 그 배신을 그대로 되갚아 주겠다고, 서윤은 조용히 그를 지켜본다."
+      "title": "10년 전으로",
+      "summary": "좀비 사태로 모든 것을 잃은 서윤이 사태 3시간 전 물류센터로 돌아온다. 경고는 무시당하고, 첫 감염자를 도끼로 쓰러뜨리며 머리를 베야 죽는다는 것을 보여 준다. 서윤은 10년 전 셔터를 연 배신자가 다정한 박반장임을 기억한다."
+    },
+    {
+      "no": 2,
+      "title": "물린 아이",
+      "summary": "쪽문 틈의 손에 민재가 물린다. 공포에 질린 오창식이 쇠파이프로 민재를 죽이려 하지만 서윤이 맨손으로 막아선다. 서윤은 한 시간의 유예를 얻어 내고, 박반장은 몰래 무전기로 물려도 변하지 않는 아이가 있다고 알린다."
+    },
+    {
+      "no": 3,
+      "title": "예언",
+      "summary": "한 시간이 다가오자 오창식 무리가 민재를 내보내자고 몰아간다. 서윤은 30초 뒤 전기가 나간다고 예언하고, 정전이 적중하자 사람들이 서윤 편에 선다. 서윤은 관제실에서 켜진 채 놓인 무전기를 발견한다."
+    },
+    {
+      "no": 4,
+      "title": "식량 창고",
+      "summary": "한밤중 오창식과 태수가 식량과 민재를 노리고 창고를 습격하지만 서윤이 한 동작으로 제압한다. 서윤은 식량을 공평하게 나누고, 미숙은 딸에게서 지하철역에 갇혔다는 문자를 받는다. 벽시계는 4시를 가리킨다."
+    },
+    {
+      "no": 5,
+      "title": "덫",
+      "summary": "모두 잠든 새벽 4시, 박반장이 관제실에서 셔터 개방 버튼을 누르지만 아무 반응이 없다. 서윤이 미리 전원을 내려 둔 것이다. 등 뒤에서 서윤이 십 년 전 이야기를 꺼내자 박반장의 미소가 사라진다."
+    },
+    {
+      "no": 6,
+      "title": "무전기",
+      "summary": "무전 속 남자가 문이 열렸는지, 아이는 데려오는지 묻는다. 약탈단이 민재를 노린다는 사실이 드러나고, 서윤은 문을 열지 않겠다고 답한다. 남자는 그럼 직접 열겠다고 웃고, 셔터가 안쪽으로 휜다."
+    },
+    {
+      "no": 7,
+      "title": "포위",
+      "summary": "약탈단이 셔터를 들이받고, 서윤이 방어를 지휘한다. 오창식은 자기 창고는 자기가 지킨다며 서윤 편에 선다. 그 사이 묶어 둔 박반장이 사라진다."
+    },
+    {
+      "no": 8,
+      "title": "인질",
+      "summary": "풀려난 박반장이 미숙을 붙잡고 민재를 넘기라고 요구한다. 민재가 스스로 나서려는 순간, 서윤은 벽시계를 보며 새벽 5시에 지나가는 것을 떠올린다."
+    },
+    {
+      "no": 9,
+      "title": "문을 여는 자",
+      "summary": "서윤은 지난 생의 기억대로 새벽 5시 좀비 떼가 지나가는 순간 직접 셔터를 열어, 약탈단 쪽으로 흘려보낸다. 셔터 밖에는 박반장만 홀로 남는다."
+    },
+    {
+      "no": 10,
+      "title": "동이 트면",
+      "summary": "새벽, 약탈단이 무너지고 박반장은 닫힌 셔터 밖에 남는다. 생존자들은 서윤을 리더로 받아들이고 미숙의 딸을 찾아 나서기로 한다. 그때 무전기에서 낯선 목소리가 서윤의 이름을 부르며, 당신도 돌아왔느냐고 묻는다."
     }
   ],
   "safety": {

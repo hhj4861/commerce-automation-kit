@@ -1,0 +1,247 @@
+{
+  "kind": "dialogue",
+  "fingerprint": "3bde23248fef69c1",
+  "questions": [
+    {
+      "id": "c1__0__context",
+      "type": "choice"
+    },
+    {
+      "id": "c1__0__voice",
+      "type": "choice"
+    },
+    {
+      "id": "c1__0__natural",
+      "type": "choice"
+    },
+    {
+      "id": "c1__0__reaction",
+      "type": "choice"
+    },
+    {
+      "id": "c1__1__context",
+      "type": "choice"
+    },
+    {
+      "id": "c1__1__voice",
+      "type": "choice"
+    },
+    {
+      "id": "c1__1__natural",
+      "type": "choice"
+    },
+    {
+      "id": "c1__1__reaction",
+      "type": "choice"
+    },
+    {
+      "id": "c2__0__context",
+      "type": "choice"
+    },
+    {
+      "id": "c2__0__voice",
+      "type": "choice"
+    },
+    {
+      "id": "c2__0__natural",
+      "type": "choice"
+    },
+    {
+      "id": "c2__0__reaction",
+      "type": "choice"
+    },
+    {
+      "id": "c3__0__context",
+      "type": "choice"
+    },
+    {
+      "id": "c3__0__voice",
+      "type": "choice"
+    },
+    {
+      "id": "c3__0__natural",
+      "type": "choice"
+    },
+    {
+      "id": "c3__0__reaction",
+      "type": "choice"
+    },
+    {
+      "id": "c4__0__context",
+      "type": "choice"
+    },
+    {
+      "id": "c4__0__voice",
+      "type": "choice"
+    },
+    {
+      "id": "c4__0__natural",
+      "type": "choice"
+    },
+    {
+      "id": "c4__0__reaction",
+      "type": "choice"
+    },
+    {
+      "id": "c5__0__context",
+      "type": "choice"
+    },
+    {
+      "id": "c5__0__voice",
+      "type": "choice"
+    },
+    {
+      "id": "c5__0__natural",
+      "type": "choice"
+    },
+    {
+      "id": "c5__0__reaction",
+      "type": "choice"
+    },
+    {
+      "id": "c6__0__context",
+      "type": "choice"
+    },
+    {
+      "id": "c6__0__voice",
+      "type": "choice"
+    },
+    {
+      "id": "c6__0__natural",
+      "type": "choice"
+    },
+    {
+      "id": "c6__0__reaction",
+      "type": "choice"
+    },
+    {
+      "id": "c6__1__context",
+      "type": "choice"
+    },
+    {
+      "id": "c6__1__voice",
+      "type": "choice"
+    },
+    {
+      "id": "c6__1__natural",
+      "type": "choice"
+    },
+    {
+      "id": "c6__1__reaction",
+      "type": "choice"
+    },
+    {
+      "id": "c7__0__context",
+      "type": "choice"
+    },
+    {
+      "id": "c7__0__voice",
+      "type": "choice"
+    },
+    {
+      "id": "c7__0__natural",
+      "type": "choice"
+    },
+    {
+      "id": "c7__0__reaction",
+      "type": "choice"
+    },
+    {
+      "id": "c8__0__context",
+      "type": "choice"
+    },
+    {
+      "id": "c8__0__voice",
+      "type": "choice"
+    },
+    {
+      "id": "c8__0__natural",
+      "type": "choice"
+    },
+    {
+      "id": "c8__0__reaction",
+      "type": "choice"
+    },
+    {
+      "id": "c9__0__context",
+      "type": "choice"
+    },
+    {
+      "id": "c9__0__voice",
+      "type": "choice"
+    },
+    {
+      "id": "c9__0__natural",
+      "type": "choice"
+    },
+    {
+      "id": "c9__0__reaction",
+      "type": "choice"
+    },
+    {
+      "id": "c9__1__context",
+      "type": "choice"
+    },
+    {
+      "id": "c9__1__voice",
+      "type": "choice"
+    },
+    {
+      "id": "c9__1__natural",
+      "type": "choice"
+    },
+    {
+      "id": "c9__1__reaction",
+      "type": "choice"
+    },
+    {
+      "id": "c10__0__context",
+      "type": "choice"
+    },
+    {
+      "id": "c10__0__voice",
+      "type": "choice"
+    },
+    {
+      "id": "c10__0__natural",
+      "type": "choice"
+    },
+    {
+      "id": "c10__0__reaction",
+      "type": "choice"
+    },
+    {
+      "id": "c11__0__context",
+      "type": "choice"
+    },
+    {
+      "id": "c11__0__voice",
+      "type": "choice"
+    },
+    {
+      "id": "c11__0__natural",
+      "type": "choice"
+    },
+    {
+      "id": "c11__0__reaction",
+      "type": "choice"
+    },
+    {
+      "id": "c11__1__context",
+      "type": "choice"
+    },
+    {
+      "id": "c11__1__voice",
+      "type": "choice"
+    },
+    {
+      "id": "c11__1__natural",
+      "type": "choice"
+    },
+    {
+      "id": "c11__1__reaction",
+      "type": "choice"
+    }
+  ],
+  "createdAt": "2026-10-07T09:22:03.148Z"
+}

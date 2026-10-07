@@ -1,0 +1,17 @@
+{
+  "gate": "topic-seventy-two-hours",
+  "stage": "topic",
+  "ok": false,
+  "fingerprint": "12195bd25f53db4a",
+  "findings": [
+    {
+      "severity": "block",
+      "message": "조회 유발 요소 확정 1개 — 최소 2개 필요",
+      "evidence": "strong-conflict"
+    },
+    {
+      "severity": "info",
+      "message": "노린 요소가 확정되지 않음: 숨겨진 정체·비밀"
+    }
+  ]
+}

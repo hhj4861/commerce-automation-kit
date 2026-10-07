@@ -1,0 +1,12 @@
+{
+  "gate": "topic-tyrant-of-storage",
+  "stage": "topic",
+  "ok": true,
+  "fingerprint": "c2e35b10d84f7f80",
+  "findings": [
+    {
+      "severity": "info",
+      "message": "노린 요소가 확정되지 않음: 복수"
+    }
+  ]
+}

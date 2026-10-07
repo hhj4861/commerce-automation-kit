@@ -1,0 +1,433 @@
+{
+  "seriesId": "day-zero",
+  "no": 2,
+  "title": "물린 아이",
+  "cuts": [
+    {
+      "id": "c1",
+      "locationId": "aisle",
+      "durationSec": 10,
+      "cast": [
+        {
+          "characterId": "seoyun",
+          "lookId": "present"
+        },
+        {
+          "characterId": "minjae",
+          "lookId": "base"
+        },
+        {
+          "characterId": "misuk",
+          "lookId": "base"
+        }
+      ],
+      "action": "[편집: 콜드 오픈 2초 — 7컷에서 오창식이 치켜든 쇠파이프를 서윤이 맨손으로 붙잡는 순간을 먼저 보여 주고 자막 \"10분 전\"] 셔터가 내려진 통로에 사람들이 모여 웅성거린다. 열쇠 꾸러미를 쥔 서윤이 민재를 불러 쪽문도 잠겼는지 확인해 달라고 한다.",
+      "visualEn": "In {location}, the loading shutter is fully closed and survivors murmur in small groups. {seoyun}, gripping the key ring, turns to {minjae} and points at the small side door next to the shutter. {misuk} watches nervously in the background.",
+      "lines": [
+        {
+          "speaker": "seoyun",
+          "text": "민재 씨, 쪽문도 잠겼는지 봐 줘요.",
+          "kind": "dialogue",
+          "verification": {
+            "status": "unverified"
+          }
+        },
+        {
+          "speaker": "minjae",
+          "text": "네, 누나.",
+          "kind": "dialogue",
+          "verification": {
+            "status": "unverified"
+          }
+        }
+      ],
+      "caption": "새벽 2시 20분",
+      "propState": {
+        "셔터": "끝까지 내려짐",
+        "창고 열쇠 꾸러미": "서윤이 쥠",
+        "쪽문": "닫힘",
+        "쇠파이프": "랙에 기대 있음"
+      }
+    },
+    {
+      "id": "c2",
+      "locationId": "aisle",
+      "durationSec": 12,
+      "cast": [
+        {
+          "characterId": "minjae",
+          "lookId": "base"
+        }
+      ],
+      "action": "민재가 셔터 옆 쪽문으로 가 손잡이를 확인한다. 문 너머에서 무언가 긁는 소리가 난다. 민재가 문에 귀를 가져다 댄다.",
+      "visualEn": "In {location}, {minjae} walks to the small grey side door beside the shutter and tests the handle. A faint scratching sound comes from the other side. He hesitates, then slowly presses his ear to the door. Tense, quiet.",
+      "lines": [
+        {
+          "speaker": "minjae",
+          "text": "…무슨 소리지?",
+          "kind": "dialogue",
+          "verification": {
+            "status": "unverified"
+          }
+        }
+      ],
+      "sfx": "faint scratching on metal, low breathing outside",
+      "propState": {
+        "셔터": "끝까지 내려짐",
+        "창고 열쇠 꾸러미": "서윤이 쥠",
+        "쪽문": "닫힘",
+        "쇠파이프": "랙에 기대 있음"
+      }
+    },
+    {
+      "id": "c3",
+      "locationId": "aisle",
+      "durationSec": 10,
+      "cast": [
+        {
+          "characterId": "minjae",
+          "lookId": "base"
+        }
+      ],
+      "action": "쪽문이 덜컥 열리며 문틈으로 회색 손이 뻗어 나와 민재의 팔을 끌어당기고, 문틈 너머에서 민재의 팔이 물린다. 무는 순간은 보이지 않고 비명 지르는 민재의 얼굴로 넘어간다. 피는 없다.",
+      "visualEn": "In {location}, the side door jolts open a few inches; a grey hand shoots through the gap, seizes the forearm of {minjae} and yanks his arm into the gap out of view; the shot cuts to his face as he screams. The bite itself is never shown. Non-graphic, no blood.",
+      "lines": [
+        {
+          "speaker": "minjae",
+          "text": "아악! 누나!",
+          "kind": "dialogue",
+          "verification": {
+            "status": "unverified"
+          }
+        }
+      ],
+      "sfx": "door slam, scream",
+      "propState": {
+        "셔터": "끝까지 내려짐",
+        "창고 열쇠 꾸러미": "서윤이 쥠",
+        "쪽문": "살짝 열림",
+        "쇠파이프": "랙에 기대 있음"
+      }
+    },
+    {
+      "id": "c4",
+      "locationId": "aisle",
+      "durationSec": 12,
+      "cast": [
+        {
+          "characterId": "seoyun",
+          "lookId": "present"
+        },
+        {
+          "characterId": "minjae",
+          "lookId": "base"
+        },
+        {
+          "characterId": "misuk",
+          "lookId": "base"
+        }
+      ],
+      "action": "서윤이 달려와 쪽문을 발로 차 닫고 잠근 뒤 민재를 끌어낸다. 민재의 팔뚝에 멍 같은 흐린 이빨 자국이 보인다. 미숙이 그것을 보고 소리친다.",
+      "visualEn": "In {location}, {seoyun} sprints in, kicks the side door shut and locks it, then drags {minjae} away. On his forearm is a faint bruise-like ring of tooth marks, no blood. {misuk} sees it and points, horrified.",
+      "lines": [
+        {
+          "speaker": "misuk",
+          "text": "물렸어… 저 팔 좀 봐요!",
+          "kind": "dialogue",
+          "verification": {
+            "status": "unverified"
+          }
+        }
+      ],
+      "propState": {
+        "셔터": "끝까지 내려짐",
+        "창고 열쇠 꾸러미": "서윤이 쥠",
+        "쪽문": "잠김",
+        "쇠파이프": "랙에 기대 있음"
+      }
+    },
+    {
+      "id": "c5",
+      "locationId": "aisle",
+      "durationSec": 12,
+      "cast": [
+        {
+          "characterId": "changsik",
+          "lookId": "base"
+        },
+        {
+          "characterId": "taesu",
+          "lookId": "base"
+        },
+        {
+          "characterId": "minjae",
+          "lookId": "base"
+        },
+        {
+          "characterId": "seoyun",
+          "lookId": "present"
+        }
+      ],
+      "action": "사람들이 비명을 지르며 물러선다. 오창식이 랙에 기대 있던 쇠파이프를 뽑아 들고, 태수가 통로 출구를 막아선다.",
+      "visualEn": "In {location}, survivors scream and scatter back. {changsik} yanks a steel pipe from the pallet rack and shouts at {minjae}, who is on the floor clutching his arm next to {seoyun}. {taesu} plants himself across the aisle, blocking the way out.",
+      "lines": [
+        {
+          "speaker": "changsik",
+          "text": "다들 떨어져! 저놈 곧 변해!",
+          "kind": "dialogue",
+          "verification": {
+            "status": "unverified"
+          }
+        }
+      ],
+      "propState": {
+        "셔터": "끝까지 내려짐",
+        "창고 열쇠 꾸러미": "서윤이 쥠",
+        "쪽문": "잠김",
+        "쇠파이프": "오창식이 쥠"
+      }
+    },
+    {
+      "id": "c6",
+      "locationId": "aisle",
+      "durationSec": 12,
+      "cast": [
+        {
+          "characterId": "seoyun",
+          "lookId": "present"
+        },
+        {
+          "characterId": "changsik",
+          "lookId": "base"
+        },
+        {
+          "characterId": "minjae",
+          "lookId": "base"
+        }
+      ],
+      "action": "서윤이 민재와 오창식 사이를 막아선다. 서윤 등 뒤에서 민재가 떨고 있다.",
+      "visualEn": "In {location}, {seoyun} steps squarely between {minjae} and {changsik}, arms slightly spread, calm. Behind her {minjae} trembles, holding his bitten arm. {changsik} grips the pipe, sneering.",
+      "lines": [
+        {
+          "speaker": "seoyun",
+          "text": "이 사람은 안 변해요.",
+          "kind": "dialogue",
+          "verification": {
+            "status": "unverified"
+          }
+        },
+        {
+          "speaker": "changsik",
+          "text": "알바 주제에 네가 그걸 어떻게 알아?",
+          "kind": "dialogue",
+          "verification": {
+            "status": "unverified"
+          }
+        }
+      ],
+      "propState": {
+        "셔터": "끝까지 내려짐",
+        "창고 열쇠 꾸러미": "서윤이 쥠",
+        "쪽문": "잠김",
+        "쇠파이프": "오창식이 쥠"
+      }
+    },
+    {
+      "id": "c7",
+      "locationId": "aisle",
+      "durationSec": 10,
+      "cast": [
+        {
+          "characterId": "seoyun",
+          "lookId": "present"
+        },
+        {
+          "characterId": "changsik",
+          "lookId": "base"
+        }
+      ],
+      "action": "오창식이 쇠파이프를 위협하듯 치켜드는 순간, 서윤이 그 파이프를 맨손으로 붙잡아 멈춘다. 아무도 다치지 않는다.",
+      "visualEn": "In {location}, {changsik} raises the steel pipe threateningly; before he can move, {seoyun} grabs it with one bare hand and holds it still, eyes locked on his. Standoff, no strike, nobody is hurt.",
+      "lines": [
+        {
+          "speaker": "seoyun",
+          "text": "십 년 동안 봤으니까요.",
+          "kind": "dialogue",
+          "verification": {
+            "status": "unverified"
+          }
+        }
+      ],
+      "sfx": "tense silence, grip on metal",
+      "propState": {
+        "셔터": "끝까지 내려짐",
+        "창고 열쇠 꾸러미": "서윤이 쥠",
+        "쪽문": "잠김",
+        "쇠파이프": "오창식이 쥠"
+      }
+    },
+    {
+      "id": "c8",
+      "locationId": "aisle",
+      "durationSec": 12,
+      "cast": [
+        {
+          "characterId": "seoyun",
+          "lookId": "present"
+        },
+        {
+          "characterId": "changsik",
+          "lookId": "base"
+        },
+        {
+          "characterId": "misuk",
+          "lookId": "base"
+        },
+        {
+          "characterId": "taesu",
+          "lookId": "base"
+        }
+      ],
+      "action": "정적. 서윤이 파이프를 비틀어 빼앗아 바닥에 던진다. 쨍그랑 소리가 울린다. 서윤이 모두를 둘러보며 말한다.",
+      "visualEn": "In {location}, silence. {seoyun} twists the pipe out of the grip of {changsik} and tosses it onto the floor with a loud clang. She looks around at {misuk}, {taesu} and the others, steady and commanding.",
+      "lines": [
+        {
+          "speaker": "seoyun",
+          "text": "한 시간만 지켜봐요. 변하면 그때 내보내요.",
+          "kind": "dialogue",
+          "verification": {
+            "status": "unverified"
+          }
+        }
+      ],
+      "sfx": "metal pipe clattering on concrete",
+      "propState": {
+        "셔터": "끝까지 내려짐",
+        "창고 열쇠 꾸러미": "서윤이 쥠",
+        "쪽문": "잠김",
+        "쇠파이프": "바닥에 떨어짐"
+      }
+    },
+    {
+      "id": "c9",
+      "locationId": "aisle",
+      "durationSec": 12,
+      "cast": [
+        {
+          "characterId": "seoyun",
+          "lookId": "present"
+        },
+        {
+          "characterId": "minjae",
+          "lookId": "base"
+        },
+        {
+          "characterId": "misuk",
+          "lookId": "base"
+        }
+      ],
+      "action": "망설이던 미숙이 구급상자를 가져와 민재의 팔에 붕대를 감아 준다. 민재의 눈에 눈물이 고인다.",
+      "visualEn": "In {location}, {misuk} hesitates, then kneels with a first-aid kit and wraps a bandage around the forearm of {minjae}. His eyes fill with tears as he looks up at {seoyun}, who crouches beside him.",
+      "lines": [
+        {
+          "speaker": "minjae",
+          "text": "누나… 저 진짜 괜찮은 거예요?",
+          "kind": "dialogue",
+          "verification": {
+            "status": "unverified"
+          }
+        },
+        {
+          "speaker": "seoyun",
+          "text": "괜찮아요. 제가 알아요.",
+          "kind": "dialogue",
+          "verification": {
+            "status": "unverified"
+          }
+        }
+      ],
+      "propState": {
+        "셔터": "끝까지 내려짐",
+        "창고 열쇠 꾸러미": "서윤이 쥠",
+        "쪽문": "잠김",
+        "쇠파이프": "바닥에 떨어짐",
+        "구급상자": "미숙이 엶"
+      }
+    },
+    {
+      "id": "c10",
+      "locationId": "aisle",
+      "durationSec": 10,
+      "cast": [
+        {
+          "characterId": "parkys",
+          "lookId": "base"
+        },
+        {
+          "characterId": "minjae",
+          "lookId": "base"
+        },
+        {
+          "characterId": "seoyun",
+          "lookId": "present"
+        }
+      ],
+      "action": "멀찍이서 사람들을 다독이던 박반장이 웃는 얼굴로 민재의 붕대를 오래 바라보다가, 천천히 어두운 복도로 사라진다. 서윤이 멀리서 그 뒷모습을 지켜보며, 10년 전 그가 셔터를 열던 밤을 떠올린다. 서윤은 그를 막지 않고 일부러 보내 준다.",
+      "visualEn": "In {location}, at a distance, {parkys} pats a worker's shoulder with a kind smile, but his eyes stay fixed on the bandaged arm of {minjae}. He quietly backs away into a dark corridor. Across the aisle, {seoyun} watches him go without moving, cold and patient, and murmurs to herself.",
+      "lines": [
+        {
+          "speaker": "seoyun",
+          "text": "어디 한번 해 봐요.",
+          "kind": "dialogue",
+          "verification": {
+            "status": "unverified"
+          }
+        }
+      ],
+      "propState": {
+        "셔터": "끝까지 내려짐",
+        "창고 열쇠 꾸러미": "서윤이 쥠",
+        "쪽문": "잠김",
+        "쇠파이프": "바닥에 떨어짐",
+        "구급상자": "미숙이 엶"
+      }
+    },
+    {
+      "id": "c11",
+      "locationId": "control",
+      "durationSec": 12,
+      "cast": [
+        {
+          "characterId": "parkys",
+          "lookId": "base"
+        }
+      ],
+      "action": "관제실. 박반장이 책상 서랍에서 무전기를 꺼내 문 쪽을 살핀 뒤 낮게 속삭인다.",
+      "visualEn": "In {location}, {parkys} slips in, opens the desk drawer and takes out a handheld two-way radio. He glances at the door, then raises the radio and whispers into it, his warm smile completely gone.",
+      "lines": [
+        {
+          "speaker": "parkys",
+          "text": "물려도 안 변하는 놈이 있어.",
+          "kind": "dialogue",
+          "verification": {
+            "status": "unverified"
+          }
+        },
+        {
+          "speaker": "parkys",
+          "text": "그놈 값은 따로 받아야겠어.",
+          "kind": "dialogue",
+          "verification": {
+            "status": "unverified"
+          }
+        }
+      ],
+      "sfx": "faint radio static",
+      "caption": "3화에서 계속",
+      "propState": {
+        "무전기": "박반장이 쥠",
+        "책상 서랍": "열림"
+      }
+    }
+  ]
+}

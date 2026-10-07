@@ -1,0 +1,16 @@
+{
+  "ok": true,
+  "report": {
+    "gate": "props",
+    "stage": "episode",
+    "ok": true,
+    "fingerprint": "3bde23248fef69c1",
+    "findings": [
+      {
+        "severity": "review",
+        "message": "props 미확정(pass 0.84/0.92)",
+        "cutId": "c7"
+      }
+    ]
+  }
+}

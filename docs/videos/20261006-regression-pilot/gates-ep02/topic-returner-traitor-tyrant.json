@@ -1,0 +1,12 @@
+{
+  "gate": "topic-returner-traitor-tyrant",
+  "stage": "topic",
+  "ok": true,
+  "fingerprint": "856a6422fa7ddd43",
+  "findings": [
+    {
+      "severity": "info",
+      "message": "노린 요소가 확정되지 않음: 숨겨진 정체·비밀"
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "gate": "topic-day-zero-warehouse",
+  "stage": "topic",
+  "ok": true,
+  "fingerprint": "842e34c2141ccca8",
+  "findings": [
+    {
+      "severity": "info",
+      "message": "노린 요소가 확정되지 않음: 숨겨진 정체·비밀"
+    },
+    {
+      "severity": "info",
+      "message": "노린 요소가 확정되지 않음: 배신"
+    },
+    {
+      "severity": "info",
+      "message": "노린 요소가 확정되지 않음: 복수"
+    }
+  ]
+}
