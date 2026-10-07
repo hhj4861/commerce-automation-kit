@@ -23,6 +23,9 @@
     "유혈·절단·부상 묘사 금지",
     "무기와 도구는 장소에 실제로 있는 물건만 쓴다"
   ],
+  "safetyChecks": {
+    "violence-boundary": { "task": "Is the violence at the level of a Korean 15+ TV zombie drama: genre action such as zombie attacks, a bite shown without blood, fights, weapon threats and kills that happen off-screen or in a cutaway, with no blood spray, gore, dismemberment, exposed wounds or lingering on injury?", "pass": "Genre action stays at 15+ TV drama level: attacks, bite marks without blood, fights, weapon threats and cutaway kills, all without gore.", "fail": "It shows blood spray, gore, dismemberment, exposed wounds, or lingers on injury or suffering.", "undecided": "review" }
+  },
   "bannedWords": ["씨발", "개새끼", "병신", "이년", "저년"],
   "structure": { "pilotCuts": 7, "episodeMinutes": [3, 8] }
 }

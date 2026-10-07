@@ -7,6 +7,12 @@ describe('genre packs', () => {
     expect(ids).toEqual(expect.arrayContaining(['hidden-master-revenge', 'regression-apocalypse']));
     expect(ids.some((id) => id.startsWith('_'))).toBe(false);
   });
+  it('regression-apocalypse allows genre action violence but keeps sexual boundary strict', () => {
+    const g = loadGenre('regression-apocalypse');
+    expect(g.safetyChecks['violence-boundary']!.undecided).toBe('review');
+    expect(g.safetyChecks['violence-boundary']!.pass).toMatch(/bite/i);
+    expect(g.safetyChecks['sexual-boundary']!.undecided ?? 'block').toBe('block');
+  });
   it('loads regression-apocalypse with five scenario checks', () => {
     const g = loadGenre('regression-apocalypse');
     expect(Object.keys(g.scenarioChecks).sort()).toEqual(['cliffhanger', 'conflict', 'genre', 'hook', 'payoff']);

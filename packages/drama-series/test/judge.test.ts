@@ -156,6 +156,19 @@ describe('applyVerdicts', () => {
     const unsafe = applyVerdicts('scenario', c, expected(qs), answer(qs, (id) => (id === 'scenario__safe__sexual-boundary' ? ['pass', 0.5, 0.7] : ['pass', 0.95, 0.97])), 'r', 'now');
     expect(unsafe.report.ok).toBe(false);
   });
+  it('a safety check may mark undecided as review, but a decided fail still blocks', () => {
+    // 2026-10-07: 장르 액션(피 없는 물림·무기 위협)이 0.78/0.89 로 매번 미확정 차단됐다 → 폭력은 장르 팩이 기준을 정한다.
+    const c = ctx();
+    c.genre = { ...c.genre, safetyChecks: { ...c.genre.safetyChecks, 'violence-boundary': { ...c.genre.safetyChecks['violence-boundary']!, undecided: 'review' } } };
+    const qs = buildQuestions('scenario', c);
+    const pick = (fail: boolean) => (id: string): ['pass' | 'fail', number, number] =>
+      id === 'scenario__safe__violence-boundary' ? (fail ? ['fail', 0.95, 0.97] : ['pass', 0.78, 0.89]) : ['pass', 0.95, 0.97];
+    const undecided = applyVerdicts('scenario', c, expected(qs), answer(qs, pick(false)), 'r', 'now');
+    expect(undecided.report.ok).toBe(true);
+    expect(undecided.report.findings.find((f) => /violence-boundary/.test(f.message))!.severity).toBe('review');
+    const failed = applyVerdicts('scenario', c, expected(qs), answer(qs, pick(true)), 'r', 'now');
+    expect(failed.report.ok).toBe(false);
+  });
   it('props: undecided is review', () => {
     const c = ctx();
     const qs = buildQuestions('props', c);

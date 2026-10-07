@@ -166,8 +166,8 @@ export function applyVerdicts(kind: EpisodeJudgeKind, ctx: GateContext, expected
         findings.push({ severity: 'info', message: `${label} ${v.level}/${v.levels} (확신도 ${v.confidence.toFixed(2)}, 참고용)` });
         continue;
       }
-      // 수위 안전은 미확정도 통과로 보지 않는다.
-      const safety = label.startsWith('safe__');
+      // 수위 안전은 미확정도 통과로 보지 않는다 — 장르 팩이 undecided:'review' 로 완화한 항목만 예외.
+      const safety = label.startsWith('safe__') && (ctx.genre.safetyChecks[label.slice('safe__'.length)]?.undecided ?? 'block') === 'block';
       if (v.decided && v.choice === 'fail') findings.push({ severity: 'block', message: `${label} 확정 fail`, cutId });
       else if (!v.decided) findings.push({ severity: safety ? 'block' : 'review', message: `${label} 미확정(${v.choice} ${v.confidence.toFixed(2)}/${v.probability.toFixed(2)})${safety ? ' — 수위 표현을 고쳐 재판정' : ''}`, cutId });
     }

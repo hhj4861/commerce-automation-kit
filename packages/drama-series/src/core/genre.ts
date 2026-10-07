@@ -4,6 +4,8 @@ import { z } from 'zod';
 
 const KEY = z.string().regex(/^[a-z-]+$/);
 const check = z.object({ task: z.string().min(10), pass: z.string().min(5), fail: z.string().min(5) });
+/** 수위 판정. undecided = 판정기가 확신하지 못했을 때 처리(기본 block). 확정 fail 은 항상 block */
+const safetyCheck = check.extend({ undecided: z.enum(['block', 'review']).optional() });
 const element = check.extend({ name: z.string().min(1) });
 const score = z.object({ task: z.string().min(10), levels: z.array(z.string().min(3)).min(2).max(10) });
 
@@ -20,7 +22,7 @@ export const genreSchema = z
     /** 재미 요소 점수(참고용, 차단하지 않음) */
     funChecks: z.record(KEY, score),
     /** 수위 경계. 주제·시나리오 모두에 적용 */
-    safetyChecks: z.record(KEY, check).refine((o) => Object.keys(o).length >= 1, '수위 안전 판정은 1개 이상'),
+    safetyChecks: z.record(KEY, safetyCheck).refine((o) => Object.keys(o).length >= 1, '수위 안전 판정은 1개 이상'),
     dialogueStyle: z.array(z.string().min(1)),
     actionRules: z.array(z.string().min(1)),
     bannedWords: z.array(z.string().min(1)),
