@@ -68,9 +68,11 @@ export function scoreTranscript(lines: string[], transcript: string): LineScore[
 }
 
 /** 조립 전 확인: 대사가 있는 모든 컷에 현재 대본 기준으로 통과한 받아쓰기 대조 기록이 있어야 한다. */
-export function transcriptReadiness(ctx: GateContext, reports: DramaGateReport[]): DramaFinding[] {
+/** cutIds 를 주면 그 컷만 확인한다(회차 일부만 조립할 때). 지문은 항상 회차 전체 기준. */
+export function transcriptReadiness(ctx: GateContext, reports: DramaGateReport[], cutIds?: string[]): DramaFinding[] {
   const fp = fingerprintOf(ctx.series, ctx.episode);
   return ctx.episode.cuts
+    .filter((c) => !cutIds || cutIds.includes(c.id))
     .filter((c) => c.lines.some((l) => l.kind === 'dialogue'))
     .flatMap((c): DramaFinding[] => {
       const r = reports.filter((x) => x.gate === `transcript-${c.id}`).at(-1);

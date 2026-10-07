@@ -35,6 +35,25 @@ describe('assemble args', () => {
     expect(graph.match(/drawtext=/g)!.length).toBe(graph.match(/expansion=none/g)!.length);
     expect(args.at(-1)).toBe('o.mp4');
   });
+  it('builds a vertical blur-fill layout with a pinned title and subtitles outside the picture band', () => {
+    const args = buildAssembleArgs({
+      clips: [{ file: 'a.mp4', durationSec: 4, transitionIn: 'cut' }],
+      cues: [
+        { startSec: 0.2, endSec: 3.9, textFile: '/w/cue-0.txt', position: 'bottom' },
+        { startSec: 0.2, endSec: 2.9, textFile: '/w/cue-1.txt', position: 'top' },
+      ],
+      aiLabelFile: null, titleFile: '/w/title.txt', layout: 'blur-fill', fontFile: FONT, out: 'o.mp4', width: 1080, height: 1920, fps: 24,
+    });
+    const graph = args[args.indexOf('-filter_complex') + 1]!;
+    expect(graph).toContain('boxblur');
+    expect(graph).toContain('overlay=(W-w)/2:(H-h)/2');
+    expect(graph).toContain("textfile='/w/title.txt'");
+    // 가로 1080 의 16:9 화면 띠는 세로 656~1264 — 자막은 그 아래, 캡션은 그 위
+    expect(graph).toMatch(/cue-0\.txt'[^\[]*:y=13\d\d/);
+    expect(graph).toMatch(/cue-1\.txt'[^\[]*:y=[45]\d\d:/);
+    // 세로 화면 글자 크기는 가로폭 기준(한 줄 20자가 1080 안에 들어가야 함)
+    expect(graph).toContain('fontsize=54');
+  });
   it('refuses an empty clip list', () => {
     expect(() => buildAssembleArgs({ clips: [], cues: [], aiLabelFile: null, fontFile: FONT, out: 'o.mp4', width: 1, height: 1, fps: 24 })).toThrow();
   });

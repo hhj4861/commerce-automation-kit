@@ -21,10 +21,16 @@ export interface AssembleClip {
   transitionIn: DramaTransition;
 }
 
+/** fit = 비율 유지 + 검은 여백, blur-fill = 흐린 배경으로 채우고 원본은 가운데(가로 영상을 세로 쇼츠로) */
+export type AssembleLayout = 'fit' | 'blur-fill';
+
 export interface AssembleSpec {
   clips: AssembleClip[];
   cues: AssembleCue[];
   aiLabelFile: string | null;
+  /** 영상 내내 위쪽에 고정되는 제목(쇼츠용). 없으면 넣지 않는다 */
+  titleFile?: string | null;
+  layout?: AssembleLayout;
   fontFile: string;
   out: string;
   width: number;
@@ -64,9 +70,17 @@ export function buildAssembleArgs(s: AssembleSpec): string[] {
   const { width: W, height: H, fps } = s;
   const inputs: string[] = [];
   const parts: string[] = [];
+  const layout = s.layout ?? 'fit';
   s.clips.forEach((c, i) => {
     inputs.push('-i', c.file);
-    parts.push(`[${i}:v]scale=${W}:${H}:force_original_aspect_ratio=decrease,pad=${W}:${H}:(ow-iw)/2:(oh-ih)/2,setsar=1,fps=${fps},format=yuv420p${FADE[c.transitionIn]}[v${i}]`);
+    if (layout === 'blur-fill') {
+      parts.push(`[${i}:v]split[s${i}a][s${i}b]`);
+      parts.push(`[s${i}a]scale=${W}:${H}:force_original_aspect_ratio=increase,crop=${W}:${H},boxblur=20:2,setsar=1[bg${i}]`);
+      parts.push(`[s${i}b]scale=${W}:-2,setsar=1[fg${i}]`);
+      parts.push(`[bg${i}][fg${i}]overlay=(W-w)/2:(H-h)/2,fps=${fps},format=yuv420p${FADE[c.transitionIn]}[v${i}]`);
+    } else {
+      parts.push(`[${i}:v]scale=${W}:${H}:force_original_aspect_ratio=decrease,pad=${W}:${H}:(ow-iw)/2:(oh-ih)/2,setsar=1,fps=${fps},format=yuv420p${FADE[c.transitionIn]}[v${i}]`);
+    }
     parts.push(`[${i}:a]aresample=48000,aformat=channel_layouts=stereo[a${i}]`);
   });
   parts.push(`${s.clips.map((_, i) => `[v${i}][a${i}]`).join('')}concat=n=${s.clips.length}:v=1:a=1[vc][ac]`);
@@ -78,8 +92,19 @@ export function buildAssembleArgs(s: AssembleSpec): string[] {
     parts.push(`[${label}]drawtext=fontfile='${font}':textfile='${escapeFilterValue(textFile)}':fontsize=${size}:fontcolor=white:borderw=3:bordercolor=black:expansion=none:x=${x}:y=${y}:enable='${enable}'[${next}]`);
     label = next;
   };
-  for (const c of s.cues)
-    draw(c.textFile, Math.round(H * 0.055), '(w-text_w)/2', c.position === 'top' ? `${Math.round(H * 0.12)}` : `h-text_h-${Math.round(H * 0.08)}`, `between(t,${c.startSec},${c.endSec})`);
+  const vertical = H > W;
+  // 세로 화면은 가로폭 기준(한 줄 약 20자가 들어가게), 가로 화면은 높이 기준
+  const size = vertical ? Math.round(W * 0.05) : Math.round(H * 0.055);
+  // blur-fill 이면 원본 16:9 화면 띠 바깥(위·아래 빈 공간)에 글자를 둔다
+  const band = layout === 'blur-fill' ? Math.round((W * 9) / 16) : H;
+  const bandTop = Math.round((H - band) / 2);
+  const gap = Math.round(H * 0.04);
+  const cueY = (pos: 'top' | 'bottom') =>
+    layout === 'blur-fill'
+      ? `${pos === 'top' ? bandTop - size - gap : bandTop + band + gap}`
+      : pos === 'top' ? `${Math.round(H * 0.12)}` : `h-text_h-${Math.round(H * 0.08)}`;
+  for (const c of s.cues) draw(c.textFile, size, '(w-text_w)/2', cueY(c.position), `between(t,${c.startSec},${c.endSec})`);
+  if (s.titleFile) draw(s.titleFile, Math.round(size * 1.3), '(w-text_w)/2', `${Math.round(H * 0.1)}`, 'gte(t,0)');
   if (s.aiLabelFile) draw(s.aiLabelFile, Math.round(H * 0.035), 'w-text_w-24', '24', 'lt(t,2)');
   parts.push(`[${label}]null[vout]`);
   parts.push('[ac]loudnorm=I=-14:TP=-1.5:LRA=11[aout]');

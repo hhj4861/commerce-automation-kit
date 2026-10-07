@@ -66,6 +66,14 @@ describe('transcript gate', () => {
     // 2026-10-06: small/medium 이 실제로 발음된 대사를 "아이고"·"샤토"로 적거나 통째로 빠뜨렸다. large-v3 는 같은 클립을 정확히 받아썼다.
     expect(DEFAULT_WHISPER_MODEL).toBe('large-v3');
   });
+  it('readiness can be limited to the cuts being assembled', () => {
+    const c = ctx();
+    const all = transcriptReadiness(c, []);
+    const dialogueCuts = [...new Set(all.map((f) => f.cutId))];
+    expect(dialogueCuts.length).toBeGreaterThan(1);
+    const only = transcriptReadiness(c, [], [dialogueCuts[0]!]);
+    expect(only.map((f) => f.cutId)).toEqual([dialogueCuts[0]]);
+  });
   it('parses whisper JSON output', () => {
     expect(parseWhisperJson({ text: ' 넌 또 뭐야? ', segments: [] })).toBe('넌 또 뭐야?');
     expect(() => parseWhisperJson({ segments: [] })).toThrow(TranscribeError);

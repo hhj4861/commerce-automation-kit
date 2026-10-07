@@ -11,6 +11,7 @@
  *   plan         --series --episode --gates dir --budget <크레딧> [--resolution 480p] [--draft] [--aspect 16:9] --out plan.json
  *   verify-clip  --series --episode --cut c2 --gates dir (--transcript whisper.json | --media clip.mp4 [--work dir])
  *   assemble     --series s.json --episode e.json --gates dir --clips <dir: cutId.mp4> --out ep.mp4 --font <ttc> [--work dir] [--no-ai-label]
+ *                [--cuts c1,c2,…(회차 일부만)] [--aspect 16:9|9:16(세로는 흐린 배경 채우기)] [--title <쇼츠 상단 고정 제목>]
  *
  * stdout = JSON. 종료 코드 0 정상 / 1 차단·검증 실패 / 2 사용법 오류.
  */
@@ -226,14 +227,19 @@ function main(argv: string[]): number {
     }
 
     case 'assemble': {
-      const o = opts(rest, { series: 'string', episode: 'string', gates: 'string', clips: 'string', out: 'string', font: 'string', work: 'string', 'no-ai-label': 'boolean' });
+      const o = opts(rest, { series: 'string', episode: 'string', gates: 'string', clips: 'string', out: 'string', font: 'string', work: 'string', 'no-ai-label': 'boolean', cuts: 'string', aspect: 'string', title: 'string' });
       const ctx = loadCtx(o);
-      const notReady = transcriptReadiness(ctx, loadReports(req(o, 'gates')));
+      const cutIds = optStr(o, 'cuts')?.split(',').map((x) => x.trim()).filter(Boolean);
+      const unknown = cutIds?.filter((id) => !ctx.episode.cuts.some((c) => c.id === id)) ?? [];
+      if (unknown.length) throw new UsageError(`대본에 없는 컷: ${unknown.join(', ')}`);
+      const aspect = optStr(o, 'aspect') ?? '16:9';
+      if (!['16:9', '9:16'].includes(aspect)) throw new UsageError('--aspect 는 16:9|9:16');
+      const notReady = transcriptReadiness(ctx, loadReports(req(o, 'gates')), cutIds);
       if (notReady.length) {
         out({ ok: false, problem: '받아쓰기 대조를 통과하지 않은 컷이 있어 조립하지 않음', findings: notReady });
         return 1;
       }
-      const episode = ctx.episode;
+      const episode = cutIds ? { ...ctx.episode, cuts: ctx.episode.cuts.filter((c) => cutIds.includes(c.id)) } : ctx.episode;
       const dir = abs(req(o, 'clips'));
       const target = abs(req(o, 'out'));
       const result = assembleEpisode({
@@ -243,6 +249,8 @@ function main(argv: string[]): number {
         fontFile: abs(req(o, 'font')),
         workDir: abs(optStr(o, 'work') ?? join(dirname(target), '.assemble')),
         aiLabel: o['no-ai-label'] === true ? null : 'AI로 생성된 영상입니다',
+        title: optStr(o, 'title') ?? null,
+        ...(aspect === '9:16' ? { layout: 'blur-fill' as const, width: 1080, height: 1920 } : {}),
       });
       out({ ok: true, ...result });
       return 0;
