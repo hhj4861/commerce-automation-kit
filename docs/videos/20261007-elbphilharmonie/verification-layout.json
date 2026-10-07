@@ -1,0 +1,101 @@
+{
+  "final": "/Users/admin/Downloads/vedio/elbphilharmonie-webtoon-3d-v3.mp4",
+  "duration": 81.95833333333333,
+  "frames": 1967,
+  "resolution": [
+    1080,
+    1920
+  ],
+  "fps": 24,
+  "bytes": 63753965,
+  "sha256": "6f60a582f69e639759bac490aecec1475918cbb37091c8ff5bd8464a7cadc18c",
+  "checks": {
+    "decode": true,
+    "audioVideoDuration": true,
+    "completeNarrationCaptionCoverage": true,
+    "endingHoldSeconds": 2.717335600907024,
+    "clipFrames": [
+      {
+        "id": "approach",
+        "valid": true,
+        "expectedFrames": 242
+      },
+      {
+        "id": "transmission",
+        "valid": true,
+        "expectedFrames": 147
+      },
+      {
+        "id": "cutaway",
+        "valid": true,
+        "expectedFrames": 213
+      },
+      {
+        "id": "spring_detail",
+        "valid": true,
+        "expectedFrames": 108
+      },
+      {
+        "id": "comparison",
+        "valid": true,
+        "expectedFrames": 85
+      },
+      {
+        "id": "rigid",
+        "valid": true,
+        "expectedFrames": 88
+      },
+      {
+        "id": "spring_action",
+        "valid": true,
+        "expectedFrames": 135
+      },
+      {
+        "id": "mass",
+        "valid": true,
+        "expectedFrames": 121
+      },
+      {
+        "id": "isolation",
+        "valid": true,
+        "expectedFrames": 136
+      },
+      {
+        "id": "air",
+        "valid": true,
+        "expectedFrames": 171
+      },
+      {
+        "id": "closing",
+        "valid": true,
+        "expectedFrames": 92
+      }
+    ]
+  },
+  "paidMedia": {
+    "higgsfieldNewCalls": 0,
+    "ttsNewSentences": 0
+  },
+  "reusedVoiceClips": 7,
+  "voiceId": "RU7aSi6lT4uQBXMLgDxK",
+  "speed": 1.1,
+  "limitations": [
+    "Illustrative reconstruction; structural explanation unchanged."
+  ],
+  "edit": {
+    "removedOverlay": "설명용 단면 · 실제 배치/축척 아님 · 움직임 과장·감속",
+    "captionFirstLineCenterBefore": 1630,
+    "captionFirstLineCenterAfter": 1525,
+    "lineSpacing": 70,
+    "fontSize": 54
+  },
+  "verifiedAt": "2026-10-07T12:41:51.352656+00:00",
+  "encodedAudioUnchangedFromV2": true,
+  "audioAdtsSha256": "a297e91f70fa6b0d078ce2e06a4aad12b33d09441687daf8f63733361c0b8a08",
+  "visualInspection": "Rendered body and ending frames inspected: section note absent, narration subtitles at former note height.",
+  "sourceSha256": {
+    "finish-3d.py": "323ca93e11270a3d1e62a8897b6d4b598eff292b69c229c64037d8ea7d6097a5",
+    "scene-3d.py": "41e1b23302e4f8cb0ab1bbbd7ae01510018ef24872f4fe603a062dc6439d141e",
+    "story.json": "c8c9b422031ef60d9cedd95c533088d922e0070e8cf52286b50b777afddcc66a"
+  }
+}

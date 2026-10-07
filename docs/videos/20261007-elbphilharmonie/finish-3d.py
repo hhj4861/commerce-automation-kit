@@ -5,7 +5,7 @@ import numpy as np
 from PIL import Image,ImageDraw,ImageFont
 P=argparse.ArgumentParser();P.add_argument('mode',choices=['plan','assemble','verify','preview','clips']);P.add_argument('--cache',type=Path,required=True);a=P.parse_args();C=a.cache;V=C/'v2';FPS=24;W,H,SR=1080,1920,44100
 os.environ['TMPDIR']=str(V/'tmp')
-S=json.loads((Path(__file__).parent/'story.json').read_text());OUT=Path('/Users/admin/Downloads/vedio/elbphilharmonie-webtoon-3d-v2.mp4')
+S=json.loads((Path(__file__).parent/'story.json').read_text());OUT=Path('/Users/admin/Downloads/vedio/elbphilharmonie-webtoon-3d-v3.mp4')
 fonts={n:ImageFont.truetype(str(C/'fonts/Pretendard-SemiBold.otf'),n)for n in [24,28,32,36,46,50,54]}
 def run(args):
  r=subprocess.run([str(x)for x in args],capture_output=True)
@@ -75,11 +75,10 @@ def overlay(im,t,tl,shot):
  if shot in ['comparison','mass']:
   text(d,'단단한 연결',(255,580),32,'#c4d1d9');text(d,'스프링 지지',(815,690),32,'#f4cc8d')
  if shot=='transmission':text(d,'벽 → 실내 공기 → 관객',(540,1420),36,'#a3dbe5')
- text(d,'설명용 단면 · 실제 배치/축척 아님 · 움직임 과장·감속',(540,1525),24,'#c5cecb')
  cap=next((x for x in tl['captions']if x['start']<=t<x['end']),None)
  if cap:
   lines=wrap(cap['text'])
-  for i,line in enumerate(lines):text(d,line,(540,1630+i*70),54)
+  for i,line in enumerate(lines):text(d,line,(540,1525+i*70),54)
  if tl['duration']-t<.6:im=Image.blend(Image.new('RGBA',(W,H),'#08121a'),im,max(0,(tl['duration']-t)/.6))
  return im.convert('RGB')
 
@@ -133,7 +132,7 @@ def verify():
  for i,t in enumerate(times):
   f=V/'qa'/f'final-{i}.jpg';run(['ffmpeg','-y','-v','error','-ss',t,'-i',OUT,'-frames:v','1','-vf','scale=270:480',f]);sheet.paste(Image.open(f),((i%4)*270,(i//4)*480))
  sheet.save(V/'qa/final-review.jpg',quality=92)
- result={'final':str(OUT),'duration':tl['duration'],'frames':tl['frames'],'resolution':[W,H],'fps':FPS,'bytes':OUT.stat().st_size,'sha256':hashlib.sha256(OUT.read_bytes()).hexdigest(),'checks':{'decode':True,'audioVideoDuration':True,'completeNarrationCaptionCoverage':True,'endingHoldSeconds':tail,'clipFrames':check_clips()},'paidMedia':{'higgsfieldNewCalls':0,'ttsNewSentences':1},'reusedVoiceClips':6,'voiceId':S['voiceId'],'speed':S['speed'],'limitations':['Illustrative geometric reconstruction, not construction drawings or acoustic simulation.','Actual visual inspection and independent speech check recorded separately.']}
+ result={'final':str(OUT),'duration':tl['duration'],'frames':tl['frames'],'resolution':[W,H],'fps':FPS,'bytes':OUT.stat().st_size,'sha256':hashlib.sha256(OUT.read_bytes()).hexdigest(),'checks':{'decode':True,'audioVideoDuration':True,'completeNarrationCaptionCoverage':True,'endingHoldSeconds':tail,'clipFrames':check_clips()},'paidMedia':{'higgsfieldNewCalls':0,'ttsNewSentences':0},'reusedVoiceClips':7,'voiceId':S['voiceId'],'speed':S['speed'],'limitations':['Illustrative geometric reconstruction, not construction drawings or acoustic simulation.','Actual visual inspection and independent speech check recorded separately.']}
  (V/'verification.json').write_text(json.dumps(result,ensure_ascii=False,indent=2));print(json.dumps(result,ensure_ascii=False))
 
 if a.mode=='plan':plan()
