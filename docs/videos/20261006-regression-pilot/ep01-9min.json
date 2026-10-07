@@ -240,14 +240,14 @@
       "lines": [
         {
           "speaker": "changsik",
-          "text": "이거 놔!",
+          "text": "아이씨!",
           "kind": "dialogue",
           "verification": {
             "status": "human-approved",
             "approvedBy": "user",
-            "at": "2026-10-06T09:04:58.815Z",
-            "note": "JEV 9분판 r2 미확정(ctx p0.64 voice p0.66 nat p0.80 react p0.55) — 사용자 9분 대본 검토 승인 2026-10-06",
-            "lineHash": "b74a4c95fe0fad90"
+            "at": "2026-10-07T03:23:47.082Z",
+            "note": "생성 결과 '이거 놔!'→'아이씨'로 발음, 재생성 대신 대본을 결과에 맞춤(사용자 무료안 승인 2026-10-07)",
+            "lineHash": "88c85cc810c823fd"
           }
         },
         {

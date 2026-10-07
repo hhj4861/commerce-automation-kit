@@ -1,0 +1,375 @@
+{
+  "kind": "props",
+  "fingerprint": "44538686858bcabc",
+  "questions": [
+    {
+      "id": "c1__props",
+      "type": "choice"
+    },
+    {
+      "id": "c1__single-location",
+      "type": "choice"
+    },
+    {
+      "id": "c2__props",
+      "type": "choice"
+    },
+    {
+      "id": "c2__single-location",
+      "type": "choice"
+    },
+    {
+      "id": "c3__props",
+      "type": "choice"
+    },
+    {
+      "id": "c3__single-location",
+      "type": "choice"
+    },
+    {
+      "id": "c4__props",
+      "type": "choice"
+    },
+    {
+      "id": "c4__single-location",
+      "type": "choice"
+    },
+    {
+      "id": "c5__props",
+      "type": "choice"
+    },
+    {
+      "id": "c5__single-location",
+      "type": "choice"
+    },
+    {
+      "id": "c6__props",
+      "type": "choice"
+    },
+    {
+      "id": "c6__single-location",
+      "type": "choice"
+    },
+    {
+      "id": "c7__props",
+      "type": "choice"
+    },
+    {
+      "id": "c7__single-location",
+      "type": "choice"
+    },
+    {
+      "id": "c8__props",
+      "type": "choice"
+    },
+    {
+      "id": "c8__single-location",
+      "type": "choice"
+    },
+    {
+      "id": "c9__props",
+      "type": "choice"
+    },
+    {
+      "id": "c9__single-location",
+      "type": "choice"
+    },
+    {
+      "id": "c10__props",
+      "type": "choice"
+    },
+    {
+      "id": "c10__single-location",
+      "type": "choice"
+    },
+    {
+      "id": "c11__props",
+      "type": "choice"
+    },
+    {
+      "id": "c11__single-location",
+      "type": "choice"
+    },
+    {
+      "id": "c12__props",
+      "type": "choice"
+    },
+    {
+      "id": "c12__single-location",
+      "type": "choice"
+    },
+    {
+      "id": "c13__props",
+      "type": "choice"
+    },
+    {
+      "id": "c13__single-location",
+      "type": "choice"
+    },
+    {
+      "id": "c14__props",
+      "type": "choice"
+    },
+    {
+      "id": "c14__single-location",
+      "type": "choice"
+    },
+    {
+      "id": "c15__props",
+      "type": "choice"
+    },
+    {
+      "id": "c15__single-location",
+      "type": "choice"
+    },
+    {
+      "id": "c16__props",
+      "type": "choice"
+    },
+    {
+      "id": "c16__single-location",
+      "type": "choice"
+    },
+    {
+      "id": "c17__props",
+      "type": "choice"
+    },
+    {
+      "id": "c17__single-location",
+      "type": "choice"
+    },
+    {
+      "id": "c18__props",
+      "type": "choice"
+    },
+    {
+      "id": "c18__single-location",
+      "type": "choice"
+    },
+    {
+      "id": "c19__props",
+      "type": "choice"
+    },
+    {
+      "id": "c19__single-location",
+      "type": "choice"
+    },
+    {
+      "id": "c20__props",
+      "type": "choice"
+    },
+    {
+      "id": "c20__single-location",
+      "type": "choice"
+    },
+    {
+      "id": "c21__props",
+      "type": "choice"
+    },
+    {
+      "id": "c21__single-location",
+      "type": "choice"
+    },
+    {
+      "id": "c22__props",
+      "type": "choice"
+    },
+    {
+      "id": "c22__single-location",
+      "type": "choice"
+    },
+    {
+      "id": "c23__props",
+      "type": "choice"
+    },
+    {
+      "id": "c23__single-location",
+      "type": "choice"
+    },
+    {
+      "id": "c24__props",
+      "type": "choice"
+    },
+    {
+      "id": "c24__single-location",
+      "type": "choice"
+    },
+    {
+      "id": "c25__props",
+      "type": "choice"
+    },
+    {
+      "id": "c25__single-location",
+      "type": "choice"
+    },
+    {
+      "id": "c26__props",
+      "type": "choice"
+    },
+    {
+      "id": "c26__single-location",
+      "type": "choice"
+    },
+    {
+      "id": "c27__props",
+      "type": "choice"
+    },
+    {
+      "id": "c27__single-location",
+      "type": "choice"
+    },
+    {
+      "id": "c28__props",
+      "type": "choice"
+    },
+    {
+      "id": "c28__single-location",
+      "type": "choice"
+    },
+    {
+      "id": "c29__props",
+      "type": "choice"
+    },
+    {
+      "id": "c29__single-location",
+      "type": "choice"
+    },
+    {
+      "id": "c30__props",
+      "type": "choice"
+    },
+    {
+      "id": "c30__single-location",
+      "type": "choice"
+    },
+    {
+      "id": "c31__props",
+      "type": "choice"
+    },
+    {
+      "id": "c31__single-location",
+      "type": "choice"
+    },
+    {
+      "id": "c32__props",
+      "type": "choice"
+    },
+    {
+      "id": "c32__single-location",
+      "type": "choice"
+    },
+    {
+      "id": "c33__props",
+      "type": "choice"
+    },
+    {
+      "id": "c33__single-location",
+      "type": "choice"
+    },
+    {
+      "id": "c34__props",
+      "type": "choice"
+    },
+    {
+      "id": "c34__single-location",
+      "type": "choice"
+    },
+    {
+      "id": "c35__props",
+      "type": "choice"
+    },
+    {
+      "id": "c35__single-location",
+      "type": "choice"
+    },
+    {
+      "id": "c36__props",
+      "type": "choice"
+    },
+    {
+      "id": "c36__single-location",
+      "type": "choice"
+    },
+    {
+      "id": "c37__props",
+      "type": "choice"
+    },
+    {
+      "id": "c37__single-location",
+      "type": "choice"
+    },
+    {
+      "id": "c38__props",
+      "type": "choice"
+    },
+    {
+      "id": "c38__single-location",
+      "type": "choice"
+    },
+    {
+      "id": "c39__props",
+      "type": "choice"
+    },
+    {
+      "id": "c39__single-location",
+      "type": "choice"
+    },
+    {
+      "id": "c40__props",
+      "type": "choice"
+    },
+    {
+      "id": "c40__single-location",
+      "type": "choice"
+    },
+    {
+      "id": "c41__props",
+      "type": "choice"
+    },
+    {
+      "id": "c41__single-location",
+      "type": "choice"
+    },
+    {
+      "id": "c42__props",
+      "type": "choice"
+    },
+    {
+      "id": "c42__single-location",
+      "type": "choice"
+    },
+    {
+      "id": "c43__props",
+      "type": "choice"
+    },
+    {
+      "id": "c43__single-location",
+      "type": "choice"
+    },
+    {
+      "id": "c44__props",
+      "type": "choice"
+    },
+    {
+      "id": "c44__single-location",
+      "type": "choice"
+    },
+    {
+      "id": "c45__props",
+      "type": "choice"
+    },
+    {
+      "id": "c45__single-location",
+      "type": "choice"
+    },
+    {
+      "id": "c46__props",
+      "type": "choice"
+    },
+    {
+      "id": "c46__single-location",
+      "type": "choice"
+    }
+  ],
+  "createdAt": "2026-10-07T03:23:59.651Z"
+}
