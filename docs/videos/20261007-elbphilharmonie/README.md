@@ -2,7 +2,13 @@
 
 새 건축학 웹툰 영상. 이전 벨뤼베이메르 영상은 수정하지 않았다. 사용자의 “내용을 압축하지 말고 시작–연결–종료를 자연스럽게” 요청에 맞춘 별도 제작이다.
 
-## 완성본
+## 최신 완성본 — 본문 3D 재제작 v2
+
+`/Users/admin/Downloads/vedio/elbphilharmonie-webtoon-3d-v2.mp4`
+
+81.958초(약1분22초), 1080×1920, 24fps, 1,967프레임, 약64MB. 기존 Higgsfield 도입6초와 음성6클립을 재사용하고 본문11샷을 실제3D로 교체했다. 인과 설명 한 문장만 새 음성으로 추가했다. 마지막 대사 후2.717초 여유를 유지했다. 아래 v1 파일은 동일 해시로 보존했다. 상세 검증은 `verification-3d.json`.
+
+## 기존 완성본 — v1 기록
 
 - `/Users/admin/Downloads/vedio/elbphilharmonie-webtoon-short.mp4`
 - 75.833초, 1080×1920, 24fps, 1,820프레임, 약20.1MB.
@@ -45,8 +51,30 @@
 
 내부 프롬프트:9:16 관객석에서 본 중앙무대의 바이올린연주자, 포도밭형 테라스 객석과 크림색 음향패널, 따뜻한 조명과 어두운청록그림자, 섬세한웹툰선,글자없음. 수정프롬프트:연주자·객석·구도·조명유지,외부전망유리창만 창없는 연속크림색 음향패널로 교체. 최종 `art/interior.png`.
 
-## 재현
+## 기존 v1 재현 기록
+
+아래는 `74b86d6` 시점의 제작 기록이다. 현재 v2 `story.json`과 구형 `render.py`를 섞어 실행하지 않는다. v2는 마지막 절의 전용 절차를 따른다.
 
 `VIDEO_CACHE`를 위캐시로, `CAK_ENGINE_ROOT=/Users/admin/workSpace/shopshorts-production`으로 지정하고 `node produce.mjs review|preflight|generate|poll`. generate는 신규캐시에 비용이 발생한다. 내레이션은 검토합격 후 story.scenes를 beats의index/role/narration/durationSec으로 매핑한JSON을base64로 만들어 기존 `tts-remote.yml` main에 `script_b64`, `voice_id`, `verify_secrets_only=false`로1회 전달했다. narration아티팩트를 회수한뒤 대본/voiceId/modelId 일치를 검증해voice/<scene-id>.mp3로 매핑한다. 이미접수된요청은 재전송하지 않는다.
 
 `python3 render.py align|plan|preview|render|verify --cache <cache>` 순서. ffmpeg, Pillow, numpy, Whisper base 사용. Pretendard와 Whisper모델은 기존지정캐시를 재사용. 프레임은 encoder로 스트리밍해대용량프레임캐시를 만들지 않는다. 완성본은Downloads/vedio,중간파일은iCloud. 기존영상은덮어쓰지 않는다.
+
+## 본문3D 재제작 작업 — 2026-10-07
+
+사용자 승인: 기존 2D 본문 품질 퇴보 지적 후 재진행. 소유 Codex 단독, 기준 `74b86d6`. 기존 도입 6초와 Kyle 음성 6클립을 재사용하고 본문을 Blender EEVEE의 실제 입체 모델로 교체한다. 따뜻한 내부/청회색 외부 대비, 두께·접촉 그림자·금속 코일·이동 카메라를 사용한다. 실제 설계도나 음향 시뮬레이션이 아닌 개념 재현이다.
+
+검토 과정에서 벽의 진동 → 실내 공기 → 관객의 소음 연결이 빠진 점을 발견해 문장 하나를 추가했다. 기존 “추가 TTS 0회” 계획 변경을 사용자에게 알렸으며 원격 TTS 한 문장만 생성했다. Higgsfield 신규 생성은 0회다. 실제 음성 기반 길이 81.958초, 마지막 음성 후 여유 2.717초. 첫 검토의 명목 길이 불일치와 중복 화면도 실제 타이밍과 단계 분리로 수정한 뒤 7항목 검토를 통과했다.
+
+- 대본 검토 digest: `9269eca5ebd3cad72042406c6c5ac4055f39419157d14719d8c01fdfbc550976`.
+- 추가 음성: https://github.com/hhj4861/commerce-automation-kit/actions/runs/37613387219 (성공, 대본·음성 ID·모델 일치 확인).
+- `scene-3d.py`: 공연장 단면, 스프링 코일 변형, 동일 입력 비교, 실제 3D 렌더. 불완전한 본인 클립은 v2/aborted에 보존 후 재생성.
+- `finish-3d.py`: 원본 음성/미디어 재사용, 연결 문장 삽입, 실제 길이 편집, 자막·최종 조립·검증.
+- 캐시: 기존 캐시 아래 `v2/`. 완성본: `/Users/admin/Downloads/vedio/elbphilharmonie-webtoon-3d-v2.mp4`.
+- 결과: 11샷 렌더 정상 종료, 전체 영상 디코딩·1,967프레임·A/V길이·모든대사 자막포함·종료2.717초 검사 통과. 최종13시점, 실제 코일의 반대 진동위상, 이전 평면본문 대비를 눈으로 확인했다. 전체 독립전사에 새 연결문장과 완결된 결말이 회수됐으며 고유명사 등의 ASR 오류는 한계로 기록했다. 피크-1.4dB, 0.5초 이상 검은화면/1.5초 이상 무음 미검출. 기존 v1 파일·검증기록 보존.
+- 실제 모델·카메라·재질은 개선됐지만 도입 원화와 코드 모형의 세부 화풍이 완전히 같다고 보장하지 않는다. 시청자 반응이나 조회수 개선은 아직 측정하지 않았다.
+
+### v2 재현 순서
+
+동일 캐시의 원화·도입·기존음성과 v2/voice/transmission.mp3를 사용한다. 추가 API호출 없이 `python3 finish-3d.py plan --cache <cache>` → `blender -b --python scene-3d.py -- --cache <cache> --samples 64` → `python3 finish-3d.py assemble --cache <cache>` → `python3 finish-3d.py verify --cache <cache>` 순서다. Blender4.5.10, ffmpeg, Pillow, numpy, Node를 사용한다. assemble은 현재 대본의 검토 digest·실제 인용 근거까지 재검증한다.
+
+기존 클립 재사용은 현재 코드/타이밍의 동일 캐시에만 적용한다. 모델이나 화면 계획을 변경한다면 별도 버전 캐시로 새 렌더링한다. 검토 없이 유료 생성하거나 예전 검토로 다른 대본을 조립하지 않는다. 이번 수정은 독립 영상 제작 소스이며 운영 웹앱 배포나 업로드를 수행한 것은 아니다.

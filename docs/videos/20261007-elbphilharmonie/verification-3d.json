@@ -1,0 +1,258 @@
+{
+  "final": "/Users/admin/Downloads/vedio/elbphilharmonie-webtoon-3d-v2.mp4",
+  "duration": 81.95833333333333,
+  "frames": 1967,
+  "resolution": [
+    1080,
+    1920
+  ],
+  "fps": 24,
+  "bytes": 63987124,
+  "sha256": "4e3c099e98af6a052d3654f1c1e6a98877c927ce5e1942d8fa4b04a593543f31",
+  "checks": {
+    "decode": true,
+    "audioVideoDuration": true,
+    "completeNarrationCaptionCoverage": true,
+    "endingHoldSeconds": 2.717335600907024,
+    "clipFrames": [
+      {
+        "id": "approach",
+        "valid": true,
+        "expectedFrames": 242
+      },
+      {
+        "id": "transmission",
+        "valid": true,
+        "expectedFrames": 147
+      },
+      {
+        "id": "cutaway",
+        "valid": true,
+        "expectedFrames": 213
+      },
+      {
+        "id": "spring_detail",
+        "valid": true,
+        "expectedFrames": 108
+      },
+      {
+        "id": "comparison",
+        "valid": true,
+        "expectedFrames": 85
+      },
+      {
+        "id": "rigid",
+        "valid": true,
+        "expectedFrames": 88
+      },
+      {
+        "id": "spring_action",
+        "valid": true,
+        "expectedFrames": 135
+      },
+      {
+        "id": "mass",
+        "valid": true,
+        "expectedFrames": 121
+      },
+      {
+        "id": "isolation",
+        "valid": true,
+        "expectedFrames": 136
+      },
+      {
+        "id": "air",
+        "valid": true,
+        "expectedFrames": 171
+      },
+      {
+        "id": "closing",
+        "valid": true,
+        "expectedFrames": 92
+      }
+    ]
+  },
+  "paidMedia": {
+    "higgsfieldNewCalls": 0,
+    "ttsNewSentences": 1
+  },
+  "reusedVoiceClips": 6,
+  "voiceId": "RU7aSi6lT4uQBXMLgDxK",
+  "speed": 1.1,
+  "limitations": [
+    "Illustrative geometric reconstruction, not construction drawings or acoustic simulation.",
+    "Actual visual inspection and independent speech check recorded separately."
+  ],
+  "verifiedAt": "2026-10-07T11:52:13.636548+00:00",
+  "sourceSha256": {
+    "scene-3d.py": "41e1b23302e4f8cb0ab1bbbd7ae01510018ef24872f4fe603a062dc6439d141e",
+    "finish-3d.py": "b61ea28f190223594ae7bc2579f7e7355fa64370495fb35eb2834c881da5a6fd",
+    "story.json": "c8c9b422031ef60d9cedd95c533088d922e0070e8cf52286b50b777afddcc66a"
+  },
+  "depthReview": {
+    "version": "explanation-depth-v1",
+    "digest": "9269eca5ebd3cad72042406c6c5ac4055f39419157d14719d8c01fdfbc550976",
+    "checks": {
+      "focus": {
+        "pass": true,
+        "reason": "왜 공연장을 스프링으로 받치는가라는 하나의 질문에 집중한다. 구조를 통한 소음 전달, 방의 분리, 스프링과 관성의 작용, 적용 한계가 이 질문을 설명하는 순서로 연결된다. 이중 벽도 별도 주제로 확장하지 않고 스프링의 역할을 구분하는 데 사용한다.",
+        "evidence": [
+          {
+            "sceneId": "hook",
+            "field": "narration",
+            "quote": "무거운 방을 왜 이렇게 만들었을까요?"
+          },
+          {
+            "sceneId": "payoff",
+            "field": "narration",
+            "quote": "바깥의 흔들림이 음악에 끼어드는 걸 줄이려는 거죠."
+          }
+        ]
+      },
+      "why": {
+        "pass": true,
+        "reason": "항구라는 위치만 제시하지 않고, 건물 구조를 탄 진동이 벽과 실내 공기를 움직여 관객에게 소음으로 들리는 문제를 설명한다. 따라서 공기로 들어오는 소음만 막아서는 부족하고 구조 진동에도 대책이 필요한 이유가 납득된다.",
+        "evidence": [
+          {
+            "sceneId": "problem",
+            "field": "narration",
+            "quote": "문제는 소음이 공기로만 들어오는 게 아니라는 거예요. 진동은 건물의 구조를 타고도 전달될 수 있죠."
+          },
+          {
+            "sceneId": "transmission",
+            "field": "narration",
+            "quote": "벽이 떨리면서 안쪽 공기까지 진동시키면, 관객에게 소음으로 들리는 겁니다."
+          }
+        ]
+      },
+      "mechanism": {
+        "pass": true,
+        "reason": "바닥 진동→단단한 받침을 통한 방의 움직임과, 바닥 진동→스프링의 변형→무거운 방이 바깥 움직임을 덜 따라가는 과정을 비교한다. 관성을 일상어로 설명하고 탄성과 함께 작용한다고 밝혀 장점 나열에 그치지 않는다. 주파수와 하중에 따른 설계 조건도 언급하며 스프링이 모든 진동 에너지를 없앤다고 주장하지 않는다.",
+        "evidence": [
+          {
+            "sceneId": "mechanism",
+            "field": "narration",
+            "quote": "단단한 받침은 안쪽 방도 함께 밀어 올립니다. 스프링은 그 사이에서 눌렸다 펴지며, 안쪽 방이 바깥 움직임을 그대로 따라가지 않게 해요. 무거운 방이 움직임의 변화를 버티는 성질과, 스프링의 탄성이 함께 작용하는 거죠."
+          },
+          {
+            "sceneId": "limit",
+            "field": "narration",
+            "quote": "다만 진동이 얼마나 빠른지에 따라 효과가 달라서, 공연장 무게에 맞춘 정밀한 설계가 필요합니다."
+          }
+        ]
+      },
+      "example": {
+        "pass": true,
+        "reason": "엘프필하모니의 안쪽 공연장을 구체적 대상으로 유지하며, 바닥이 위아래로 떨릴 때 받침 방식에 따라 방의 반응이 어떻게 달라지는지 대입한다. 실제 건물의 개조 전후를 주장하는 대신 설명용 비교를 사용한다. 362개도 개별 스프링이 아닌 묶음으로 표현해 제공 근거와 일치한다.",
+        "evidence": [
+          {
+            "sceneId": "separate",
+            "field": "narration",
+            "quote": "바깥 구조와 안쪽 공연장을 단단하게 이어 붙이지 않고, 그 사이를 분리한 거죠. 대공연장 아래에는 스프링 묶음이 삼백예순두 개나 들어갑니다."
+          },
+          {
+            "sceneId": "mechanism",
+            "field": "narration",
+            "quote": "바깥 바닥이 빠르게 위아래로 떨리는 상황을 보세요. 단단한 받침은 안쪽 방도 함께 밀어 올립니다. 스프링은 그 사이에서 눌렸다 펴지며, 안쪽 방이 바깥 움직임을 그대로 따라가지 않게 해요."
+          }
+        ]
+      },
+      "payoff": {
+        "pass": true,
+        "reason": "스프링의 목적을 외부 흔들림이 음악을 방해하는 정도를 줄이는 것으로 명확히 답한다. 작은 연주에 집중할 수 있다는 관객의 경험으로 의미를 연결하고, 앞 장면에서 주파수·무게·공기 전달 소음에 대한 한계를 제시한다. 집중 효과를 정량적으로 보장하거나 완전한 무음을 주장하지 않으며 첫 장면의 의외성을 회수해 끝낸다.",
+        "evidence": [
+          {
+            "sceneId": "limit",
+            "field": "narration",
+            "quote": "또 공기를 타고 오는 소음은 이중 벽 같은 차음 구조가 함께 막아야 하죠. 소리가 들어오는 길마다 대책이 다른 겁니다."
+          },
+          {
+            "sceneId": "payoff",
+            "field": "narration",
+            "quote": "그 덕분에 항구 한복판에서도 관객은 작은 연주 소리에 집중할 수 있습니다. 이 공연장을 스프링 위에 올린 이유는 흔들리게 하려는 게 아닙니다. 바깥의 흔들림이 음악에 끼어드는 걸 줄이려는 거죠."
+          }
+        ]
+      },
+      "pacing": {
+        "pass": true,
+        "reason": "첫 문장부터 스프링 위 공연장이라는 의외의 대상과 질문을 제시한다. 문제→벽·공기·관객 전달→분리 구조→받침 비교→한계→답의 순서에 핵심 인과 점프가 없다. 지명 소개와 스프링 수치는 짧고 결말도 완결된다. 사용자 목표인 약 83초를 기준으로 판단했으며, 실제 발화 속도와 장면별 수용 시간은 TTS로 별도 확인해야 한다.",
+        "evidence": [
+          {
+            "sceneId": "hook",
+            "field": "narration",
+            "quote": "공연장을 스프링 위에 올린다고요?"
+          },
+          {
+            "sceneId": "transmission",
+            "field": "narration",
+            "quote": "벽이 떨리면서 안쪽 공기까지 진동시키면, 관객에게 소음으로 들리는 겁니다."
+          },
+          {
+            "sceneId": "payoff",
+            "field": "narration",
+            "quote": "이 공연장을 스프링 위에 올린 이유는 흔들리게 하려는 게 아닙니다. 바깥의 흔들림이 음악에 끼어드는 걸 줄이려는 거죠."
+          }
+        ]
+      },
+      "visuals": {
+        "pass": true,
+        "reason": "첫 화면에 안쪽 공연장·스프링·짧은 질문이 함께 있어 무음으로도 핵심 현상을 읽을 수 있다. 같은 공연장 단면을 따라 구조 진동, 벽에서 공기로 퍼지는 파면, 스프링 변형과 방의 상대운동을 보여준다. 동일 입력과 기준선으로 받침의 차이를 비교하므로 카메라 이동이나 용어 자막만으로 설명을 대신하지 않는다. 이는 화면 계획의 합격이며 실제 렌더 구현 여부는 별도 검증 대상이다.",
+        "evidence": [
+          {
+            "sceneId": "hook",
+            "field": "prompt",
+            "quote": "첫 프레임부터 항구 건물 안의 독립 공연장과 그 밑 스프링 묶음을 동시에 드러낸 웹툰 단면. 즉시 큰 질문 자막 “공연장이 스프링 위에?” 표시. 건물 전체가 아니라 안쪽 방임이 분명하게 보인다."
+          },
+          {
+            "sceneId": "transmission",
+            "field": "prompt",
+            "quote": "이전 장면에서 도달한 벽 안쪽을 근접 촬영. 벽에서 실내 공기로 퍼지는 청록색 파면이 객석에 닿는 새로운 단계만 보여준다."
+          },
+          {
+            "sceneId": "mechanism",
+            "field": "prompt",
+            "quote": "동일 바닥변위에서 단단한 받침 위 방은 함께 움직이고, 스프링 위 방은 훨씬 작게 움직이는 차이를 반드시 보여준다. 좌우 방 표면의 같은 기준선을 사용하고, 내부공기로 퍼지는 소음 표시도 오른쪽은 약하게 그린다."
+          }
+        ]
+      }
+    },
+    "passed": true
+  },
+  "ttsRun": "https://github.com/hhj4861/commerce-automation-kit/actions/runs/37613387219",
+  "renderer": {
+    "engine": "Blender 4.5.10 EEVEE",
+    "samples": 64,
+    "fullHdShots": 11,
+    "exitCode": 0,
+    "mountDetached": true
+  },
+  "visualInspection": {
+    "contactSheet": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261007-elbphilharmonie/v2/qa/final-review.jpg",
+    "beforeAfter": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261007-elbphilharmonie/v2/qa/before-after.jpg",
+    "motionPhaseComparison": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261007-elbphilharmonie/v2/qa/spring-motion-check.jpg",
+    "findings": [
+      "Actual room cutaway, stepped audience terraces, textured shells and metallic helical coils visible.",
+      "Travelling camera and opposite compression phases inspected in rendered output.",
+      "Warm interior/cool outer structure contrast; no large flat explanation board.",
+      "Captions do not cover the central mechanism; final complete sentence remains through the hold."
+    ],
+    "limits": [
+      "Conceptual simplified geometry and exaggerated, slowed displacement, not actual engineering dimensions.",
+      "Art direction remains more model-like than the reused illustrated opening; subjective parity is not claimed."
+    ]
+  },
+  "speechCheck": {
+    "method": "Independent Whisper base Korean transcription of new full mixed audio",
+    "cache": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261007-elbphilharmonie/v2/speech-check.json",
+    "bridgeRecovered": true,
+    "completeEndingRecovered": true,
+    "limitations": "Proper nouns and some technical words have ASR transcription errors; this is not a perfect-pronunciation certification."
+  },
+  "audioAnalysis": {
+    "meanDb": -17.6,
+    "peakDb": -1.4,
+    "detectedBlackOverHalfSecond": false,
+    "detectedSilenceOver1point5Seconds": false
+  },
+  "originalV1PreservedSha256": "97e4ce6d0e40bb424da3f4e0b43066c5aaa443bb970704c8d97b5d801d68f5d9"
+}
