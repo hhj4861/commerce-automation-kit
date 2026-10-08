@@ -326,6 +326,12 @@ class NativeReviewTests(unittest.TestCase):
         # A short fact (e.g. a city) is valid support; only the bare name is not.
         out['reviews'][0]['checks']['support_answer']['citations'][0]['quote']='상판이 회전'
         self.assertEqual(apply_reviews(review,out)[0]['decision'],'accepted')
+        # Regression from the 10/05 replay (anyang-1): a name-only quote next to a
+        # contentful one is fine, and for support_entity the name IS the fact.
+        eid=out['reviews'][0]['checks']['support_answer']['citations'][0]['evidenceId']
+        out['reviews'][0]['checks']['support_answer']['citations']=[{'evidenceId':eid,'quote':'회전교1'},{'evidenceId':eid,'quote':'상판이 회전'}]
+        out['reviews'][0]['checks']['support_entity']['citations']=[{'evidenceId':eid,'quote':'회전교1'}]
+        self.assertEqual(apply_reviews(review,out)[0]['decision'],'accepted')
         self.assertIn('not only the entity name',review['action']['prompt'])
         self.assertNotIn('not only the entity name',build_prompt(old,[]))
 

@@ -18,7 +18,7 @@ VERSION = 'discovery-v2.7'
 VERSIONS = {'discovery-v2.4', 'discovery-v2.5', 'discovery-v2.6', VERSION}
 # v2.6+ may adopt a low-confidence JEV uncertainty after a fully resolved review.
 LOW_CONFIDENCE_PROMOTION = {'discovery-v2.6', VERSION}
-# v2.7: a quote must carry content beyond the entity name to count as support.
+# v2.7: a cited pass needs a quote with content beyond the entity name (support_entity excepted).
 # Length alone is not used: a short city name can be valid location support.
 MIN_QUOTE_FACT_CHARS = 2
 FIELDS = ('title','question','entity','location','answer','whyItMatters','openingVisual','direction','expectedAnswer')
@@ -83,11 +83,15 @@ def validate_checks(row,candidate,evidence,profile,rubric=None):
             if not isinstance(cite,dict) or set(cite)!={'evidenceId','quote'} or not isinstance(cite['evidenceId'],str) or cite['evidenceId'] not in by_id or not _text(cite['quote'],600): raise ValueError('invalid_native_review')
             e=by_id[cite['evidenceId']]
             if not any(cite['quote'] in e.get(k,'') for k in ('title','excerpt')): raise ValueError('invalid_native_review_citation')
-            if rubric==VERSION and len(_norm(cite['quote']).replace(_norm(candidate['entity']),''))<MIN_QUOTE_FACT_CHARS: raise ValueError('invalid_native_review_citation')
             pair=(cite['evidenceId'],cite['quote'])
             if pair in seen: raise ValueError('invalid_native_review_citation')
             seen.add(pair)
         if choice=='pass' and (name.startswith('support_') or profile=='business' and name=='value') and not cites: raise ValueError('missing_native_review_citation')
+        # v2.7: a cited pass needs at least one quote with content beyond the entity name.
+        # Name-only quotes may accompany it; for support_entity the name itself is the fact.
+        if (rubric==VERSION and choice=='pass' and cites and name!='support_entity' and
+                not any(len(_norm(c['quote']).replace(_norm(candidate['entity']),''))>=MIN_QUOTE_FACT_CHARS for c in cites)):
+            raise ValueError('invalid_native_review_citation')
         if issue=='contradiction' and not cites: raise ValueError('missing_native_review_citation')
         if issue=='conflicting_sources' and len({c['evidenceId'] for c in cites})<2: raise ValueError('missing_native_review_citation')
     return copy.deepcopy(row['checks'])

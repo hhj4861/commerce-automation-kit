@@ -1,0 +1,275 @@
+{
+ "date": "2026-10-08",
+ "source": "2026-10-05 v2.6 fixed-input run (jev-v26-final-20261005)",
+ "codeBranch": "fix/jev-discovery-review-gaps",
+ "method": "offline re-application of recorded JEV checks and native reviews; no network or model calls",
+ "rows": [
+  {
+   "case": "anyang-1",
+   "expected": "accepted",
+   "eligible": true,
+   "jev": "held",
+   "v26": "accepted",
+   "control": "accepted",
+   "v27": "accepted",
+   "v26Reasons": [
+    "native_review_passed"
+   ],
+   "controlReasons": [
+    "native_review_passed"
+   ],
+   "v27Reasons": [
+    "native_review_passed"
+   ]
+  },
+  {
+   "case": "baram-1",
+   "expected": "accepted",
+   "eligible": true,
+   "jev": "held",
+   "v26": "accepted",
+   "control": "accepted",
+   "v27": "accepted",
+   "v26Reasons": [
+    "native_review_passed"
+   ],
+   "controlReasons": [
+    "native_review_passed"
+   ],
+   "v27Reasons": [
+    "native_review_passed"
+   ]
+  },
+  {
+   "case": "baram-3",
+   "expected": "rejected",
+   "eligible": true,
+   "jev": "held",
+   "v26": "rejected",
+   "control": "rejected",
+   "v27": "rejected",
+   "v26Reasons": [
+    "native_support_title_rejected",
+    "native_support_whyItMatters_rejected",
+    "native_value_rejected"
+   ],
+   "controlReasons": [
+    "native_support_title_rejected",
+    "native_support_whyItMatters_rejected",
+    "native_value_rejected"
+   ],
+   "v27Reasons": [
+    "native_support_title_rejected",
+    "native_support_whyItMatters_rejected",
+    "native_value_rejected"
+   ]
+  },
+  {
+   "case": "baram-4",
+   "expected": "not_accepted",
+   "eligible": true,
+   "jev": "held",
+   "v26": "held",
+   "control": "held",
+   "v27": "held",
+   "v26Reasons": [
+    "support_answer_uncertain",
+    "support_direction_uncertain",
+    "support_entity_uncertain",
+    "support_expectedAnswer_uncertain",
+    "support_location_uncertain",
+    "support_openingVisual_uncertain",
+    "support_question_uncertain",
+    "support_whyItMatters_uncertain",
+    "native_support_expectedAnswer_uncertain"
+   ],
+   "controlReasons": [
+    "support_answer_uncertain",
+    "support_direction_uncertain",
+    "support_entity_uncertain",
+    "support_expectedAnswer_uncertain",
+    "support_location_uncertain",
+    "support_openingVisual_uncertain",
+    "support_question_uncertain",
+    "support_whyItMatters_uncertain",
+    "native_support_expectedAnswer_uncertain"
+   ],
+   "v27Reasons": [
+    "support_answer_uncertain",
+    "support_direction_uncertain",
+    "support_entity_uncertain",
+    "support_expectedAnswer_uncertain",
+    "support_location_uncertain",
+    "support_openingVisual_uncertain",
+    "support_question_uncertain",
+    "support_whyItMatters_uncertain",
+    "native_support_expectedAnswer_uncertain"
+   ]
+  },
+  {
+   "case": "business-1",
+   "expected": "accepted",
+   "eligible": true,
+   "jev": "held",
+   "v26": "accepted",
+   "control": "accepted",
+   "v27": "accepted",
+   "v26Reasons": [
+    "native_review_passed"
+   ],
+   "controlReasons": [
+    "native_review_passed"
+   ],
+   "v27Reasons": [
+    "native_review_passed"
+   ]
+  },
+  {
+   "case": "business-2",
+   "expected": "rejected",
+   "eligible": true,
+   "jev": "held",
+   "v26": "rejected",
+   "control": "rejected",
+   "v27": "rejected",
+   "v26Reasons": [
+    "native_support_title_rejected",
+    "native_support_whyItMatters_rejected",
+    "native_value_rejected"
+   ],
+   "controlReasons": [
+    "native_support_title_rejected",
+    "native_support_whyItMatters_rejected",
+    "native_value_rejected"
+   ],
+   "v27Reasons": [
+    "native_support_title_rejected",
+    "native_support_whyItMatters_rejected",
+    "native_value_rejected"
+   ]
+  },
+  {
+   "case": "conflict-1",
+   "expected": "held",
+   "eligible": true,
+   "jev": "held",
+   "v26": "held",
+   "control": "held",
+   "v27": "held",
+   "v26Reasons": [
+    "support_direction_uncertain",
+    "support_expectedAnswer_uncertain",
+    "support_openingVisual_uncertain",
+    "support_question_uncertain",
+    "support_title_uncertain",
+    "value_uncertain",
+    "native_support_openingVisual_uncertain",
+    "native_support_title_uncertain"
+   ],
+   "controlReasons": [
+    "support_direction_uncertain",
+    "support_expectedAnswer_uncertain",
+    "support_openingVisual_uncertain",
+    "support_question_uncertain",
+    "support_title_uncertain",
+    "value_uncertain",
+    "native_support_openingVisual_uncertain",
+    "native_support_title_uncertain"
+   ],
+   "v27Reasons": [
+    "support_direction_uncertain",
+    "support_expectedAnswer_uncertain",
+    "support_openingVisual_uncertain",
+    "support_question_uncertain",
+    "support_title_uncertain",
+    "value_uncertain",
+    "native_support_openingVisual_uncertain",
+    "native_support_title_uncertain"
+   ]
+  },
+  {
+   "case": "conflict-2",
+   "expected": "accepted",
+   "eligible": true,
+   "jev": "held",
+   "v26": "accepted",
+   "control": "accepted",
+   "v27": "accepted",
+   "v26Reasons": [
+    "native_review_passed"
+   ],
+   "controlReasons": [
+    "native_review_passed"
+   ],
+   "v27Reasons": [
+    "native_review_passed"
+   ]
+  },
+  {
+   "case": "eiffel-1",
+   "expected": "accepted",
+   "eligible": true,
+   "jev": "held",
+   "v26": "accepted",
+   "control": "accepted",
+   "v27": "accepted",
+   "v26Reasons": [
+    "native_review_passed"
+   ],
+   "controlReasons": [
+    "native_review_passed"
+   ],
+   "v27Reasons": [
+    "native_review_passed"
+   ]
+  },
+  {
+   "case": "haesol-1",
+   "expected": "accepted",
+   "eligible": true,
+   "jev": "held",
+   "v26": "accepted",
+   "control": "accepted",
+   "v27": "accepted",
+   "v26Reasons": [
+    "native_review_passed"
+   ],
+   "controlReasons": [
+    "native_review_passed"
+   ],
+   "v27Reasons": [
+    "native_review_passed"
+   ]
+  },
+  {
+   "case": "baram-2",
+   "expected": "not_accepted",
+   "v26": null,
+   "v27": "unchanged (no native review; JEV/server decision)"
+  },
+  {
+   "case": "eiffel-2",
+   "expected": "rejected",
+   "v26": null,
+   "v27": "unchanged (no native review; JEV/server decision)"
+  },
+  {
+   "case": "eiffel-3",
+   "expected": "held",
+   "v26": null,
+   "v27": "unchanged (no native review; JEV/server decision)"
+  },
+  {
+   "case": "haesol-2",
+   "expected": "rejected",
+   "v26": null,
+   "v27": "unchanged (no native review; JEV/server decision)"
+  },
+  {
+   "case": "haesol-3",
+   "expected": "not_accepted",
+   "v26": null,
+   "v27": "unchanged (no native review; JEV/server decision)"
+  }
+ ]
+}
