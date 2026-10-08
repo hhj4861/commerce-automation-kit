@@ -1,0 +1,279 @@
+{
+  "kind": "dialogue",
+  "fingerprint": "7232a8150b0eb9e1",
+  "questions": [
+    {
+      "id": "c1__0__context",
+      "type": "choice"
+    },
+    {
+      "id": "c1__0__voice",
+      "type": "choice"
+    },
+    {
+      "id": "c1__0__natural",
+      "type": "choice"
+    },
+    {
+      "id": "c1__0__reaction",
+      "type": "choice"
+    },
+    {
+      "id": "c1__1__context",
+      "type": "choice"
+    },
+    {
+      "id": "c1__1__voice",
+      "type": "choice"
+    },
+    {
+      "id": "c1__1__natural",
+      "type": "choice"
+    },
+    {
+      "id": "c1__1__reaction",
+      "type": "choice"
+    },
+    {
+      "id": "c2__0__context",
+      "type": "choice"
+    },
+    {
+      "id": "c2__0__voice",
+      "type": "choice"
+    },
+    {
+      "id": "c2__0__natural",
+      "type": "choice"
+    },
+    {
+      "id": "c2__0__reaction",
+      "type": "choice"
+    },
+    {
+      "id": "c3__0__context",
+      "type": "choice"
+    },
+    {
+      "id": "c3__0__voice",
+      "type": "choice"
+    },
+    {
+      "id": "c3__0__natural",
+      "type": "choice"
+    },
+    {
+      "id": "c3__0__reaction",
+      "type": "choice"
+    },
+    {
+      "id": "c4__0__context",
+      "type": "choice"
+    },
+    {
+      "id": "c4__0__voice",
+      "type": "choice"
+    },
+    {
+      "id": "c4__0__natural",
+      "type": "choice"
+    },
+    {
+      "id": "c4__0__reaction",
+      "type": "choice"
+    },
+    {
+      "id": "c4__1__context",
+      "type": "choice"
+    },
+    {
+      "id": "c4__1__voice",
+      "type": "choice"
+    },
+    {
+      "id": "c4__1__natural",
+      "type": "choice"
+    },
+    {
+      "id": "c4__1__reaction",
+      "type": "choice"
+    },
+    {
+      "id": "c4__2__context",
+      "type": "choice"
+    },
+    {
+      "id": "c4__2__voice",
+      "type": "choice"
+    },
+    {
+      "id": "c4__2__natural",
+      "type": "choice"
+    },
+    {
+      "id": "c4__2__reaction",
+      "type": "choice"
+    },
+    {
+      "id": "c4__3__context",
+      "type": "choice"
+    },
+    {
+      "id": "c4__3__voice",
+      "type": "choice"
+    },
+    {
+      "id": "c4__3__natural",
+      "type": "choice"
+    },
+    {
+      "id": "c4__3__reaction",
+      "type": "choice"
+    },
+    {
+      "id": "c4__4__context",
+      "type": "choice"
+    },
+    {
+      "id": "c4__4__voice",
+      "type": "choice"
+    },
+    {
+      "id": "c4__4__natural",
+      "type": "choice"
+    },
+    {
+      "id": "c4__4__reaction",
+      "type": "choice"
+    },
+    {
+      "id": "c5__0__context",
+      "type": "choice"
+    },
+    {
+      "id": "c5__0__voice",
+      "type": "choice"
+    },
+    {
+      "id": "c5__0__natural",
+      "type": "choice"
+    },
+    {
+      "id": "c5__0__reaction",
+      "type": "choice"
+    },
+    {
+      "id": "c5__1__context",
+      "type": "choice"
+    },
+    {
+      "id": "c5__1__voice",
+      "type": "choice"
+    },
+    {
+      "id": "c5__1__natural",
+      "type": "choice"
+    },
+    {
+      "id": "c5__1__reaction",
+      "type": "choice"
+    },
+    {
+      "id": "c5__2__context",
+      "type": "choice"
+    },
+    {
+      "id": "c5__2__voice",
+      "type": "choice"
+    },
+    {
+      "id": "c5__2__natural",
+      "type": "choice"
+    },
+    {
+      "id": "c5__2__reaction",
+      "type": "choice"
+    },
+    {
+      "id": "c6__0__context",
+      "type": "choice"
+    },
+    {
+      "id": "c6__0__voice",
+      "type": "choice"
+    },
+    {
+      "id": "c6__0__natural",
+      "type": "choice"
+    },
+    {
+      "id": "c6__0__reaction",
+      "type": "choice"
+    },
+    {
+      "id": "c6__1__context",
+      "type": "choice"
+    },
+    {
+      "id": "c6__1__voice",
+      "type": "choice"
+    },
+    {
+      "id": "c6__1__natural",
+      "type": "choice"
+    },
+    {
+      "id": "c6__1__reaction",
+      "type": "choice"
+    },
+    {
+      "id": "c6__2__context",
+      "type": "choice"
+    },
+    {
+      "id": "c6__2__voice",
+      "type": "choice"
+    },
+    {
+      "id": "c6__2__natural",
+      "type": "choice"
+    },
+    {
+      "id": "c6__2__reaction",
+      "type": "choice"
+    },
+    {
+      "id": "c8__0__context",
+      "type": "choice"
+    },
+    {
+      "id": "c8__0__voice",
+      "type": "choice"
+    },
+    {
+      "id": "c8__0__natural",
+      "type": "choice"
+    },
+    {
+      "id": "c8__0__reaction",
+      "type": "choice"
+    },
+    {
+      "id": "c8__1__context",
+      "type": "choice"
+    },
+    {
+      "id": "c8__1__voice",
+      "type": "choice"
+    },
+    {
+      "id": "c8__1__natural",
+      "type": "choice"
+    },
+    {
+      "id": "c8__1__reaction",
+      "type": "choice"
+    }
+  ],
+  "createdAt": "2026-10-07T14:33:35.067Z"
+}

@@ -2,14 +2,14 @@
   "gate": "transcript-c3",
   "stage": "clip",
   "ok": false,
-  "fingerprint": "af94eaee14bda347",
+  "fingerprint": "fc07c6e2ca982e92",
   "findings": [
     {
       "severity": "block",
-      "message": "대사 불일치 CER 0.75 > 0.15",
+      "message": "대사 불일치 CER 0.50 > 0.15",
       "cutId": "c3",
       "lineIndex": 0,
-      "evidence": "기대 \"아악! 누나!\" / 전사 \"누리!\""
+      "evidence": "기대 \"다들 떨어져! 저놈 곧 변해!\" / 전사 \"이놈 곧 변해! 저놈 곧 변해!\""
     }
   ]
 }

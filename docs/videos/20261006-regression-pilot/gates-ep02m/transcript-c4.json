@@ -1,0 +1,15 @@
+{
+  "gate": "transcript-c4",
+  "stage": "clip",
+  "ok": false,
+  "fingerprint": "1250792eaa19a436",
+  "findings": [
+    {
+      "severity": "block",
+      "message": "대사 불일치 CER 0.22 > 0.15",
+      "cutId": "c4",
+      "lineIndex": 1,
+      "evidence": "기대 \"밖에 몇 마린지도 몰라.\" / 전사 \"뭐 하시는 거예요? 밖에 몇 마리인지도 몰라 민재가 나가 있잖아요 알아 10년 전에도 이 손이었어\""
+    }
+  ]
+}

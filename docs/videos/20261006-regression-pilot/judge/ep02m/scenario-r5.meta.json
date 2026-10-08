@@ -1,0 +1,71 @@
+{
+  "kind": "scenario",
+  "fingerprint": "1250792eaa19a436",
+  "questions": [
+    {
+      "id": "scenario__hook",
+      "type": "choice"
+    },
+    {
+      "id": "scenario__conflict",
+      "type": "choice"
+    },
+    {
+      "id": "scenario__payoff",
+      "type": "choice"
+    },
+    {
+      "id": "scenario__cliffhanger",
+      "type": "choice"
+    },
+    {
+      "id": "scenario__genre",
+      "type": "choice"
+    },
+    {
+      "id": "scenario__carry__strong-conflict",
+      "type": "choice"
+    },
+    {
+      "id": "scenario__carry__revenge",
+      "type": "choice"
+    },
+    {
+      "id": "scenario__carry__betrayal",
+      "type": "choice"
+    },
+    {
+      "id": "scenario__carry__class-gap",
+      "type": "choice"
+    },
+    {
+      "id": "scenario__safe__sexual-boundary",
+      "type": "choice"
+    },
+    {
+      "id": "scenario__safe__violence-boundary",
+      "type": "choice"
+    },
+    {
+      "id": "scenario__fun__surprise",
+      "type": "score"
+    },
+    {
+      "id": "scenario__fun__tension-curve",
+      "type": "score"
+    },
+    {
+      "id": "scenario__fun__protagonist-appeal",
+      "type": "score"
+    },
+    {
+      "id": "scenario__fun__freshness",
+      "type": "score"
+    },
+    {
+      "id": "scenario__fun__emotional-peak",
+      "type": "score"
+    }
+  ],
+  "createdAt": "2026-10-07T14:41:40.273Z"
+}

@@ -1,15 +1,7 @@
 {
   "gate": "transcript-c8",
   "stage": "clip",
-  "ok": false,
-  "fingerprint": "af94eaee14bda347",
-  "findings": [
-    {
-      "severity": "block",
-      "message": "대사 불일치 CER 1.00 > 0.15",
-      "cutId": "c8",
-      "lineIndex": 0,
-      "evidence": "기대 \"한 시간만 지켜봐요. 변하면 그때 내보내요.\" / 전사 \".\""
-    }
-  ]
+  "ok": true,
+  "fingerprint": "fc07c6e2ca982e92",
+  "findings": []
 }

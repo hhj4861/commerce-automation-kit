@@ -2,7 +2,7 @@
   "gate": "dialogue-judge",
   "stage": "episode",
   "ok": true,
-  "fingerprint": "3bde23248fef69c1",
+  "fingerprint": "6ffda7b8132cea0f",
   "findings": [
     {
       "severity": "review",
@@ -20,92 +20,85 @@
     },
     {
       "severity": "review",
-      "message": "JEV 미확정: voice, natural — 문구 수정 후 재판정 또는 사람 승인",
+      "message": "JEV 미확정: context, voice, natural, reaction — 문구 수정 후 재판정 또는 사람 승인",
       "cutId": "c2",
       "lineIndex": 0,
       "evidence": "…무슨 소리지?"
     },
     {
       "severity": "review",
-      "message": "JEV 미확정: context, voice, natural — 문구 수정 후 재판정 또는 사람 승인",
+      "message": "JEV 미확정: context, voice, reaction — 문구 수정 후 재판정 또는 사람 승인",
       "cutId": "c3",
       "lineIndex": 0,
-      "evidence": "아악! 누나!"
+      "evidence": "물린 거야? 물린 거지?"
     },
     {
       "severity": "review",
-      "message": "JEV 미확정: voice, natural — 문구 수정 후 재판정 또는 사람 승인",
+      "message": "JEV 미확정: context, voice, natural, reaction — 문구 수정 후 재판정 또는 사람 승인",
       "cutId": "c4",
       "lineIndex": 0,
-      "evidence": "물렸어… 저 팔 좀 봐요!"
+      "evidence": "민재야, 우리 민재야. 어쩌다가 물렸니?"
     },
     {
       "severity": "review",
-      "message": "JEV 미확정: context, natural — 문구 수정 후 재판정 또는 사람 승인",
+      "message": "JEV 미확정: context, voice, natural, reaction — 문구 수정 후 재판정 또는 사람 승인",
       "cutId": "c5",
-      "lineIndex": 0,
-      "evidence": "다들 떨어져! 저놈 곧 변해!"
-    },
-    {
-      "severity": "review",
-      "message": "JEV 미확정: context, voice, natural — 문구 수정 후 재판정 또는 사람 승인",
-      "cutId": "c6",
       "lineIndex": 0,
       "evidence": "이 사람은 안 변해요."
     },
     {
       "severity": "review",
-      "message": "JEV 미확정: natural — 문구 수정 후 재판정 또는 사람 승인",
-      "cutId": "c6",
+      "message": "JEV 미확정: context, voice, natural, reaction — 문구 수정 후 재판정 또는 사람 승인",
+      "cutId": "c5",
       "lineIndex": 1,
       "evidence": "알바 주제에 네가 그걸 어떻게 알아?"
     },
     {
       "severity": "review",
       "message": "JEV 미확정: context, voice, natural — 문구 수정 후 재판정 또는 사람 승인",
-      "cutId": "c7",
+      "cutId": "c6",
       "lineIndex": 0,
       "evidence": "십 년 동안 봤으니까요."
     },
     {
       "severity": "review",
       "message": "JEV 미확정: context, voice, natural, reaction — 문구 수정 후 재판정 또는 사람 승인",
-      "cutId": "c8",
+      "cutId": "c7",
       "lineIndex": 0,
-      "evidence": "한 시간만 지켜봐요. 그래도 변하면 제가 직접 할게요."
+      "evidence": "한 시간만 지켜봐요. 변하면 그때 내보내요."
     },
     {
       "severity": "review",
       "message": "JEV 미확정: reaction — 문구 수정 후 재판정 또는 사람 승인",
-      "cutId": "c9",
+      "cutId": "c8",
       "lineIndex": 0,
       "evidence": "누나… 저 진짜 괜찮은 거예요?"
     },
     {
       "severity": "review",
       "message": "JEV 미확정: context, voice, natural, reaction — 문구 수정 후 재판정 또는 사람 승인",
-      "cutId": "c9",
+      "cutId": "c8",
       "lineIndex": 1,
       "evidence": "괜찮아요. 제가 알아요."
+    },
+    {
+      "severity": "review",
+      "message": "JEV 미확정: reaction — 문구 수정 후 재판정 또는 사람 승인",
+      "cutId": "c9",
+      "lineIndex": 0,
+      "evidence": "이번엔 놓치지 않아."
     },
     {
       "severity": "review",
       "message": "JEV 미확정: context, voice, natural, reaction — 문구 수정 후 재판정 또는 사람 승인",
       "cutId": "c10",
       "lineIndex": 0,
-      "evidence": "어디 한번 해 봐요."
-    },
-    {
-      "severity": "review",
-      "message": "JEV 미확정: context, voice, natural, reaction — 문구 수정 후 재판정 또는 사람 승인",
-      "cutId": "c11",
-      "lineIndex": 0,
       "evidence": "물려도 안 변하는 놈이 있어."
     },
     {
       "severity": "review",
       "message": "JEV 미확정: context, voice, natural, reaction — 문구 수정 후 재판정 또는 사람 승인",
-      "cutId": "c11",
+      "cutId": "c10",
       "lineIndex": 1,
       "evidence": "그놈 값은 따로 받아야겠어."
     }

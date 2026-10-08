@@ -1,0 +1,127 @@
+{
+  "gate": "dialogue-judge",
+  "stage": "episode",
+  "ok": true,
+  "fingerprint": "a0c65708e34102b4",
+  "findings": [
+    {
+      "severity": "review",
+      "message": "JEV 미확정: context, voice, natural, reaction — 문구 수정 후 재판정 또는 사람 승인",
+      "cutId": "c1",
+      "lineIndex": 0,
+      "evidence": "민재 씨, 쪽문도 잠겼는지 봐 줘요."
+    },
+    {
+      "severity": "review",
+      "message": "JEV 미확정: context, voice, reaction — 문구 수정 후 재판정 또는 사람 승인",
+      "cutId": "c1",
+      "lineIndex": 1,
+      "evidence": "네, 누나."
+    },
+    {
+      "severity": "review",
+      "message": "JEV 미확정: context, voice, natural — 문구 수정 후 재판정 또는 사람 승인",
+      "cutId": "c2",
+      "lineIndex": 0,
+      "evidence": "…무슨 소리지?"
+    },
+    {
+      "severity": "review",
+      "message": "JEV 미확정: context, voice, natural, reaction — 문구 수정 후 재판정 또는 사람 승인",
+      "cutId": "c3",
+      "lineIndex": 0,
+      "evidence": "아악! 누나!"
+    },
+    {
+      "severity": "review",
+      "message": "JEV 미확정: context, voice, natural, reaction — 문구 수정 후 재판정 또는 사람 승인",
+      "cutId": "c4",
+      "lineIndex": 0,
+      "evidence": "뭐 하시는 거예요?"
+    },
+    {
+      "severity": "review",
+      "message": "JEV 미확정: context, voice, natural, reaction — 문구 수정 후 재판정 또는 사람 승인",
+      "cutId": "c4",
+      "lineIndex": 1,
+      "evidence": "밖에 몇 마린지도 몰라."
+    },
+    {
+      "severity": "review",
+      "message": "JEV 미확정: context, voice, natural, reaction — 문구 수정 후 재판정 또는 사람 승인",
+      "cutId": "c4",
+      "lineIndex": 2,
+      "evidence": "민재가 나가 있잖아요."
+    },
+    {
+      "severity": "review",
+      "message": "JEV 미확정: context, voice, reaction — 문구 수정 후 재판정 또는 사람 승인",
+      "cutId": "c4",
+      "lineIndex": 3,
+      "evidence": "알아."
+    },
+    {
+      "severity": "review",
+      "message": "JEV 미확정: context, voice, natural, reaction — 문구 수정 후 재판정 또는 사람 승인",
+      "cutId": "c4",
+      "lineIndex": 4,
+      "evidence": "십 년 전에도… 이 손이었어."
+    },
+    {
+      "severity": "review",
+      "message": "JEV 미확정: context, natural — 문구 수정 후 재판정 또는 사람 승인",
+      "cutId": "c5",
+      "lineIndex": 0,
+      "evidence": "누나… 저 여기 있어요. 문 좀…"
+    },
+    {
+      "severity": "review",
+      "message": "JEV 미확정: context, natural, reaction — 문구 수정 후 재판정 또는 사람 승인",
+      "cutId": "c5",
+      "lineIndex": 1,
+      "evidence": "물렸으면 끝이야. 말할 줄 안다고 사람인 줄 알아?"
+    },
+    {
+      "severity": "review",
+      "message": "JEV 미확정: context, voice, natural, reaction — 문구 수정 후 재판정 또는 사람 승인",
+      "cutId": "c5",
+      "lineIndex": 2,
+      "evidence": "아직 아무도 못 봤잖아요."
+    },
+    {
+      "severity": "review",
+      "message": "JEV 미확정: context, voice, natural — 문구 수정 후 재판정 또는 사람 승인",
+      "cutId": "c6",
+      "lineIndex": 0,
+      "evidence": "안쪽 방화문 닫아요. 제가 데려올게요."
+    },
+    {
+      "severity": "review",
+      "message": "JEV 미확정: context, voice, natural, reaction — 문구 수정 후 재판정 또는 사람 승인",
+      "cutId": "c6",
+      "lineIndex": 1,
+      "evidence": "너까지 죽으면?"
+    },
+    {
+      "severity": "review",
+      "message": "JEV 미확정: context, voice, natural — 문구 수정 후 재판정 또는 사람 승인",
+      "cutId": "c6",
+      "lineIndex": 2,
+      "evidence": "제가 확인하러 가라고 했어요."
+    },
+    {
+      "severity": "review",
+      "message": "JEV 미확정: context, voice, natural, reaction — 문구 수정 후 재판정 또는 사람 승인",
+      "cutId": "c8",
+      "lineIndex": 0,
+      "evidence": "…역시, 당신이었어."
+    },
+    {
+      "severity": "review",
+      "message": "JEV 미확정: context, reaction — 문구 수정 후 재판정 또는 사람 승인",
+      "cutId": "c8",
+      "lineIndex": 1,
+      "evidence": "…누나?"
+    }
+  ]
+}

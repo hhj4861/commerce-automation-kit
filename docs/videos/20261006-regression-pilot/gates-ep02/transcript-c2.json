@@ -1,7 +1,15 @@
 {
   "gate": "transcript-c2",
   "stage": "clip",
-  "ok": true,
-  "fingerprint": "af94eaee14bda347",
-  "findings": []
+  "ok": false,
+  "fingerprint": "fc07c6e2ca982e92",
+  "findings": [
+    {
+      "severity": "block",
+      "message": "대사 불일치 CER 0.25 > 0.15",
+      "cutId": "c2",
+      "lineIndex": 1,
+      "evidence": "기대 \"아악! 누나!\" / 전사 \"아, 누나! 뭐, 무슨 소리지? 물렸어! 저 팔 좀 봐요! 자막 제공 및 자막을 사용하였습니다.\""
+    }
+  ]
 }

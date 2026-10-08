@@ -2,12 +2,6 @@
   "gate": "dialogue-lint",
   "stage": "episode",
   "ok": true,
-  "fingerprint": "fc07c6e2ca982e92",
-  "findings": [
-    {
-      "severity": "review",
-      "message": "컷당 대사 3줄(권장 2줄 이하)",
-      "cutId": "c2"
-    }
-  ]
+  "fingerprint": "6ffda7b8132cea0f",
+  "findings": []
 }

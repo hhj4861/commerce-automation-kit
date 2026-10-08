@@ -144,7 +144,7 @@
     {
       "id": "aisle",
       "name": "물류센터 야간 작업 통로",
-      "anchorText": "Same continuous location in every cut: the night-shift aisle of the warehouse shown in the location reference - a roller conveyor on the left, tall blue pallet racks stacked with cardboard boxes on the right, polished grey epoxy floor with yellow lane lines, amber safety lamps, a wide roll-up loading shutter at the far end with a small grey steel side door next to it, a wall clock, a red wall-mounted fire cabinet holding a fire axe, and a waist-high pile of empty cardboard boxes beside the conveyor. Keep the same layout, lighting and time of night.",
+      "anchorText": "Same continuous location in every cut: the night-shift aisle of the warehouse shown in the location reference - a roller conveyor on the left, tall blue pallet racks stacked with cardboard boxes on the right, polished grey epoxy floor with yellow lane lines, amber safety lamps, a wide roll-up loading shutter at the far end with a small grey steel side door next to it with a heavy sliding bolt latch on the inside, a pair of heavy grey steel fire doors with small wired-glass windows on the side wall leading to the inner area, a wall clock, a red wall-mounted fire cabinet holding a fire axe, and a waist-high pile of empty cardboard boxes beside the conveyor. Keep the same layout, lighting and time of night.",
       "props": [
         "컨베이어",
         "팔레트",
@@ -161,7 +161,9 @@
         "쪽문",
         "생수 팩",
         "쇠파이프",
-        "구급상자"
+        "구급상자",
+        "잠금쇠",
+        "안쪽 방화문"
       ],
       "refAssetId": "2ae41641-0ebc-45ea-ae47-f785e1c5b8f3"
     },
@@ -207,6 +209,18 @@
         "책상 서랍"
       ],
       "refAssetId": "465fe94b-0e52-4d9e-b4e3-5a4054fb0e85"
+    },
+    {
+      "id": "yard",
+      "name": "물류센터 쪽문 바깥 하역장",
+      "anchorText": "Same continuous location in every cut: outside the warehouse at night, right in front of the small grey steel side door in a tall corrugated metal wall, a single dim caged lamp above the door, wet cracked asphalt, a few stacked wooden pallets, a dark loading yard fading into pitch darkness beyond the lamp light, cold blue night with faint fog. Keep the same layout and lighting.",
+      "props": [
+        "쪽문",
+        "철제 벽",
+        "방범등",
+        "팔레트"
+      ],
+      "refAssetId": "327ca5b8-65fa-447f-a330-2b4c8f07f342"
     }
   ],
   "episodes": [
@@ -217,13 +231,13 @@
     },
     {
       "no": 2,
-      "title": "물린 아이",
-      "summary": "쪽문 틈의 손에 민재가 물린다. 공포에 질린 오창식이 쇠파이프로 민재를 죽이려 하지만 서윤이 맨손으로 막아선다. 서윤은 한 시간의 유예를 얻어 내고, 박반장은 몰래 무전기로 물려도 변하지 않는 아이가 있다고 알린다."
+      "title": "문밖",
+      "summary": "쪽문을 확인하던 민재가 문틈의 손에 끌려 나간다. 박반장은 잠금쇠를 걸어 버리고, 문밖에서 민재의 목소리가 들리지만 오창식은 이미 변했다고 단정한다. 자기가 민재를 보냈다는 죄책감에 서윤은 도끼를 들고 문밖으로 나가고, 그 등 뒤에서 박반장이 다시 잠금쇠를 건다. 어둠 속에서 민재가 서윤을 부른다."
     },
     {
       "no": 3,
-      "title": "예언",
-      "summary": "한 시간이 다가오자 오창식 무리가 민재를 내보내자고 몰아간다. 서윤은 30초 뒤 전기가 나간다고 예언하고, 정전이 적중하자 사람들이 서윤 편에 선다. 서윤은 관제실에서 켜진 채 놓인 무전기를 발견한다."
+      "title": "물린 아이",
+      "summary": "문밖 어둠에서 서윤은 팔을 물린 민재를 찾아내고 좀비를 베어 길을 연다. 잠긴 쪽문 대신 다른 길로 돌아온 두 사람 앞에서 오창식이 쇠파이프를 치켜들고, 서윤은 맨손으로 막아 한 시간의 유예를 얻는다. 박반장은 몰래 무전기로 물려도 변하지 않는 아이가 있다고 알린다."
     },
     {
       "no": 4,

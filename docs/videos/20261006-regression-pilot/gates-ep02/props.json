@@ -2,6 +2,12 @@
   "gate": "props",
   "stage": "episode",
   "ok": true,
-  "fingerprint": "fc07c6e2ca982e92",
-  "findings": []
+  "fingerprint": "6ffda7b8132cea0f",
+  "findings": [
+    {
+      "severity": "review",
+      "message": "props 미확정(pass 0.84/0.92)",
+      "cutId": "c4"
+    }
+  ]
 }

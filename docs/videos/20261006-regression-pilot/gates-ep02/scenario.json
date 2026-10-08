@@ -2,43 +2,43 @@
   "gate": "scenario",
   "stage": "episode",
   "ok": true,
-  "fingerprint": "fc07c6e2ca982e92",
+  "fingerprint": "6ffda7b8132cea0f",
   "findings": [
     {
       "severity": "review",
-      "message": "payoff 미확정(pass 0.80/0.90)"
+      "message": "payoff 미확정(pass 0.76/0.88)"
     },
     {
       "severity": "review",
-      "message": "carry__revenge 미확정(pass 0.50/0.75)"
+      "message": "carry__revenge 미확정(pass 0.30/0.65)"
     },
     {
       "severity": "review",
-      "message": "carry__betrayal 미확정(pass 0.80/0.90)"
+      "message": "carry__betrayal 미확정(pass 0.60/0.80)"
     },
     {
       "severity": "review",
-      "message": "carry__class-gap 미확정(pass 0.38/0.69)"
+      "message": "carry__class-gap 미확정(pass 0.42/0.71)"
     },
     {
       "severity": "info",
-      "message": "fun__surprise 3/5 (확신도 0.28, 참고용)"
+      "message": "fun__surprise 3/5 (확신도 0.21, 참고용)"
     },
     {
       "severity": "info",
-      "message": "fun__tension-curve 5/5 (확신도 0.97, 참고용)"
+      "message": "fun__tension-curve 5/5 (확신도 0.94, 참고용)"
     },
     {
       "severity": "info",
-      "message": "fun__protagonist-appeal 5/5 (확신도 0.91, 참고용)"
+      "message": "fun__protagonist-appeal 5/5 (확신도 0.88, 참고용)"
     },
     {
       "severity": "info",
-      "message": "fun__freshness 4/5 (확신도 0.59, 참고용)"
+      "message": "fun__freshness 4/5 (확신도 0.45, 참고용)"
     },
     {
       "severity": "info",
-      "message": "fun__emotional-peak 5/5 (확신도 0.69, 참고용)"
+      "message": "fun__emotional-peak 4/5 (확신도 0.58, 참고용)"
     }
   ]
 }

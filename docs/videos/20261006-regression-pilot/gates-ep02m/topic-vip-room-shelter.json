@@ -1,0 +1,16 @@
+{
+  "gate": "topic-vip-room-shelter",
+  "stage": "topic",
+  "ok": true,
+  "fingerprint": "30d2a00f3e8cbce7",
+  "findings": [
+    {
+      "severity": "info",
+      "message": "노린 요소가 확정되지 않음: 강한 갈등"
+    },
+    {
+      "severity": "review",
+      "message": "장르 약속 미확정(fail 0.14/0.57)"
+    }
+  ]
+}
