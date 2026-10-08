@@ -283,8 +283,8 @@ legacy 회차는 기존 조립을 그대로 쓴다(회귀 테스트).
 
 **키 관리 (GCP Secret Manager — 사용자 결정 2026-10-08: "gcp 활용, shorts 프로젝트에 등록")**
 - 비대칭 키(Ed25519). 검증에는 공개 키만 필요하므로 공개 키는 저장소 `packages/drama-series/review-keys/<agent>.pub`(커밋), **개인 키는 GCP Secret Manager** 에만 둔다. 로컬 파일·iCloud·메일함·저장소에 개인 키를 쓰지 않는다.
-- 프로젝트: GCP "shorts" 프로젝트. 같은 표시 이름의 프로젝트가 둘(`shorts-479009`, `gen-lang-client-0881453127`)이라 어느 쪽인지 사용자 확인 — TODO(D1). 2026-10-08 조회 기준 두 프로젝트 모두 Secret Manager API 미사용 상태(사용 설정 필요).
-- 비밀 이름(GCP 규칙상 `/` 불가): `cak-drama-review-claude-ed25519`, `cak-drama-review-codex-ed25519`. 서명 시 CLI 가 `gcloud secrets versions access latest --secret <이름> --project <id>`(또는 클라이언트 라이브러리)로 실행 시점에 조회해 메모리에서만 사용한다(`--sm-project` 인자, 기본값 환경 변수 `CAK_REVIEW_SM_PROJECT`).
+- 프로젝트: GCP `gen-lang-client-0881453127`(표시 이름 shorts) — 사용자 지정 2026-10-08. 같은 날 조회 기준 Secret Manager API 미사용 상태(사용 설정 필요).
+- 비밀 이름(GCP 규칙상 `/` 불가): `cak-drama-review-claude-ed25519`, `cak-drama-review-codex-ed25519`. 서명 시 CLI 가 `gcloud secrets versions access latest --secret <이름> --project <id>`(또는 클라이언트 라이브러리)로 실행 시점에 조회해 메모리에서만 사용한다(`--sm-project` 인자, 기본값 환경 변수 `CAK_REVIEW_SM_PROJECT`, 미설정 시 `gen-lang-client-0881453127`).
 - API 사용 설정·비밀 생성·IAM 부여는 클라우드 설정 변경이므로 **사용자가 실행하거나 명시 승인 후** 실행한다. 키 생성 스크립트는 개인 키를 디스크에 쓰지 않고 바로 `gcloud secrets versions add --data-file=-` 로 넣고 공개 키만 출력한다.
 - 한계(명시): 두 에이전트가 같은 gcloud 계정으로 돌면 서로의 개인 키를 조회할 수 있다. 실질 분리는 에이전트별 서비스 계정을 두고 각 비밀에 `roles/secretmanager.secretAccessor` 를 해당 서비스 계정에만 부여할 때 생긴다. 그 전까지 서명은 '위조 시 흔적이 남는' 수준이다.
 - 키 교체: 공개 키 파일에 keyId 를 두고 응답에 keyId 를 넣는다. 폐기된 keyId 서명은 거부.
