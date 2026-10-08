@@ -2,13 +2,13 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** shot-v1 정책 회차에서 구도·블로킹·비트 관문, 키프레임 승인, 컷별 판정 기반 실행 경계(`ds next`), 토큰 기반 교차 리뷰(Ed25519, GCP Secret Manager)를 코드로 강제하고, 정책 없는 기존 회차는 그대로 동작하게 한다.
+**Goal:** 컷과 컷, 회차와 회차(1화 마지막 → 2화 첫 컷)가 배경·문맥으로 이어지도록, shot-v1 정책 회차에서 구도·블로킹·비트 관문, 키프레임 승인, 컷별 판정 기반 실행 경계(`ds next`), 토큰 기반 교차 리뷰(Ed25519, GCP Secret Manager)를 코드로 강제하고, 정책 없는 기존 회차는 그대로 동작하게 한다.
 
 **Architecture:** 계약(`@cak/contracts`)에 선택 필드·새 타입만 추가한다. `packages/drama-series/src/core` 에 순수 로직(shot 관문, 키프레임 지문, 실행 상태, 컷 판정, 리뷰 토큰)을 파일 단위로 두고, 외부 의존(ffmpeg 프레임, gcloud 비밀 조회)은 `src/adapters` 에 둔다. CLI 는 얇게 연결만 한다. 모든 신규 규칙은 `episode.shotPolicy?.version === 'shot-v1'` 일 때만 강제하고 legacy 는 info 만 남긴다.
 
 **Tech Stack:** TypeScript(ESM), zod 3, vitest 2, tsx, node:crypto(Ed25519), ffmpeg/ffprobe, gcloud CLI.
 
-**Spec:** `docs/superpowers/specs/2026-10-08-drama-keyframe-pipeline-design.md` (r5, f258088)
+**Spec:** `docs/superpowers/specs/2026-10-08-drama-keyframe-pipeline-design.md` (r6, 19075ae — §19 회차 간 연결 포함)
 
 ## Global Constraints
 
@@ -25,7 +25,7 @@
 
 ## Review Focus
 
-1. 기존 gates 디렉터리(1화 `gates-9min`)에 `shot` 기록이 없는 legacy 회차 → plan 이 이전처럼 통과해야 한다 (Task 5 테스트 `legacy plan does not require shot/keyframes/cross-review`).
+1. 2화(shot-v1)의 앞 회차가 legacy 로 만든 1화(구도 정보 없음) → 앞 회차로 읽히고, 1화 마지막 소품 상태를 이어받지 않으면 block, 시작 이미지는 1화 마지막 클립 (Task 12 테스트 `reads a legacy previous episode as the start of episode 2`). legacy 회차 자체의 plan 도 이전처럼 통과 (Task 5).
 2. 판정·승인 후 같은 cut 의 클립 파일을 교체(sha 변경) → 판정·승인이 무효가 되어 다음 컷이 막혀야 한다 (Task 8 테스트 `replaced clip file voids verdict and approval`).
 3. 리뷰 응답 후 대본을 고침 → cross-review-apply 거부, plan 차단 (Task 10 테스트 `rejects a response whose fingerprint is no longer current`).
 4. 비트 sec 합이 컷 길이 초과, lines 인덱스 범위 밖·중복·누락 → block, beatWindows 는 음수 구간을 만들지 않는다 (Task 3 테스트).
@@ -2178,7 +2178,301 @@ git commit -m "feat(drama-series): CLI for keyframes, run state, clip verdict an
 
 ---
 
-### Task 12: 스킬·작성 지침·진행 기록 갱신 + 전체 검증
+### Task 12: 회차 간 연결 — 단일 `previousCutOf` 와 1화→2화 이어받기
+
+**Files:**
+- Modify: `packages/contracts/src/drama-series.ts` (append)
+- Modify: `packages/drama-series/src/core/model.ts`, `src/core/gates/types.ts`
+- Create: `packages/drama-series/src/core/continuation.ts`
+- Modify: `src/core/gates/continuity.ts`, `src/core/gates/shot.ts`, `src/core/keyframe.ts`, `src/core/judge-gates.ts`, `src/core/verdict.ts`, `src/core/join.ts`, `src/core/plan.ts`, `src/core/run-state.ts`, `src/cli/index.ts`
+- Test: `packages/drama-series/test/continuation.test.ts`
+
+**Interfaces:**
+- Consumes: 모든 이전 Task
+- Produces:
+  - 계약: `DramaEpisode.continuesFromEpisode?: { no: number; cutId: string }`, `DramaEpisode.startsFresh?: true`, `DramaStartImage` 에 `{ source: 'prev-episode-clip'; episodeNo: number; cutId: string }`
+  - `GateContext.prev?: { episode: DramaEpisode } | undefined`
+  - `interface PrevCut { cut: DramaCut; episodeNo: number; sameEpisode: boolean }`, `previousCutOf(ctx: GateContext, index: number): PrevCut | undefined`
+  - `chainsFromV1(prev: DramaCut | undefined, cut: DramaCut)` — prev 가 legacy(setupId 없음)면 장소만 비교
+  - `NextItem.useLastFrameOf` 를 `{ cutId: string; jobId: string } | { episodeNo: number; cutId: string; file: string }` 로 확장, `nextCuts(…, prevEpisodeClip?: (cutId: string) => string | null)` (파일 경로 또는 null)
+  - CLI: `--prev-episode <epNN.json>` (validate, judge-build, judge-apply, plan, keyframe-build, approve-keyframe, verdict-build, review-request), `--prev-clips <dir>` (next)
+
+- [ ] **Step 1: Write the failing tests**
+
+```ts
+// packages/drama-series/test/continuation.test.ts
+import { describe, expect, it } from 'vitest';
+import { readFileSync } from 'node:fs';
+import type { DramaPlan } from '@cak/contracts';
+import { parseEpisode, parseSeries } from '../src/core/model.js';
+import { loadGenre } from '../src/core/genre.js';
+import { previousCutOf } from '../src/core/continuation.js';
+import { continuityGate } from '../src/core/gates/continuity.js';
+import { shotGate } from '../src/core/gates/shot.js';
+import { buildQuestions } from '../src/core/judge-gates.js';
+import { buildVerdictRequest } from '../src/core/verdict.js';
+import { newRunState, nextCuts } from '../src/core/run-state.js';
+import type { GateContext } from '../src/core/gates/types.js';
+
+const fx = (n: string): any => JSON.parse(readFileSync(new URL(`./fixtures/${n}`, import.meta.url), 'utf8'));
+/** fixture 회차 = legacy 1화. 2화는 shot-v1 으로 1화 마지막 컷(c4)에서 이어진다. */
+function ep2(mutate?: (e2: any, e1: any) => void): GateContext {
+  const s = fx('series.json');
+  const e1 = fx('episode.json');
+  const last = e1.cuts.at(-1);
+  last.propState = { ...(last.propState ?? {}), '빈 박스 더미': '무너짐' };
+  const loc = s.locations.find((l: any) => l.id === last.locationId);
+  if (!loc.props.includes('빈 박스 더미')) loc.props.push('빈 박스 더미');
+  loc.setups = [{ id: 'front', name: '정면', cameraEn: 'static eye-level medium-wide shot of the place', refAssetId: 'set1', visiblePropIds: ['빈 박스 더미'] }];
+  const e2 = {
+    seriesId: e1.seriesId, no: 2, title: '2화', shotPolicy: { version: 'shot-v1', strict: true }, authoredBy: 'claude',
+    continuesFromEpisode: { no: 1, cutId: last.id },
+    cuts: [{
+      id: 'c1', locationId: last.locationId, setupId: 'front', durationSec: 8, cast: last.cast,
+      blocking: last.cast.map((m: any, i: number) => ({ characterId: m.characterId, side: i ? 'right' : 'left' })),
+      action: '1화 마지막 장면에서 바로 이어진다.', visualEn: 'Continuing right from the previous episode ending.',
+      beats: [{ en: 'They hold still, breathing.', lines: [] }], continuesFromPrev: true, usedPropIds: ['빈 박스 더미'],
+      propState: { '빈 박스 더미': '무너짐' }, lines: [],
+    }],
+  };
+  mutate?.(e2, e1);
+  return { series: parseSeries(s), episode: parseEpisode(e2), genre: loadGenre(s.genreId), prev: { episode: parseEpisode(e1) } };
+}
+const blocks = (ctx: GateContext) => [...continuityGate.run(ctx), ...shotGate.run(ctx)].filter((f) => f.severity === 'block').map((f) => f.message);
+
+describe('cross-episode continuation', () => {
+  it('reads a legacy previous episode as the start of episode 2', () => {
+    const ctx = ep2();
+    const p = previousCutOf(ctx, 0)!;
+    expect(p).toMatchObject({ episodeNo: 1, sameEpisode: false });
+    expect(p.cut.id).toBe(ctx.prev!.episode.cuts.at(-1)!.id);
+    expect(blocks(ctx)).toEqual([]);
+  });
+  it('blocks when episode 1 prop state is not carried into episode 2', () => {
+    expect(blocks(ep2((e2) => { e2.cuts[0].propState = {}; })).join('\n')).toMatch(/앞 컷\(.+\) 소품 상태 미반영: 빈 박스 더미/);
+  });
+  it('blocks when the previous episode script is missing or the cut does not exist', () => {
+    const noPrev = { ...ep2(), prev: undefined };
+    expect(blocks(noPrev).join('\n')).toMatch(/앞 회차 대본/);
+    expect(blocks(ep2((e2) => { e2.continuesFromEpisode.cutId = 'zz'; })).join('\n')).toMatch(/앞 회차에 컷 없음: zz/);
+  });
+  it('requires episode 2+ to declare continuation or a fresh start', () => {
+    expect(blocks(ep2((e2) => { delete e2.continuesFromEpisode; e2.cuts[0].continuesFromPrev = false; e2.cuts[0].propState = {}; })).join('\n')).toMatch(/continuesFromEpisode 또는 startsFresh/);
+    expect(blocks(ep2((e2) => { delete e2.continuesFromEpisode; e2.startsFresh = true; e2.cuts[0].continuesFromPrev = false; e2.cuts[0].propState = {}; }))).toEqual([]);
+  });
+  it('puts the episode 1 ending into dialogue judging context', () => {
+    const ctx = ep2((e2) => { e2.cuts[0].lines = [{ speaker: e2.cuts[0].cast[0].characterId, text: '방금 그거 뭐였어?', kind: 'dialogue' }]; e2.cuts[0].beats[0].lines = [0]; });
+    const q = buildQuestions('dialogue', ctx);
+    expect(JSON.stringify(q[0])).toContain(ctx.prev!.episode.cuts.at(-1)!.action);
+  });
+  it('asks the verdict join question against the previous episode ending', () => {
+    const ctx = ep2();
+    const r = buildVerdictRequest(ctx, ctx.episode.cuts[0]!, 'S', '', () => null);
+    expect(r.questions.find((q) => q.id === 'join')!.question).toContain('1화');
+  });
+  it('next waits for the previous episode clip, then hands its file for the last frame', () => {
+    const plan: DramaPlan = { seriesId: 's', episodeNo: 2, fingerprint: 'fp', totalCredits: 24, budgetCredits: 30, rateMeasuredAt: 'x', createdAt: 'x', clips: [{ cutId: 'c1', backend: 'b', model: 'm', durationSec: 8, params: {}, medias: [], prompt: 'p', voiceOver: [], estCredits: 24, keyframeAssetId: 'k', startImage: { source: 'prev-episode-clip', episodeNo: 1, cutId: 'c4' } }] };
+    const run = newRunState(plan, { agent: 'claude', session: 's', since: 'n' });
+    expect(nextCuts(plan, run, 'claude', () => null, 2, () => null).waiting).toMatch(/앞 회차 클립 없음: 1화 c4/);
+    expect(nextCuts(plan, run, 'claude', () => null, 2, () => '/m/ep01/c4.mp4').items[0]!.useLastFrameOf).toEqual({ episodeNo: 1, cutId: 'c4', file: '/m/ep01/c4.mp4' });
+  });
+});
+```
+
+(Plan-level `startImage: prev-episode-clip` assertion: append to `plan-v1.test.ts` a case that builds `ep2()`-style context with `prev`, passes all reports incl. `cross-review`, and expects `r.plan!.clips[0]!.startImage).toEqual({ source: 'prev-episode-clip', episodeNo: 1, cutId: <1화 마지막 컷 id> })`.)
+
+- [ ] **Step 2: Run** `npm test -w @cak/drama-series -- continuation` → FAIL.
+
+- [ ] **Step 3: Contracts + model**
+
+```ts
+// contracts — DramaEpisode (append)
+  /** (2026-10-08 r6) 첫 컷이 이어받는 앞 회차 컷 */
+  continuesFromEpisode?: { no: number; cutId: string } | undefined;
+  /** (2026-10-08 r6) 앞 회차와 이어지지 않음을 명시(시간 점프 등) */
+  startsFresh?: true | undefined;
+// contracts — DramaStartImage 를 확장
+export type DramaStartImage =
+  | { source: 'keyframe'; assetId: string }
+  | { source: 'prev-clip'; fromCut: string }
+  | { source: 'prev-episode-clip'; episodeNo: number; cutId: string };
+```
+
+```ts
+// model.ts episodeSchema 에 추가
+  continuesFromEpisode: z.object({ no: z.number().int().min(1), cutId: ID }).optional(),
+  startsFresh: z.literal(true).optional(),
+```
+
+```ts
+// gates/types.ts
+export interface GateContext {
+  series: DramaSeries;
+  episode: DramaEpisode;
+  genre: GenrePack;
+  /** (r6) 앞 회차 — continuesFromEpisode 가 있을 때 CLI --prev-episode 로 읽는다 */
+  prev?: { episode: DramaEpisode } | undefined;
+}
+```
+
+- [ ] **Step 4: `core/continuation.ts`**
+
+```ts
+import type { DramaCut } from '@cak/contracts';
+import type { GateContext } from './gates/types.js';
+
+export interface PrevCut { cut: DramaCut; episodeNo: number; sameEpisode: boolean }
+
+/** "이 컷 바로 앞 장면"의 유일한 기준. 회차 첫 컷은 continuesFromEpisode 로 앞 회차 컷을 가리킨다. */
+export function previousCutOf(ctx: GateContext, index: number): PrevCut | undefined {
+  if (index > 0) {
+    const cut = ctx.episode.cuts[index - 1];
+    return cut ? { cut, episodeNo: ctx.episode.no, sameEpisode: true } : undefined;
+  }
+  const link = ctx.episode.continuesFromEpisode;
+  if (!link || !ctx.prev || ctx.prev.episode.no !== link.no) return undefined;
+  const cut = ctx.prev.episode.cuts.find((c) => c.id === link.cutId);
+  return cut ? { cut, episodeNo: link.no, sameEpisode: false } : undefined;
+}
+
+/** 회차 단위 연결 검사(shot 관문에서 호출). */
+export function episodeLinkFindings(ctx: GateContext): { message: string }[] {
+  const e = ctx.episode;
+  const out: { message: string }[] = [];
+  if (e.no >= 2 && !e.continuesFromEpisode && !e.startsFresh) out.push({ message: `${e.no}화는 continuesFromEpisode 또는 startsFresh 중 하나를 적어야 함` });
+  const link = e.continuesFromEpisode;
+  if (link) {
+    if (!ctx.prev || ctx.prev.episode.no !== link.no) out.push({ message: `앞 회차 대본(${link.no}화)이 입력되지 않음 — --prev-episode` });
+    else if (!ctx.prev.episode.cuts.some((c) => c.id === link.cutId)) out.push({ message: `앞 회차에 컷 없음: ${link.cutId}` });
+  }
+  return out;
+}
+```
+
+- [ ] **Step 5: 사용처 교체**
+
+`continuity.ts` — 앞 컷 소품 이어받기:
+```ts
+import { previousCutOf } from '../continuation.js';
+// episode.cuts.forEach((cut, i) => { … 안에서
+      const p = previousCutOf({ series, episode, genre, prev } as GateContext, i);
+      if (p && p.cut.locationId === cut.locationId) {
+        const next = cut.propState ?? {};
+        for (const k of Object.keys(p.cut.propState ?? {}))
+          if (!(k in next))
+            f.push({ severity: 'block', message: `앞 컷(${p.sameEpisode ? '' : `${p.episodeNo}화 `}${p.cut.id}) 소품 상태 미반영: ${k}=${p.cut.propState?.[k] ?? ''}`, cutId: cut.id });
+      }
+```
+(`run(ctx)` 로 받아 `const { series, episode } = ctx;` 후 `previousCutOf(ctx, i)` 를 쓰는 형태로 바꾼다.)
+
+`shot.ts` — `cutFindings(ctx, cut, prev, sev)` 의 prev 를 `previousCutOf(ctx, i)?.cut` 로, 그리고 run 에 회차 검사 추가:
+```ts
+import { episodeLinkFindings, previousCutOf } from '../continuation.js';
+  run(ctx) {
+    const strict = isShotV1(ctx.episode);
+    const sev = (s: DramaFindingSeverity): DramaFindingSeverity => (strict ? s : 'info');
+    const link = episodeLinkFindings(ctx).map((x) => ({ severity: sev('block'), message: x.message }));
+    return [...link, ...ctx.episode.cuts.flatMap((cut, i) => cutFindings(ctx, cut, previousCutOf(ctx, i)?.cut, sev))];
+  },
+```
+그리고 continuesFromPrev 검사에서 앞 컷이 legacy 면 구도 비교를 review 로:
+```ts
+  if (cut.continuesFromPrev) {
+    const legacyPrev = !!prev && prev.setupId === undefined;
+    const sameSet = !!prev && prev.locationId === cut.locationId && (legacyPrev || prev.setupId === cut.setupId);
+    …(기존 block 조건 그대로, sameSet 정의만 교체)
+    if (legacyPrev) push('review', '앞 컷에 구도 정보 없음(legacy) — 키프레임 승인 때 배경 연결을 사람이 확인');
+  }
+```
+
+`join.ts`:
+```ts
+export function chainsFromV1(prev: DramaCut | undefined, cut: DramaCut): boolean {
+  return !!prev && cut.continuesFromPrev === true && prev.locationId === cut.locationId && (prev.setupId === undefined || prev.setupId === cut.setupId) && (cut.transitionIn ?? 'cut') === 'cut';
+}
+```
+
+`keyframe.ts` `keyframeDigest` — `propsIn`:
+```ts
+    propsIn: (() => { const p = previousCutOf(ctx, i); return p && p.cut.locationId === cut.locationId ? p.cut.propState : undefined; })(),
+```
+
+`judge-gates.ts` `previousCut`:
+```ts
+function previousCut(ctx: GateContext, cut: DramaCut): string {
+  const p = previousCutOf(ctx, ctx.episode.cuts.findIndex((c) => c.id === cut.id));
+  if (!p) return '(첫 컷)';
+  const lines = p.cut.lines.map((l) => `${nameOf(ctx, l.speaker)}: "${l.text}"`).join(' ');
+  return `${p.sameEpisode ? '' : `[앞 회차 ${p.episodeNo}화 마지막] `}${p.cut.action}${lines ? ` 대사 — ${lines}` : ''}`;
+}
+```
+`judgeState` 에 앞 회차 결말 추가:
+```ts
+export function judgeState(ctx: GateContext): Record<string, unknown> {
+  const p = previousCutOf(ctx, 0);
+  return { series: ctx.series.title, logline: ctx.series.logline, genre: ctx.genre.name, genrePromise: ctx.genre.promise, ...(p && !p.sameEpisode ? { previousEpisodeEnding: `${p.episodeNo}화 ${p.cut.id}: ${p.cut.action}` } : {}) };
+}
+```
+
+`verdict.ts` join 질문:
+```ts
+  const i = ctx.episode.cuts.indexOf(cut);
+  const p = previousCutOf(ctx, i);
+  if (p && cut.continuesFromPrev) questions.push({ id: 'join', question: `첫 프레임이 ${p.sameEpisode ? '' : `${p.episodeNo}화 `}${p.cut.id} 마지막 장면에서 자연스럽게 이어지는가(배경·인물 위치·소품 상태)`, frameIds: ['f-first'] });
+```
+
+`plan.ts` — 컷 루프에서 prev 를 `previousCutOf(ctx, i)` 로:
+```ts
+    const p = previousCutOf(ctx, i);
+    const chained = !!p && (v1 ? chainsFromV1(p.cut, cut) : p.sameEpisode && chainsFrom(p.cut, cut));
+    const start: DramaStartImage | undefined = !v1 || !cut.keyframe ? undefined
+      : chained ? (p!.sameEpisode ? { source: 'prev-clip', fromCut: p!.cut.id } : { source: 'prev-episode-clip', episodeNo: p!.episodeNo, cutId: p!.cut.id })
+      : { source: 'keyframe', assetId: cut.keyframe.assetId };
+    // startFromCut 는 같은 회차 이어붙임에만(기존 의미 유지)
+    ...(chained && p!.sameEpisode ? { startFromCut: p!.cut.id } : {}), ...(start ? { startImage: start, keyframeAssetId: cut.keyframe!.assetId } : {})
+```
+
+`run-state.ts`:
+```ts
+export interface NextItem { cutId: string; action: 'generate' | 'regenerate'; startImage: DramaStartImage | undefined; useLastFrameOf?: { cutId: string; jobId: string } | { episodeNo: number; cutId: string; file: string } }
+export function nextCuts(plan, run, agent, currentSha, pilotCuts = SHOT_V1.pilotCuts, prevEpisodeClip: (cutId: string) => string | null = () => null) {
+  …
+    const item = (action) => { …
+      if (spec.startImage?.source === 'prev-episode-clip') {
+        const file = prevEpisodeClip(spec.startImage.cutId);
+        if (file) base.useLastFrameOf = { episodeNo: spec.startImage.episodeNo, cutId: spec.startImage.cutId, file };
+      }
+      return base; };
+    if (!rec) {
+      if (spec.startImage?.source === 'prev-episode-clip' && !prevEpisodeClip(spec.startImage.cutId))
+        return { items: [], waiting: `앞 회차 클립 없음: ${spec.startImage.episodeNo}화 ${spec.startImage.cutId} — --prev-clips`, done: false };
+      return { items: [item('generate')], waiting: null, done: false };
+    }
+```
+
+`cli/index.ts`:
+```ts
+function loadCtx(o: Opts): GateContext {
+  const series = parseSeries(readJson(req(o, 'series')));
+  const episode = parseEpisode(readJson(req(o, 'episode')));
+  const prevPath = optStr(o, 'prev-episode');
+  return { series, episode, genre: loadGenre(series.genreId), ...(prevPath ? { prev: { episode: parseEpisode(readJson(prevPath)) } } : {}) };
+}
+```
+— `'prev-episode': 'string'` 를 validate, judge-build, judge-apply, plan, keyframe-build, approve-keyframe, verdict-build, review-request, review-respond, cross-review-apply 의 opts 에 추가. `next` 에 `'prev-clips': 'string'` 를 추가하고 `(cutId) => { const f = join(abs(dir), `${cutId}.mp4`); return existsSync(f) ? f : null; }` 를 넘긴다. review-request 요약에 `judgeState(ctx).previousEpisodeEnding` 을 덧붙인다.
+
+- [ ] **Step 6: Run** `npm test -w @cak/drama-series` → all pass (continuity/judge 기존 테스트 포함). tsc 0.
+
+- [ ] **Step 7: Commit**
+
+```bash
+git add packages/contracts/src/drama-series.ts packages/drama-series/src packages/drama-series/test/continuation.test.ts packages/drama-series/test/plan-v1.test.ts
+git commit -m "feat(drama-series): cross-episode continuation — single previousCutOf, ep1 ending feeds ep2 gates, judging, plan and run"
+```
+
+---
+
+### Task 13: 스킬·작성 지침·진행 기록 갱신 + 전체 검증
 
 **Files:**
 - Modify: `.claude/skills/drama-series/SKILL.md`
@@ -2193,6 +2487,10 @@ git commit -m "feat(drama-series): CLI for keyframes, run state, clip verdict an
 ## 세션 시작
 - 이 세션의 역할을 정한다(`claude`). `ds review-inbox --dir docs/videos/<작업>/reviews --agent claude` 로 미처리 리뷰 토큰부터 처리한다.
 - 메일함 `/Users/admin/workSpace/.agent-mailbox/drama-series/to-claude/` 를 확인하고, 답장을 기다리는 동안 Monitor 로 감시한다.
+
+## 2.4 회차 연결 (shot-v1 필수)
+- 2화 이상은 `continuesFromEpisode: { no, cutId }`(앞 회차 마지막 컷) 또는 `startsFresh: true` 를 적는다. 첫 컷은 앞 회차 마지막 컷의 소품 상태를 이어받고, 바로 이어지면 `continuesFromPrev: true`.
+- validate·judge·plan·keyframe·verdict·review 명령에 `--prev-episode <앞 회차 json>` 을, next 에 `--prev-clips <앞 회차 클립 폴더>` 를 준다.
 
 ## 2.6 교차 리뷰 (shot-v1 필수)
 1. 회차에 `authoredBy` 를 적는다(이 세션이 쓰면 `claude`).
@@ -2266,7 +2564,7 @@ git commit -m "docs(drama-series): skill and writing guide for shot-v1, keyframe
 
 ## Self-Review
 
-1. **Spec coverage:** §3 정책 버전 → T1/T3/T5; §4 계약 → T1; §5 shot 관문 → T3; §6 키프레임 → T4/T11; §7 지문 분리 → T2/T4; §8 연결 → T3(continuesFromPrev 검사)/T5(chainsFromV1); §9 프롬프트 → T6; §10 실행 경계 → T8/T11; §10a 컷 판정 → T9/T11; §11 frame-check → T7/T9(SSIM 참고, 카메라 이동 N/A); §12 스킬·참조 영상 무음 → T12; §16 회차 잠금·인계 → T8/T11, Codex 입구는 Codex 담당(범위 밖); §17·§18 교차 리뷰·토큰·키 → T10/T11/T12; §13 테스트 → 각 Task. 공백: Codex 입구 파일(Codex 담당), 실제 GCP 키 생성(사용자 승인 후 실행).
+1. **Spec coverage:** §19 회차 간 연결 → T12(단일 previousCutOf 로 continuity·shot·keyframe·judge·verdict·plan·next 교체); §3 정책 버전 → T1/T3/T5; §4 계약 → T1; §5 shot 관문 → T3; §6 키프레임 → T4/T11; §7 지문 분리 → T2/T4; §8 연결 → T3(continuesFromPrev 검사)/T5(chainsFromV1); §9 프롬프트 → T6; §10 실행 경계 → T8/T11; §10a 컷 판정 → T9/T11; §11 frame-check → T7/T9(SSIM 참고, 카메라 이동 N/A); §12 스킬·참조 영상 무음 → T12; §16 회차 잠금·인계 → T8/T11, Codex 입구는 Codex 담당(범위 밖); §17·§18 교차 리뷰·토큰·키 → T10/T11/T12; §13 테스트 → 각 Task. 공백: Codex 입구 파일(Codex 담당), 실제 GCP 키 생성(사용자 승인 후 실행).
 2. **Placeholder scan:** TODO(D1) 는 설계상 미확인 사항(start_image 번호)에 대한 코드 주석으로만 남김. 그 외 없음.
 3. **Type consistency:** `Aspect`, `keyframeFindings(ctx, aspect, fileSha)`, `PlanInput.keyframeFileSha`, `DramaStartImage`, `NextItem.useLastFrameOf`, `VerdictRequest/Response`, `PublicKeyRecord`, `PrivateKeySource` 이름이 Task 간 일치. `toSeedanceClip` 시그니처 불변.
 4. **Review Focus:** 5개 모두 해당 Task 테스트에 포함(T5 legacy, T8 replaced file, T10 stale fingerprint, T3 beat sums/indexes, T9 empty transcript).
