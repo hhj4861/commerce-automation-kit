@@ -77,21 +77,29 @@ try {
   assert.equal((await music()).status(), 401); assert.equal(calls, 0);
   await post({ action: "signup", name: "lyricsfixture" + Date.now(), password: "fixture-password-only-123" }, "/api/study/account");
   await post({ action: "assess", language: "ja", answers: [0, 0, 0], confidence: 1, minutes: 5 });
-  let pending = true;
+  let pending = "not-configured";
   await page.route("**/api/study/music", r => {
-    if (r.request().method() === "GET" && pending) return r.fulfill({ contentType: "application/json", body: '{"status":"unavailable","reason":"not-configured"}' });
+    if (r.request().method() === "GET" && pending) return r.fulfill({ contentType: "application/json", body: JSON.stringify({ status: "unavailable", reason: pending }) });
     return r.continue();
   });
   await page.goto(base + "/study");
   await page.getByRole("button", { name: "음악", exact: true }).click();
-  await page.getByRole("heading", { name: "가사 학습 준비 중", exact: true }).waitFor();
+  await page.getByRole("heading", { name: "현재 가사 학습 이용 불가", exact: true }).waitFor();
   assert.equal(await page.locator(".hm-music-unit").count(), 0);
+  for (const reason of ["not-configured", "rights-pending"]) {
+    pending = reason;
+    await page.reload(); await page.getByRole("button", { name: "음악", exact: true }).click();
+    await page.getByRole("heading", { name: "현재 가사 학습 이용 불가", exact: true }).waitFor();
+    assert.equal(await page.getByRole("button", { name: "다시 확인", exact: true }).count(), 0);
+    assert.equal(await page.getByText("가사를 한 줄씩 듣고, 뜻을 익히며 따라 불러요.", { exact: true }).count(), 0);
+    await page.getByText("이 곡의 가사 학습 자료가 아직 연결되지 않았어요. 새로고침하거나 다시 접속해도 학습을 시작할 수 없어요.", { exact: true }).waitFor();
+  }
   assert.equal(videoRequests, 0);
   await page.getByRole("button", { name: "앱에서 영상 열기", exact: true }).click();
   await page.locator('iframe[title="Pretender 공식 뮤직비디오"]').waitFor();
   assert.match(await page.locator("iframe").getAttribute("src"), /cc_load_policy=1/);
   await page.screenshot({ path: resolve(dir, "music-pending.png") });
-  pending = false; await page.getByRole("button", { name: "다시 확인", exact: true }).click();
+  pending = ""; await page.reload(); await page.getByRole("button", { name: "음악", exact: true }).click();
   await page.getByText("가사 1 / 12", { exact: true }).waitFor();
   assert.equal(await page.locator("iframe").count(), 0, "full song unmounts before pronunciation practice");
   for (const width of [320, 390, 1024]) {
@@ -158,6 +166,7 @@ try {
     await page.reload(); await page.getByRole("button", { name: "음악", exact: true }).click();
     await page.getByRole("heading", { name: "지금은 가사를 불러올 수 없어요", exact: true }).waitFor();
     assert.equal(await page.locator(".hm-lyrics-original").count(), 0);
+    assert(await page.getByRole("button", { name: "다시 확인", exact: true }).isVisible());
   }
   mode = "ready"; lesson.revision = "fixture-v2";
   await page.getByRole("button", { name: "다시 확인", exact: true }).click();
@@ -166,7 +175,7 @@ try {
   await page.getByLabel("학습 언어", { exact: true }).selectOption("es");
   assert.equal(await page.getByRole("button", { name: "음악", exact: true }).count(), 0);
   assert.deepEqual(errors, []);
-  await writeFile(resolve(dir, "result.json"), JSON.stringify({ passed: true, supplier: "Hanmadi-contract fixture, no commercial provider connected", lines: 12, calls, videoRequests, audioRequests: audioRequests.length, errors, verified: ["pending UI", "no emotional lessons", "12 ordered lines including repeat", "Korean pronunciation/meaning", "manual segment replay", "speech unmounts video", "cursor persistence and account isolation", "no lyric persistence", "failed save/retry", "auth/origin/index/revision guards", "provider errors/expiry", "no overflow at 320/390/1024"] }, null, 2));
+  await writeFile(resolve(dir, "result.json"), JSON.stringify({ passed: true, supplier: "Hanmadi-contract fixture, no commercial provider connected", lines: 12, calls, videoRequests, audioRequests: audioRequests.length, errors, verified: ["unconfigured/rights-pending states have no retry or learning promise", "transient errors keep retry", "no emotional lessons", "12 ordered lines including repeat", "Korean pronunciation/meaning", "manual segment replay", "speech unmounts video", "cursor persistence and account isolation", "no lyric persistence", "failed save/retry", "auth/origin/index/revision guards", "provider errors/expiry", "no overflow at 320/390/1024"] }, null, 2));
   console.log("PASS licensed lyrics fixture journey, 12 lines, progress, playback controls and errors");
 } finally {
   await browser?.close(); app.kill("SIGTERM"); await exited;

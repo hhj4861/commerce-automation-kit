@@ -26,7 +26,7 @@ export function MusicStudy() {
       <span className="hm-music-record" aria-hidden="true">♪</span>
       <div><h1>{pretender.title}</h1><p>{pretender.artist}</p></div>
     </div>
-    <p>가사를 한 줄씩 듣고, 뜻을 익히며 따라 불러요.</p>
+    <p>{ready ? "가사를 한 줄씩 듣고, 뜻을 익히며 따라 불러요." : "공식 영상으로 원곡을 감상할 수 있어요."}</p>
     <section className="hm-music-listen" aria-label="공식 영상 듣기">
       <a className="hm-music-official" href={pretender.officialUrl} target="_blank" rel="noopener noreferrer">YouTube에서 공식 영상 듣기 ↗</a>
       {!ready && <>
@@ -42,9 +42,9 @@ export function MusicStudy() {
     {!result && !error && <p role="status">가사 학습 자료를 확인하고 있어요…</p>}
     {error && <div role="alert"><p>{error}</p><button onClick={reload}>다시 시도</button></div>}
     {result?.status === "unavailable" && <div className="hm-lyrics-unavailable" role="status">
-      <h2>{pending ? "가사 학습 준비 중" : "지금은 가사를 불러올 수 없어요"}</h2>
-      <p>{pending ? "이 곡의 가사 학습은 아직 열리지 않았어요. 지금은 공식 영상으로 원곡을 들을 수 있어요." : "잠시 후 다시 확인해 주세요. 원곡은 위의 YouTube 링크에서 들을 수 있어요."}</p>
-      <button onClick={reload}>다시 확인</button>
+      <h2>{pending ? "현재 가사 학습 이용 불가" : "지금은 가사를 불러올 수 없어요"}</h2>
+      <p>{pending ? "이 곡의 가사 학습 자료가 아직 연결되지 않았어요. 새로고침하거나 다시 접속해도 학습을 시작할 수 없어요." : "잠시 후 다시 확인해 주세요. 원곡은 위의 YouTube 링크에서 들을 수 있어요."}</p>
+      {!pending && <button onClick={reload}>다시 확인</button>}
     </div>}
     {result?.status === "ready" && <LyricsPractice key={`${attempt}:${result.lesson.revision}`} lesson={result.lesson} progress={result.progress} onReload={reload} />}
   </section>;
