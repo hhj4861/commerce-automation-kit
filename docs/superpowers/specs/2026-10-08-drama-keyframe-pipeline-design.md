@@ -1,7 +1,7 @@
-# drama-series 키프레임 우선 파이프라인 — 설계 (r2)
+# drama-series 키프레임 우선 파이프라인 — 설계 (r3)
 
 - 날짜: 2026-10-08
-- 상태: r2 — Codex 리뷰(`to-claude/20261008T082354-codex-keyframe-design-review.md`) 반영. 사용자 검토 대기
+- 상태: r3 — r2: Codex 리뷰(`archive/20261008T082354-codex-keyframe-design-review.md`) 반영. r3: 사용자 결정(2026-10-08) "모든 컷을 시나리오 대비 판정해 pass 여야 다음으로" — 방식 A(자동 판정 pass 면 진행, 사람은 파일럿·예외 통과·회차 미리보기만) 추가
 - 대상(담당 범위): `packages/contracts/src/drama-series.ts`(append-only), `packages/drama-series`, `.claude/skills/drama-series`, 관련 spec·test. `apps/shopshorts` 는 건드리지 않는다
 - 선행 설계: `2026-10-06-drama-series-design.md`
 
@@ -175,11 +175,28 @@ legacy 회차는 기존 조립을 그대로 쓴다(회귀 테스트).
 `DramaReport.ok` 는 block 이 없으면 true 이므로 review 로는 막을 수 없다. 그래서 생성 진행을 별도 상태로 관리한다.
 
 - 실행 상태 파일 `<dir>/run-<ep>.json` (계약: `DramaRunState { planFingerprint; clips: { cutId; jobId?; assetId?; fileSha256?; frameCheck?; approvedBy?; at? }[] }`, append). 에피소드 파일과 분리해 내용 지문을 흔들지 않는다.
-- `ds approve-clip --run --cut --asset <job_id> --file <mp4> --by user` — 사람이 본 **그 출력 자산**(job_id + sha256)에 승인을 묶는다.
+- 컷 상태: `generated → verdict(pass|fail) → [human-approved] → released`. 상태는 출력 자산(job_id + 파일 sha256)에 묶이고, 파일이 바뀌면 판정·승인 모두 무효.
+- **모든 컷**은 §10a 컷 판정 `pass` 가 있어야 다음 컷이 열린다(사용자 결정 A).
+- 사람 승인(`ds approve-clip --run --cut --asset <job_id> --file <mp4> --by user`)이 추가로 필요한 경우만:
+  - 파일럿: 회차의 처음 `PILOT_CUTS = 2` 컷 — pass 이후 사람 승인까지 받아야 3번째 컷부터 열린다.
+  - 예외 통과: fail 판정을 사람이 근거를 보고 통과시킬 때(`--override --note` 필수, fail 항목과 함께 기록).
+  - 회차 완성 미리보기: 전 컷 released 후 조립본을 사람에게 보이고 승인 — 업로드·최종 1080p 확정 전 관문.
 - `ds next --plan --run` — 지금 제출 가능한 컷만 출력한다:
-  - shot-v1 은 처음 `PILOT_CUTS = 2` 컷만 나오고, 두 컷이 모두 승인되기 전에는 나머지가 나오지 않는다.
-  - `startImage.source = 'prev-clip'` 컷은 앞 컷 출력이 승인된 뒤에만 나오고, 그 승인 자산의 실제 마지막 디코딩 프레임을 쓰라고 명시한다.
-  - 승인 파일의 sha256 이 바뀌었으면 승인 무효.
+  - 파일럿 2컷이 사람 승인되기 전에는 3번째 컷부터 나오지 않는다.
+  - 그 뒤 각 컷은 앞 컷이 pass(또는 예외 승인)인 뒤에만 나온다. `startImage.source = 'prev-clip'` 컷은 그 판정된 자산의 실제 마지막 디코딩 프레임을 쓰라고 명시한다.
+  - fail 컷이 있으면 그 컷의 재생성만 나오며(재생성 상한·크레딧은 사용자 승인 범위 안), 뒤 컷은 막힌다.
+
+### 10a. 컷 판정 `clip-verdict` (모든 컷, 0크레딧)
+
+- `ds verdict-build --run --cut --file <mp4>` 가 대본에서 판정 항목을 **자동 생성**한다(판정자가 항목을 고르지 않는다):
+  1. 대사: whisper large-v3 받아쓰기와 대본 대조 — 줄별 CER ≤ 0.15(기존 `LINE_CER_MAX`), 줄 수·순서 일치. 결정적.
+  2. 비트: 비트마다 구간 시작·중간·끝 프레임 3장 + 질문 "이 프레임들에 '<beat.en>' 이 일어나는가" — pass/fail + 근거 프레임.
+  3. 인물·의상·블로킹: 출연진 전원 등장, 좌·우 위치, 의상 요소(look description 의 의상 구)가 유지되는가.
+  4. 배경: 승인 키프레임과 같은 세트인가(usedPropIds 소품이 보이는가, 그림에 없는 세트 요소가 생겼는가). SSIM 은 참고 수치로 첨부만.
+  5. 연결: 앞 컷이 있으면 join SSIM(참고) + "앞 컷 마지막 장면에서 이어지는가".
+  - 산출: `verdict-<cut>.request.json` + 판정용 프레임 시트(비트 행 × 3열, 키프레임 대조 열).
+- 판정자: 2~5는 세션의 멀티모달 판정(프레임 시트를 보고 항목별 pass/fail + 근거)을 1차로 쓴다. JEV 가 이미지 입력을 받는지는 TODO(D1) — 받으면 JEV 로 교체해 생성 주체와 판정 주체를 분리한다. 생성 주체가 판정하는 한계는 판정 항목 자동 생성·근거 프레임 필수·사람 예외 통과 기록으로 완화하고, 보고서에 판정자를 명시한다.
+- `ds verdict-apply --run --cut --response <json>` — 모든 항목 pass 일 때만 `pass`. 응답에 항목 누락·근거 프레임 누락이 있으면 `fail` 로 기록(침묵 통과 금지).
 - 스킬은 `ds next` 출력에 있는 컷만 제출한다(스킬 문장만으로 끝내지 않고 이 명령이 경계다).
 
 ## 11. 생성 직후 점검 `frame-check` (참고 지표, 0크레딧)
@@ -194,7 +211,7 @@ legacy 회차는 기존 조립을 그대로 쓴다(회귀 테스트).
 
 - 동작 참조 영상: 사용권이 확인된 자체 생성물만. 원본 보존, `ffmpeg -an` 사본 생성 후 `ffprobe` 로 오디오 스트림 0개 확인한 사본만 업로드. 음성 누출이 사라지는지는 미실측.
 - 비용 수치(키프레임 장당 약 0.25, 영상 3크레딧/초)는 실제 모델·입력 조합의 get_cost 로 확인한 값만 쓰고, 승인 예산과 분리해 보고한다. 추가 크레딧 집행은 매번 사용자 승인.
-- `SKILL.md`: 2(기획) → 2.5 키프레임(사람 승인) → 5(계획) → 6(생성: `ds next` → 파일럿 2컷 → `approve-clip` → 나머지).
+- `SKILL.md`: 2(기획) → 2.5 키프레임(사람 승인) → 5(계획) → 6(생성 루프: `ds next` → 생성 → `verdict-build` → 판정 → `verdict-apply` → 파일럿 2컷은 `approve-clip` → 다음) → 7(조립·회차 미리보기 사람 승인).
 - `WRITING-GUIDE.md`: 컷 1개 = 비트 1~2개·대사 2줄 이하·5~10초, 블로킹·구도·usedPropIds 작성법, 그림에 없는 세트 요소 금지, 감정·시선은 action/beats 에.
 
 ## 13. 테스트 (TDD)
@@ -207,7 +224,8 @@ legacy 회차는 기존 조립을 그대로 쓴다(회귀 테스트).
 - **참조 매핑**: image_references 순서와 @Image 번호, 의상 참조 위치, startImage 가 medias 에 들어가지 않음, keyframeAssetId 일치 검사.
 - **화면비**: keyframe-build 요청 화면비 = plan 화면비, 다르면 digest 불일치로 block.
 - **연결**: chainsFromV1 조건별(구도 변경·블로킹 비호환 시 continuesFromPrev block), legacy chainsFrom 불변.
-- **실행 경계**: ds next — 파일럿 2컷만 노출, 미승인 선행 컷 뒤 컷 비노출, 승인 후 노출, 파일 sha 변경 시 승인 무효.
+- **실행 경계**: ds next — 파일럿 2컷 pass+사람 승인 전 3번째 컷 비노출, 이후 앞 컷 pass 전 비노출, fail 이면 해당 컷 재생성만 노출, 예외 통과는 --override --note 필수, 파일 sha 변경 시 판정·승인 무효.
+- **컷 판정**: verdict-build 항목 자동 생성(비트 수만큼 비트 항목), 대사 CER 결정적 판정, 응답 항목·근거 누락 시 fail, 전 항목 pass 만 pass.
 - **frame-check**: 계산기(bars/noise), 카메라 이동 컷 N/A, 실제 마지막 프레임 추출.
 - 기존 89개 + tsc.
 
@@ -216,7 +234,7 @@ legacy 회차는 기존 조립을 그대로 쓴다(회귀 테스트).
 1. 구도 배경 그림: `aisle/side-door`(1차 3컷 첫 장면 기반, 잠금쇠·방화문·소화함을 그림에 포함), `aisle/wide`(기존), `yard/door`(기존 하역장).
 2. 2화를 `shotPolicy: shot-v1` 로 올리고 4~7컷을 규칙에 맞게 재구성 → validate·JEV 재판정.
 3. 키프레임 생성 → 시트로 사용자 승인.
-4. `ds next` 파일럿 2컷 → 사람 승인 → 나머지.
+4. `ds next` 파일럿 2컷 → 컷 판정 pass + 사람 승인 → 나머지는 컷마다 판정 pass 후 다음 → 회차 미리보기 사람 승인.
 5. 이미 만든 3컷·8컷은 legacy 출력이므로 재사용 여부를 사용자와 정한다(키프레임 소급 승인 가능).
 
 ## 15. 미확인 (TODO(D1))
