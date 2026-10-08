@@ -45,7 +45,7 @@ test('invalid, repetitive or unchanged plans fail before paid media generation',
  assert.throws(()=>scenarioResult({...f,scenes:[{...f.scenes[0],visualDirection:{...f.scenes[2].visualDirection,hookText:'왜 그럴까?'}},...f.scenes.slice(1)]},f.brief),/summary-placement/);
 });
 test('editing direction invalidates only its own media; saved legacy scenes stay editable',()=>{
- const f=fixture(),result=scenarioResult(f,f.brief);const p={...createProject(f.brief),...result,assets:{'scene-1':{source:'ai',key:'a'},'scene-2':{source:'ai',key:'b'}},task:null};
+ const f=fixture(),result=scenarioResult(f,f.brief);const p={...createProject(f.brief),brief:f.brief,...result,assets:{'scene-1':{source:'ai',key:'a'},'scene-2':{source:'ai',key:'b'}},task:null};
  const changed=changeProject(p,'scenes',{scenes:p.scenes.map((s,i)=>i? s:{...s,visualDirection:{...s.visualDirection,lighting:'왼쪽 측면광'}})});
  assert.equal(changed.assets['scene-1'],undefined);assert.equal(changed.assets['scene-2'].key,'b');
 });
