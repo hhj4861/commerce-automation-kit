@@ -1,9 +1,10 @@
-# drama-series 키프레임 우선 파이프라인 — 설계 (r5)
+# drama-series 키프레임 우선 파이프라인 — 설계 (r6)
 
 - 날짜: 2026-10-08
 - 상태: r3 — r2: Codex 리뷰(`archive/20261008T082354-codex-keyframe-design-review.md`) 반영. r3: 사용자 결정(2026-10-08) "모든 컷을 시나리오 대비 판정해 pass 여야 다음으로" — 방식 A(자동 판정 pass 면 진행, 사람은 파일럿·예외 통과·회차 미리보기만) 추가
 - r4: 사용자 결정(2026-10-08) — (1) Codex 에서도 같은 구조로 실행 가능하게(이식은 Codex 세션 담당), (2) 시나리오 교차 리뷰: Claude 가 쓴 시나리오는 Codex, Codex 가 쓴 시나리오는 Claude 가 리뷰. §16·§17 추가
 - r5: 사용자 결정(2026-10-08) — 파이프라인은 같은 세션에서 이어지지 않으므로 교차 리뷰는 세션이 아닌 **리뷰 토큰** 기반으로 주고받고, 에이전트별 서명 키는 GCP Secret Manager(shorts 프로젝트)에서 관리. §18 추가, §17 갱신
+- r6: 사용자 지적(2026-10-08) — 회차 간 연결 누락. "1화 마지막 컷이 2화 첫 컷으로 이어지는 것, 회차·컷마다 배경·문맥이 연결되는 것이 이 파이프라인의 핵심". §19 추가. r5 까지는 회차 안의 연결만 다뤘다(설계 결함)
 - 대상(담당 범위): `packages/contracts/src/drama-series.ts`(append-only), `packages/drama-series`, `.claude/skills/drama-series`, 관련 spec·test. `apps/shopshorts` 는 건드리지 않는다
 - 선행 설계: `2026-10-06-drama-series-design.md`
 
@@ -292,3 +293,34 @@ legacy 회차는 기존 조립을 그대로 쓴다(회귀 테스트).
 **메일함 README 갱신** — 수신 대상은 세션이 아니라 역할(claude/codex). 리뷰 메일은 토큰 파일명·머리말 `token:` 을 포함. 세션 ID 는 참고 정보로만 적는다.
 
 **테스트**: 토큰 1회용·만료, reviewer=author 거부, 지문 불일치(리뷰 후 대본 수정) 거부, 서명 위조·keyId 폐기 거부, 응답 reviewer 불일치 거부, inbox 가 응답된·만료된 토큰을 제외, 개인 키가 디스크에 쓰이지 않음(Secret Manager 조회는 주입 가능한 인터페이스로 테스트 대역 사용).
+
+## 19. 회차 간 연결 (핵심 요구 — r6)
+
+이 파이프라인의 목적은 **컷과 컷, 회차와 회차가 배경·문맥으로 이어지는 영상**이다. 2화 첫 컷은 1화 마지막 컷에서 시작한다. legacy 로 만든 1화도 '앞 회차'로 읽혀야 한다.
+
+**단일 기준 `previousCutOf(ctx, index)`** (`core/continuation.ts`) — "이 컷 바로 앞 장면"을 구하는 곳은 여기 하나다.
+- index > 0 → 같은 회차 앞 컷.
+- index = 0 이고 `episode.continuesFromEpisode` 가 있으면 → 앞 회차의 지정 컷(`ctx.prev.episode` 에서 cutId).
+- 그 외 → 없음.
+- 이 함수를 쓰는 곳(모두 교체): continuity 관문(소품 상태 이어받기), shot 관문(소품 반입·continuesFromPrev 호환), keyframeDigest(propsIn), 대사 판정 문맥(previousCut·sceneSoFar), 시나리오 판정 상태(앞 회차 결말), 컷 판정의 join 질문, plan 의 startImage, `ds next` 의 useLastFrameOf.
+
+**계약(append)**
+- `DramaEpisode.continuesFromEpisode?: { no: number; cutId: string }` — 이 회차 첫 컷이 이어받는 앞 회차 컷.
+- `DramaEpisode.startsFresh?: true` — 앞 회차와 이어지지 않는 회차(시간 점프 등)를 명시할 때만.
+- `DramaStartImage` 에 `{ source: 'prev-episode-clip'; episodeNo: number; cutId: string }` 추가.
+
+**검사(shot-v1)**
+- no ≥ 2 인 회차는 `continuesFromEpisode` 또는 `startsFresh` 중 하나 필수(block).
+- `continuesFromEpisode` 가 있는데 앞 회차 대본이 입력되지 않았거나(CLI `--prev-episode`) 지정 컷이 없으면 block.
+- 앞 회차 마지막 컷과 첫 컷: 소품 상태 이어받기(continuity), 장소 일치, 출연진 호환을 기존 같은 회차 규칙과 똑같이 적용. 앞 컷이 legacy(구도 정보 없음)면 구도 비교는 review 로 내리고 키프레임 승인 때 사람이 확인.
+- 첫 컷 `continuesFromPrev: true` 면 시작 이미지는 앞 회차 그 컷의 **승인된 실제 마지막 프레임**(`prev-episode-clip`), 아니면 자체 키프레임.
+
+**문맥**
+- 대사 판정의 previousCut 과 시나리오 판정 상태에 앞 회차 마지막 컷(행동·대사)을 넣는다 — 2화 첫 대사가 1화 결말에 반응하는지 판정된다.
+- 교차 리뷰 요청 요약에 앞 회차 결말 컷을 포함한다.
+
+**실행**
+- `ds next --prev-clips <앞 회차 클립 폴더>`: 첫 컷이 `prev-episode-clip` 이면 그 파일이 있어야 열리고, `useLastFrameOf` 에 회차·컷·파일을 준다. 파일이 없으면 대기 사유를 낸다.
+- 컷 판정 join 질문: 첫 컷은 앞 회차 마지막 장면과 이어지는지 묻는다.
+
+**테스트**: 2화 첫 컷의 previousCutOf 가 1화 지정 컷, 1화 소품 상태 미반영 시 block, 앞 회차 대본 누락 시 block, no≥2 에 연결 선언 없음 block, startsFresh 면 통과, 대사 판정 문맥에 1화 마지막 대사 포함, plan startImage=prev-episode-clip, next 가 앞 회차 클립 없으면 대기, legacy 1화를 앞 회차로 읽음.
