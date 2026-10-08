@@ -38,6 +38,7 @@ export type Profile = {
   completedLessons?: Record<string, { at: number; phrases: number }>;
 };
 export type StudyState = {
+  musicProgress?: Record<string, { revision: string; index: number }>;
   revision: number;
   saveEpoch: number;
   autoSave: boolean;

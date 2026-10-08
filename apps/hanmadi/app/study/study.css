@@ -2322,3 +2322,25 @@ body:has(.hm-dialog[open]) { overflow: hidden; }
 .hm-music-action { color: #3157d5; font-size: 13px; font-weight: 700; }
 
 .hm-music-listen a.hm-music-official { width: 100%; justify-content: center; text-align: center; background: #3157d5; color: white; text-decoration: none; border-radius: 12px; padding: 12px; margin: 16px 0 12px; font-weight: 700; font-size: 14px; }
+
+.hm-lyrics { min-width: 0; }
+.hm-lyrics > .hm-row { flex-wrap: wrap; gap: 8px; }
+.hm-lyrics > .hm-row h2 { font-size: 20px; }
+.hm-lyrics > .hm-row span { font-size: 13px; color: #596880; }
+.hm-lyrics progress { width: 100%; accent-color: #493879; }
+.hm-lyrics-line { margin: 18px 0; padding: 22px 18px; background: #f4f1fc; border-radius: 18px; overflow-wrap: anywhere; }
+.hm-lyrics-original { font-size: 24px; line-height: 1.7; font-weight: 700; }
+.hm-lyrics-reading { color: #574576; line-height: 1.8; }
+.hm-lyrics-meaning { color: #172e50; line-height: 1.8; }
+.hm-lyrics-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 20px; }
+.hm-lyrics-actions button { min-height: 44px; }
+.hm-lyrics-credit { font-size: 12px; color: #63738b; white-space: pre-line; overflow-wrap: anywhere; }
+.hm-lyrics-unavailable { padding: 24px 18px; background: #f4f1fc; border-radius: 18px; }
+.hm-lyrics-unavailable h2 { font-size: 20px; }
+.hm-lyrics-unavailable p { line-height: 1.8; }
+
+.hm-lyrics progress { display: block; height: 6px; appearance: none; border: 0; border-radius: 8px; overflow: hidden; }
+.hm-lyrics progress::-webkit-progress-bar { background: #e4def1; border-radius: 8px; }
+.hm-lyrics progress::-webkit-progress-value { background: #493879; border-radius: 8px; }
+.hm-lyrics progress::-moz-progress-bar { background: #493879; border-radius: 8px; }
+.hm-lyrics .hm-lesson-navigation { position: static; box-shadow: none; background: transparent; padding-top: 0; }

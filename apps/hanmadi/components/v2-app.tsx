@@ -1442,7 +1442,7 @@ export function V2App() {
                     </div>
                   )}
                   {section === "music" && language === "ja" && (
-                    <MusicStudy profile={profile} onStart={setActiveUnit} />
+                    <MusicStudy />
                   )}
                   {section === "today" && (
                     <>
