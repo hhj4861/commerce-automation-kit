@@ -1,8 +1,9 @@
-# drama-series 키프레임 우선 파이프라인 — 설계 (r4)
+# drama-series 키프레임 우선 파이프라인 — 설계 (r5)
 
 - 날짜: 2026-10-08
 - 상태: r3 — r2: Codex 리뷰(`archive/20261008T082354-codex-keyframe-design-review.md`) 반영. r3: 사용자 결정(2026-10-08) "모든 컷을 시나리오 대비 판정해 pass 여야 다음으로" — 방식 A(자동 판정 pass 면 진행, 사람은 파일럿·예외 통과·회차 미리보기만) 추가
 - r4: 사용자 결정(2026-10-08) — (1) Codex 에서도 같은 구조로 실행 가능하게(이식은 Codex 세션 담당), (2) 시나리오 교차 리뷰: Claude 가 쓴 시나리오는 Codex, Codex 가 쓴 시나리오는 Claude 가 리뷰. §16·§17 추가
+- r5: 사용자 결정(2026-10-08) — 파이프라인은 같은 세션에서 이어지지 않으므로 교차 리뷰는 세션이 아닌 **리뷰 토큰** 기반으로 주고받고, 에이전트별 서명 키는 Secrets Manager 에서 관리. §18 추가, §17 갱신
 - 대상(담당 범위): `packages/contracts/src/drama-series.ts`(append-only), `packages/drama-series`, `.claude/skills/drama-series`, 관련 spec·test. `apps/shopshorts` 는 건드리지 않는다
 - 선행 설계: `2026-10-06-drama-series-design.md`
 
@@ -258,6 +259,35 @@ legacy 회차는 기존 조립을 그대로 쓴다(회귀 테스트).
 - `DramaEpisode.authoredBy?: 'claude' | 'codex'`(append). shot-v1 회차는 필수.
 - 시나리오(대본·컷 구성·대사)를 만든 에이전트가 아닌 쪽이 리뷰한다: Claude 작성 → Codex 리뷰, Codex 작성 → Claude 리뷰. 요청·답장은 `.agent-mailbox/drama-series/` 규칙(원자적 쓰기, 머리말)을 따른다.
 - 요청 내용: 회차 파일 경로·내용 지문, validate·JEV 결과 요약, 확인받을 항목(이야기 흐름·장르 약속·연속성·컷 규칙·수위).
-- 리뷰 결과 기록: `ds cross-review-apply --episode --reviewer <agent> --verdict pass|changes --file <리뷰 md>` → 관문 보고서 `cross-review`(내용 지문 포함). 리뷰어 = authoredBy 이면 거부.
+- 리뷰 요청·응답·기록은 §18 의 토큰 방식으로만 한다(세션 ID 에 의존하지 않는다). `ds cross-review-apply` 가 토큰·지문·서명을 검증해 관문 보고서 `cross-review` 를 남긴다. 리뷰어 = authoredBy 이면 거부.
 - shot-v1 plan 필수 관문에 `cross-review` 추가: 현재 내용 지문과 같은 `pass` 기록이 있어야 한다. 대본을 고치면 다시 리뷰.
 - 리뷰는 정보이며 사용자 승인이 아니다. 사람 승인 1(기획 확정)은 교차 리뷰 pass 뒤에 사용자에게 받는다.
+
+## 18. 토큰 기반 리뷰 통신 (세션 무관)
+
+파이프라인은 여러 날·여러 세션에 걸쳐 진행되므로, 요청한 세션이 사라져도 리뷰가 이어져야 한다. 메시지를 세션이 아니라 **리뷰 토큰**에 묶는다.
+
+**발급** — `ds review-request --series --episode --author <claude|codex> --reviewer <codex|claude> [--ttl-hours 72]`
+- 토큰: 128비트 난수(`rv_<base32>`). 기록 `docs/videos/<작업>/reviews/<token>.request.json`(저장소 커밋 대상): token, kind('scenario'), episode 경로, 내용 지문(fingerprintOf), author, reviewer, createdAt, expiresAt, 요청 요약(validate·JEV 결과, 확인 항목).
+- 같은 파일을 상대 메일함(`to-<reviewer>/`)에 사본으로 넣는다(원자적 쓰기). 메일 파일명에 토큰을 포함한다.
+
+**처리** — 리뷰어 쪽은 어느 세션이든 시작 시 `ds review-inbox --agent <me>` 로 자기 앞 미처리 토큰을 찾는다(요청 기록 중 응답 없는·만료 안 된 것). 스킬 시작 단계에 넣는다.
+
+**응답** — `ds review-respond --token --verdict pass|changes --file <리뷰 md> --agent <me>`
+- 응답 본문: token, reviewedFingerprint(리뷰 시점 회차 지문 — 요청 지문과 다르면 응답 거부), verdict, findings[], reviewer, respondedAt.
+- **서명**: 응답 본문의 canonical 직렬화에 리뷰어 개인 키로 Ed25519 서명. 기록 `reviews/<token>.response.json` + 상대 메일함 사본.
+
+**적용** — `ds cross-review-apply --token`
+- 검증(하나라도 실패하면 거부, 사유를 보고서에 기록): 요청 기록 존재, 미사용(1회용), 미만료, reviewer ≠ author, 응답 reviewer = 요청 reviewer, reviewedFingerprint = 요청 지문 = **현재** 회차 지문, 서명이 reviewer 공개 키로 검증됨.
+- 통과 시 관문 보고서 `cross-review`(지문·토큰·verdict) 기록, 토큰을 사용 처리. verdict=changes 면 ok=false.
+
+**키 관리 (Secrets Manager)**
+- 비대칭 키(Ed25519)를 쓴다. 검증에는 공개 키만 필요하므로 공개 키는 저장소 `packages/drama-series/review-keys/<agent>.pub`(커밋), **개인 키는 Secrets Manager** 에만 둔다. 로컬 파일·iCloud·메일함·저장소에 개인 키를 쓰지 않는다.
+- 비밀 이름(예정): `cak/drama-review/claude-ed25519`, `cak/drama-review/codex-ed25519`. 서명 시 CLI 가 실행 시점에 조회해 메모리에서만 사용한다(`--sm-profile`/`--sm-region` 인자, 기본값은 환경 변수).
+- 어느 Secrets Manager 인지(AWS 계정·리전·프로필)와 비밀 생성은 **사용자가 정하고 실행**한다 — TODO(D1). 키 생성 스크립트는 공개 키만 출력·커밋하고 개인 키는 바로 SM 에 넣는 형태로 제공한다.
+- 한계(명시): 두 에이전트가 같은 OS 사용자·같은 AWS 자격으로 돌면 서로의 개인 키를 조회할 수 있다. 실질 분리는 에이전트별 IAM 주체(프로필)를 나누고 각 비밀의 리소스 정책을 해당 주체로 제한할 때만 생긴다. 그 전까지 서명은 '위조 시 흔적이 남는' 수준이다.
+- 키 교체: 공개 키 파일에 keyId 를 두고 응답에 keyId 를 넣는다. 폐기된 keyId 서명은 거부.
+
+**메일함 README 갱신** — 수신 대상은 세션이 아니라 역할(claude/codex). 리뷰 메일은 토큰 파일명·머리말 `token:` 을 포함. 세션 ID 는 참고 정보로만 적는다.
+
+**테스트**: 토큰 1회용·만료, reviewer=author 거부, 지문 불일치(리뷰 후 대본 수정) 거부, 서명 위조·keyId 폐기 거부, 응답 reviewer 불일치 거부, inbox 가 응답된·만료된 토큰을 제외, 개인 키가 디스크에 쓰이지 않음(SM 조회는 주입 가능한 인터페이스로 테스트 대역 사용).
