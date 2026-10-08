@@ -299,4 +299,55 @@ class NativeReviewTests(unittest.TestCase):
         self.assertIn('unsupported_guarantee',prompt);self.assertNotIn('confidence":',prompt)
         with self.assertRaises(ValueError):build_prompt(review,[{'title':'x'*350000}])
 
+    def test_v27_uncertain_fact_needs_cited_pass_not_nonfactual_relabel(self):
+        self.jev.side_effect=lambda p:low_result(p,'uncertain')
+        _,_,review,_=self.review_stage()
+        self.assertEqual(review['rubricVersion'],VERSION)
+        self.assertEqual(VERSION,'discovery-v2.7')
+        out=valid_output(review)
+        out['reviews'][0]['checks']['support_openingVisual'].update(choice='not_applicable',issue='nonfactual',citations=[])
+        final=apply_reviews(review,out)[0]
+        self.assertEqual(final['decision'],'held')
+        self.assertIn('jev_unresolved_preserved',final['reasonCodes'])
+        old=copy.deepcopy(review);old['rubricVersion']='discovery-v2.6'
+        self.assertEqual(apply_reviews(old,out)[0]['decision'],'accepted')
+        self.assertEqual(apply_reviews(review,valid_output(review))[0]['decision'],'accepted')
+
+    def test_v27_name_only_quotes_do_not_count_as_support(self):
+        self.jev.side_effect=lambda p:low_result(p,'uncertain')
+        _,_,review,_=self.review_stage()
+        out=valid_output(review)
+        out['reviews'][0]['checks']['support_answer']['citations'][0]['quote']='회전교1'
+        final=apply_reviews(review,out)[0]
+        self.assertEqual(final['decision'],'held')
+        self.assertIn('invalid_native_review_citation',final['reasonCodes'])
+        old=copy.deepcopy(review);old['rubricVersion']='discovery-v2.6'
+        self.assertEqual(apply_reviews(old,out)[0]['decision'],'accepted')
+        # A short fact (e.g. a city) is valid support; only the bare name is not.
+        out['reviews'][0]['checks']['support_answer']['citations'][0]['quote']='상판이 회전'
+        self.assertEqual(apply_reviews(review,out)[0]['decision'],'accepted')
+        self.assertIn('not only the entity name',review['action']['prompt'])
+        self.assertNotIn('not only the entity name',build_prompt(old,[]))
+
+    def test_v27_business_value_reject_is_not_promoted(self):
+        self.jev.side_effect=lambda p:low_result(p,'uncertain')
+        _,_,review,_=self.review_stage()
+        data=copy.deepcopy(review);c=data['candidates'][0]
+        c['checks']['value']=copy.deepcopy(c['checks']['support_openingVisual'])
+        c['checks']['value'].update(choice='reject',probabilities={'reject':.6})
+        c['reasonCodes']=['value_uncertain']
+        self.assertEqual(apply_reviews(data,valid_output(data))[0]['decision'],'accepted')
+        data['input']['profile']='business'
+        self.assertEqual(apply_reviews(data,valid_output(data))[0]['decision'],'held')
+
+    def test_v27_draft_prompt_omits_unlocated_leads_instead_of_writing_unknown(self):
+        from service import grounded_prompt
+        self.jev.side_effect=low_result
+        _,second,_,_=self.review_stage()
+        draft=second['action']['prompt']
+        self.assertNotIn('precise location is not established',draft)
+        self.assertIn('omit that lead',draft)
+        legacy=grounded_prompt(second['input'],second['evidence'],[],[],'discovery-v2.6')
+        self.assertIn('precise location is not established',legacy)
+
 if __name__=='__main__':unittest.main()

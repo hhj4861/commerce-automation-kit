@@ -54,7 +54,8 @@ export function createDiscoveryClient({baseUrl,apiKey,subject,allowLocalhost=fal
         let output;
         try {output=await generate(action.prompt,{signal,model:input.runtime.model});}
         catch(e){
-          await request(path+'/complete',{actionId:action.id,runtime:input.runtime,generationError:true},undefined,signal).catch(()=>{});
+          // Not tied to the caller's signal: a cancelled job must still release the server-side scope lock.
+          await request(path+'/complete',{actionId:action.id,runtime:input.runtime,generationError:true},undefined,AbortSignal.timeout(10000)).catch(()=>{});
           throw new DiscoveryError('generation_failed');
         }
         await assertConnection(input.runtime);

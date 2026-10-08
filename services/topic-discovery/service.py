@@ -29,8 +29,8 @@ def research_workflow(value):
     return value.get("workflow") == "research-v2"
 LIMIT = 3
 class Failure(Exception):
-    def __init__(self, code, status=400):
-        self.code, self.status = code, status
+    def __init__(self, code, status=400, detail=None):
+        self.code, self.status, self.detail = code, status, detail
         super().__init__(code)
 
 def canonical(value):
@@ -240,13 +240,18 @@ class NaverSearch:
         clean = lambda s: html.unescape(re.sub("<[^>]*>", "", str(s)))[:3000]
         return [{"url": r.get("link"), "title": clean(r.get("title", "")), "excerpt": clean(r.get("description", ""))} for r in items[:10] if isinstance(r, dict) and public_url(r.get("link"))]
 
+JEV_ERROR_CODES = {"timeout", "cancelled", "rate_limited", "authentication_failed", "overloaded", "redirect_rejected",
+                   "upstream_error", "network_error", "invalid_response", "response_too_large", "request_too_large", "invalid_config", "invalid_input"}
+
 class Jev:
     def __init__(self, env):
         self.env = {k: v for k, v in env.items() if k in ("PATH", "JEV_BASE_URL", "JEV_API_KEY", "JEV_ALLOW_LOCALHOST")}
     def __call__(self, payload):
         run = subprocess.run(["node", str(Path(__file__).with_name("jev-bridge.mjs"))], input=canonical(payload), text=True, capture_output=True, timeout=12, env=self.env)
         if run.returncode != 0 or len(run.stdout) > 1048576:
-            raise Failure("jev_unavailable", 503)
+            # The bridge reports only a fixed SDK code; never upstream text.
+            detail = run.stderr.strip().removeprefix("jev_unavailable:")
+            raise Failure("jev_unavailable", 503, detail if detail in JEV_ERROR_CODES else None)
         return json.loads(run.stdout)
 
 def search_query(value):
@@ -595,7 +600,9 @@ def grounded_prompt(value, evidence, history, leads, rubric_version=None):
       "A lead's searchQuery is only a retrieval hypothesis, never evidence for an alias, a claim, or the authority of a returned website. "
       "Do not force one candidate for every lead. Use the smallest useful set of factual claims, in the user's language. "
       "A detail is not required just because a source mentions it: omit nonessential dates, street addresses, first/best claims and technical mechanisms unless directly supported by a primary-source excerpt. "
-      "For location use only the evidenced city/region; if unspecified, explicitly say the precise location is not established. "
+      + ("For location use only the evidenced city/region. Location is a required supported fact: if that lead's evidence does not state the entity's city or region, omit that lead instead of writing that the location is unknown. "
+         if rubric_version == HYBRID_VERSION else
+         "For location use only the evidenced city/region; if unspecified, explicitly say the precise location is not established. ") +
       "Every factual claim in the title, hook, explanation and production direction will be checked, not only the central answer. "
       "Keep demonstrated facts distinct from a proposed visual and hypothetical viewer expectation; do not imply the proposed visual was observed. "
       "Eligible leads (data): " + canonical(leads))
@@ -693,7 +700,7 @@ class Discovery:
             v2 = research_workflow(data["input"])
             if v2 and data["action"]["stage"] == "research":
                 leads = parse_leads(completion.get("output"),data["evidence"])
-                eligible, failures = [], []
+                eligible, failures, diagnostics = [], [], []
                 for lead in leads:
                     current = self.store.attempt(scope,rid,"reviewing","searchCalls")
                     if current["state"] != "reviewing":
@@ -703,17 +710,27 @@ class Discovery:
                         additional = self.evidence(research_query(lead, data["input"]), lead["id"]+"-source-")
                         if not additional:
                             raise Failure("research_evidence_missing",422)
+                        # Counts only: separates "search returned nothing about this entity" from a draft failure.
+                        # Foreign-language sources may be relevant without the entity string, so this never filters.
+                        diagnostics.append({"leadId":lead["id"],"results":len(additional),
+                                            "entityMatches":sum(normalize(lead["entity"]) in normalize(e["title"]+" "+e["excerpt"]) for e in additional)})
                         data["evidence"].extend(additional)
                         eligible.append({**lead,"draftEvidenceIds":lead["evidenceIds"],"evidenceIds":lead["evidenceIds"]+[e["id"] for e in additional]})
                     except Exception as exc:
                         failures.append({"leadId":lead["id"],"reason":exc.code if isinstance(exc,Failure) else "research_search_failed"})
-                data.update(researchLeads=eligible,researchFailures=failures)
+                data.update(researchLeads=eligible,researchFailures=failures,researchDiagnostics=diagnostics)
                 if not eligible:
                     raise Failure("research_evidence_missing",422)
                 data["action"] = {"id":str(uuid.uuid4()),"stage":"draft","runtime":data["input"]["runtime"],"prompt":grounded_prompt(data["input"],data["evidence"],prior,eligible,data["rubricVersion"])}
                 data["state"] = "awaiting_generation"
                 return self.store.save(scope,rid,data,expected="reviewing")
-            candidates = grounded_candidates(completion.get("output"),data["evidence"],data["researchLeads"]) if v2 else parse_candidates(completion.get("output"), data["evidence"])
+            try:
+                candidates = grounded_candidates(completion.get("output"),data["evidence"],data["researchLeads"]) if v2 else parse_candidates(completion.get("output"), data["evidence"])
+            except Failure as exc:
+                found = data.get("researchDiagnostics")
+                if exc.code == "no_grounded_candidates" and found and not any(d["entityMatches"] for d in found):
+                    raise Failure("research_evidence_unmatched", 422)
+                raise
             for candidate in candidates:
                 if candidate.get("decision") == "held":
                     data["candidates"].append(candidate)
@@ -722,7 +739,7 @@ class Discovery:
                 if current["state"] != "reviewing":
                     return current
                 reasons, decision, checks = [], "held", {}
-                aliases = {}
+                aliases, jev_error = {}, None
                 used = [e for e in data["evidence"] if e["id"] in candidate["evidenceIds"]]
                 if any(normalize(candidate["title"]) == normalize(p["title"]) for p in prior):
                     reasons, decision = ["exact_duplicate"], "rejected"
@@ -766,7 +783,10 @@ class Discovery:
                         decision = decision_from_reasons(reasons, rubric)
                     except Exception as exc:
                         reasons, decision = [exc.code if isinstance(exc, Failure) else "verification_failed"], "held"
+                        jev_error = getattr(exc, "detail", None)
                 data["candidates"].append({**candidate, "draftEvidenceIds": candidate["evidenceIds"], "evidenceIds": [e["id"] for e in used], "decision": decision, "reasonCodes": reasons or ["rubric_passed"], "checks": checks})
+                if jev_error:
+                    data["candidates"][-1]["jevError"] = jev_error
                 if aliases:
                     data["candidates"][-1]["evidenceAliases"] = aliases
                 # Only accepted candidates establish duplicate history. A failed draft

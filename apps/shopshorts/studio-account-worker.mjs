@@ -6,6 +6,7 @@ import { executeAccountJob } from './studio-account-codex.mjs';
 import { executeClaudeAccountJob } from './studio-account-claude.mjs';
 import { discoveryRuntimeEnv } from '../../services/topic-discovery/runtime-config.mjs';
 import { accountFailureCode, accountFailureMessage } from './lib/llm-account-errors.js';
+import { discoveryDiagnostics } from './lib/topic-discovery.js';
 
 export async function executeProviderJob(value, context) {
   let env = context.env;
@@ -60,7 +61,7 @@ export function startAccountWorker({ env = process.env, call = accountBroker(env
       try { await execute(initial, { signal: controller.signal, subject: owner, update, read: async () => (await read()).value, env }); }
       catch (error) {
         if (!controller.signal.aborted) {
-          log(`[llm-accounts] ${initial.job.provider === 'claude' ? 'claude' : 'codex'} ${['connect', 'recommend', 'scenario'].includes(initial.job.kind) ? initial.job.kind : 'unknown'} ${accountFailureCode(error)}`);
+          log(`[llm-accounts] ${initial.job.provider === 'claude' ? 'claude' : 'codex'} ${['connect', 'recommend', 'scenario'].includes(initial.job.kind) ? initial.job.kind : 'unknown'} ${accountFailureCode(error)}${discoveryDiagnostics(error)}`);
           await update({ job: { state: 'failed', device: null, manual: null, code: null, error: accountFailureMessage(initial.job.provider, error) } }).catch(() => {});
         }
       } finally { clearTimeout(deadline); clearInterval(renew); await serial; tasks.delete(owner); }

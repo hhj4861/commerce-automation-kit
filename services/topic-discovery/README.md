@@ -2,6 +2,26 @@
 
 Current source: `discovery-v1.2` (single-stage, unchanged) and `discovery-v2.2` (opt-in `workflow: research-v2`). v2.2 isolates per-question candidate context and explicitly distinguishes purely nonfactual text. This source change is not deployed and does not enable clients. The last verified production service remains v1.1. The explicit v2.6 native-review path completed a 15-case fixed-input evaluation: 14 semantic outcomes on the first run, plus one separately planned diagnostic after a bridge failure. This is not independent quality certification or production browser E2E. Historical rollout notes below describe earlier revisions.
 
+## Native adjudication guard fixes — discovery-v2.7 (2026-10-08)
+
+New `reviewMode: "native-llm-v1"` requests pin v2.7. Persisted v2.4–v2.6 requests keep their prompts and adoption rules. No threshold or required check is relaxed; these changes come from the independent review of 2026-10-08 (`docs/20261008-jev-claude-review-request.md`).
+
+- **Location contradiction.** The v2.6 draft prompt told the model to write "the precise location is not established", while JEV and native review require supported location content. Such a draft could never be accepted, and it still spent a native review claim. v2.7 drafts omit a lead whose evidence states no city or region. The required check is unchanged. Ordinary v2.2 requests keep their pinned prompt.
+- **Uncertain fields need cited support.** In v2.6 the reviewer could relabel a low-confidence JEV `uncertain` factual field as `not_applicable` with no citation, and the candidate was accepted. In v2.7 that field resolves only with a cited native `pass`. The single exception is the narrow content `expectedAnswer` viewer-prediction role correction, which now also covers low-confidence uncertainty.
+- **Quote strength.** A native citation must contain at least two word characters beyond the candidate's entity name, so the bare name does not count as support. A short city name still counts, which is why length alone is not the test. A failing quote holds that candidate with `invalid_native_review_citation`. This is still not an entailment proof.
+- **Business value.** A low-confidence business `value` reject is no longer promoted, because profitability claims are factual, not editorial.
+- **Diagnosability.** When JEV fails, the candidate keeps `reasonCodes: ["jev_unavailable"]` and adds `jevError`. `jevError` holds only a whitelisted SDK code, such as `rate_limited` or `timeout`, never upstream text.
+- **Research diagnosis.** Each research-v2 lead records `researchDiagnostics: [{leadId, results, entityMatches}]` for its follow-up search. These are counts only, with no titles. If the draft returns no candidates and no follow-up result mentions any lead entity, the hold is `research_evidence_unmatched` instead of `no_grounded_candidates`. That separates a search miss (the long translated query in case A) from a draft failure. Results are not filtered by entity, because relevant foreign-language official sources (such as `Tour Eiffel`) do not contain the Korean entity name. Query composition stays unchanged until a live search comparison exists.
+- **Shopshorts mapping.** A completed request with no accepted candidate now reports which stage held it:
+  - transport or review failure → `DISCOVERY_UNAVAILABLE`
+  - held by review → `DISCOVERY_REVIEW_HELD`
+  - only rejects or no candidates → `DISCOVERY_NO_ACCEPTED_CANDIDATES`
+
+  Search and evidence shortfalls (`no_grounded_candidates`, `search_evidence_missing`, `no_research_leads`, `research_evidence_missing`, `research_evidence_unmatched`) now map to `DISCOVERY_EVIDENCE_INSUFFICIENT`. They no longer claim that novelty was evaluated. The account worker log line appends only the server request UUID, whitelisted reason codes and `jevError` codes.
+- **Cancellation.** The JS client reports a cancelled generation with its own short timeout, not the caller's aborted signal. The server therefore releases the scope lock instead of keeping it until the 600-second expiry.
+
+Unit tests prove protocol behavior, not semantic quality. Before activating Shopshorts, v2.7 needs the same fixed-input comparison as v2.6, plus a held-out set that measures unnecessary holds.
+
 ## Opt-in native adjudication — discovery-v2.6
 
 Research requests may explicitly add `reviewMode: "native-llm-v1"`. Ordinary requests remain v2.2. New review requests pin v2.6; persisted v2.4/v2.5 requests retain their prior questions/adoption policy and three-claim review flow. v2.5 retains the same full-text questions and score thresholds, but makes fictional viewer-prediction roles explicit and limits entity support to identity and qualifiers actually asserted in that field. Other-property conflicts cannot invalidate an otherwise identified subject. Business expectedAnswer requires supported existing alternatives and offers no not_applicable choice; pure proposals or unspecified alternatives cannot bypass factual support. The failed v2.3 split prototype remains internal-only. It adds at most one `review` action after research/draft when a fully validated JEV response held a candidate solely for low confidence/probability/margin. Confident rejections, confident uncertainty, invalid responses and transport failures never dispatch this fallback.

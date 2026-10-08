@@ -3,6 +3,8 @@
 const messages = Object.freeze({
   DISCOVERY_RESEARCH_UNGROUNDED: 'AI가 고른 대상명을 인용된 검색 자료에서 확인하지 못해 추천을 보류했어요. 주제나 조건을 좁혀 다시 추천받아 주세요.',
   DISCOVERY_NO_ACCEPTED_CANDIDATES: '검색 근거와 새로움을 모두 충족한 후보를 찾지 못했어요. 관심사를 더 구체화해 주세요.',
+  DISCOVERY_EVIDENCE_INSUFFICIENT: '검색 자료에서 추천에 필요한 근거를 충분히 찾지 못했어요. 공식 자료가 있는 대상으로 바꾸거나 대상을 더 분명히 적어 다시 추천받아 주세요.',
+  DISCOVERY_REVIEW_HELD: '후보는 만들었지만 검색 근거로 확인되지 않은 내용이 있어 추천하지 않았어요. 대상이나 조건을 바꿔 다시 추천받아 주세요.',
   DISCOVERY_BUDGET_LIMIT: '오늘의 주제 검증 요청 한도에 도달했어요. 한도가 회복된 뒤 다시 시도해 주세요.',
   DISCOVERY_IN_PROGRESS: '이전 주제 검증이 진행 중이에요. 완료 후 결과를 확인해 주세요.',
   DISCOVERY_UNAVAILABLE: '공통 주제 검증을 완료하지 못했어요. 잠시 후 다시 시도하고, 반복되면 운영자에게 확인을 요청해 주세요.',

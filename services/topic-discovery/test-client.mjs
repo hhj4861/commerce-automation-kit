@@ -23,7 +23,7 @@ for(const {workflow,dropReply,rubric,reviewMode,dropReview} of [{},{workflow:'re
   if(dropReply||dropReview)await assert.rejects(client.discover(request,options),e=>e.code==='discovery_unavailable');
   const result=await client.discover(request,options);
   assert.equal(result.candidates[0].decision,'accepted');assert.equal(checks,dropReview?11:reviewMode?10:dropReply?8:workflow?7:4);
-  assert.equal(result.factChecked,false);assert.equal(result.rubricVersion,workflow?(reviewMode?'discovery-v2.6':rubric||'discovery-v2.2'):'discovery-v1.2');
+  assert.equal(result.factChecked,false);assert.equal(result.rubricVersion,workflow?(reviewMode?'discovery-v2.7':rubric||'discovery-v2.2'):'discovery-v1.2');
   assert.equal((await client.discover(request,options)).requestId,result.requestId);assert.equal(generated,reviewMode?3:workflow?2:1);
   if(reviewMode){assert.equal(result.usage.generationClaims,3);assert.equal(result.candidates[0].jevDecision,'held');}
   const wrong=createDiscoveryClient({baseUrl:'http://127.0.0.1:'+port,apiKey:'k'.repeat(40),subject:'b'.repeat(64),allowLocalhost:true});
@@ -55,4 +55,16 @@ test('v2 revocation before second claim stops generation and submission',async()
  }});
  await assert.rejects(client.discover({...input,workflow:'research-v2'},{idempotencyKey:'revoke-v2',generate:async()=>{generations++;return {leads:[]};},assertConnection:async()=>{if(++checks===5)throw Error('revoked');}}),/revoked/);
  assert.equal(claims,1);assert.equal(completions,1);assert.equal(generations,1);
+});
+
+test('cancelled generation still reports failure so the server releases the scope',async()=>{
+ const controller=new AbortController();let completion;
+ const action={id:'action',prompt:'Draft',runtime:input.runtime};
+ const client=createDiscoveryClient({baseUrl:'https://server.example',apiKey:'k'.repeat(40),subject:'a'.repeat(64),fetch:async(url,init)=>{
+  if(url.endsWith('/complete')){completion={aborted:init.signal.aborted,body:JSON.parse(init.body)};}
+  return Response.json({requestId:'id',state:url.endsWith('/claim')?'generating':'awaiting_generation',candidates:[],evidence:[],action});
+ }});
+ await assert.rejects(client.discover(input,{idempotencyKey:'cancel-key-1',signal:controller.signal,assertConnection:async()=>{},
+  generate:async()=>{controller.abort();throw Error('aborted');}}),e=>e.code==='generation_failed');
+ assert.deepEqual(completion,{aborted:false,body:{actionId:'action',runtime:input.runtime,generationError:true}});
 });

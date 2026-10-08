@@ -294,6 +294,19 @@ class Tests(unittest.TestCase):
         self.assertEqual(result['state'],'held');self.assertEqual(result['reasonCodes'],['request_expired'])
         self.assertEqual(result['usage']['generationClaims'],1);self.assertEqual(result['usage']['searchCalls'],2)
         self.assertIsNone(result['action']);self.jev.assert_not_called()
+    def test_empty_draft_after_unmatched_followup_search_is_distinguished(self):
+        first=self.research_start('research-unmatched')
+        self.search.return_value=[{'url':'https://dictionary.example/fer','title':'Dictionnaire','excerpt':'fer puddlé : définition du terme'}]
+        second,_=self.finish_action(first,self.lead_output())
+        self.assertEqual(second['researchDiagnostics'],[{'leadId':'lead-1','results':1,'entityMatches':0}])
+        result,_=self.finish_action(second,{'candidates':[]})
+        self.assertEqual(result['state'],'held');self.assertEqual(result['reasonCodes'],['research_evidence_unmatched'])
+        self.assertNotIn('Dictionnaire',json.dumps(result['researchDiagnostics']))
+        second,_=self.finish_action(self.research_start('research-matched'),self.lead_output())
+        self.assertEqual(second['researchDiagnostics'],[{'leadId':'lead-1','results':1,'entityMatches':1}])
+        result,_=self.finish_action(second,{'candidates':[]})
+        self.assertEqual(result['reasonCodes'],['no_grounded_candidates'])
+
     def test_second_generation_failure_and_empty_draft_are_terminal(self):
         for i,options in enumerate([{'generationError':True},{'output':{'candidates':[]}}]):
             second,_=self.finish_action(self.research_start('research-draft-error-'+str(i)),self.lead_output())
@@ -628,6 +641,26 @@ class Tests(unittest.TestCase):
             self.assertEqual(row['checks']['support_direction']['choice'],'pass')
             self.assertEqual(row['checks']['factual_direction']['choice'],'factual')
             self.assertEqual(result['usage']['jevCalls'],1)
+        finally:server.shutdown();server.server_close();thread.join()
+
+    def test_bridge_keeps_failure_code_and_records_whitelisted_jev_error(self):
+        from service import Jev
+        from http.server import BaseHTTPRequestHandler,ThreadingHTTPServer
+        class Limited(BaseHTTPRequestHandler):
+            def log_message(self,*args):pass
+            def do_POST(self):
+                self.rfile.read(int(self.headers['Content-Length']))
+                self.send_response(429);self.send_header('Content-Type','application/json');self.end_headers();self.wfile.write(b'{"error":"secret upstream text"}')
+        server=ThreadingHTTPServer(('127.0.0.1',0),Limited)
+        thread=threading.Thread(target=server.serve_forever,daemon=True);thread.start()
+        try:
+            self.d.jev=Jev({'PATH':os.environ['PATH'],'JEV_BASE_URL':'http://127.0.0.1:'+str(server.server_port),'JEV_API_KEY':'synthetic-jev-key','JEV_ALLOW_LOCALHOST':'1'})
+            result,_=self.complete(self.start())
+            row=result['candidates'][0]
+            self.assertEqual(row['decision'],'held')
+            self.assertEqual(row['reasonCodes'],['jev_unavailable'])
+            self.assertEqual(row['jevError'],'rate_limited')
+            self.assertNotIn('secret upstream text',json.dumps(result))
         finally:server.shutdown();server.server_close();thread.join()
 
     def test_experimental_version_requires_internal_opt_in_and_pins_requests(self):
