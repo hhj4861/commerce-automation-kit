@@ -1,11 +1,11 @@
-# drama-series 키프레임 우선 파이프라인 — 설계 (r7 초안)
+# drama-series 키프레임 우선 파이프라인 — 설계 (r7)
 
 - 날짜: 2026-10-08
 - 상태: r3 — r2: Codex 리뷰(`archive/20261008T082354-codex-keyframe-design-review.md`) 반영. r3: 사용자 결정(2026-10-08) "모든 컷을 시나리오 대비 판정해 pass 여야 다음으로" — 방식 A(자동 판정 pass 면 진행, 사람은 파일럿·예외 통과·회차 미리보기만) 추가
 - r4: 사용자 결정(2026-10-08) — (1) Codex 에서도 같은 구조로 실행 가능하게(이식은 Codex 세션 담당), (2) 시나리오 교차 리뷰: Claude 가 쓴 시나리오는 Codex, Codex 가 쓴 시나리오는 Claude 가 리뷰. §16·§17 추가
 - r5: 사용자 결정(2026-10-08) — 파이프라인은 같은 세션에서 이어지지 않으므로 교차 리뷰는 세션이 아닌 **리뷰 토큰** 기반으로 주고받고, 에이전트별 서명 키는 GCP Secret Manager(shorts 프로젝트)에서 관리. §18 추가, §17 갱신
 - r6: 사용자 지적(2026-10-08) — 회차 간 연결 누락. "1화 마지막 컷이 2화 첫 컷으로 이어지는 것, 회차·컷마다 배경·문맥이 연결되는 것이 이 파이프라인의 핵심". §19 추가. r5 까지는 회차 안의 연결만 다뤘다(설계 결함)
-- r7 초안: 요구 목록(`2026-10-08-drama-pipeline-requirements.md`) 대비 재검토 — 독립 검토 에이전트 결과 반영(§20). Codex 재검토 결과 합친 뒤 확정
+- r7 초안: 요구 목록(`2026-10-08-drama-pipeline-requirements.md`) 대비 재검토 — 독립 검토 에이전트 결과 반영(§20). Codex 재검토(archive/20261008T154540-codex-full-rereview-dcddf97.md, 판정 changes) 합침(§21) — 사용자 범위 결정 대기
 - 대상(담당 범위): `packages/contracts/src/drama-series.ts`(append-only), `packages/drama-series`, `.claude/skills/drama-series`, 관련 spec·test. `apps/shopshorts` 는 건드리지 않는다
 - 선행 설계: `2026-10-06-drama-series-design.md`
 
@@ -338,9 +338,9 @@ legacy 회차는 기존 조립을 그대로 쓴다(회귀 테스트).
 5. **재생성 상한 (C3)** — 컷 기록을 덮어쓰지 않고 `attempts[]`(jobId, sha, verdict, credits, at)를 쌓는다. `maxAttemptsPerCut`(기본 3, run-init 인자) 초과 시 `next` 는 재생성을 내놓지 않고 "사용자 승인 필요"로 대기. 실지출 합계를 run 에 기록.
 
 ### 20.2 부분 반영 보완
-6. **소품 상태 값 (A6)** — 이어지는 경계(continuesFromPrev 또는 회차 연결)에서 앞 컷 값과 다음 컷 값이 다르면 review("이어지는 장면에서 상태가 바뀜: 쪽문 잠김→살짝 열림"). 바뀐 이유를 비트에 적으면 사람이 승인. 컷 판정 background 질문에 그 컷 propState 를 포함.
+6. **소품 상태 전이 (A6, Codex 수정 반영)** — propState 는 '컷 종료 상태'이므로 값이 같아야 한다는 규칙은 틀리다. 컷 시작 상태 = 앞 장면(previousCutOf) 종료 상태로 보고, 이 컷에서 바뀌는 소품은 비트에 `changes?: Record<소품, 새 상태>` 로 선언한다. 시작 상태 + 선언된 변화 ≠ 종료 상태이면 v1 block. 컷 판정 background 질문에 시작·종료 상태를 함께 넣는다.
 7. **생성물 수위 (B8)** — 컷 판정에 `safety` 항목(장르 safetyChecks 에서 질문 자동 생성: 피·상처 노출·노출·미성년 성적 암시 없음). 키프레임 시트 승인 때 같은 체크리스트를 사람에게 함께 보인다. v1 키프레임·영상 프롬프트에 장르 안전 문구(`no blood spray, no exposed wounds, no nudity`) 고정 포함.
-8. **대사량 (B9)** — 장르 팩에 회차 발화 밀도 하한 `minDialogueSyllablesPerMin`(review). 대사만 있는 비트(행동 없음)는 동작 여유를 0.5초로. 2화 재구성 때 컷을 늘려 대사량 유지(컷당 상한은 유지).
+8. **대사량 (B9, Codex 수정 반영)** — 단순 최소 줄 수는 두지 않는다. 시나리오 JEV 에 '장면마다 필요한 반응·정보가 대사로 충분히 전달되는가, 회차가 요약처럼 느껴지지 않는가' 질문 추가(의도적 무대사 컷은 비트에 명시하면 예외). 2화를 shot-v1 로 올릴 때 컷을 나눠 대사량 유지.
 9. **연결 선언 강제 (A1)** — 같은 장소·전환 cut 인데 `continuesFromPrev` 가 없으면 review("이어지는 장면이면 continuesFromPrev, 아니면 transitionIn 또는 다른 구도"). 앞 회차 연결의 지정 컷이 앞 회차 마지막 컷이 아니면 review.
 10. **plan 의 회차 연결 강제 (A2)** — `buildPlan` 이 `episodeLinkFindings` 를 block 으로 포함. `--prev-episode` 누락 시 plan 불가. v1 은 `--keyframes` 누락도 block(파일 sha 검사 생략 방지, E4).
 11. **새 세션 이어받기 (E1)** — run 파일에 `mediaDir`, `approvals[]`(kind: scenario·cost·keyframes·pilot·preview·override, by, at, userQuote, recordedBy), `submitted?: { cutId; jobId; at }`, `attempts[]`, `spentCredits` 추가. 세션 시작 절차: review-inbox → run 파일 `ds status` 로 다음 행동 출력.
@@ -367,3 +367,25 @@ legacy 회차는 기존 조립을 그대로 쓴다(회귀 테스트).
 - 키프레임 장면 변경 테스트는 같은 ctx 의 컷으로(위치 -1 오검증 제거).
 - legacy 출력 회귀는 픽스처 전 컷 프롬프트 스냅샷 + 실데이터 1화·2화 validate/plan 결과 비교 테스트(파일 존재 시).
 - plan `prev-episode-clip`, 판정·승인·교차 리뷰 CLI, `plan --keyframes` 경로, 블로킹이 바뀐 continuesFromPrev block 테스트를 코드로.
+
+## 21. Codex 재검토 반영 (r7 — F01~F15)
+
+Codex 판정: changes(✅2·부분26·❌3/31). 방향은 동의, 아래 보완 전 구현 완료 판정 불가.
+
+1. **지문 3종 분리 (F01·F02)** — (a) 내용 지문 `fingerprintOf`(승인 증거·자산 id 제외), (b) **검토 문맥 지문** `reviewContextDigest` = 현재 회차 + `previousCutOf` 로 닿는 앞 회차 컷들 + 장르 팩 버전 — scenario·shot·continuity·cross-review·대사 판정 기록은 이것에 묶는다(앞 회차를 고치면 2화 기록 무효), (c) **실행 지문** `executionPlanDigest` = 모델·해상도·화면비·프롬프트·참조 자산·키프레임 자산·선행 출력 sha — run 파일의 키. `lineHash` 에 앞 장면 요약·같은 컷 앞 대사·화자 프로필 해시를 포함해 문맥만 바뀌어도 대사 재판정.
+2. **판정 요청 결합 (F03·F04)** — verdict 요청에 requestId, 실행 지문, 내용 지문, jobId, 클립·키프레임·앞 컷 마지막 프레임 sha 를 넣는다. `verdict-apply` 는 요청 파일을 믿지 않고 질문 목록을 다시 계산해 일치를 확인. 근거 프레임은 **그 질문의 frameIds 부분집합**이어야 한다. 시트에 승인 키프레임, 인물 얼굴·의상 참조, 앞 컷 마지막 프레임을 반드시 포함(manifest). 표본으로 확정할 수 없으면 응답에 `unknown` 을 허용하고 unknown 은 pass 가 아니다(확대 표본 또는 사람).
+3. **키프레임 파일 필수 (F05)** — 파일을 확인할 수 없으면 성공으로 치지 않는다(block). 원격 자산 id 와 로컬 sha 둘 다 기록.
+4. **작성자 검증 (F06)** — shot-v1 은 `authoredBy` 필수(block). review-request 의 author 는 회차 authoredBy 와 같아야 하고, apply 도 현재 회차 authoredBy 와 대조. 서명은 '키 보유 증거'일 뿐 같은 gcloud 자격에서는 독립성을 증명하지 않는다고 문서에 명시.
+5. **원자적 쓰기·동시성 (F07)** — 모든 상태 파일은 고유 임시 파일 → rename, 쓰기 잠금(lock 파일 + revision CAS). 토큰 소비는 `used/<token>` create-exclusive 파일로 1회만, 리뷰 응답도 create-exclusive(같은 응답 재전송은 멱등, 다른 응답은 충돌 보고). inbox 는 서명 검증된 응답만 처리된 것으로 본다. 같은 역할의 두 세션도 잠금으로 막는다(owner = agent + session).
+6. **조립 출시 관문 (F08)** — assemble 은 선택 컷·콜드 오픈·trim 원본의 실제 파일 sha 가 run 의 released(판정 pass 또는 예외 승인, 확정본이면 final 대조 pass)와 같아야 한다. 받아쓰기 보고서에도 클립 sha 를 넣는다. v1 은 transcript 보고서만으로 조립하지 못한다. 편집본 최종 검수(자막·콜드 오픈·trim 보존) 승인 기록.
+7. **회차 연결 검증 강화 (F09)** — 같은 seriesId, 앞 회차 no = 현재 no − 1(아니면 사유와 사람 승인), 지정 컷은 앞 회차 마지막 컷(아니면 review), startsFresh 와 continuesFromEpisode 동시 선언 block. `--prev-clips` 는 앞 회차 run 의 released sha 와 일치하는 파일만 인정, 재생성 경로에서도 검사.
+8. **previousCutOf 사용처 완결 (F10)** — referenceMap(앞 회차 첫 컷 참조·키프레임), join-check CLI, judgeState(앞 결말 대사 포함), 리뷰 요약까지. 구현 후 `ctx.episode.cuts[i - 1]` 직접 접근이 남지 않았는지 검색으로 확인하는 테스트.
+9. **비트별 시간 예산 (F11)** — 각 비트 구간에서 (그 비트 대사 발화 + 행동 여유) ≤ 구간 길이. 영문·숫자·vocal 발화는 음절 0 으로 치지 않는 추정 규칙.
+10. **블로킹 범위 (F12)** — 출연진 1명이어도 blocking 필수(v1). chainsFromV1 도 블로킹 호환(같은 인물 집합·좌우, 이동은 blockingChange)을 같은 공통 함수로 검사.
+11. **리뷰 전달·실패 기록 (F13)** — review-respond 는 서명 응답 사본을 요청자 메일함에 원자 전달. 요청 메일에 토큰·요청 파일·series/episode 경로·지문·응답 명령 전체를 적는다. apply 실패도 `cross-review` 실패 보고서로 남긴다.
+12. **비용 원장 (F14, C1)** — run 에 승인 기록(승인 id·범위·옵션·한도), 제출 예약액, 실지출(get_cost·잔액 차이)을 둔다. '0크레딧'은 생성 크레딧만 뜻하며 whisper·JEV·세션 판정·GCP 조회 비용과 구분해 표기.
+13. **legacy 검증 강화 (F15, E5)** — 실제 1화 대본·관문 고정 사본으로 validate·plan 결과 고정 테스트, 명령 exit code 보존(파이프로 가리지 않음), 짧은 재조립 시험.
+14. **장르 약속 미확정 (Codex B7)** — 필수 약속(훅·사이다·장르 고유) 질문이 미확정이면 plan 필수 관문에서 block 또는 기록된 사람 예외. 현재 review→ok 경로를 막는다.
+15. **수위 기준 정합 (Codex B8)** — WRITING-GUIDE 의 '부상 전면 금지' 문구와 장르 팩의 15세 허용(물린 자국 무혈, 컷어웨이 처치)을 맞춘다.
+16. **저장 경로 (E3)** — 에이전트별 임시 루트(Claude: iCloud `claude 작업/`, Codex: 사용자 전역 규칙의 `gpt 작업/`)를 설정값으로. 미디어·승인·판정 manifest 로 새 세션이 자산 위치를 복구.
+17. **D3·D4 범위** — 업로드는 이번 범위 밖, 업로드 인계 manifest(제목·설명·AI 표시 플래그)만 산출. 배경음악 후반 믹스는 기존 ai-music 원자로 인계 계약만 정의.
