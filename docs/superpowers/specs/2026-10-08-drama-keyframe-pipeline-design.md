@@ -1,7 +1,8 @@
-# drama-series 키프레임 우선 파이프라인 — 설계 (r3)
+# drama-series 키프레임 우선 파이프라인 — 설계 (r4)
 
 - 날짜: 2026-10-08
 - 상태: r3 — r2: Codex 리뷰(`archive/20261008T082354-codex-keyframe-design-review.md`) 반영. r3: 사용자 결정(2026-10-08) "모든 컷을 시나리오 대비 판정해 pass 여야 다음으로" — 방식 A(자동 판정 pass 면 진행, 사람은 파일럿·예외 통과·회차 미리보기만) 추가
+- r4: 사용자 결정(2026-10-08) — (1) Codex 에서도 같은 구조로 실행 가능하게(이식은 Codex 세션 담당), (2) 시나리오 교차 리뷰: Claude 가 쓴 시나리오는 Codex, Codex 가 쓴 시나리오는 Claude 가 리뷰. §16·§17 추가
 - 대상(담당 범위): `packages/contracts/src/drama-series.ts`(append-only), `packages/drama-series`, `.claude/skills/drama-series`, 관련 spec·test. `apps/shopshorts` 는 건드리지 않는다
 - 선행 설계: `2026-10-06-drama-series-design.md`
 
@@ -225,6 +226,7 @@ legacy 회차는 기존 조립을 그대로 쓴다(회귀 테스트).
 - **화면비**: keyframe-build 요청 화면비 = plan 화면비, 다르면 digest 불일치로 block.
 - **연결**: chainsFromV1 조건별(구도 변경·블로킹 비호환 시 continuesFromPrev block), legacy chainsFrom 불변.
 - **실행 경계**: ds next — 파일럿 2컷 pass+사람 승인 전 3번째 컷 비노출, 이후 앞 컷 pass 전 비노출, fail 이면 해당 컷 재생성만 노출, 예외 통과는 --override --note 필수, 파일 sha 변경 시 판정·승인 무효.
+- **교차 리뷰**: 리뷰어 = 작성자면 거부, 지문 불일치·changes 면 plan block, 회차 잠금 owner 불일치 시 next/verdict/approve 거부.
 - **컷 판정**: verdict-build 항목 자동 생성(비트 수만큼 비트 항목), 대사 CER 결정적 판정, 응답 항목·근거 누락 시 fail, 전 항목 pass 만 pass.
 - **frame-check**: 계산기(bars/noise), 카메라 이동 컷 N/A, 실제 마지막 프레임 추출.
 - 기존 89개 + tsc.
@@ -243,3 +245,19 @@ legacy 회차는 기존 조립을 그대로 쓴다(회귀 테스트).
 - `@ImageN` 이 start_image 를 세는지: 공식 문서 미확인.
 - 참조 이미지 최대 개수, 참조 강도 조절: 미확인.
 - 무음 참조 영상으로 음성 누출이 사라지는지: 미실측.
+
+## 16. 에이전트 공용 실행 (Claude ↔ Codex)
+
+- 절차의 단일 원본은 `.claude/skills/drama-series/SKILL.md` + `WRITING-GUIDE.md` 다. Codex 입구 `.agents/skills/drama-series/SKILL.md` 는 원본을 읽고 따르라는 얇은 문서로 두고 절차를 복제하지 않는다(어긋남 방지). 이식 작업은 Codex 세션이 맡는다.
+- 코드 경계(`ds next`, 컷 판정, 키프레임·plan 관문)는 에이전트와 무관하게 같은 규칙을 강제한다.
+- **회차 잠금**: `DramaRunState.owner?: { agent: 'claude' | 'codex'; session: string; since: string }`(append). `ds next`·`verdict-apply`·`approve-clip` 은 `--agent` 가 owner 와 다르면 거부. 넘길 때는 `ds handoff --run --to <agent> --note` 로 명시 기록.
+- 힉스필드 생성: Claude 는 claude.ai 계정 커넥터. Codex 는 현재 힉스필드 MCP 미설정 — Codex 에서 쓸 수 있는 공식 MCP 접속 경로가 있는지 TODO(D1). 없으면 Codex 는 무과금 단계를 맡고 생성 요청은 메일함으로 Claude 세션에 넘긴다(`ds next` 출력을 그대로 첨부).
+
+## 17. 시나리오 교차 리뷰 (사람 승인 1 앞의 필수 관문)
+
+- `DramaEpisode.authoredBy?: 'claude' | 'codex'`(append). shot-v1 회차는 필수.
+- 시나리오(대본·컷 구성·대사)를 만든 에이전트가 아닌 쪽이 리뷰한다: Claude 작성 → Codex 리뷰, Codex 작성 → Claude 리뷰. 요청·답장은 `.agent-mailbox/drama-series/` 규칙(원자적 쓰기, 머리말)을 따른다.
+- 요청 내용: 회차 파일 경로·내용 지문, validate·JEV 결과 요약, 확인받을 항목(이야기 흐름·장르 약속·연속성·컷 규칙·수위).
+- 리뷰 결과 기록: `ds cross-review-apply --episode --reviewer <agent> --verdict pass|changes --file <리뷰 md>` → 관문 보고서 `cross-review`(내용 지문 포함). 리뷰어 = authoredBy 이면 거부.
+- shot-v1 plan 필수 관문에 `cross-review` 추가: 현재 내용 지문과 같은 `pass` 기록이 있어야 한다. 대본을 고치면 다시 리뷰.
+- 리뷰는 정보이며 사용자 승인이 아니다. 사람 승인 1(기획 확정)은 교차 리뷰 pass 뒤에 사용자에게 받는다.
