@@ -1,3 +1,5 @@
+import {architectureQuality} from './public/architecture-quality.js';
+import {renderArchitectureScene} from './studio-architecture-blender.mjs';
 import {copyFile,mkdir,readFile,writeFile,rm} from 'node:fs/promises';
 import {createRequire} from 'node:module';
 import {join,dirname} from 'node:path';
@@ -34,6 +36,7 @@ export async function checkHybridRuntime(env={}){
  return true;
 }
 export async function renderHybridScene(job,scene,work,env={},renderer='motion'){
+ if(renderer==='3d'&&architectureQuality(job.brief))return renderArchitectureScene(job,validateHybridRender(scene),work,env);
  const html=await hybridComposition(scene,job.brief.aspect,renderer);
  const cli=env.SHOPSHORTS_MOTION_CLI||join(dirname(require.resolve('hyperframes/package.json')),'bin/hyperframes.mjs');
  const gsap=env.SHOPSHORTS_MOTION_GSAP||join(dirname(require.resolve('gsap/package.json')),'dist/gsap.min.js');

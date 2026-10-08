@@ -7,6 +7,7 @@ import { studyAudio } from "@/lib/study-audio-client";
 import { Dialog } from "./v2-dialog";
 import { Wordbook } from "./v2-wordbook";
 import { Vocabulary } from "./v2-vocabulary";
+import { MusicStudy } from "./v2-music";
 import { V2Lesson } from "./v2-lesson";
 import { lessonPlan } from "@/lib/v2-lesson";
 import { GoogleLogin } from "./google-login";
@@ -1035,6 +1036,7 @@ export function V2App() {
   async function chooseLanguage(value: StudyLanguage) {
     if (operation.current) return;
     const previousLanguage = language;
+    setSection("today");
     setLanguage(value);
     try {
       localStorage.setItem("hanmadi:v2:language", value);
@@ -1417,6 +1419,7 @@ export function V2App() {
                       ["today", "오늘 추천"],
                       ["levels", "레벨별"],
                       ["scenes", "상황별"],
+                      ...(language === "ja" ? [["music", "음악"]] : []),
                     ].map(([id, label]) => (
                       <button
                         key={id}
@@ -1437,6 +1440,9 @@ export function V2App() {
                         로그인하고 레벨 체크하기 →
                       </button>
                     </div>
+                  )}
+                  {section === "music" && language === "ja" && (
+                    <MusicStudy />
                   )}
                   {section === "today" && (
                     <>

@@ -165,7 +165,7 @@ export async function executeStudioTask(job, env, io, checkpoint, { fetcher = fe
       if(hybrid){
         hybrid.merge(assets);
         const duration=Math.max(scene===job.scenes[0]?6:1,Math.ceil(((narrationAsset({...job,assets},scene,normalizeEdit(job).voice)?.duration||scene.duration)+.3)*FPS)/FPS);
-        const result=await hybrid.scene(scene,duration);({data,type}=result);providerInfo={provider:result.provider,providerJobId:result.providerJobId};
+        const result=await hybrid.scene(scene,duration);({data,type}=result);providerInfo={provider:result.provider,providerJobId:result.providerJobId,...(result.qualityProfile?{qualityProfile:result.qualityProfile,renderReport:result.renderReport}:{})};
         assets=hybrid.merge(assets);
       } else if (scene.motion) {
         // Whitelisted body motion template rendered on this local worker; no paid provider call.

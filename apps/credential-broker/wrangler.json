@@ -20,7 +20,7 @@
     "BROKER_URL": "https://cak-credential-broker.guswhd1085.workers.dev",
     "RUNNER_PUBLIC_JWK": "{\"crv\":\"Ed25519\",\"x\":\"Gdu3rj0RqgHpDNNPdXpPNE7PUxrEiz5YKSltS3tVKDE\",\"kty\":\"OKP\"}",
     "GITHUB_ALLOWED_REFS": "refs/heads/main,refs/heads/feat/common-video-generator",
-    "GITHUB_DEPLOY_ALLOWED_REFS": "refs/heads/deploy/hanmadi-admin,refs/heads/deploy/hanmadi",
+    "GITHUB_DEPLOY_ALLOWED_REFS": "refs/heads/deploy/hanmadi-admin,refs/heads/deploy/hanmadi,refs/heads/deploy/shopshorts",
     "GITHUB_REPLAY_DEPLOY_ENABLED": "true",
     "GITHUB_BLOG_DISCOVERY_ENABLED": "false"
   },
@@ -164,6 +164,11 @@
       "binding": "SS_DEPLOY_VERCEL_TOKEN",
       "store_id": "de2c8d7c3e9c4067acc22212522c0fc4",
       "secret_name": "CAK_DEPLOY_VERCEL_TOKEN"
+    },
+    {
+      "binding": "SS_DEPLOY_CLOUDFLARE_API_TOKEN",
+      "store_id": "de2c8d7c3e9c4067acc22212522c0fc4",
+      "secret_name": "CAK_DEPLOY_CLOUDFLARE_API_TOKEN"
     }
   ]
 }

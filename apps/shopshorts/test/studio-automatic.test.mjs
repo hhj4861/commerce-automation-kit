@@ -89,7 +89,7 @@ test('real local server serves automatic route and every browser module dependen
  let output='',errors='';child.stderr.on('data',chunk=>errors+=chunk);
  const base=await new Promise((resolve,reject)=>{child.once('error',reject);child.once('exit',code=>reject(Error(`Server ${code}: ${errors}`)));child.stdout.on('data',chunk=>{output+=chunk;const match=output.match(/http:\/\/127\.0\.0\.1:\d+/);if(match)resolve(match[0]);});});
  assert.equal((await fetch(base+'/automatic',{redirect:'manual'})).status,302);
- for(const path of ['/studio/automatic','/automatic','/automatic-creation.js','/automatic-creation.css','/architecture-case.js','/content-library.js','/workspace.css','/ai-account.js','/llm-connection.js']){
+ for(const path of ['/studio/automatic','/automatic','/automatic-creation.js','/automatic-creation.css','/architecture-case.js','/architecture-quality.js','/hybrid-plan.js','/content-library.js','/workspace.css','/ai-account.js','/llm-connection.js']){
   const response=await fetch(base+path,{headers:{cookie:'ss=fixture-static-only'}});assert.equal(response.status,200,path);assert.match(response.headers.get('content-type'),path.endsWith('.js')?/javascript/:path.endsWith('.css')?/css/:/html/);
  }
 });
@@ -108,5 +108,6 @@ test('automatic selection preserves the saved architecture case and ignores brow
  const f=fixture({savedInput:{...input,category:'건축학'},savedResult});
  const response=await f.request('/automatic',{recommendationId,index:1,caseStudy:{entity:'forged'},topic:'forged'});
  assert.equal(response.status,201);assert.deepEqual(response.project.automation.caseStudy,savedResult.suggestions[1].caseStudy);
+ assert.equal(response.project.brief.architectureQuality,'architecture-cycles-v1');assert.equal(response.project.brief.productionStyle,'webtoon');
  assert.equal(response.project.brief.topic,savedResult.suggestions[1].topic);assert.equal(response.project.brief.direction,savedResult.suggestions[1].direction);
 });

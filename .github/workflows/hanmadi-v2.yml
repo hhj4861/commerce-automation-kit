@@ -38,6 +38,9 @@ jobs:
       - run: npm run test:dialog-vocabulary
         env:
           HANMADI_E2E_ARTIFACTS: ${{ runner.temp }}/hanmadi-vocabulary
+      - run: npm run test:music
+        env:
+          HANMADI_E2E_ARTIFACTS: ${{ runner.temp }}/hanmadi-music
       - run: npm run test:diagnostics
         env:
           HANMADI_E2E_SCREENSHOTS: ${{ runner.temp }}/hanmadi-diagnostics
@@ -53,4 +56,6 @@ jobs:
             ${{ runner.temp }}/hanmadi-diagnostics/result.json
             ${{ runner.temp }}/hanmadi-vocabulary/*.png
             ${{ runner.temp }}/hanmadi-vocabulary/result.json
+            ${{ runner.temp }}/hanmadi-music/*.png
+            ${{ runner.temp }}/hanmadi-music/result.json
           retention-days: 7
