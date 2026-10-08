@@ -34,3 +34,19 @@ CI 5개 모두 성공: study 7m32s, Dify connection 7m29s, connections 1m40s, na
 실제 가사 서비스 계약과 Pretender의 제공·지역·번역/발음/TTS/보관 허용 범위 확인, 공급자 전용 어댑터, 검수된 실제 자료와 음성 검증 후 활성화한다. 현재 구현의 계약과 승인 조건은 main의 `docs/tasks/20261008-hanmadi-lyrics.md`에 있다.
 
 이 QA 문서는 사용자 지침에 따라 현재 프로젝트 docs의 작업 브랜치에 별도로 보관한다. 문서 커밋 자체가 새로운 운영 빌드를 만드는 것은 아니다.
+
+
+## PR #165 — 반복 재시도 안내 수정 운영 반영
+
+사용자의 “머지 하고 배포해주” 및 중단 후 “계속” 승인으로 [PR #165](https://github.com/hhj4861/commerce-automation-kit/pull/165)를 정상 머지·배포했다. 현재 운영은 아래 버전이며 위 PR #163 기록은 이전 배포 이력이다.
+
+- PR head: `b419e10ef278f5ce55f2a4e3aa7fd828af958886`.
+- 원격 CI 5개 성공: study 11m26s, connection 7m27s, connections 2m11s, native-runtime 1m6s, Platform GitOps verification 16s. 초기 실행기 대기와 조회 연결 오류 이후 최종 성공 및 CLEAN 상태를 확인했다.
+- 머지: `2bc71787a8417d0cd315b80dab04acded829d9fb`, 2026-10-08 10:57:23 UTC. 정확한 PR head 조건으로 머지했으며 우회 없음.
+- 배포: https://hanmadi-qmtwcg0j9-dean-10.vercel.app — `dpl_581jrsQDbdfJS7jV66pWPYqpLnmQ`, production READY, 원격 Next 16.3.6 빌드 13초.
+- 운영 alias: https://hanmadi-lake.vercel.app/study . 배포 소스의 앱 디렉터리가 검증한 PR head와 동일함을 확인했다. 중단된 worktree 전환은 재개 후 실제 HEAD/clean 상태로 완료 여부를 확인했다.
+- 배포 전 필수 설정 이름 검사 통과. 배포 후 정확한 revision, study/privacy 200, Google login available/clientId, anonymous admin 403 및 music 401 검사 통과.
+- 실제 로그인된 Chrome 운영 탭을 새로고침하고 음악 탭을 열어 `공식 영상으로 원곡을 감상할 수 있어요.`, `현재 가사 학습 이용 불가`, 미연결 설명 및 **다시 확인 버튼 부재**를 확인했다. 공식 영상 링크/열기 버튼은 유지된다.
+- 이번 배포의 최근 10분 error-level 로그 조회 결과 `No logs found`. 조회 시점·필터 범위에 한정한다.
+- 기존 로컬 E2E는 공급 미설정/권한 미승인 두 상태의 재시도 제거, 일시 오류의 재시도 유지와 12줄 fixture 학습 회귀를 검증했다. 운영에서는 실제 가사·TTS·음악 재생이나 개인 기록 변경을 수행하지 않았다.
+- 실제 Pretender 가사 공급은 여전히 미연결이다. 이번 배포는 반복 재시도를 유도하던 UI 수정이며 가사 학습 활성화 완료가 아니다.
