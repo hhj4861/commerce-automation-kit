@@ -1,0 +1,43 @@
+{
+  "file": "/Users/admin/Downloads/vedio/al-bahr-webtoon-short.mp4",
+  "duration": 54.875,
+  "width": 1080,
+  "height": 1920,
+  "frames": "1317",
+  "bytes": 35000913,
+  "sha256": "8c2e4c1f383856719e696d07c27057fe44364db54df2bc013221f51a5a4d6455",
+  "speed": 1.1,
+  "voiceId": "RU7aSi6lT4uQBXMLgDxK",
+  "finalHold": 2.736122448979592,
+  "decode": "pass",
+  "captionCoverage": "all narration",
+  "visualReview": {
+    "status": "pass",
+    "scope": "8 representative final frames and shade folding previews; not a full-frame manual audit",
+    "notes": "Opening and body targets, visible folding/shading, caption bounds and complete final sentence inspected."
+  },
+  "reviewDigest": "6b43260a72bf7aab98407bb4943b20f846b2a9251315992ddbae1d572b9b0360",
+  "audioCheck": {
+    "maxVolumeDb": -1.4,
+    "meanVolumeDb": -17.7,
+    "silenceOver1s": [
+      [
+        4.715079,
+        6.03381
+      ],
+      [
+        51.976145,
+        54.891973
+      ]
+    ],
+    "note": "Opening visual hold and deliberate final hold; no >1s interior speech gap"
+  },
+  "blackCheck": "No >=0.5s black segment detected",
+  "higgsfield": {
+    "id": "722f2140-b1da-47c2-b223-43c8c31850d0",
+    "seconds": 6,
+    "quotedCredits": 54,
+    "state": "downloaded"
+  },
+  "ttsRun": "https://github.com/hhj4861/commerce-automation-kit/actions/runs/37740232027"
+}
