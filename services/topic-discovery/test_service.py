@@ -686,7 +686,7 @@ class Tests(unittest.TestCase):
         self.assertEqual(result['candidates'][0]['decision'],'accepted');self.assertEqual(sent,[None])
 
     def test_experimental_version_requires_internal_opt_in_and_pins_requests(self):
-        self.assertEqual(RESEARCH_VERSION,'discovery-v2.2')
+        self.assertEqual(RESEARCH_VERSION,'discovery-v2.8')
         self.assertEqual(self.d.research_version,RESEARCH_VERSION)
         for version in ('unknown','discovery-v2.1'):
             with self.assertRaises(Failure):Discovery(self.store,self.search,self.jev,research_version=version)
@@ -773,6 +773,36 @@ class Tests(unittest.TestCase):
             second,_=self.finish_action(self.research_start('split-invalid-'+str(i)),self.lead_output())
             result,_=self.finish_action(second,self.draft_output())
             self.assertEqual(result['candidates'][0]['decision'],'held')
+
+    def test_location_is_required_only_for_architecture_from_v28(self):
+        from service import grounded_prompt
+        subjects=iter(('d'*64,'e'*64,'f'*64))
+        def location_question(category,rubric=None):
+            self.jev.reset_mock();subject=next(subjects)
+            first=self.start(key='location-'+subject[0],subject=subject,value={**INPUT,'category':category,'workflow':'research-v2'})
+            if rubric:
+                with self.store.db() as db:
+                    data=json.loads(db.execute('SELECT data FROM requests WHERE id=?',(first['requestId'],)).fetchone()[0])
+                    data['rubricVersion']=rubric;db.execute('UPDATE requests SET data=? WHERE id=?',(json.dumps(data),first['requestId']))
+            scope=self.d.scope('shopshorts',subject)
+            self.store.claim(scope,first['requestId'],first['action']['id'])
+            second=self.d.complete('shopshorts',subject,first['requestId'],{'actionId':first['action']['id'],'runtime':INPUT['runtime'],'output':self.lead_output()})
+            self.store.claim(scope,second['requestId'],second['action']['id'])
+            self.d.complete('shopshorts',subject,second['requestId'],{'actionId':second['action']['id'],'runtime':INPUT['runtime'],'output':self.draft_output()})
+            return second,self.jev.call_args.args[0]['questions']['support_location']
+        self.search.return_value=[{**SOURCE,'title':'공식 회전교1 회전교2 회전교3 설명'}]
+        second,q=location_question('과학')
+        self.assertEqual(second['rubricVersion'],'discovery-v2.8')
+        self.assertIn('not_applicable',q['criteria'])
+        self.assertIn('location is not established',second['action']['prompt'])
+        self.assertIn('never guess',second['action']['prompt'])
+        second,q=location_question('건축학')
+        self.assertNotIn('not_applicable',q['criteria'])
+        self.assertIn('omit that lead',second['action']['prompt'])
+        # Stored v2.2 requests keep the pinned questions and draft wording.
+        second,q=location_question('과학','discovery-v2.2')
+        self.assertNotIn('not_applicable',q['criteria'])
+        self.assertNotIn('never guess',second['action']['prompt'])
 
     def test_inflight_v22_payload_and_prompt_unchanged(self):
         first=self.research_start(rubric='discovery-v2.2')

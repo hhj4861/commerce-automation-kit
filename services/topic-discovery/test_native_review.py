@@ -88,7 +88,7 @@ class NativeReviewTests(unittest.TestCase):
         self.assertEqual(review['action']['stage'],'review')
         self.assertEqual(review['usage']['generationClaims'],2)
         self.assertEqual(review['action']['runtime'],fixtures.INPUT['runtime'])
-        self.assertEqual(RESEARCH_VERSION,'discovery-v2.2')
+        self.assertEqual(RESEARCH_VERSION,'discovery-v2.8')
         self.assertEqual(self.d.research_version,RESEARCH_VERSION)
 
     def test_promotion_preserves_raw_checks_and_has_one_durable_review(self):
@@ -355,5 +355,18 @@ class NativeReviewTests(unittest.TestCase):
         self.assertIn('omit that lead',draft)
         legacy=grounded_prompt(second['input'],second['evidence'],[],[],'discovery-v2.6')
         self.assertIn('precise location is not established',legacy)
+
+    def test_v27_non_architecture_location_may_state_it_is_unknown(self):
+        self.jev.side_effect=lambda p:low_result(p,'uncertain')
+        _,_,review,_=self.review_stage()
+        for category,decision in (('과학','accepted'),('건축학','held')):
+            data=copy.deepcopy(review);data['input']['category']=category
+            out=valid_output(data)
+            out['reviews'][0]['checks']['support_location'].update(choice='not_applicable',issue='nonfactual',citations=[])
+            self.assertEqual(apply_reviews(data,out)[0]['decision'],decision,category)
+            self.assertEqual('location may instead state' in build_prompt(data,[]),category!='건축학')
+        old=copy.deepcopy(review);old['rubricVersion']='discovery-v2.6';old['input']['category']='과학'
+        out=valid_output(old);out['reviews'][0]['checks']['support_location'].update(choice='not_applicable',issue='nonfactual',citations=[])
+        self.assertEqual(apply_reviews(old,out)[0]['decision'],'held')
 
 if __name__=='__main__':unittest.main()

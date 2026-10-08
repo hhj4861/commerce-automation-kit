@@ -17,10 +17,19 @@ from urllib.request import Request, build_opener, HTTPRedirectHandler
 from native_review import MIN_CONFIDENCE, MIN_PROBABILITY, MIN_MARGIN, MODE as REVIEW_MODE, VERSION as HYBRID_VERSION, VERSIONS as HYBRID_VERSIONS, eligible as review_eligible, build_prompt as native_review_prompt, apply_reviews
 
 VERSION = "discovery-v1.2"
-RESEARCH_VERSION = "discovery-v2.2"
+# v2.8 = v2.2 questions + the category-aware location policy below. Stored v2.2
+# requests keep their pinned questions and draft wording.
+RESEARCH_VERSION = "discovery-v2.8"
+PINNED_SCOPED_VERSION = "discovery-v2.2"
 # Failed the quality gate: only explicit, internal evaluation may select v2.3.
 EXPERIMENTAL_RESEARCH_VERSION = "discovery-v2.3"
-SCOPED_REVIEW_VERSIONS = {RESEARCH_VERSION, EXPERIMENTAL_RESEARCH_VERSION} | HYBRID_VERSIONS
+SCOPED_REVIEW_VERSIONS = {RESEARCH_VERSION, PINNED_SCOPED_VERSION, EXPERIMENTAL_RESEARCH_VERSION} | HYBRID_VERSIONS
+# Location is a required fact only where the product shows it (architecture case
+# studies). Elsewhere it may state that no location is established; a stated place
+# still needs support.
+LOCATION_POLICY_VERSIONS = {RESEARCH_VERSION, HYBRID_VERSION}
+def location_optional(request, rubric):
+    return rubric in LOCATION_POLICY_VERSIONS and request.get("category") != "건축학"
 FIELD_SUPPORT_VERSIONS = {"discovery-v2.1"} | SCOPED_REVIEW_VERSIONS
 LEGACY_VERSIONS = {"discovery-v1.1", "discovery-v2"}
 SUPPORT_FIELDS = ("title", "question", "entity", "location", "answer",
@@ -334,7 +343,7 @@ def questions(profile, has_prior=True, field_support=False):
     return result
 
 
-def scoped_review(state):
+def scoped_review(state, rubric=None):
     """One batched call; each question owns its data, shared state is evidence only.
 
     Never remove clauses, accept model-provided claim lists, or infer nonfactual
@@ -362,15 +371,19 @@ def scoped_review(state):
         "expectedAnswer": ("An explicitly hypothetical viewer expectation, not the actual answer."
                            if request["profile"] == "content" else "An existing customer alternative; its existence and properties are factual claims."),
     }
+    optional_location = location_optional(request, rubric)
+    if optional_location:
+        roles["location"] = "The subject's location, or a statement that no location is established. A stated place must be supported at its stated precision."
     for field in SUPPORT_FIELDS:
-        allow_nonfactual = field not in ("entity", "location", "answer")
+        allow_nonfactual = field not in ("entity", "location", "answer") or (field == "location" and optional_location)
         criteria = {
             "pass": "The text has factual content and every material assertion/presupposition is supported by matching evidence. A question's unanswered part is not itself an assertion.",
             "reject": "Matching evidence directly contradicts at least one material assertion/presupposition in this text. Absence of evidence alone is not contradiction.",
             "uncertain": "A material assertion lacks support, sources conflict, the referent is ambiguous, or the factual status is unclear. No direct contradiction is established.",
         }
         if allow_nonfactual:
-            criteria["not_applicable"] = "The ENTIRE text contains no real-world assertion or factual presupposition: only an open question, explicitly hypothetical expectation, subjective takeaway or proposed production action. No embedded fact is exempted."
+            criteria["not_applicable"] = ("The ENTIRE text only states that the subject's location is not established and names no place, region or address." if field == "location" else
+                "The ENTIRE text contains no real-world assertion or factual presupposition: only an open question, explicitly hypothetical expectation, subjective takeaway or proposed production action. No embedded fact is exempted.")
         q["support_" + field] = {
             "type": "choice",
             "instructions": {
@@ -394,13 +407,13 @@ def scoped_review(state):
     return {"state": {"evidence": state["evidence"]}, "questions": q}
 
 
-def role_review(state):
+def role_review(state, rubric=None):
     """v2.5: distinguish fictional prediction from fact and identity from properties.
 
     Keep the full original field, evidence, question count and scoring thresholds.
     v2.4 requests retain their original scoped_review questions on resume.
     """
-    payload = scoped_review(state)
+    payload = scoped_review(state, rubric)
     entity = payload['questions']['support_entity']
     entity['instructions']['task'] = (
         'Does the supplied evidence identify the subject named in the complete text? '
@@ -603,8 +616,10 @@ def grounded_prompt(value, evidence, history, leads, rubric_version=None):
       "A lead's searchQuery is only a retrieval hypothesis, never evidence for an alias, a claim, or the authority of a returned website. "
       "Do not force one candidate for every lead. Use the smallest useful set of factual claims, in the user's language. "
       "A detail is not required just because a source mentions it: omit nonessential dates, street addresses, first/best claims and technical mechanisms unless directly supported by a primary-source excerpt. "
-      + ("For location use only the evidenced city/region. Location is a required supported fact: if that lead's evidence does not state the entity's city or region, omit that lead instead of writing that the location is unknown. "
-         if rubric_version == HYBRID_VERSION else
+      + (("For location use only the evidenced city/region. Location is a required supported fact: if that lead's evidence does not state the entity's city or region, omit that lead instead of writing that the location is unknown. "
+          if value.get("category") == "건축학" else
+          "For location use only the evidenced city/region; if that lead's evidence states none, write that the location is not established and never guess a place. ")
+         if rubric_version in LOCATION_POLICY_VERSIONS else
          "For location use only the evidenced city/region; if unspecified, explicitly say the precise location is not established. ") +
       "Every factual claim in the title, hook, explanation and production direction will be checked, not only the central answer. "
       "Keep demonstrated facts distinct from a proposed visual and hypothetical viewer expectation; do not imply the proposed visual was observed. "
@@ -773,9 +788,9 @@ class Discovery:
                         state = {"request": {k:v for k,v in data["input"].items() if k != "history"}, "candidate": candidate, "evidence": reviewed, "prior": prior}
                         if aliases:
                             state["evidenceAliases"] = aliases
-                        payload = (role_review(state) if rubric in HYBRID_VERSIONS - {"discovery-v2.4"} else
+                        payload = (role_review(state, rubric) if rubric in HYBRID_VERSIONS - {"discovery-v2.4"} else
                                    split_review(state) if rubric == EXPERIMENTAL_RESEARCH_VERSION else
-                                   scoped_review(state) if rubric in SCOPED_REVIEW_VERSIONS else
+                                   scoped_review(state, rubric) if rubric in SCOPED_REVIEW_VERSIONS else
                                    {"state": state, "questions": q})
                         q = payload["questions"]
                         if data.get("jevModel"):

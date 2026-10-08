@@ -55,6 +55,8 @@ Return exactly {"reviews":[{"candidateId":"...","checks":{"<every required check
     if data.get('rubricVersion')==VERSION:
         instructions=instructions.replace('with exact, short quotes from that candidate\'s evidence title or excerpt.',
           'with exact, short quotes from that candidate\'s evidence title or excerpt. Each quote must state the supporting fact itself, not only the entity name.',1)
+        if data['input'].get('category')!='건축학':
+            instructions+="Outside architecture, location may instead state that no location is established: classify such text as not_applicable/nonfactual with empty citations. A stated place, region or address still needs support.\n"
     context={'request':{k:data['input'][k] for k in ('profile','category','brief')},'prior':prior,'items':items}
     prompt=instructions+json.dumps(context,ensure_ascii=False,sort_keys=True,separators=(',',':'))
     if len(prompt)>350000: raise ValueError('review_prompt_too_large')
@@ -64,7 +66,7 @@ def _norm(value): return re.sub(r'[\W_]+','',unicodedata.normalize('NFKC',value)
 
 def _text(value, limit): return isinstance(value,str) and 0<len(value.strip())<=limit
 
-def validate_checks(row,candidate,evidence,profile,rubric=None):
+def validate_checks(row,candidate,evidence,profile,rubric=None,category=None):
     if not isinstance(row,dict) or set(row)!={'candidateId','checks'} or row['candidateId']!=candidate['id'] or not isinstance(row['checks'],dict) or set(row['checks'])!=REQUIRED:
         raise ValueError('invalid_native_review')
     by_id={e['id']:e for e in evidence if e['id'] in candidate['evidenceIds']}
@@ -75,7 +77,8 @@ def validate_checks(row,candidate,evidence,profile,rubric=None):
         allowed={'pass':{'none'},'not_applicable':{'nonfactual'},'reject':{'contradiction','unsupported_guarantee','irrelevant','duplicate','no_value'},'uncertain':{'missing_evidence','conflicting_sources','ambiguous_reference'}}
         if choice not in allowed or issue not in allowed[choice]: raise ValueError('invalid_native_review')
         field=name.removeprefix('support_')
-        if choice=='not_applicable' and (not name.startswith('support_') or field not in OPTIONAL_FACTS or profile=='business' and field=='expectedAnswer'): raise ValueError('invalid_native_review')
+        optional=OPTIONAL_FACTS|({'location'} if rubric==VERSION and category!='건축학' else set())
+        if choice=='not_applicable' and (not name.startswith('support_') or field not in optional or profile=='business' and field=='expectedAnswer'): raise ValueError('invalid_native_review')
         cites=check['citations']
         if not isinstance(cites,list) or len(cites)>10: raise ValueError('invalid_native_review')
         seen=set()
@@ -113,7 +116,7 @@ def apply_reviews(data, output):
     rows={r['candidateId']:r for r in rows}
     for c in pending:
         try:
-            checks=validate_checks(rows[c['id']],c,data['evidence'],data['input']['profile'],data.get('rubricVersion'))
+            checks=validate_checks(rows[c['id']],c,data['evidence'],data['input']['profile'],data.get('rubricVersion'),data['input'].get('category'))
         except (ValueError,TypeError,KeyError) as exc:
             failed(c,str(exc) if isinstance(exc,ValueError) else 'invalid_native_review');continue
         c['jevDecision']=c['decision'];c['jevReasonCodes']=list(c['reasonCodes'])
