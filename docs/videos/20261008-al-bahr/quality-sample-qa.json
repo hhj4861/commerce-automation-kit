@@ -1,0 +1,100 @@
+{
+  "outputs": [
+    {
+      "file": "/Users/admin/Downloads/vedio/al-bahr-quality-improved-10s.mp4",
+      "duration": 10.0,
+      "frames": 240,
+      "width": 1080,
+      "height": 1920,
+      "bytes": 8140865,
+      "sha256": "ac0c6382353c4f0070ee34d117218867799435d33f2b472c6cd6f563c381ef05",
+      "decode": "pass",
+      "audio": "intentionally silent visual comparison"
+    },
+    {
+      "file": "/Users/admin/Downloads/vedio/al-bahr-quality-before-after-10s.mp4",
+      "duration": 10.0,
+      "frames": 240,
+      "width": 1080,
+      "height": 1080,
+      "bytes": 3263808,
+      "sha256": "86680c3dd427da71780b562c9ecc463d7f34d10c6c23923a8071a46a30fd47fd",
+      "decode": "pass",
+      "audio": "intentionally silent visual comparison"
+    }
+  ],
+  "motionSampleMeanAbsoluteDifferences": [
+    10.201871141975309,
+    46.54052533436214,
+    46.44455697016461,
+    26.985275205761315
+  ],
+  "geometry": {
+    "rigidHalfPanelEdgeLengths": [
+      [
+        1.459623,
+        0.77,
+        1.24,
+        1.459623,
+        0.77
+      ],
+      [
+        1.459623,
+        0.77,
+        1.24,
+        1.459623,
+        0.77
+      ],
+      [
+        1.459623,
+        0.77,
+        1.24,
+        1.459623,
+        0.77
+      ],
+      [
+        1.459623,
+        0.77,
+        1.24,
+        1.459623,
+        0.77
+      ]
+    ],
+    "frames": [
+      1,
+      72,
+      144,
+      240
+    ],
+    "status": "pass"
+  },
+  "visualReview": {
+    "status": "pass for visual comparison sample",
+    "reviewedSeconds": [
+      1,
+      4,
+      8
+    ],
+    "observations": [
+      "Labels readable; both panels framed correctly",
+      "Folded, intermediate and deployed states distinguishable",
+      "Warm panels separated from cool glass; ribs, highlights and cast shadows readable"
+    ],
+    "limits": [
+      "Representative frames inspected, not a human real-time playback review",
+      "Illustrative mechanism, not validated fabrication geometry",
+      "Camera and staging changed as well as materials and renderer; not renderer-only comparison"
+    ]
+  },
+  "extraHiggsfieldCredits": 0,
+  "extraTTSRequests": 0,
+  "originalPreserved": true,
+  "renderer": {
+    "engine": "CYCLES",
+    "device": "Metal GPU",
+    "samples": 48,
+    "denoising": true,
+    "blender": "4.5.10 LTS",
+    "processExitCode": 0
+  }
+}
