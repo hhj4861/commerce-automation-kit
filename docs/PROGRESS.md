@@ -2,7 +2,7 @@
 
 > **이 파일의 목적:** 새 IDE/새 Claude 세션이 이 문서 하나만 읽고 곧바로 이어서 작업할 수 있게 한다.
 > 설계 근거는 각 문서에, **"지금 어디까지 왔고 다음에 뭘 하나"는 여기에** 기록한다.
-> 최종 갱신: **2026-09-14**
+> 최종 갱신: **2026-10-08** (JEV 항목 추가 — 다른 원자 행은 09-14 기준 그대로)
 
 ---
 
@@ -27,6 +27,7 @@ cd packages/keyword-intel && npm test     # 128개 통과하면 정상(2026-09-0
 | 원자 | 상태 |
 |---|---|
 | **contracts** | `KeywordSignal` / `IntelBatch` 계약 확정. append-only 유지 중 |
+| **JEV 판단 연동 (공통 SDK·topic-discovery·Shopshorts·Hanmadi·Festa)** | 현황은 **[`docs/20260930-jev-platform-summary.md`](20260930-jev-platform-summary.md) 「2026-10-08 독립 리뷰 반영」 절**을 본다.<br>- 운영: discovery v2.6, Shopshorts discovery OFF, Hanmadi v10 상시, Festa shadow<br>- 리뷰 보완 PR: #161(discovery v2.7: 위치 모순·재검수 승격·실패 원인 구분·모델 고정), #162(Hanmadi), venture-studio#69(Festa)<br>- **운영 활성화 전 필수**: v2.7 고정 입력·홀드아웃 평가(유료 호출이라 승인 필요)<br>- 품질 문서는 작성자 라벨·상관 표본 기반이라 정확도 근거로 쓰지 않는다 |
 | **meta-paid-reach (PoC)** | ✅ **착수(09-04)** — Meta 공식 Marketing API Campaign→Ad Set→Video→Creative→Ad 경로. 기본 dry-run, 실제 생성도 전량 PAUSED, 사람 승인+라이브 이중잠금+하드 예산 상한. impressions/spend/status 폴링 후 1,000회 또는 지출 상한에서 Campaign 우선 PAUSE. 설정/권한 가이드와 단위 테스트 포함. **실계정 호출·과금은 아직 미수행**. 테스트 18·타입체크. 브랜치 `feat/meta-paid-reach-poc`(develop 병합 `2a77a55`). **다음** = `packages/meta-paid-reach/README.md` 「검증 순서」 2~4(preflight→CREATE_PAUSED→Ads Manager 사람 검수) |
 | **keyword-intel (#1)** | ✅ **Phase 1·2 완료 + G1·G2 실호출 통과 + 일일 자동화 가동 중**. 남은 것: Phase 3(사람 판단) |
 | slide-renderer (#2) | 미착수 스캐폴드 |
@@ -229,6 +230,7 @@ src/
 
 | 날짜 | 내용 |
 |---|---|
+| 2026-10-08 (JEV 리뷰) | JEV 연동 독립 리뷰. 결함 보완 PR #161·#162·venture-studio#69. JEV 계획·QA 문서 16건을 docs 브랜치에서 main으로 이관하고 10/08 현황 절 추가. 개인 저장소 전용 모델 라우팅 훅 `jev-route`는 전역(`~/.claude/skills`)에 설치(기본 꺼짐, 키 미발급) |
 | 2026-09-14 (공통 영상 생성기) | **광고 품질을 광고·쇼츠에 공통 적용** — `@cak/ad-video-gen`의 기존 기획 게이트·`buildSpotPrompt`·티어 정책을 단일 `video:plan`/`video:estimate` 경로로 조합. 계약 `VideoGenerationRequest/Plan`, 쇼츠 `videoDirection/videoTier/videoGeneration` append. 로컬 승인/클라우드 워커가 계획 생성, 입력 지문으로 수정된 기획의 이전 계획 거부, 계획·클립 수 검증 후 생성 완료 기록. 승인 중 동시 수정/다른 잡 추가 보존, CLI 실패 시 이전 출력 계획 교체. Codex·Claude 광고/쇼츠 스킬 4개는 `docs/VIDEO-GENERATION.md`의 같은 MCP 실행 절차를 참조한다. 검증: ad-video-gen 71·shopshorts 15 테스트, contracts/ad-video-gen 타입 검사, 클라우드 라우터 브라우저 번들·UI 스크립트 문법·스킬 4개 검증 통과. **실제 영상 생성/과금/배포/운영 재시작 없음**. 다음 운영 반영은 클라우드 Functions 배포와 로컬 워커 재시작을 함께 적용한 뒤 승인된 샘플로 실영상 비교 |
 | 2026-07-23 | D1 실측(D1-1~4 확정) · Phase 1(zod 검증·상수 확정) · Phase 2(store/budget/obs·analyze/dlq CLI) · G1·G2 실호출 통과 · 시드 182개 확정 · 일일 자동화+텔레그램 리포트 구축 · 리뷰 3회 31건 수정 |
 | 2026-07-24 | 저장소 경로 이동(TCC 대응) · 첫 자동실행 DNS 실패 진단 → 결함 4건 수정(DNS 재시도·**예산 환불**·네트워크 대기·타임아웃 완화+재시도코드 보강) · 다른 세션 산출물 조사·통합 · 이 문서 작성 |
