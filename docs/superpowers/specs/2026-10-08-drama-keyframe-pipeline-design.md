@@ -1,10 +1,11 @@
-# drama-series 키프레임 우선 파이프라인 — 설계 (r6)
+# drama-series 키프레임 우선 파이프라인 — 설계 (r7 초안)
 
 - 날짜: 2026-10-08
 - 상태: r3 — r2: Codex 리뷰(`archive/20261008T082354-codex-keyframe-design-review.md`) 반영. r3: 사용자 결정(2026-10-08) "모든 컷을 시나리오 대비 판정해 pass 여야 다음으로" — 방식 A(자동 판정 pass 면 진행, 사람은 파일럿·예외 통과·회차 미리보기만) 추가
 - r4: 사용자 결정(2026-10-08) — (1) Codex 에서도 같은 구조로 실행 가능하게(이식은 Codex 세션 담당), (2) 시나리오 교차 리뷰: Claude 가 쓴 시나리오는 Codex, Codex 가 쓴 시나리오는 Claude 가 리뷰. §16·§17 추가
 - r5: 사용자 결정(2026-10-08) — 파이프라인은 같은 세션에서 이어지지 않으므로 교차 리뷰는 세션이 아닌 **리뷰 토큰** 기반으로 주고받고, 에이전트별 서명 키는 GCP Secret Manager(shorts 프로젝트)에서 관리. §18 추가, §17 갱신
 - r6: 사용자 지적(2026-10-08) — 회차 간 연결 누락. "1화 마지막 컷이 2화 첫 컷으로 이어지는 것, 회차·컷마다 배경·문맥이 연결되는 것이 이 파이프라인의 핵심". §19 추가. r5 까지는 회차 안의 연결만 다뤘다(설계 결함)
+- r7 초안: 요구 목록(`2026-10-08-drama-pipeline-requirements.md`) 대비 재검토 — 독립 검토 에이전트 결과 반영(§20). Codex 재검토 결과 합친 뒤 확정
 - 대상(담당 범위): `packages/contracts/src/drama-series.ts`(append-only), `packages/drama-series`, `.claude/skills/drama-series`, 관련 spec·test. `apps/shopshorts` 는 건드리지 않는다
 - 선행 설계: `2026-10-06-drama-series-design.md`
 
@@ -324,3 +325,45 @@ legacy 회차는 기존 조립을 그대로 쓴다(회귀 테스트).
 - 컷 판정 join 질문: 첫 컷은 앞 회차 마지막 장면과 이어지는지 묻는다.
 
 **테스트**: 2화 첫 컷의 previousCutOf 가 1화 지정 컷, 1화 소품 상태 미반영 시 block, 앞 회차 대본 누락 시 block, no≥2 에 연결 선언 없음 block, startsFresh 면 통과, 대사 판정 문맥에 1화 마지막 대사 포함, plan startImage=prev-episode-clip, next 가 앞 회차 클립 없으면 대기, legacy 1화를 앞 회차로 읽음.
+
+## 20. 재검토 보완 (r7 초안 — 요구 목록 대비)
+
+출처: 독립 검토 에이전트(2026-10-08, HEAD dcddf97). Codex 재검토 결과를 합쳐 확정한다. 각 항목 뒤 괄호는 요구 id.
+
+### 20.1 빠진 요구
+1. **세계관 규칙 (A7)** — `DramaSeries.worldRules?: { id: string; ruleKo: string; ruleEn: string }[]`(append). 시나리오 JEV 에 규칙마다 "이 회차가 규칙을 어기는가" 질문 자동 생성(확정 fail = block). v1 영상 프롬프트에 `World rules:` 한 줄로 ruleEn 포함. 컷 판정에 규칙 질문 1개(`world-rules`, 근거 프레임 필수). 사태 0일: "좀비는 머리를 베야 죽고 몸통 타격으로 쓰러지지 않는다".
+2. **목소리 일관성 (A8)** — `DramaCharacter.voice?: { description: string; audioRefAssetId?: string }`(append). 프롬프트에 화자별 목소리 묘사, `audioRefAssetId` 가 있으면 `audio_references` 로 넣는다 — `DramaClipMedia.role` 에 `'audio_references'` 추가(append; 기존 값 의미 불변). 효과는 TODO(D1, 파일럿에서 확인). 세션은 소리를 들을 수 없으므로 컷 판정에서 목소리는 판정하지 않고, **파일럿 2컷과 회차 미리보기의 사람 확인 항목**으로 명시한다(실행 상태에 확인 항목으로 기록).
+3. **비어휘 발화·대사 순서 (B10)** — `DramaLineKind` 에 `'vocal'` 추가(append: 비명·신음 등). vocal 은 CER 대조에서 빼고 "발화가 있었는가"만 본다. 대사 대조에 (a) 줄 순서(줄별 최적 일치 위치가 증가), (b) 여분 발화(일치 구간 밖 전사 길이가 대본 대비 30% 초과 시 review) 추가. 혼합 줄("아악! 누나!")은 작성 지침에서 vocal 줄과 dialogue 줄로 나눈다.
+4. **1080p 확정 (C2)** — 실행 상태 컷에 `final?: { jobId; fileSha256; at }`. `ds finalize-list` 가 승인된 초안 중 생성 후 7일 이내인 컷과 견적(get_cost 실측 필요 — 1080p 단가 미실측이면 null 로 표시하고 block)을 낸다. 확정 파일은 `record-final` 로 기록하고 대사 대조를 다시 통과해야 조립에 쓴다. 초안→확정 job 연결을 기록.
+5. **재생성 상한 (C3)** — 컷 기록을 덮어쓰지 않고 `attempts[]`(jobId, sha, verdict, credits, at)를 쌓는다. `maxAttemptsPerCut`(기본 3, run-init 인자) 초과 시 `next` 는 재생성을 내놓지 않고 "사용자 승인 필요"로 대기. 실지출 합계를 run 에 기록.
+
+### 20.2 부분 반영 보완
+6. **소품 상태 값 (A6)** — 이어지는 경계(continuesFromPrev 또는 회차 연결)에서 앞 컷 값과 다음 컷 값이 다르면 review("이어지는 장면에서 상태가 바뀜: 쪽문 잠김→살짝 열림"). 바뀐 이유를 비트에 적으면 사람이 승인. 컷 판정 background 질문에 그 컷 propState 를 포함.
+7. **생성물 수위 (B8)** — 컷 판정에 `safety` 항목(장르 safetyChecks 에서 질문 자동 생성: 피·상처 노출·노출·미성년 성적 암시 없음). 키프레임 시트 승인 때 같은 체크리스트를 사람에게 함께 보인다. v1 키프레임·영상 프롬프트에 장르 안전 문구(`no blood spray, no exposed wounds, no nudity`) 고정 포함.
+8. **대사량 (B9)** — 장르 팩에 회차 발화 밀도 하한 `minDialogueSyllablesPerMin`(review). 대사만 있는 비트(행동 없음)는 동작 여유를 0.5초로. 2화 재구성 때 컷을 늘려 대사량 유지(컷당 상한은 유지).
+9. **연결 선언 강제 (A1)** — 같은 장소·전환 cut 인데 `continuesFromPrev` 가 없으면 review("이어지는 장면이면 continuesFromPrev, 아니면 transitionIn 또는 다른 구도"). 앞 회차 연결의 지정 컷이 앞 회차 마지막 컷이 아니면 review.
+10. **plan 의 회차 연결 강제 (A2)** — `buildPlan` 이 `episodeLinkFindings` 를 block 으로 포함. `--prev-episode` 누락 시 plan 불가. v1 은 `--keyframes` 누락도 block(파일 sha 검사 생략 방지, E4).
+11. **새 세션 이어받기 (E1)** — run 파일에 `mediaDir`, `approvals[]`(kind: scenario·cost·keyframes·pilot·preview·override, by, at, userQuote, recordedBy), `submitted?: { cutId; jobId; at }`, `attempts[]`, `spentCredits` 추가. 세션 시작 절차: review-inbox → run 파일 `ds status` 로 다음 행동 출력.
+12. **편집 잠금 (E2)** — 회차 잠금을 run-init 이 아니라 기획 시작 시 `ds lock --episode --agent --session` 으로 만든다(사이드카 `<episode>.lock.json`). 대본을 쓰는 명령(judge-apply, approve-line, approve-keyframe, run-init)은 잠금 소유자만. 인계는 `ds handoff` 가 잠금도 넘긴다.
+13. **사람 승인 증거 (B3)** — `--by user` 는 에이전트가 적을 수 있으므로, 승인 기록에 `userQuote`(사용자 발화 원문 한 줄)·`recordedBy`(에이전트·세션)를 필수로 남긴다. 위조를 막지는 못하지만 흔적을 남긴다(한계 명시).
+14. **참조 영상 무음 (B11)** — `ds mute-ref --in --out` 이 `-an` 사본을 만들고 `hasAudio` 로 0개를 확인한 뒤에만 성공.
+15. **자산 id 와 내용 지문** — 참조 자산 id(refAssetId·outfitRefAssetId·setup.refAssetId·voice.audioRefAssetId)는 `fingerprintOf` 에서 제외한다(등록만으로 JEV·교차 리뷰를 다시 돌리지 않게). 자산은 keyframeDigest 가 맡는다.
+
+### 20.3 계획 코드 결함 보완
+16. 테스트 헬퍼에서 픽스처 c4 를 8초로 올린다(6초에 12음절 → shot block). 픽스처 원본은 legacy 테스트용으로 유지.
+17. legacy 앞 컷(setupId 없음) 허용을 Task 5(`chainsFromV1`)로 당겨 Task 6 테스트 순서 문제 해소.
+18. **v1 조립**: `transcriptReadiness` 가 v1 회차에서는 실행 상태의 컷 판정(dialogue 항목 pass, 최종 파일이면 final 대조 pass)을 받아쓰기 기록으로 인정. 회차 미리보기 승인은 run `approvals[kind=preview]`.
+19. **실행 상태 키**: `planFingerprint` 를 대본 지문이 아니라 plan 본문 해시(`planHash`)로. 해상도·초안 여부가 다르면 다른 run.
+20. **제출 중 상태**: `ds submit --cut --job` 이 `submitted` 를 기록하고, `next` 는 submitted 컷을 다시 내놓지 않는다(중복 생성 방지).
+21. **뒤 컷 무효화**: 컷을 재생성하면 그 컷 끝 프레임에서 시작한 뒤 컷들(startImage prev-clip 사슬)의 판정·승인을 무효로 표시.
+22. keyframe-sheet 는 대본 컷 순서로 정렬하고 컷 id·첫 대사 라벨을 그린다(`--font`).
+23. `join-check` 는 `previousCutOf` + 정책별 연결 규칙(v1 `chainsFromV1`, 회차 간 포함)을 쓴다.
+24. **생성 화면비 고정**: 생성은 항상 16:9(`DramaPlan.aspectRatio` 기록), 쇼츠는 조립에서 blur-fill. 9:16 생성은 shot-v1 에서 block(롱폼 전환 재생성 방지). 키프레임 승인 때 PNG 실제 비율 검사.
+25. 소소: plan.ts `DramaStartImage` import, 계약 `startImage?: … | undefined`, `run-init`·`next` 가 실패한 plan(`ok:false`) 거부, `keyframeDigest` 의 컷 위치 -1 방지(id 로 찾기).
+26. `ds last-frame --clip --out` 명령(실제 마지막 디코딩 프레임) — 세션이 직접 ffmpeg seek 하지 않게.
+27. 계획 Task 13 Step 4 의 임시 폴더를 iCloud `claude 작업/tmp/<날짜-작업>/` 로(전역 규칙 E3).
+
+### 20.4 테스트 보강
+- 키프레임 장면 변경 테스트는 같은 ctx 의 컷으로(위치 -1 오검증 제거).
+- legacy 출력 회귀는 픽스처 전 컷 프롬프트 스냅샷 + 실데이터 1화·2화 validate/plan 결과 비교 테스트(파일 존재 시).
+- plan `prev-episode-clip`, 판정·승인·교차 리뷰 CLI, `plan --keyframes` 경로, 블로킹이 바뀐 continuesFromPrev block 테스트를 코드로.
