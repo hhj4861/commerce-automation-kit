@@ -3,7 +3,7 @@
 - 날짜: 2026-10-08
 - 상태: r3 — r2: Codex 리뷰(`archive/20261008T082354-codex-keyframe-design-review.md`) 반영. r3: 사용자 결정(2026-10-08) "모든 컷을 시나리오 대비 판정해 pass 여야 다음으로" — 방식 A(자동 판정 pass 면 진행, 사람은 파일럿·예외 통과·회차 미리보기만) 추가
 - r4: 사용자 결정(2026-10-08) — (1) Codex 에서도 같은 구조로 실행 가능하게(이식은 Codex 세션 담당), (2) 시나리오 교차 리뷰: Claude 가 쓴 시나리오는 Codex, Codex 가 쓴 시나리오는 Claude 가 리뷰. §16·§17 추가
-- r5: 사용자 결정(2026-10-08) — 파이프라인은 같은 세션에서 이어지지 않으므로 교차 리뷰는 세션이 아닌 **리뷰 토큰** 기반으로 주고받고, 에이전트별 서명 키는 Secrets Manager 에서 관리. §18 추가, §17 갱신
+- r5: 사용자 결정(2026-10-08) — 파이프라인은 같은 세션에서 이어지지 않으므로 교차 리뷰는 세션이 아닌 **리뷰 토큰** 기반으로 주고받고, 에이전트별 서명 키는 GCP Secret Manager(shorts 프로젝트)에서 관리. §18 추가, §17 갱신
 - 대상(담당 범위): `packages/contracts/src/drama-series.ts`(append-only), `packages/drama-series`, `.claude/skills/drama-series`, 관련 spec·test. `apps/shopshorts` 는 건드리지 않는다
 - 선행 설계: `2026-10-06-drama-series-design.md`
 
@@ -281,13 +281,14 @@ legacy 회차는 기존 조립을 그대로 쓴다(회귀 테스트).
 - 검증(하나라도 실패하면 거부, 사유를 보고서에 기록): 요청 기록 존재, 미사용(1회용), 미만료, reviewer ≠ author, 응답 reviewer = 요청 reviewer, reviewedFingerprint = 요청 지문 = **현재** 회차 지문, 서명이 reviewer 공개 키로 검증됨.
 - 통과 시 관문 보고서 `cross-review`(지문·토큰·verdict) 기록, 토큰을 사용 처리. verdict=changes 면 ok=false.
 
-**키 관리 (Secrets Manager)**
-- 비대칭 키(Ed25519)를 쓴다. 검증에는 공개 키만 필요하므로 공개 키는 저장소 `packages/drama-series/review-keys/<agent>.pub`(커밋), **개인 키는 Secrets Manager** 에만 둔다. 로컬 파일·iCloud·메일함·저장소에 개인 키를 쓰지 않는다.
-- 비밀 이름(예정): `cak/drama-review/claude-ed25519`, `cak/drama-review/codex-ed25519`. 서명 시 CLI 가 실행 시점에 조회해 메모리에서만 사용한다(`--sm-profile`/`--sm-region` 인자, 기본값은 환경 변수).
-- 어느 Secrets Manager 인지(AWS 계정·리전·프로필)와 비밀 생성은 **사용자가 정하고 실행**한다 — TODO(D1). 키 생성 스크립트는 공개 키만 출력·커밋하고 개인 키는 바로 SM 에 넣는 형태로 제공한다.
-- 한계(명시): 두 에이전트가 같은 OS 사용자·같은 AWS 자격으로 돌면 서로의 개인 키를 조회할 수 있다. 실질 분리는 에이전트별 IAM 주체(프로필)를 나누고 각 비밀의 리소스 정책을 해당 주체로 제한할 때만 생긴다. 그 전까지 서명은 '위조 시 흔적이 남는' 수준이다.
+**키 관리 (GCP Secret Manager — 사용자 결정 2026-10-08: "gcp 활용, shorts 프로젝트에 등록")**
+- 비대칭 키(Ed25519). 검증에는 공개 키만 필요하므로 공개 키는 저장소 `packages/drama-series/review-keys/<agent>.pub`(커밋), **개인 키는 GCP Secret Manager** 에만 둔다. 로컬 파일·iCloud·메일함·저장소에 개인 키를 쓰지 않는다.
+- 프로젝트: GCP "shorts" 프로젝트. 같은 표시 이름의 프로젝트가 둘(`shorts-479009`, `gen-lang-client-0881453127`)이라 어느 쪽인지 사용자 확인 — TODO(D1). 2026-10-08 조회 기준 두 프로젝트 모두 Secret Manager API 미사용 상태(사용 설정 필요).
+- 비밀 이름(GCP 규칙상 `/` 불가): `cak-drama-review-claude-ed25519`, `cak-drama-review-codex-ed25519`. 서명 시 CLI 가 `gcloud secrets versions access latest --secret <이름> --project <id>`(또는 클라이언트 라이브러리)로 실행 시점에 조회해 메모리에서만 사용한다(`--sm-project` 인자, 기본값 환경 변수 `CAK_REVIEW_SM_PROJECT`).
+- API 사용 설정·비밀 생성·IAM 부여는 클라우드 설정 변경이므로 **사용자가 실행하거나 명시 승인 후** 실행한다. 키 생성 스크립트는 개인 키를 디스크에 쓰지 않고 바로 `gcloud secrets versions add --data-file=-` 로 넣고 공개 키만 출력한다.
+- 한계(명시): 두 에이전트가 같은 gcloud 계정으로 돌면 서로의 개인 키를 조회할 수 있다. 실질 분리는 에이전트별 서비스 계정을 두고 각 비밀에 `roles/secretmanager.secretAccessor` 를 해당 서비스 계정에만 부여할 때 생긴다. 그 전까지 서명은 '위조 시 흔적이 남는' 수준이다.
 - 키 교체: 공개 키 파일에 keyId 를 두고 응답에 keyId 를 넣는다. 폐기된 keyId 서명은 거부.
 
 **메일함 README 갱신** — 수신 대상은 세션이 아니라 역할(claude/codex). 리뷰 메일은 토큰 파일명·머리말 `token:` 을 포함. 세션 ID 는 참고 정보로만 적는다.
 
-**테스트**: 토큰 1회용·만료, reviewer=author 거부, 지문 불일치(리뷰 후 대본 수정) 거부, 서명 위조·keyId 폐기 거부, 응답 reviewer 불일치 거부, inbox 가 응답된·만료된 토큰을 제외, 개인 키가 디스크에 쓰이지 않음(SM 조회는 주입 가능한 인터페이스로 테스트 대역 사용).
+**테스트**: 토큰 1회용·만료, reviewer=author 거부, 지문 불일치(리뷰 후 대본 수정) 거부, 서명 위조·keyId 폐기 거부, 응답 reviewer 불일치 거부, inbox 가 응답된·만료된 토큰을 제외, 개인 키가 디스크에 쓰이지 않음(Secret Manager 조회는 주입 가능한 인터페이스로 테스트 대역 사용).
