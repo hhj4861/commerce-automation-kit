@@ -1,10 +1,7 @@
 **
-!packages/
-!packages/litellm-client/
 !packages/litellm-client/jev.mjs
-!services/
-!services/topic-discovery/
 !services/topic-discovery/Dockerfile
 !services/topic-discovery/service.py
 !services/topic-discovery/server.py
 !services/topic-discovery/jev-bridge.mjs
+!services/topic-discovery/native_review.py

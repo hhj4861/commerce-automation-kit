@@ -9,6 +9,10 @@ import math
 import re
 import unicodedata
 
+# Shared JEV adoption thresholds (service scoring and native-review eligibility).
+# While MIN_PROBABILITY >= .6 the margin test is implied (margin >= 2*p-1 >= .6);
+# it stays explicit so lowering MIN_PROBABILITY cannot silently drop it.
+MIN_CONFIDENCE, MIN_PROBABILITY, MIN_MARGIN = .8, .8, .2
 MODE = 'native-llm-v1'
 VERSION = 'discovery-v2.7'
 VERSIONS = {'discovery-v2.4', 'discovery-v2.5', 'discovery-v2.6', VERSION}
@@ -26,7 +30,7 @@ def low_confidence(check):
     if not isinstance(check,dict): return False
     values=[check.get('confidence'),check.get('margin'),check.get('probabilities',{}).get(check.get('choice'))]
     if any(isinstance(v,bool) or not isinstance(v,(int,float)) or not math.isfinite(v) for v in values): return False
-    return values[0]<.8 or values[1]<.2 or values[2]<.8
+    return values[0]<MIN_CONFIDENCE or values[1]<MIN_MARGIN or values[2]<MIN_PROBABILITY
 
 def eligible(candidate):
     if candidate.get('decision')!='held': return False

@@ -18,6 +18,8 @@ New `reviewMode: "native-llm-v1"` requests pin v2.7. Persisted v2.4–v2.6 reque
   - only rejects or no candidates → `DISCOVERY_NO_ACCEPTED_CANDIDATES`
 
   Search and evidence shortfalls (`no_grounded_candidates`, `search_evidence_missing`, `no_research_leads`, `research_evidence_missing`, `research_evidence_unmatched`) now map to `DISCOVERY_EVIDENCE_INSUFFICIENT`. They no longer claim that novelty was evaluated. The account worker log line appends only the server request UUID, whitelisted reason codes and `jevError` codes.
+- **JEV model pin.** New requests store `jevModel` (`jev-1.13.0`) at creation, as they do the rubric. The bridge sends that model, and an answer from a different model holds the candidate with `jev_model_mismatch`. Requests created earlier have no pin and behave as before. The adoption thresholds (confidence .8, probability .8, margin .2) are now one shared constant set. The margin check is implied while the probability threshold is at least .6, and stays explicit as a guard.
+- **Build context.** `Dockerfile.dockerignore` re-includes only the five copied files, not whole directories.
 - **Cancellation.** The JS client reports a cancelled generation with its own short timeout, not the caller's aborted signal. The server therefore releases the scope lock instead of keeping it until the 600-second expiry.
 
 Unit tests prove protocol behavior, not semantic quality. Before activating Shopshorts, v2.7 needs the same fixed-input comparison as v2.6, plus a held-out set that measures unnecessary holds.

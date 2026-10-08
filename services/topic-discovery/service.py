@@ -14,7 +14,7 @@ from pathlib import Path
 from urllib.parse import urlencode, urlsplit
 from urllib.request import Request, build_opener, HTTPRedirectHandler
 
-from native_review import MODE as REVIEW_MODE, VERSION as HYBRID_VERSION, VERSIONS as HYBRID_VERSIONS, eligible as review_eligible, build_prompt as native_review_prompt, apply_reviews
+from native_review import MIN_CONFIDENCE, MIN_PROBABILITY, MIN_MARGIN, MODE as REVIEW_MODE, VERSION as HYBRID_VERSION, VERSIONS as HYBRID_VERSIONS, eligible as review_eligible, build_prompt as native_review_prompt, apply_reviews
 
 VERSION = "discovery-v1.2"
 RESEARCH_VERSION = "discovery-v2.2"
@@ -158,7 +158,7 @@ class Store:
             if db.execute("SELECT COUNT(*) FROM requests WHERE platform=? AND created>=?", (platform, now - 86400)).fetchone()[0] >= per_day:
                 raise Failure("skipped_by_budget", 429)
             rid = str(uuid.uuid4())
-            data = {"requestId": rid, "rubricVersion": research_version if research_workflow(value) else VERSION, "state": "searching", "input": value,
+            data = {"requestId": rid, "rubricVersion": research_version if research_workflow(value) else VERSION, "jevModel": JEV_MODEL, "state": "searching", "input": value,
                     "requiresHumanReview": True, "factChecked": False, "createdAt": now, "expiresAt": now + 600,
                     "candidates": [], "evidence": [], "reasonCodes": [],
                     "usage": {"searchCalls": 0, "generationClaims": 0, "jevCalls": 0, "costUsd": None}, "action": None}
@@ -240,6 +240,9 @@ class NaverSearch:
         clean = lambda s: html.unescape(re.sub("<[^>]*>", "", str(s)))[:3000]
         return [{"url": r.get("link"), "title": clean(r.get("title", "")), "excerpt": clean(r.get("description", ""))} for r in items[:10] if isinstance(r, dict) and public_url(r.get("link"))]
 
+# Pinned per request at creation, like the rubric: a gateway default change must not
+# re-score an in-flight request with a model the thresholds were never checked against.
+JEV_MODEL = "jev-1.13.0"
 JEV_ERROR_CODES = {"timeout", "cancelled", "rate_limited", "authentication_failed", "overloaded", "redirect_rejected",
                    "upstream_error", "network_error", "invalid_response", "response_too_large", "request_too_large", "invalid_config", "invalid_input"}
 
@@ -521,7 +524,7 @@ def score_review(response, q, rubric):
             raise Failure("invalid_jev_response", 502)
         margin = probs[choice] - max(p for key, p in probs.items() if key != choice)
         checks[name] = {"choice": choice, "confidence": confidence, "probabilities": probs, "margin": margin, "model": response.get("model"), "rubricVersion": rubric}
-        if confidence < .8 or probs[choice] < .8 or margin < .2 or choice == "uncertain":
+        if confidence < MIN_CONFIDENCE or probs[choice] < MIN_PROBABILITY or margin < MIN_MARGIN or choice == "uncertain":
             reasons.append(name + "_uncertain")
         elif choice == "reject":
             reasons.append(name + "_rejected")
@@ -775,7 +778,12 @@ class Discovery:
                                    scoped_review(state) if rubric in SCOPED_REVIEW_VERSIONS else
                                    {"state": state, "questions": q})
                         q = payload["questions"]
+                        if data.get("jevModel"):
+                            payload = {**payload, "jevModel": data["jevModel"]}
                         response = self.jev(payload)
+                        # The SDK always returns the answering model; older requests have no pin.
+                        if data.get("jevModel") and response.get("model") is not None and response["model"] != data["jevModel"]:
+                            raise Failure("jev_model_mismatch", 502)
                         scored, reasons = score_review(response, q, rubric)
                         checks.update(scored)
                         if not prior:

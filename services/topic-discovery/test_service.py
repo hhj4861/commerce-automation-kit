@@ -663,6 +663,28 @@ class Tests(unittest.TestCase):
             self.assertNotIn('secret upstream text',json.dumps(result))
         finally:server.shutdown();server.server_close();thread.join()
 
+    def test_new_requests_pin_the_jev_model_and_hold_a_different_answering_model(self):
+        sent=[]
+        def answer(model):
+            def run(payload):
+                sent.append(payload.get('jevModel'));return {**pass_result(payload),'model':model}
+            return run
+        self.jev.side_effect=answer('jev-1.13.0')
+        result,_=self.complete(self.start())
+        self.assertEqual(result['jevModel'],'jev-1.13.0');self.assertEqual(sent,['jev-1.13.0'])
+        self.assertEqual(result['candidates'][0]['decision'],'accepted')
+        self.jev.side_effect=answer('jev-2.0.0')
+        result,_=self.complete(self.start(key='model-drift-001',subject='b'*64),subject='b'*64)
+        self.assertEqual(result['candidates'][0]['decision'],'held')
+        self.assertEqual(result['candidates'][0]['reasonCodes'],['jev_model_mismatch'])
+        # Requests persisted before pinning keep accepting whatever model answered.
+        request=self.start(key='legacy-model-001',subject='c'*64)
+        with self.store.db() as db:
+            data=json.loads(db.execute('SELECT data FROM requests WHERE id=?',(request['requestId'],)).fetchone()[0])
+            data.pop('jevModel');db.execute('UPDATE requests SET data=? WHERE id=?',(json.dumps(data),request['requestId']))
+        sent.clear();result,_=self.complete(request,subject='c'*64)
+        self.assertEqual(result['candidates'][0]['decision'],'accepted');self.assertEqual(sent,[None])
+
     def test_experimental_version_requires_internal_opt_in_and_pins_requests(self):
         self.assertEqual(RESEARCH_VERSION,'discovery-v2.2')
         self.assertEqual(self.d.research_version,RESEARCH_VERSION)
