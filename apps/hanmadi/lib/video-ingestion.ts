@@ -167,11 +167,15 @@ export async function processVideo(
     }
     await progress("evaluating");
     // Serialize judgment+save across instances so each video sees preceding accepted drafts.
+    // Sequential worst case: JEV quality 12s + context LLM 15s + reference JEV 12s
+    // + dedupe JEV 12s ≈ 51s before Redis read/save. Keep a 2x margin so a slow
+    // judgment cannot lose the lock to a concurrent instance mid-save.
     const judgeLock = "video-judge",
-      judgeToken = randomUUID();
+      judgeToken = randomUUID(),
+      judgeLockSeconds = 120;
     let claimed = false;
     for (let i = 0; i < 50; i++) {
-      claimed = await store.claim(judgeLock, judgeToken, 60);
+      claimed = await store.claim(judgeLock, judgeToken, judgeLockSeconds);
       if (claimed) break;
       await new Promise((r) => setTimeout(r, 300));
     }

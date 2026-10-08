@@ -1,10 +1,10 @@
 name: Shared LiteLLM client
 on:
   pull_request:
-    paths: ["packages/litellm-client/**", ".github/workflows/litellm-client.yml"]
+    paths: ["packages/litellm-client/**", "apps/hanmadi/vendor/**", "apps/hanmadi/package.json", ".github/workflows/litellm-client.yml"]
   push:
     branches: [main]
-    paths: ["packages/litellm-client/**", ".github/workflows/litellm-client.yml"]
+    paths: ["packages/litellm-client/**", "apps/hanmadi/vendor/**", "apps/hanmadi/package.json", ".github/workflows/litellm-client.yml"]
 permissions:
   contents: read
 jobs:
@@ -17,3 +17,19 @@ jobs:
           node-version: '22'
       - run: npm test --prefix packages/litellm-client --workspaces=false
       - run: npm pack ./packages/litellm-client --dry-run
+      # A vendored copy of the current version must equal the source; changing the
+      # source therefore requires a version bump. Apps may still pin an older tarball.
+      - name: Vendored Hanmadi package matches source
+        run: |
+          set -eu
+          v=$(node -p "require('./packages/litellm-client/package.json').version")
+          ref=$(node -p "require('./apps/hanmadi/package.json').dependencies['@cak/litellm-client']")
+          test -f "apps/hanmadi/${ref#file:}"
+          f="apps/hanmadi/vendor/cak-litellm-client-$v.tgz"
+          if [ -f "$f" ]; then
+            tmp=$(mktemp -d); tar -xzf "$f" -C "$tmp"
+            for name in package.json $(node -p "require('./packages/litellm-client/package.json').files.join(' ')"); do
+              cmp "packages/litellm-client/$name" "$tmp/package/$name"
+            done
+            test "$(cd "$tmp/package" && find . -type f | sort | wc -l)" -eq "$(node -p "require('./packages/litellm-client/package.json').files.length + 1")"
+          fi
