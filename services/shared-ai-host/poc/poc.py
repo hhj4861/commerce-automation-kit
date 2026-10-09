@@ -45,6 +45,9 @@ GCLOUD_SCOPE = ["--region=us-central1", "--project=replay-live-508202", "--quiet
 
 
 def headers(token, key, content_type="application/json"):
+    # TODO(D1): Cloud Run documents X-Serverless-Authorization for ID tokens and says only that
+    # header is checked when both are sent; whether a user's gcloud token works there and
+    # Authorization reaches LiteLLM unchanged is confirmed by the 7-5 smoke (bad-key, models).
     result = {"Content-Type": content_type}
     if token:
         result["X-Serverless-Authorization"] = "Bearer " + token
@@ -196,8 +199,9 @@ def warm_trial(base, token, key, neon_state, idle_seconds, max_wait, ping_second
                call_fn=call, sleep=time.sleep, clock=time.monotonic):
     """Wait until Neon has idled while LiteLLM stays up, then measure one keyed request.
 
-    Optional liveliness pings (no key, no database) keep the instance warm; without them the
-    instance lives only as long as Cloud Run's idle retention.
+    Liveliness pings carry no key and the handler skips the database, but the CPU they give
+    lets LiteLLM's 60 s heartbeat write to it (P2-R13), so (e) runs without pings by default
+    and the instance lives only as long as Cloud Run's idle retention.
     """
     start = last_ping = clock()
     if ping_seconds:
@@ -240,7 +244,8 @@ def idle_neon_shutdown(base, token, key, neon, n, call_fn=call, gcloud_fn=None):
 
 
 def gcloud(args, run=subprocess.run):
-    done = run(["gcloud", *args, *GCLOUD_SCOPE], check=True, capture_output=True, text=True)
+    account = [f"--account={os.environ['STG_ACCOUNT']}"] if os.environ.get("STG_ACCOUNT") else []
+    done = run(["gcloud", *args, *GCLOUD_SCOPE, *account], check=True, capture_output=True, text=True)
     lines = (done.stderr or "").strip().splitlines()
     return observe.redact(lines[-1] if lines else "")
 
@@ -269,6 +274,7 @@ def main(argv=None):
     burst.add_argument("--n", type=int, required=True)
     burst.add_argument("--every", type=float, default=0, help="seconds between calls")
     burst.add_argument("--real", action="store_true", help="max_tokens 1 provider calls instead of mock_response")
+    burst.add_argument("--confirm-paid", action="store_true")
     features = sub.add_parser("features")
     features.add_argument("--tts-voice", required=True)
     features.add_argument("--confirm-paid", action="store_true")
@@ -287,9 +293,12 @@ def main(argv=None):
     gate = sub.add_parser("evaluate")
     gate.add_argument("summary")
     args = parser.parse_args(argv)
-    if args.command in ("features", "cold") or (args.command == "shutdown" and args.mode == "stream"):
-        if not args.confirm_paid:
-            parser.error(f"{args.command} makes paid provider calls; pass --confirm-paid after approval")
+    paid = (args.command in ("features", "cold") or (args.command == "shutdown" and args.mode == "stream")
+            or (args.command == "burst" and args.real))
+    if paid and not args.confirm_paid:
+        parser.error(f"{args.command} makes paid provider calls; pass --confirm-paid after approval")
+    if args.command == "new-key" and Path(args.out).exists():
+        parser.error(f"{args.out} already exists; a key created now would have nowhere to go")
     if args.command == "stats":
         records = [json.loads(line) for line in Path(args.file).read_text().splitlines() if line.strip()]
         observe.emit({"step": "stats", "of": args.step, **stats([r for r in records if r.get("step") == args.step])})
@@ -302,7 +311,12 @@ def main(argv=None):
     if neon is None and (args.command in ("cold", "warm-neon") or getattr(args, "mode", None) == "idle-neon"):
         parser.error(f"{args.command} needs NEON_API_KEY and NEON_PROJECT_ID to confirm the compute idled")
     base, token = os.environ["STG_EDGE"], IdToken()
-    key = "" if args.command == "probe" else load_key()  # the probe needs no LiteLLM key
+    if args.command == "probe":
+        key = ""  # the probe needs no LiteLLM key
+    elif args.command == "new-key":
+        key = os.environ["STG_KEY"]  # always the master key, never a test key file
+    else:
+        key = load_key()
     observe.register_secret(key)
     if args.command == "smoke":
         observe.emit({"step": "no-id-token", **call(base, "/llm/v1/models", "", key)})

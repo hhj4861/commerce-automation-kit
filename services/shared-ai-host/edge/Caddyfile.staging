@@ -4,6 +4,8 @@
 }
 # Phase 2 staging edge: only the LiteLLM allowlist, proxied to an internal Cloud Run
 # service. LLM_UPSTREAM is that service's https run.app URL; Cloud Run sets PORT.
+# TODO(D1): for an https upstream Caddy sends Host as <service>.run.app:443; the 7-5 smoke
+# (models 200) confirms Cloud Run accepts it, else the Host value changes to the bare host.
 :{$PORT:8080} {
     @llm path /llm/v1/models /llm/v1/chat/completions /llm/v1/responses /llm/v1/embeddings /llm/v1/audio/speech /llm/v1/audio/transcriptions
     handle @llm {

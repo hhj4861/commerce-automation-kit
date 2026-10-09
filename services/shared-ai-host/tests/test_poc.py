@@ -1,5 +1,6 @@
 """Unit tests for the staging PoC harness; no network, no gcloud."""
 import base64
+import contextlib
 import http.client
 import io
 import json
@@ -222,9 +223,50 @@ class MeasurementTest(unittest.TestCase):
                     poc.main(argv)
 
     def test_paid_commands_need_explicit_confirmation(self):
-        for argv in (["features", "--tts-voice", "v"], ["cold", "--path", "jev"]):
+        with mock.patch.dict(os.environ, {}, clear=True):
+            for argv in (["features", "--tts-voice", "v"], ["cold", "--path", "jev"], ["burst", "--n", "1", "--real"],
+                         ["shutdown", "--mode", "stream"]):
+                with self.assertRaises(SystemExit):
+                    poc.main(argv)
+
+    def test_new_key_refuses_an_existing_output_before_creating_a_key(self):
+        with tempfile.TemporaryDirectory() as tmp, mock.patch.dict(os.environ, {}, clear=True):
+            existing = Path(tmp) / "taken"
+            existing.write_text("")
             with self.assertRaises(SystemExit):
-                poc.main(argv)
+                poc.main(["new-key", "--alias", "x", "--out", str(existing)])
+
+    def test_new_key_uses_the_master_key_and_prints_only_the_hash(self):
+        created, seen = "sk-" + "n" * 40, {}
+
+        def fake_call(base, path, token, key, **kwargs):
+            seen["key"] = key
+            return {"path": path, "status": 200, "ms": 3, "body": {"key": created}}
+
+        with tempfile.TemporaryDirectory() as tmp:
+            stale = Path(tmp) / "old-test-key"
+            stale.write_text("sk-" + "t" * 40)
+            env = {"STG_EDGE": "https://edge.test", "STG_KEY": KEY, "STG_KEY_FILE": str(stale)}
+            out, buffer = Path(tmp) / "new", io.StringIO()
+            with mock.patch.dict(os.environ, env, clear=True), mock.patch.object(poc, "call", fake_call), \
+                    mock.patch.object(poc, "IdToken", lambda: (lambda: TOKEN)), contextlib.redirect_stdout(buffer):
+                poc.main(["new-key", "--alias", "x", "--out", str(out)])
+            self.assertEqual(seen["key"], KEY)
+            self.assertEqual(out.read_text(), created)
+        self.assertNotIn(created, buffer.getvalue())
+        self.assertIn(poc.key_hash(created), buffer.getvalue())
+
+    def test_gcloud_runs_as_the_personal_account(self):
+        seen = {}
+
+        def run(argv, **kwargs):
+            seen["argv"] = argv
+            return type("Done", (), {"stderr": "Done.\n"})()
+
+        with mock.patch.dict(os.environ, {"STG_ACCOUNT": "me@example.com"}, clear=True):
+            self.assertEqual(poc.gcloud(["run", "services", "update-traffic", "litellm-stg"], run=run), "Done.")
+        self.assertIn("--account=me@example.com", seen["argv"])
+        self.assertIn("--project=replay-live-508202", seen["argv"])
 
 
 if __name__ == "__main__":
