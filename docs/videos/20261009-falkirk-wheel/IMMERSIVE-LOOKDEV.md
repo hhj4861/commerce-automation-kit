@@ -50,3 +50,35 @@ Scene sources and Blender-generated manifests remain together under the task's s
 
 Reproduce motion: `blender -b --factory-startup --python-exit-code 1 --python immersive-motion.py -- --out <cache>/final --percent 100 --samples 64`.
 Then `python3 motion-finish.py --cache <cache>/final --source-cache <original-falkirk-cache> --output <Downloads>/vedio/falkirk-immersive-motion-v3.mp4 --report motion-verification.json`.
+
+## Full film — approved 2026-10-10
+
+- User accepted the motion proof and requested the complete film. Base `8f64d44`, same owner/branch. Files: `immersive-full.py`, `full-finish.py`, `full-verification.json`, this card. Existing accepted scene/entry sources remain unchanged.
+- Goal: existing 46.958s story and Kyle 1.1×, cached Higgsfield introduction, accepted entry footage, new facility approach / horizontal gondola rotation / upper canal departure in the same visual treatment.
+- Gates must close before rotation; both gondolas counteract arm rotation to remain horizontal; upper dock gates open only after the wheel stops, then boat departure. Mechanical/geometric checks cover every new output frame. Visual preview before full render. No new paid calls, no upload or production deployment.
+- Done: full MP4 with complete original narration/captions and ending hold, actual render/decode/A/V/visual verification, own commit/push. Current: sources prepared, preview pending.
+
+- First full-motion preflight correctly rejected rotation because the stern was 0.2m across the newly added entrance gate plane. Move the boat another 0.3m during the initial 0.35s, then close the gate, then rotate; check the complete hull rather than only its origin. No paid calls/render batch started on the failed state.
+
+- Preview 2 passes horizontal-deck, radius and gate checks. Visual inspection found slight frame-edge clipping at mid-rotation and a foreground bearing ring hiding the boat late in departure. Widen the rotation lens slightly and move the departure camera alongside/forward with the same boat; verify those frames again before full resolution.
+
+- Preview 3: rotation framing corrected. Departure camera solved ring occlusion but cropped the stern because its lateral view was too close. Return to the canal-direction view, with greater elevation and lateral clearance; preview only departure for this isolated change.
+
+- Preview 4 leaves part of the stern behind the rear crescent at the final hold. Move the camera farther out laterally and forward, widen its lens and target the boat centre; the end view must clear the rear-ring plane. Only departure geometry/camera evidence is rerun.
+
+- Preview 5 clears the complete boat at the final hold. Its new side angle exposes the finite lookdev terrain edge; extend only the outer terrain, retain the accepted foreground, and instance a small distant grove. Add a projected hull-boundary check for departure so future framing changes cannot silently crop the vessel.
+
+- Full animation completed successfully (682 new frames, 3467.92s). First assembly failed because this FFmpeg requires `0.5` rather than `.5` for a fade duration; reproduced with a 16×16 lavfi input (exit 234). Correct the duration spelling and expose captured FFmpeg stderr. Reuse all rendered clips; no Blender rerender or paid call is needed.
+
+
+## Full film delivery and verification
+
+- Complete film: `/Users/admin/Downloads/vedio/falkirk-wheel-immersive-full-v3.mp4`, 46.958333s, 1127 frames, 1080×1920, 24fps, H.264/AAC, 31,222,985 bytes. SHA-256 `58eff741ba7c2fae6e45123199090b9ad6b6a02458ef59b7ba112e140df2834f`.
+- Existing Higgsfield opening and accepted entry footage reused; all original Kyle 1.1× narration preserved. New API/paid calls: 0. The older opening retains its original stylized appearance; the body follows the approved immersive scene. Original full film and 17-second proof remain intact.
+- Actual Blender render: 682 new frames, 3467.92 seconds (57m48s), Cycles Metal / 64 samples. Approach 1172.04s, rotation 959.15s, departure 1336.54s. One failed mechanical preflight, four camera/background adjustments across low-resolution previews, and one FFmpeg option-format correction; no full Blender rerender. Model token metrics and whole conversational elapsed time were not recorded.
+- Render and final assembly processes exited 0. Entire final MP4 decoded without errors. A/V duration delta 0.000328s; audio mean -17.5dB and peak -1.4dB. Captions include every original narration word; final spoken ending has 2.724s of picture remaining.
+- Geometry checks: gate/rotation/departure constraints for all 682 new frames, sampled actual world transforms and upward normals, constant arm radius, ending hull projection entirely within the frame. Final output inspected at 14 times including clip boundaries, mid-rotation and final departure. Detail/evidence in `full-verification.json`; this does not claim every frame was watched in real time or that the model is an engineering simulation.
+- Source files: `immersive-full.py`, `full-finish.py`, report and this task card. No shared Shopshorts runtime edits, deployment, PR merge or upload in this task.
+- Next: watch the completed film. Treat this user-approved visual direction separately from the older rejected renderer; do not merge rejected runtime changes just because this film is accepted.
+
+Reproduce: `blender -b --factory-startup --python-exit-code 1 --python immersive-full.py -- --out <full-cache>/final --percent 100 --samples 64`, then `python3 full-finish.py --cache <full-cache>/final --source-cache <original-falkirk-cache> --entry-cache <accepted-motion-cache>/final --output <Downloads>/vedio/falkirk-wheel-immersive-full-v3.mp4 --report full-verification.json`.
