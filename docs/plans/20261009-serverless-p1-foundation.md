@@ -15,7 +15,7 @@
 | ID | 판단 | 이유 | 틀렸을 때 비용 |
 |---|---|---|---|
 | R1 | 백업 버킷·Monitoring 알림·maintenance SA와 이미지를 Phase 3-2로 미룬다 | 운영 데이터가 생기는 Phase 3 전에는 쓸 곳이 없다. 게이트에서 중단하면 버려질 작업이다 | Phase 3가 반나절 늘어남 |
-| R2 | Cloud Run 서비스·Job 골격은 처음 배포하는 Phase에서 만든다(스테이징은 2-1) | Terraform으로 서비스를 만들려면 이미지가 먼저 있어야 한다 | 없음 |
+| R2 | Cloud Run 서비스·Job 골격과 그 런타임 SA(litellm·discovery·admin)는 처음 배포하는 Phase에서 만든다(스테이징은 2-1) | Terraform으로 서비스를 만들려면 이미지가 먼저 있어야 하고, SA·시크릿 IAM은 서비스와 함께 검토하는 편이 정확하다 | 없음 |
 | R3 | 대상별 배포 SA는 Phase 5로 미룬다. 1-2는 import와 이미지 빌드 provider·SA만 한다 | 자동 배포는 Phase 5에서 붙는다. 그 전 배포는 승인받은 수동 `gcloud`다 | Phase 5가 반나절 늘어남 |
 | R4 | Neon 리전은 지리상 가까운 aws-us-east-2로 정한다. Phase 2에서 왕복 지연을 재고 30ms를 넘으면 바꾼다 | 지연 비교용 프로젝트를 두 개 만드는 비용을 아낀다 | DB 조회마다 수 ms |
 | R5 | 작업 worktree는 로컬(`commerce-automation-kit-worktrees/shared-ai-serverless`)에 두고 Phase가 끝나면 지운다 | iCloud 데몬이 I/O 대기에 묶여 git·Terraform 파일 읽기가 시간 초과된다(Phase 0 기록) | 로컬 디스크 약 0.3GB를 일시 사용 |
@@ -33,7 +33,7 @@
 
 ## Review Focus
 
-1. **state 이전이 state를 잃거나 둘로 가른다.** 기대: 이전 뒤 `terraform state list`가 16개이고, plan에는 의도한 추가만 있으며 삭제·교체는 0이다. 로컬 사본은 지우고 iCloud 원본은 손대지 않는다. → 태스크 6-2.
+1. **state 이전이 state를 잃거나 둘로 가른다.** 기대: 이전 뒤 `terraform state list`가 16개이고, plan에는 의도한 추가만 있으며 삭제·교체는 0이다. 로컬 사본은 지우고, iCloud 원본은 내용을 그대로 둔 채 이름만 바꿔 다시 쓰이지 않게 한다. 이전부터 PR 머지까지 다른 checkout에서 이 모듈의 terraform을 실행하지 않는다(main에는 아직 backend 블록이 없고 machine_type 기본값이 e2-standard-2라 두 번째 writer가 된다). → 태스크 6-2.
 2. **레지스트리 정리 정책이 아직 쓰는 이미지를 지운다.** 롤백 후보 리비전은 이전 digest를 참조하므로 그 이미지가 지워지면 새 인스턴스가 뜨지 못한다. 기대: 패키지별 최근 5개 KEEP, 30일 미만 DELETE 없음, 태그 불변. → 태스크 1 `test_images_are_immutable_and_recent_ones_survive_cleanup`.
 3. **WIF 확장이 다른 브랜치·워크플로에도 토큰을 준다.** 기대: 이미지 provider는 main의 `shared-ai-images.yml` 수동 실행만 받고, `repository_id`를 매핑하지 않아 배포 SA 바인딩을 쓸 수 없다. → 태스크 2 정책 테스트.
 4. **렌더한 LiteLLM 설정이 비밀을 담거나 모델 별칭을 잃는다.** 기대: 자격 값은 `os.environ/` 참조뿐이고, production 별칭·모델이 VM과 같고, 구독 라우트가 없다. → 태스크 3.
@@ -1024,9 +1024,26 @@ gcloud storage buckets update gs://replay-live-508202-tfstate --project=replay-l
 
 Expected: 버킷 생성, `versioning_enabled: true`.
 
-- [ ] **6-2 shared-ai-host state 이전과 plan(승인).** 로컬 0600 사본을 모듈 디렉터리의 `terraform.tfstate`로 둔다(`.gitignore`가 `*.tfstate*` 제외). `terraform init -input=false -force-copy`로 GCS에 복사하고, `terraform state list | wc -l`이 16인지 확인한다. 로컬 `terraform.tfstate*`와 스크래치패드 사본을 지운다. `terraform plan`의 기대값은 `11 to add, 0 to change, 0 to destroy`(API 2, AR 1, 시크릿 8)다. machine_type 변경이 없어야 한다.
-- [ ] **6-3 shared-ai-host apply(승인).** 6-2의 plan을 저장한 파일로 apply한다.
+- [ ] **6-2 shared-ai-host state 이전과 plan(승인).** 로컬 0600 사본을 모듈 디렉터리의 `terraform.tfstate`로 둔다(`.gitignore`가 `*.tfstate*` 제외). `terraform init -input=false -force-copy`로 GCS에 복사하고, `terraform state list | wc -l`이 16인지 확인한다. 로컬 `terraform.tfstate*`와 스크래치패드 사본을 지운다. `terraform plan`의 기대값은 `11 to add, 0 to change, 0 to destroy`(API 2, AR 1, 시크릿 8)다. machine_type 변경이 없어야 한다. 이전 직후 iCloud 원본 `data/shared-ai/terraform.tfstate`의 이름을 `terraform.tfstate.migrated-20261009`로 바꾼다(내용은 그대로). 이 시점부터 PR 머지까지 다른 checkout에서 이 모듈의 terraform을 실행하지 않는다.
+- [ ] **6-3 shared-ai-host apply(승인).** 6-2의 plan을 저장한 파일로 apply한다. 6-4·6-5까지 마치면 PR 머지를 요청한다.
 - [ ] **6-4 WIF 이미지 신원 apply(승인).** 6-3(Artifact Registry 생성) 뒤에 한다. `terraform init -input=false`(빈 GCS prefix) 뒤 plan의 기대값은 `7 to add, 0 to change, 0 to destroy`다(R6, 사전 읽기 전용 plan과 같음). 다른 값이 보이면 멈추고 원인을 기록한다.
 - [ ] **6-5 저장소 변수 설정(승인).** `gh variable set GCP_IMAGES_WIF_PROVIDER --body "<output>"`, `gh variable set GCP_IMAGES_SERVICE_ACCOUNT --body "<output>"`. 둘 다 비밀이 아니다(기존 `GCP_DEPLOY_*`와 같은 성격).
 - [ ] **6-6 머지 뒤 이미지 빌드(사용자 머지 + 승인).** PR이 main에 들어간 뒤 `gh workflow run shared-ai-images.yml -f image=litellm-staging`과 `-f image=edge-staging`을 실행한다. 실행 요약의 digest를 기록한다. 첫 실행에서 토큰 교환이 실패하면 GitHub OIDC `sub` 형식(`repo:hhj4861/commerce-automation-kit:ref:refs/heads/main`)을 확인한다(`TODO(D1)`).
+- [ ] **6-6b (선택, 승인) 다른 브랜치 토큰 거부 실측.** 마스터 플랜 1-2의 검증 항목이다. job의 `if:`를 뺀 임시 브랜치 사본을 dispatch해 STS가 토큰을 거부하는지 기록하고, 임시 브랜치를 지운다. 하지 않으면 정적 정책 테스트(provider 조건의 ref·workflow_ref 고정)가 이 검증을 대신한다.
 - [ ] **6-7 Neon 스테이징(사용자).** Neon 가입 → 프로젝트 `shared-ai-stg`(aws-us-east-2, PostgreSQL 16) 생성 → direct(비풀러) 연결 문자열에 `sslmode=require&connect_timeout=15`를 붙여 Secret Manager `litellm-stg-database-url`에 새 버전으로 넣는다(콘솔). 값은 대화에 붙여 넣지 않는다.
+
+## 최종 리뷰 결과 (2026-10-09)
+
+새 리뷰어가 브랜치 전체를 검토했다. Critical·Important는 없었고 Minor 7건이 나왔다. 출시됐을 때의 영향을 기준으로 다시 분류해 다음과 같이 처리했다.
+
+| 지적 | 처리 |
+|---|---|
+| WIF subject 바인딩은 pool 단위다. 같은 pool에 나중에 추가될 provider가 이미지 SA의 subject를 만들 수 있다 | Important로 올려 수정했다. 이미지 전용 pool `cak-images`로 분리했다(테스트 `test_image_pool_is_dedicated_to_the_image_provider`) |
+| README·런북이 state 이전을 끝난 것처럼 썼다. 이전부터 머지 사이에 낡은 state로 두 번째 writer가 생길 수 있다 | Important로 올려 수정했다. README 두 곳을 고치고, 6-2에 원본 이름 변경과 다른 checkout 실행 금지를 추가했다 |
+| 다른 브랜치 토큰 거부를 실측하는 단계가 없다 | 6-6b(선택)를 추가했다. 하지 않으면 정적 테스트가 대신한다 |
+| 런타임 SA 이연이 판단 표에 없다 | R2에 명시했다 |
+| 레지스트리 보존 규칙이 배포 상태를 모른다(최신 5개 + 30일) | **보류(Phase 3 선행 조건).** 롤백용 이미지에 `keep-` 접두 태그를 붙이고 그 태그를 KEEP하는 규칙을 추가한다(AR `tag_state` 의미는 `TODO(D1)`) |
+| 같은 SHA로 다시 빌드하면 불변 태그 때문에 실패한다 | **보류(Phase 2 전).** 태그가 이미 있으면 digest만 보고하고 빌드를 건너뛰는 분기를 넣는다 |
+| edge 정적 테스트가 `@hanmadiVideo`의 `method POST`를 보지 않고, 8082 경로 우회 사례가 없다 | **보류(Phase 3 edge 작업 때 보강)** |
+
+리뷰어가 판단을 보류한 항목 중 `edge.py`와 `cloudrun-image`는 PR #169 CI에서 실제로 실행돼 통과했다. GFE가 `Host: <svc>.run.app:443`과 SNI를 받는지는 Phase 2-1 스모크에서 확인한다. 받지 않으면 `header_up Host {upstream_host}`로 바꾼다.

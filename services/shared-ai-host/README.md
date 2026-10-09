@@ -16,7 +16,7 @@ Terraform 1.5.7 / Google provider 7.46.1의 fmt·validate·시작 스크립트 �
 - LiteLLM/DB 재시작 후 기존 앱 키로 모델 조회 HTTP 200. salt 및 앱 키 파일 권한은 0600.
 - 서버 내 `/opt/shared-ai/backups/20260927-pre-apps`에 두 DB의 논리 백업과 비공개 설정을 보관했다. 네트워크가 없는 임시 DB에 복원하여 LiteLLM 86개·Dify 144개 public 테이블을 확인했고, 검사 컨테이너는 제거했다. 이는 아직 앱/대화가 없는 초기 상태의 복원 검증이며 전체 서버 재해 복구 시험은 아니다.
 - 이전 Hanmadi 배포 ID는 개발 프로젝트의 Git 제외 `data/shared-ai/`에 0600으로 보관한다. 공급자·앱 키는 이 로컬 디렉터리에 복사하지 않았다.
-- Terraform state는 GCS `gs://replay-live-508202-tfstate/shared-ai-host`(객체 버전 관리)에 있다(2026-10-09 서버리스 Phase 1에서 이전). `terraform init -input=false`로 초기화한다. 저장소를 옮기기 전 위치의 로컬 state는 이전 직후 보관용으로만 남기고 쓰지 않는다.
+- Terraform state는 서버리스 Phase 1 Task 6-2에서 GCS `gs://replay-live-508202-tfstate/shared-ai-host`(객체 버전 관리, GCS 잠금)로 옮긴다. 그 뒤로는 `terraform init -input=false`로 초기화한다. 저장소를 옮기기 전 위치의 로컬 state 파일은 이전 직후 이름을 `terraform.tfstate.migrated-20261009`로 바꿔(내용 그대로) 다시 쓰이지 않게 한다.
 - **대기:** Dify 최초 관리자·워크스페이스 생성, 공식 플러그인/두 앱 설정, Dify 실회화, Hanmadi Vercel 비공개 변수 주입과 운영 E2E. 자동 승인 검토가 관리자 이메일·권한 범위의 구체적 승인을 요구하여 `guswhd1085@gmail.com` 단일 워크스페이스 소유자 생성 승인을 요청했다. 거부된 초기화는 실행되지 않았다.
 - Hanmadi 기존 운영 배포 `dpl_5Humr4Kq3GBe47nTWboLqHFwpYu1`와 기존 변수는 변경하지 않았다. 개인 Codex OAuth도 클라우드에 복사하지 않았다.
 - 배포된 이전 `/healthz`는 VM 내부에서 200, 공개 Cloud Run에서 404였다. 이 수정본은 공개 상태 경로를 `/health`로 변경한다. 적용 전까지 공개 상태 검사 성공으로 보고하지 않는다.
@@ -47,7 +47,7 @@ terraform validate
 bash -n startup.sh
 ```
 
-개인 계정으로 인증한 `gcloud auth print-access-token --account=<개인계정>`의 stdout을 프로그램 내부에서 받아 `GOOGLE_OAUTH_ACCESS_TOKEN`으로 전달하고, 같은 프로세스에 `TF_VAR_project_id=replay-live-508202`를 설정한다. 기존 `GOOGLE_APPLICATION_CREDENTIALS`, impersonation/credential override 환경변수를 함께 전달하지 않는다. 이 상태에서 `terraform plan -input=false`로 생성할 자원을 검토한다. 사용자가 정한 예산 내에서 `terraform apply`하며, state는 개인 디렉터리에 0600으로 보관한다. `.tfstate`는 Git 제외다. 이 모듈에 공급자 API 키나 OAuth 토큰을 넣지 않는다.
+개인 계정으로 인증한 `gcloud auth print-access-token --account=<개인계정>`의 stdout을 프로그램 내부에서 받아 `GOOGLE_OAUTH_ACCESS_TOKEN`으로 전달하고, 같은 프로세스에 `TF_VAR_project_id=replay-live-508202`를 설정한다. 기존 `GOOGLE_APPLICATION_CREDENTIALS`, impersonation/credential override 환경변수를 함께 전달하지 않는다. 이 상태에서 `terraform plan -input=false`로 생성할 자원을 검토한다. 사용자가 정한 예산 내에서 `terraform apply`한다. state는 GCS backend에 있다(위 "현재 상태" 참고). 로컬 `.tfstate`는 Git 제외이며 만들지 않는다. 이 모듈에 공급자 API 키나 OAuth 토큰을 넣지 않는다.
 
 실제 배포 순서:
 

@@ -1,4 +1,5 @@
 """Static checks for the deployment identity Terraform root module."""
+import re
 import unittest
 from pathlib import Path
 
@@ -32,6 +33,16 @@ class IdentityPolicy(unittest.TestCase):
             self.assertIn(clause, provider)
         # Without repository_id, image tokens cannot match the deploy SA's principalSet binding.
         self.assertNotIn("attribute.repository_id", provider)
+
+    def test_image_pool_is_dedicated_to_the_image_provider(self):
+        # The subject binding is pool-wide: any other provider in the same pool that maps
+        # google.subject could mint "repo:...:ref:refs/heads/main" and use the image SA.
+        pool = block(MAIN, 'resource "google_iam_workload_identity_pool" "images"')
+        self.assertRegex(pool, r'workload_identity_pool_id\s*=\s*"cak-images"')
+        users = [header for header in re.findall(r'resource "google_iam_workload_identity_pool_provider" "\w+"', MAIN)
+                 if "google_iam_workload_identity_pool.images." in block(MAIN, header)]
+        self.assertEqual(users, ['resource "google_iam_workload_identity_pool_provider" "images"'])
+        self.assertIn("google_iam_workload_identity_pool.images.name", block(MAIN, 'resource "google_service_account_iam_member" "images_federation"'))
 
     def test_image_builder_can_only_write_the_shared_ai_repository(self):
         binding = block(MAIN, 'resource "google_service_account_iam_member" "images_federation"')

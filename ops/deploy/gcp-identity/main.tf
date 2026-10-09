@@ -24,18 +24,20 @@ resource "google_project_service" "identity" {
   service            = each.value
   disable_on_destroy = false
 }
-resource "google_iam_workload_identity_pool" "github" {
+# Dedicated to image builds. Subject bindings are pool-wide, so a later deploy provider
+# must live in its own pool; sharing this one would let it mint the image SA's subject.
+resource "google_iam_workload_identity_pool" "images" {
   project                   = data.google_project.personal.project_id
-  workload_identity_pool_id = "cak-deploy"
-  display_name              = "CAK reviewed GitHub workflows"
+  workload_identity_pool_id = "cak-images"
+  display_name              = "CAK shared-ai image builds"
   depends_on                = [google_project_service.identity]
 }
 # Image builds: this provider trusts only the reviewed image workflow, manually dispatched
 # on main. repository_id is deliberately not mapped, so its tokens can never satisfy a
-# repository-wide principalSet binding that a later deploy provider might add.
+# repository-wide principalSet binding elsewhere.
 resource "google_iam_workload_identity_pool_provider" "images" {
   project                            = data.google_project.personal.project_id
-  workload_identity_pool_id          = google_iam_workload_identity_pool.github.workload_identity_pool_id
+  workload_identity_pool_id          = google_iam_workload_identity_pool.images.workload_identity_pool_id
   workload_identity_pool_provider_id = "github-images"
   attribute_mapping = {
     "google.subject" = "assertion.sub"
@@ -52,7 +54,7 @@ resource "google_service_account_iam_member" "images_federation" {
   service_account_id = google_service_account.images.name
   role               = "roles/iam.workloadIdentityUser"
   # GitHub's default subject for a job without an environment.
-  member = "principal://iam.googleapis.com/${google_iam_workload_identity_pool.github.name}/subject/repo:hhj4861/commerce-automation-kit:ref:refs/heads/main"
+  member = "principal://iam.googleapis.com/${google_iam_workload_identity_pool.images.name}/subject/repo:hhj4861/commerce-automation-kit:ref:refs/heads/main"
 }
 resource "google_artifact_registry_repository_iam_member" "images_writer" {
   project    = data.google_project.personal.project_id
