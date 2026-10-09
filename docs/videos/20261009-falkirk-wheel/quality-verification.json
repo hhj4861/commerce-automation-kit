@@ -1,0 +1,82 @@
+{
+  "status": "Technical checks passed; representative frames reviewed; user preference pending",
+  "style": "architecture-crafted-v1",
+  "styleDigest": "774d0d31a75cd40a1c23a528fd1226b05a320b9d1073d316713a495165e1f8d2",
+  "files": {
+    "before": {
+      "file": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261009-falkirk-quality/before-captioned.mp4",
+      "sha256": "94051c36384aa8d0870b50bd22c468b6454248174e5178d16d5f631249312c66",
+      "frames": 365,
+      "duration": 15.208333,
+      "audioPCMHash": "a2eca4242ad11197f5e6646ebf33b72e889e2b395bd121709f595e9f791ed522",
+      "decode": true
+    },
+    "after": {
+      "file": "/Users/admin/Downloads/vedio/falkirk-quality-sample-v2.mp4",
+      "sha256": "aff19686f556ebdbb029d93369c90221b4c93fc9b9a3474257bc1df5658ee8c6",
+      "frames": 365,
+      "duration": 15.208333,
+      "audioPCMHash": "a2eca4242ad11197f5e6646ebf33b72e889e2b395bd121709f595e9f791ed522",
+      "decode": true
+    },
+    "comparison": {
+      "file": "/Users/admin/Downloads/vedio/falkirk-quality-comparison-v2.mp4",
+      "sha256": "8e2a91c6731be38b4c7c500b83cbec22aed18767e1815ee897b873cefa10b3fa",
+      "frames": 365,
+      "duration": 15.208333,
+      "audioPCMHash": "a2eca4242ad11197f5e6646ebf33b72e889e2b395bd121709f595e9f791ed522",
+      "decode": true
+    }
+  },
+  "narration": "배가 뜨려면, 물이 밀어 올리는 부력이 배의 무게와 같아야 합니다. 이 부력은 배가 밀어낸 물의 무게만큼 생기죠. 그래서 십 톤짜리 배는 십 톤의 물을 밀어냅니다. 수문이 열려 있고 수위가 유지되면, 배가 들어오는 만큼 그 물이 운하로 나가는 겁니다.",
+  "captionsComplete": true,
+  "voiceSpeed": 1.1,
+  "paidCalls": 0,
+  "scope": "15-second excerpt, not full-film replacement",
+  "runtimeRender": {
+    "styleId": "architecture-crafted-v1",
+    "styleDigest": "774d0d31a75cd40a1c23a528fd1226b05a320b9d1073d316713a495165e1f8d2",
+    "reference": "elbphilharmonie-webtoon-3d-v3",
+    "engine": "CYCLES",
+    "samples": 48,
+    "denoise": true,
+    "device": "GPU",
+    "width": 1080,
+    "height": 1920,
+    "fps": 24,
+    "frames": 24,
+    "parts": 2,
+    "representation": "conceptual, not fabrication geometry"
+  },
+  "checks": {
+    "nodeTests": {
+      "passed": 6,
+      "failed": 0,
+      "skipped": 0,
+      "includesActualBlenderRender": true
+    },
+    "blenderMaterialCameraTests": "passed",
+    "comparisonAudio": "identical decoded PCM",
+    "fullDecode": "passed for both samples and comparison",
+    "visualReview": {
+      "method": "representative rendered frames, not full playback",
+      "timesSeconds": [
+        2,
+        8.5,
+        13
+      ],
+      "observations": [
+        "Warm boat and cool water separated from dark background",
+        "Cabin trim, vents, stone joints and hardware visible",
+        "Opposed force arrows readable in buoyancy shot",
+        "Same boat followed through entry and outward water-flow shots",
+        "Captions remain below main mechanics"
+      ],
+      "limitations": [
+        "Illustrative geometry, not engineering dimensions or CFD",
+        "Shared runtime keeps generic layer geometry; does not inherit sample-specific boat geometry",
+        "User preference versus Elbphilharmonie remains unconfirmed"
+      ]
+    }
+  }
+}

@@ -7,6 +7,9 @@ from pathlib import Path
 import bpy
 from mathutils import Vector, Matrix
 from bpy.app.handlers import persistent
+sys.dont_write_bytecode = True
+sys.path.insert(0,str(Path(__file__).parent))
+from architecture_style import environment, material as mat, bevel, lighting, evidence
 parser=argparse.ArgumentParser();parser.add_argument('--input',required=True);parser.add_argument('--out',required=True)
 args=parser.parse_args(sys.argv[sys.argv.index('--')+1:]);data=json.loads(Path(args.input).read_text())
 scene=data['scene'];profile=data['render'];parts={p['layerId']:p for p in data['parts']}
@@ -24,28 +27,11 @@ for backend in ['METAL','OPTIX','CUDA','HIP','ONEAPI']:
  except (TypeError,RuntimeError):pass
 portrait=data['aspect']=='9:16';w,h=(1080,1920) if portrait else (1920,1080)
 s.render.resolution_x=w;s.render.resolution_y=h;s.render.resolution_percentage=100;s.render.fps=profile['fps'];s.frame_start=1;s.frame_end=round(scene['duration']*profile['fps'])
-s.view_settings.view_transform='AgX';s.view_settings.look='AgX - Medium High Contrast'
-s.world.use_nodes=True;s.world.node_tree.nodes['Background'].inputs[0].default_value=(.055,.085,.12,1);s.world.node_tree.nodes['Background'].inputs[1].default_value=.32
+environment(s)
 
-def mat(name,kind,color):
- m=bpy.data.materials.new(name);m.use_nodes=True;n=m.node_tree.nodes.get('Principled BSDF');n.inputs['Base Color'].default_value=(*color,1)
- n.inputs['Roughness'].default_value={'glass':.085,'metal':.24,'fabric':.66,'concrete':.82}[kind]
- if kind=='glass':n.inputs['Transmission Weight'].default_value=.55;n.inputs['IOR'].default_value=1.45;n.inputs['Coat Weight'].default_value=.5
- if kind=='metal':n.inputs['Metallic'].default_value=.88
- if kind in ['fabric','concrete']:
-  nt=m.node_tree;tex=nt.nodes.new('ShaderNodeTexNoise');tex.inputs['Scale'].default_value=210 if kind=='fabric' else 35
-  bump=nt.nodes.new('ShaderNodeBump');bump.inputs['Strength'].default_value=.16;bump.inputs['Distance'].default_value=.009;nt.links.new(tex.outputs['Fac'],bump.inputs['Height']);nt.links.new(bump.outputs['Normal'],n.inputs['Normal'])
- if kind=='fabric':
-  n.inputs['Sheen Weight'].default_value=.28
-  for direction in ['X','Z']:
-   wave=m.node_tree.nodes.new('ShaderNodeTexWave');wave.bands_direction=direction;wave.inputs['Scale'].default_value=170
-   b=m.node_tree.nodes.new('ShaderNodeBump');b.inputs['Strength'].default_value=.06;b.inputs['Distance'].default_value=.002;m.node_tree.links.new(wave.outputs['Color'],b.inputs['Height']);m.node_tree.links.new(n.inputs['Normal'].links[0].from_socket,b.inputs['Normal']);m.node_tree.links.new(b.outputs['Normal'],n.inputs['Normal'])
- return m
 ink=mat('dark backdrop','concrete',(.035,.065,.083));pinmat=mat('hinge metal','metal',(.48,.58,.65))
 def mesh(name,vs,faces,m):
  me=bpy.data.meshes.new(name);me.from_pydata(vs,[],faces);me.update();o=bpy.data.objects.new(name,me);s.collection.objects.link(o);o.data.materials.append(m);return o
-def bevel(o,width):
- mod=o.modifiers.new('edge highlights','BEVEL');mod.width=width;mod.segments=3;o.modifiers.new('weighted normals','WEIGHTED_NORMAL')
 def box(name,loc,size,m):
  bpy.ops.mesh.primitive_cube_add(size=1,location=loc);o=bpy.context.object;o.name=name;o.dimensions=size;bpy.ops.object.transform_apply(location=False,rotation=False,scale=True);o.data.materials.append(m);bevel(o,min(size)*.08);return o
 def curve(name,coords,m):
@@ -80,9 +66,7 @@ for layer in scene['webtoon']['layers']:
    bpy.ops.mesh.primitive_uv_sphere_add(segments=12,ring_count=8,radius=.065);ball=bpy.context.object;ball.data.materials.append(pinmat);ball.parent=root;particles.append(ball)
  objects.append((layer,part,root,o,pivot,particles,sw,sh))
 box('architectural backdrop',(0,2.8,0),(fw*3,.15,fh*3),ink)
-def area(name,loc,power,color,size):
- d=bpy.data.lights.new(name,'AREA');d.energy=power;d.color=color;d.shape='DISK';d.size=size;o=bpy.data.objects.new(name,d);s.collection.objects.link(o);o.location=loc;o.rotation_euler=(-o.location).to_track_quat('-Z','Y').to_euler()
-area('warm grazing key',(-5,-7,8),1900,(1,.72,.42),6);area('cool sky fill',(6,-4,4),1000,(.53,.75,1),5);area('rim',(-3,1,4),850,(1,.68,.36),4)
+lighting(s)
 bpy.ops.object.camera_add();cam=bpy.context.object;s.camera=cam;cam.data.type='ORTHO';cam.data.ortho_scale=18 if portrait else 20;cam.data.lens=55
 cam.data.dof.use_dof=False # Keep all explanatory components readable.
 def ease(v):v=max(0,min(1,v));return v*v*(3-2*v)
@@ -105,4 +89,4 @@ def update(_):
  cam.rotation_euler=(-cam.location).to_track_quat('-Z','Y').to_euler();base=18 if portrait else 20;cam.data.ortho_scale=base*(1-.045*ease(t) if camera=='push-in' else 1+.045*ease(t) if camera=='pull-out' else 1)
 bpy.app.handlers.frame_change_pre.append(update);s.render.image_settings.file_format='FFMPEG';s.render.ffmpeg.format='MPEG4';s.render.ffmpeg.codec='H264';s.render.ffmpeg.constant_rate_factor='HIGH';s.render.filepath=args.out
 s.frame_set(1);update(s);bpy.ops.render.render(animation=True)
-Path(args.out+'.json').write_text(json.dumps({'engine':s.render.engine,'samples':s.cycles.samples,'denoise':s.cycles.use_denoising,'device':s.cycles.device,'width':w,'height':h,'fps':s.render.fps,'frames':s.frame_end,'parts':len(objects),'representation':'conceptual, not fabrication geometry'}))
+Path(args.out+'.json').write_text(json.dumps({**evidence(),'engine':s.render.engine,'samples':s.cycles.samples,'denoise':s.cycles.use_denoising,'device':s.cycles.device,'width':w,'height':h,'fps':s.render.fps,'frames':s.frame_end,'parts':len(objects),'representation':'conceptual, not fabrication geometry'}))

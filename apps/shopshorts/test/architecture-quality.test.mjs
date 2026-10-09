@@ -60,7 +60,7 @@ test('completed assets are reused without Blender or paid requests',async()=>{
 });
 test('actual common renderer produces Cycles clip with moving geometry', {skip:!process.env.ARCHITECTURE_RENDER_E2E,timeout:600000},async()=>{
  const p=await architectureFixture(),dir=process.env.ARCHITECTURE_QA_DIR;assert.ok(dir);await checkArchitectureRuntime(process.env);
- const result=await renderHybridScene(p,{...p.scenes[1],duration:1},dir,process.env,'3d');assert.equal(result.provider,'architecture-blender');assert.equal(result.qualityProfile,ARCHITECTURE_QUALITY);assert.equal(result.renderReport.samples,48);
+ const result=await renderHybridScene(p,{...p.scenes[1],duration:1},dir,process.env,'3d');assert.equal(result.provider,'architecture-blender');assert.equal(result.qualityProfile,ARCHITECTURE_QUALITY);assert.equal(result.renderReport.samples,48);assert.equal(result.renderReport.styleId,'architecture-crafted-v1');assert.match(result.renderReport.styleDigest,/^[a-f0-9]{64}$/);
  const out=join(dir,'architecture-default-e2e.mp4');await writeFile(out,result.data);await writeFile(join(dir,'render-report.json'),JSON.stringify(result.renderReport,null,2));
  const {stdout}=await exec('ffprobe',['-v','error','-show_streams','-of','json',out]);const v=JSON.parse(stdout).streams[0];assert.equal(v.width,1080);assert.equal(v.height,1920);assert.equal(+v.nb_frames,24);assert.equal(+v.duration,1);
  await exec('ffmpeg',['-v','error','-i',out,'-f','null','-']);
