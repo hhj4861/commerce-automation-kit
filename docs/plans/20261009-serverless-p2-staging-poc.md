@@ -52,7 +52,7 @@
 
 ## 순서와 일정
 
-- 태스크 1~6(코드, 0.5일): PR 1개. CI가 `terraform validate`, 단위 테스트, 실제 Caddy `tests/edge.py`를 돌린다. 클라우드는 건드리지 않는다. 이 계획의 코드는 작성 때(2026-10-09) 로컬에서 그대로 실행해 확인했다. 단위 테스트 71개가 통과했고 `terraform validate`도 성공했다(최종 리뷰 지적 반영 후 기준). `tests/edge.py`는 Docker가 필요해 CI에서 처음 돈다.
+- 태스크 1~6(코드, 0.5일): PR 1개. CI가 `terraform validate`, 단위 테스트, 실제 Caddy `tests/edge.py`를 돌린다. 클라우드는 건드리지 않는다. 이 계획의 코드는 작성 때(2026-10-09) 로컬에서 그대로 실행해 확인했다. 단위 테스트 74개가 통과했고 `terraform validate`도 성공했다(최종 리뷰 지적과 미뤘던 Minor 반영 후 기준). `tests/edge.py`는 Docker가 필요해 CI에서 처음 돈다.
 - 태스크 7(운영): 준비 0.5일 → 측정 1일 → 관찰 2일(g1·g2 각 24시간) → 게이트 보고. 사용자 몫은 Neon 가입·URL·API 키 입력과 승인 묶음 A·B다.
 
 ---
@@ -161,6 +161,7 @@ class EdgeStagingTest(unittest.TestCase):
         for public in ("allUsers", "allAuthenticatedUsers"):
             self.assertNotIn(public, TF)
         self.assertIn("var.staging_invoker", block(TF, 'resource "google_cloud_run_v2_service_iam_member" "edge_stg_invoker"'))
+        self.assertNotIn("invoker_iam_disabled", self.EDGE)
 
 
 class WarmPingTest(unittest.TestCase):
@@ -364,6 +365,7 @@ resource "google_cloud_run_v2_job" "litellm_stg_migrate" {
       containers {
         image = var.staging_images.litellm
         # Applies the Prisma migrations during setup, then exits (LiteLLM 1.102.1 CLI).
+        # TODO(D1): flag behavior and log text are confirmed by the 7-5a run (table count).
         args = ["--config", "/etc/litellm/config.json", "--skip_server_startup"]
         resources {
           limits = { cpu = "1", memory = "1Gi" }
@@ -526,7 +528,7 @@ output "staging_probe_url" { value = google_cloud_run_v2_service.probe_stg.uri }
 - [ ] **Step 5: 통과 확인**
 
 Run: `python3 -m unittest discover -s services/shared-ai-host/tests -p 'test_*.py'`
-Expected: `OK`(Phase 1 테스트 16개 + 새 테스트 16개 = 32개).
+Expected: `OK`(Phase 1 테스트 16개 + 새 테스트 16개 = 32개. edge IAM 회귀 방지 단언은 기존 테스트에 들어 있다).
 
 Run: `cd services/shared-ai-host && terraform fmt -check && terraform init -backend=false -input=false -lockfile=readonly >/dev/null && terraform validate; rm -rf .terraform`
 Expected: `Success! The configuration is valid.`(2026-10-09 계획 작성 때 같은 파일로 확인함)
@@ -1093,13 +1095,14 @@ git commit -m "feat(shared-ai): add Neon, database and Cloud Run observation hel
 
 **Interfaces:**
 - Consumes: 태스크 4의 `observe.register_secret`·`observe.record`·`observe.emit`·`observe.redact`·`observe.safe`·`observe.neon_from_env`·`Neon.state`·`Neon.wait_for`, 태스크 2의 스테이징 관리 경로, 태스크 1의 서비스 이름 `litellm-stg`.
-- Produces: `poc.call(base, path, token, key, body=None, method=None, timeout=30, opener=None, content_type="application/json") -> dict`(`path`·`status`·`ms`, 성공 시 `body`, 네트워크 실패 시 `error`), `poc.stream(...) -> dict`(`events`·`done`·`first_ms`·`last_ms`), `poc.IdToken`(토큰의 `exp`를 벽시계로 보고 15분 전에 갱신), `poc.jwt_expiry(token) -> float | None`, `poc.cold_sample(base, token, key, path, body, neon, wait_seconds=900, call_fn=call) -> dict`, `poc.idle_neon_shutdown(base, token, key, neon, n, call_fn=call, gcloud_fn=None) -> dict`, `poc.key_hash(key) -> str`, `poc.write_secret_file(path, value)`, `poc.silent_wav()`, `poc.multipart(fields, files)`, `poc.percentile(values, p)`, `poc.stats(records) -> dict`, `poc.evaluate(summary) -> list[tuple[name, measured, limit, passed]]`, `poc.warm_trial(base, token, key, neon_state, idle_seconds, max_wait, ping_seconds=None, poll_seconds=30, ...) -> dict`. CLI: `smoke`, `probe`, `new-key --alias A --out PATH`, `cold --path {jev,chat} --confirm-paid`, `burst --n N [--every S] [--real]`, `features --tts-voice ID --confirm-paid`, `warm-neon [--db-idle-minutes 7] [--max-wait-minutes 12] [--ping-seconds 0]`, `shutdown --mode {idle-neon,stream}`, `stats FILE --step STEP`, `evaluate SUMMARY.json`.
+- Produces: `poc.call(base, path, token, key, body=None, method=None, timeout=30, opener=None, content_type="application/json") -> dict`(`path`·`status`·`ms`, 성공 시 `body`, 네트워크 실패 시 `error`), `poc.stream(...) -> dict`(`events`·`done`·`first_ms`·`last_ms`), `poc.IdToken`(토큰의 `exp`를 벽시계로 보고 15분 전에 갱신), `poc.jwt_expiry(token) -> float | None`, `poc.cold_sample(base, token, key, path, body, neon, wait_seconds=900, call_fn=call) -> dict`, `poc.idle_neon_shutdown(base, token, key, neon, n, call_fn=call, gcloud_fn=None) -> dict`, `poc.key_hash(key) -> str`, `poc.write_secret_file(path, value)`, `poc.silent_wav()`, `poc.multipart(fields, files)`, `poc.percentile(values, p)`, `poc.stats(records) -> dict`, `poc.evaluate(summary) -> list[tuple[name, measured, limit, passed]]`, `poc.warm_trial(base, token, key, neon_state, idle_seconds, max_wait, ping_seconds=None, poll_seconds=30, ...) -> dict`. CLI: `smoke`, `probe`, `new-key --alias A --out PATH`(`STG_KEY`의 master key만 쓰고, `--out`이 이미 있으면 키를 만들지 않는다), `cold --path {jev,chat} --confirm-paid`, `burst --n N [--every S] [--real --confirm-paid]`, `features --tts-voice ID --confirm-paid`, `warm-neon [--db-idle-minutes 7] [--max-wait-minutes 12] [--ping-seconds 0]`, `shutdown --mode {idle-neon,stream}`, `stats FILE --step STEP`, `evaluate SUMMARY.json`.
 
 - [ ] **Step 1: 실패하는 테스트 작성** (`services/shared-ai-host/tests/test_poc.py`)
 
 ```python
 """Unit tests for the staging PoC harness; no network, no gcloud."""
 import base64
+import contextlib
 import http.client
 import io
 import json
@@ -1322,9 +1325,50 @@ class MeasurementTest(unittest.TestCase):
                     poc.main(argv)
 
     def test_paid_commands_need_explicit_confirmation(self):
-        for argv in (["features", "--tts-voice", "v"], ["cold", "--path", "jev"]):
+        with mock.patch.dict(os.environ, {}, clear=True):
+            for argv in (["features", "--tts-voice", "v"], ["cold", "--path", "jev"], ["burst", "--n", "1", "--real"],
+                         ["shutdown", "--mode", "stream"]):
+                with self.assertRaises(SystemExit):
+                    poc.main(argv)
+
+    def test_new_key_refuses_an_existing_output_before_creating_a_key(self):
+        with tempfile.TemporaryDirectory() as tmp, mock.patch.dict(os.environ, {}, clear=True):
+            existing = Path(tmp) / "taken"
+            existing.write_text("")
             with self.assertRaises(SystemExit):
-                poc.main(argv)
+                poc.main(["new-key", "--alias", "x", "--out", str(existing)])
+
+    def test_new_key_uses_the_master_key_and_prints_only_the_hash(self):
+        created, seen = "sk-" + "n" * 40, {}
+
+        def fake_call(base, path, token, key, **kwargs):
+            seen["key"] = key
+            return {"path": path, "status": 200, "ms": 3, "body": {"key": created}}
+
+        with tempfile.TemporaryDirectory() as tmp:
+            stale = Path(tmp) / "old-test-key"
+            stale.write_text("sk-" + "t" * 40)
+            env = {"STG_EDGE": "https://edge.test", "STG_KEY": KEY, "STG_KEY_FILE": str(stale)}
+            out, buffer = Path(tmp) / "new", io.StringIO()
+            with mock.patch.dict(os.environ, env, clear=True), mock.patch.object(poc, "call", fake_call), \
+                    mock.patch.object(poc, "IdToken", lambda: (lambda: TOKEN)), contextlib.redirect_stdout(buffer):
+                poc.main(["new-key", "--alias", "x", "--out", str(out)])
+            self.assertEqual(seen["key"], KEY)
+            self.assertEqual(out.read_text(), created)
+        self.assertNotIn(created, buffer.getvalue())
+        self.assertIn(poc.key_hash(created), buffer.getvalue())
+
+    def test_gcloud_runs_as_the_personal_account(self):
+        seen = {}
+
+        def run(argv, **kwargs):
+            seen["argv"] = argv
+            return type("Done", (), {"stderr": "Done.\n"})()
+
+        with mock.patch.dict(os.environ, {"STG_ACCOUNT": "me@example.com"}, clear=True):
+            self.assertEqual(poc.gcloud(["run", "services", "update-traffic", "litellm-stg"], run=run), "Done.")
+        self.assertIn("--account=me@example.com", seen["argv"])
+        self.assertIn("--project=replay-live-508202", seen["argv"])
 
 
 if __name__ == "__main__":
@@ -1388,6 +1432,9 @@ GCLOUD_SCOPE = ["--region=us-central1", "--project=replay-live-508202", "--quiet
 
 
 def headers(token, key, content_type="application/json"):
+    # TODO(D1): Cloud Run documents X-Serverless-Authorization for ID tokens and says only that
+    # header is checked when both are sent; whether a user's gcloud token works there and
+    # Authorization reaches LiteLLM unchanged is confirmed by the 7-5 smoke (bad-key, models).
     result = {"Content-Type": content_type}
     if token:
         result["X-Serverless-Authorization"] = "Bearer " + token
@@ -1539,8 +1586,9 @@ def warm_trial(base, token, key, neon_state, idle_seconds, max_wait, ping_second
                call_fn=call, sleep=time.sleep, clock=time.monotonic):
     """Wait until Neon has idled while LiteLLM stays up, then measure one keyed request.
 
-    Optional liveliness pings (no key, no database) keep the instance warm; without them the
-    instance lives only as long as Cloud Run's idle retention.
+    Liveliness pings carry no key and the handler skips the database, but the CPU they give
+    lets LiteLLM's 60 s heartbeat write to it (P2-R13), so (e) runs without pings by default
+    and the instance lives only as long as Cloud Run's idle retention.
     """
     start = last_ping = clock()
     if ping_seconds:
@@ -1583,7 +1631,8 @@ def idle_neon_shutdown(base, token, key, neon, n, call_fn=call, gcloud_fn=None):
 
 
 def gcloud(args, run=subprocess.run):
-    done = run(["gcloud", *args, *GCLOUD_SCOPE], check=True, capture_output=True, text=True)
+    account = [f"--account={os.environ['STG_ACCOUNT']}"] if os.environ.get("STG_ACCOUNT") else []
+    done = run(["gcloud", *args, *GCLOUD_SCOPE, *account], check=True, capture_output=True, text=True)
     lines = (done.stderr or "").strip().splitlines()
     return observe.redact(lines[-1] if lines else "")
 
@@ -1612,6 +1661,7 @@ def main(argv=None):
     burst.add_argument("--n", type=int, required=True)
     burst.add_argument("--every", type=float, default=0, help="seconds between calls")
     burst.add_argument("--real", action="store_true", help="max_tokens 1 provider calls instead of mock_response")
+    burst.add_argument("--confirm-paid", action="store_true")
     features = sub.add_parser("features")
     features.add_argument("--tts-voice", required=True)
     features.add_argument("--confirm-paid", action="store_true")
@@ -1630,9 +1680,12 @@ def main(argv=None):
     gate = sub.add_parser("evaluate")
     gate.add_argument("summary")
     args = parser.parse_args(argv)
-    if args.command in ("features", "cold") or (args.command == "shutdown" and args.mode == "stream"):
-        if not args.confirm_paid:
-            parser.error(f"{args.command} makes paid provider calls; pass --confirm-paid after approval")
+    paid = (args.command in ("features", "cold") or (args.command == "shutdown" and args.mode == "stream")
+            or (args.command == "burst" and args.real))
+    if paid and not args.confirm_paid:
+        parser.error(f"{args.command} makes paid provider calls; pass --confirm-paid after approval")
+    if args.command == "new-key" and Path(args.out).exists():
+        parser.error(f"{args.out} already exists; a key created now would have nowhere to go")
     if args.command == "stats":
         records = [json.loads(line) for line in Path(args.file).read_text().splitlines() if line.strip()]
         observe.emit({"step": "stats", "of": args.step, **stats([r for r in records if r.get("step") == args.step])})
@@ -1645,7 +1698,12 @@ def main(argv=None):
     if neon is None and (args.command in ("cold", "warm-neon") or getattr(args, "mode", None) == "idle-neon"):
         parser.error(f"{args.command} needs NEON_API_KEY and NEON_PROJECT_ID to confirm the compute idled")
     base, token = os.environ["STG_EDGE"], IdToken()
-    key = "" if args.command == "probe" else load_key()  # the probe needs no LiteLLM key
+    if args.command == "probe":
+        key = ""  # the probe needs no LiteLLM key
+    elif args.command == "new-key":
+        key = os.environ["STG_KEY"]  # always the master key, never a test key file
+    else:
+        key = load_key()
     observe.register_secret(key)
     if args.command == "smoke":
         observe.emit({"step": "no-id-token", **call(base, "/llm/v1/models", "", key)})
@@ -1732,7 +1790,7 @@ if __name__ == "__main__":
 - [ ] **Step 4: 통과 확인**
 
 Run: `python3 -W error::ResourceWarning -m unittest discover -s services/shared-ai-host/tests -p 'test_poc.py' -v`
-Expected: PASS 19/19(argparse 오류 메시지 몇 줄은 유료 확인·Neon 필수 테스트의 정상 출력이다).
+Expected: PASS 22/22(argparse 오류 메시지 몇 줄은 유료 확인·Neon 필수·출력 파일 테스트의 정상 출력이다).
 
 - [ ] **Step 5: 커밋**
 
@@ -1882,7 +1940,7 @@ Expected: PASS 6/6, 그리고 `"sessions_per_day": 2.0`과 `"active_hours_per_da
 - [ ] **Step 5: 전체 테스트와 커밋**
 
 Run: `python3 -W error::ResourceWarning -m unittest discover -s services/shared-ai-host/tests -p 'test_*.py'`
-Expected: `Ran 71 tests` … `OK`.
+Expected: `Ran 74 tests` … `OK`.
 
 ```bash
 git add services/shared-ai-host/poc/neon_estimate.py services/shared-ai-host/tests/test_neon_estimate.py
@@ -1907,10 +1965,11 @@ export STG_ACCOUNT=guswhd1085@gmail.com
 export OUT="/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/claude 작업/tmp/<시작일>-p2-poc"
 export KEYS="$HOME/.cak-p2-keys"
 install -d -m 0700 "$KEYS"; mkdir -p "$OUT"
-P=services/shared-ai-host/poc
+P="$(git rev-parse --show-toplevel)/services/shared-ai-host/poc"  # 7-4의 cd 뒤에도 그대로 쓴다
 secret() { gcloud secrets versions access 1 --secret="$1" --project=replay-live-508202; }
 run_url() { gcloud run services describe "$1" --region=us-central1 --project=replay-live-508202 --format='value(status.url)'; }
-# 7-4 이후: 시험 키 발급(별칭·해시만 출력), Neon·DB 접근 정보는 환경변수로만 넘긴다.
+# 7-4 이후: 스테이징 edge URL, 시험 키 발급(별칭·해시만 출력), Neon·DB 접근 정보는 환경변수로만 넘긴다.
+export STG_EDGE="$(run_url shared-ai-stg 2>/dev/null)"
 new_key() { STG_KEY="$(secret litellm-stg-master-key)" python3 $P/poc.py new-key --alias "$1" --out "$KEYS/$1" | tee -a "$OUT/keys.jsonl"; }
 neon_env() { export NEON_API_KEY="$(secret neon-stg-api-key)" NEON_PROJECT_ID="<7-4에서 받은 프로젝트 ID>"; }
 sql() { STG_DATABASE_URL="$(secret litellm-stg-database-url)" python3 $P/observe.py sql "$@"; }
@@ -1920,7 +1979,7 @@ sql() { STG_DATABASE_URL="$(secret litellm-stg-database-url)" python3 $P/observe
   1. neon.com에 가입한다(Free). Launch 결제 수단은 Phase 3 운영 DB를 만들기 전에 등록하면 된다.
   2. 프로젝트 `shared-ai-stg`를 만든다. PostgreSQL 16, 리전 AWS US East 2(Ohio).
   3. Connect 화면에서 connection pooling을 끄고(direct) 연결 문자열을 복사한다. 물음표 뒤를 `sslmode=require&connect_timeout=15`로 바꾸고 다른 매개변수(`channel_binding` 등)는 지운다.
-  4. 그 문자열을 클립보드에 둔 채, Claude Code 입력창에 `! pbpaste | tr -d '\r\n' | gcloud secrets versions add litellm-stg-database-url --data-file=- --project=replay-live-508202`를 실행한다. 값은 대화에 나오지 않는다.
+  4. 그 문자열을 클립보드에 둔 채, Claude Code 입력창에 `! pbpaste | tr -d '\r\n' | gcloud secrets versions add litellm-stg-database-url --data-file=- --project=replay-live-508202`를 실행한다. 값은 대화에 나오지 않는다. 출력이 `Created version [1]`인지 확인한다. 2 이상이 나오면 멈추고 알린다. Terraform `secret_versions`와 `secret()`이 버전 1로 고정돼 있다.
   5. Hanmadi 운영의 `LITELLM_TTS_VOICE` 값(Vercel 환경변수, 비밀 아님)을 알려 준다. (d)의 TTS가 같은 음성을 쓴다.
   6. Neon API 키와 프로젝트 ID는 7-4a 적용 뒤에 받는다(아래 7-4).
 
@@ -1978,7 +2037,7 @@ terraform apply -input=false p2a.tfplan
 
 Expected 7-4a: `Plan: 10 to add, 0 to change, 0 to destroy.` 대상은 API `cloudscheduler`, 시크릿 컨테이너 `neon-stg-api-key`, SA `shared-ai-litellm-stg`, 시크릿 IAM 6개, Job `litellm-stg-migrate`다. 다른 값이 나오면 apply하지 않고 원인을 기록한다.
 
-7-4a 뒤 사용자가 Neon API 키를 만든다. 가능하면 `shared-ai-stg` 하나로 범위를 제한한 project-scoped 키로 만든다(조직 Settings → API keys). Free 플랜에서 이 유형을 만들 수 있는지는 문서에 없어(D1 미확인), 안 되면 personal 키를 쓴다. `! pbpaste | tr -d '\r\n' | gcloud secrets versions add neon-stg-api-key --data-file=- --project=replay-live-508202`로 넣고, 프로젝트 ID(Settings → General, 비밀 아님)를 알려 준다. 그다음 7-5a를 실행하고 나머지를 적용한다.
+7-4a 뒤 사용자가 Neon API 키를 만든다. 가능하면 `shared-ai-stg` 하나로 범위를 제한한 project-scoped 키로 만든다(조직 Settings → API keys). Free 플랜에서 이 유형을 만들 수 있는지는 문서에 없어(D1 미확인), 안 되면 personal 키를 쓴다. `! pbpaste | tr -d '\r\n' | gcloud secrets versions add neon-stg-api-key --data-file=- --project=replay-live-508202`로 넣고(출력이 `Created version [1]`인지 확인), 프로젝트 ID(Settings → General, 비밀 아님)를 알려 준다. 그다음 7-5a를 실행하고 나머지를 적용한다.
 
 ```bash
 terraform plan -input=false -var "$IMAGES" -out=p2b.tfplan
@@ -2012,7 +2071,7 @@ Expected 7-4b: `Plan: 8 to add, 0 to change, 0 to destroy.` 대상은 서브넷 
     - `bad-key`는 401이다(`Authorization`이 두 hop을 지나 LiteLLM에 닿음).
     - `models`는 200이다(내부 hop에 invoker 403 없음, `header_up Host` 동작). Caddy는 https 업스트림의 `{upstream_hostport}`를 `<서비스>.run.app:443`으로 만든다(소스 확인). Cloud Run이 이 Host를 거부해 404가 나면 `Caddyfile.staging`의 `header_up Host` 값을 `{http.reverse_proxy.upstream.host}`로 바꾸는 PR을 먼저 머지한다.
     - `liveliness`는 200, `closed-admin`은 404다.
-    - `mock`은 200이고 `content`가 `"pong"`이다(시험 키 metadata로 허용, 공급자 호출 없음). `content`가 다르면 mock이 버려지고 1토큰 실호출이 된 것이다. 그때는 (c)(e)(f)도 `burst --real`과 같은 1토큰 호출로 잰다(P2-R4).
+    - `mock`은 200이고 `content`가 `"pong"`이다(시험 키 metadata로 허용, 공급자 호출 없음). `content`가 다르면 mock이 버려지고 1토큰 실호출이 된 것이다. 그때는 (c)(e)(f)도 `burst --real --confirm-paid`와 같은 1토큰 호출로 잰다(P2-R4).
   - **c. 기동·종료 설정 로그.**
 
     ```bash
@@ -2048,7 +2107,7 @@ Expected 7-4b: `Plan: 8 to add, 0 to change, 0 to destroy.` 대상은 서브넷 
   - **(d) 기능.** `new_key d-features` 뒤에 `STG_KEY_FILE="$KEYS/d-features" python3 $P/poc.py features --tts-voice <7-1의 음성 ID> --confirm-paid | tee "$OUT/d.jsonl"`을 실행한다.
 
     Expected: 6줄 모두 `status` 200이다. 스트리밍은 `done`이 true, `events`가 3 이상이고, `last_ms - first_ms`가 100 이상이다(flush, 마스터 2-1). STT는 무음이라 빈 텍스트가 나올 수 있다. 판정은 200 여부로 한다. `d_failures`는 200이 아닌 줄의 수다.
-  - **(b) 사용 기록.** `new_key b-spend`를 하고, `neon_env; python3 $P/observe.py neon-watch --hours 1 --interval 60 > "$OUT/b-neon.jsonl"`을 백그라운드로 띄운다. 그다음 `STG_KEY_FILE="$KEYS/b-spend" python3 $P/poc.py burst --n 20 --real | tee "$OUT/b.jsonl"`을 실행한다. 30분 동안 아무 요청도 보내지 않은 뒤(축소와 종료 flush) 다음을 실행한다.
+  - **(b) 사용 기록.** `new_key b-spend`를 하고, `neon_env; python3 $P/observe.py neon-watch --hours 1 --interval 60 > "$OUT/b-neon.jsonl"`을 백그라운드로 띄운다. 그다음 `STG_KEY_FILE="$KEYS/b-spend" python3 $P/poc.py burst --n 20 --real --confirm-paid | tee "$OUT/b.jsonl"`을 실행한다. 30분 동안 아무 요청도 보내지 않은 뒤(축소와 종료 flush) 다음을 실행한다.
 
     ```bash
     sql spend-count --key-hash <b-spend 해시> --since <burst의 started>
@@ -2060,7 +2119,7 @@ Expected 7-4b: `Plan: 8 to add, 0 to change, 0 to destroy.` 대상은 서브넷 
     - ① `sql expire-budget --key-hash <해시>` 뒤 `burst --n 12 --every 120`(24분)을 실행하고 `sql key-state --key-hash <해시>`로 확인한다.
     - ② 다시 `expire-budget`을 하고 30분 동안 호출하지 않는다(0대로 축소). 그다음 `burst --n 1`을 실행하고, 2분 뒤 `key-state`를 확인한다.
 
-    Expected: 두 경우 모두 `budget_reset_at`이 약 30일 뒤로 옮겨지고 `spend`가 초기화된다. `c_reset_missed`는 초기화되지 않은 경우의 수(0~2)다. ②만 실패하면 마스터 플랜 게이트 규칙대로 Phase 3 admin Job에 월초 보정을 넣는다. 관리 API 지원 여부는 원문으로 확인한다(P2-R10).
+    Expected: 두 경우 모두 `budget_reset_at`이 미래로 옮겨진다. `30d`는 다음 달 1일 00:00 UTC다(마스터 §8.2). `spend`는 설정값 0.01보다 작아진다(초기화 뒤의 호출분만 남는다). `c_reset_missed`는 초기화되지 않은 경우의 수(0~2)다. ②만 실패하면 마스터 플랜 게이트 규칙대로 Phase 3 admin Job에 월초 보정을 넣는다. 관리 API 지원 여부는 원문으로 확인한다(P2-R10).
   - **(f) 종료.** `new_key f-shutdown`을 하고 `neon_env`를 실행한다.
     - `STG_KEY_FILE="$KEYS/f-shutdown" python3 $P/poc.py shutdown --mode idle-neon --n 10 | tee -a "$OUT/f.jsonl"`을 2회 실행한다. 하네스가 다음 리비전을 트래픽 없이 먼저 배포한다. 그다음 옛 리비전으로 10건을 보내고, Neon 정지를 기다린 뒤 트래픽만 옮긴다(옛 인스턴스의 유휴는 약 6분이라 15분 안이다).
     - `... shutdown --mode stream --confirm-paid | tee -a "$OUT/f.jsonl"`을 2회 실행한다.
