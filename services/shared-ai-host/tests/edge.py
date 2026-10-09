@@ -18,9 +18,11 @@ class Upstream(BaseHTTPRequestHandler):
         payload = json.loads(self.rfile.read(int(self.headers.get("Content-Length", "0"))))
         if self.headers.get("Authorization") != "Bearer " + KEY:
             self.send_response(401)
+            self.send_header("X-Echo-Host", self.headers.get("Host", ""))
             self.end_headers()
             return
         self.send_response(200)
+        self.send_header("X-Echo-Host", self.headers.get("Host", ""))
         self.send_header("Content-Type", "application/json")
         self.end_headers()
         result = {"port": self.server.server_port, "path": self.path}
@@ -46,6 +48,18 @@ def request(port, path, key=None, method="POST", body=None):
         return error.code, error.read()
 
 
+def request_with_headers(port, path, key=None, method="POST", body=None):
+    headers = {"Content-Type": "application/json"}
+    if key:
+        headers["Authorization"] = "Bearer " + key
+    req = urllib.request.Request(f"http://127.0.0.1:{port}" + path, data=json.dumps(body if body is not None else {}).encode(), headers=headers, method=method)
+    try:
+        with urllib.request.urlopen(req, timeout=5) as res:
+            return res.status, res.read(), res.headers
+    except urllib.error.HTTPError as error:
+        return error.code, error.read(), error.headers
+
+
 servers, processes = [], []
 try:
     for port in (4000, 4100, 4180, 4190, 4195):
@@ -54,7 +68,9 @@ try:
         threading.Thread(target=server.serve_forever, daemon=True).start()
     for config, args in ((ROOT / "Caddyfile", []), (ROOT.parent / "ai-gateway/Caddyfile", ["-e", "GATEWAY_DOMAIN=http://:8081", "--add-host", "gateway:127.0.0.1"])):
         processes.append(subprocess.Popen(["docker", "run", "--rm", "--network=host", *args, "-v", f"{config}:/etc/caddy/Caddyfile:ro", IMAGE], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL))
-    for port in (8080, 8081):
+    staging = ROOT / "edge" / "Caddyfile.staging"
+    processes.append(subprocess.Popen(["docker", "run", "--rm", "--network=host", "-e", "PORT=8082", "-e", "LLM_UPSTREAM=http://127.0.0.1:4100", "-v", f"{staging}:/etc/caddy/Caddyfile:ro", IMAGE], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL))
+    for port in (8080, 8081, 8082):
         for _ in range(60):
             if any(p.poll() is not None for p in processes):
                 raise RuntimeError("Caddy exited before verification")
@@ -114,7 +130,19 @@ try:
     for edge in (8080, 8081):
         for path in ("/", "/install", "/console/api/setup", "/ui", "/key/generate", "/llm/key/generate", "/v1/files", "/v1/chat-messages/../console/api/setup", "/llm/v1/responses/../../key/generate"):
             assert request(edge, path, KEY)[0] == 404, (edge, path)
-    print("PASS: real Caddy, inference routing, prefix removal, auth preservation, unauthenticated rejection, admin/unknown path denial")
+    # Staging edge (Phase 2 PoC): VM allowlist only, prefix removed, Host rewritten for run.app.
+    for path in ("/llm/v1/models", "/llm/v1/chat/completions", "/llm/v1/audio/transcriptions",
+                 "/llm/typesafe/v1/systemone", "/llm/v1beta/models/hanmadi-chat:generateContent"):
+        assert request(8082, path)[0] == 401, path
+        code, body, headers = request_with_headers(8082, path, KEY)
+        assert code == 200 and json.loads(body)["path"] == path.removeprefix("/llm"), path
+        assert headers["X-Echo-Host"] == "127.0.0.1:4100", (path, headers["X-Echo-Host"])
+    for path in ("/discovery/v1/discover", "/accounts/connections", "/v1/chat-messages", "/llm/key/generate",
+                 "/key/generate", "/llm/health/readiness", "/llm/v1/files"):
+        assert request(8082, path, KEY)[0] == 404, path
+    assert request(8082, "/llm/typesafe/v1/systemone", KEY, "GET")[0] == 404
+    assert request(8082, "/health") == (200, b"edge alive")
+    print("PASS: real Caddy, inference routing, prefix removal, auth preservation, unauthenticated rejection, admin/unknown path denial, staging edge")
 finally:
     for process in processes:
         if process.poll() is None:
