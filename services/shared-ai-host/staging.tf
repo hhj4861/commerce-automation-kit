@@ -129,6 +129,7 @@ resource "google_cloud_run_v2_job" "litellm_stg_migrate" {
       containers {
         image = var.staging_images.litellm
         # Applies the Prisma migrations during setup, then exits (LiteLLM 1.102.1 CLI).
+        # TODO(D1): flag behavior and log text are confirmed by the 7-5a run (table count).
         args = ["--config", "/etc/litellm/config.json", "--skip_server_startup"]
         resources {
           limits = { cpu = "1", memory = "1Gi" }

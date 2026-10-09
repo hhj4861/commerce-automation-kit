@@ -89,6 +89,7 @@ class EdgeStagingTest(unittest.TestCase):
         for public in ("allUsers", "allAuthenticatedUsers"):
             self.assertNotIn(public, TF)
         self.assertIn("var.staging_invoker", block(TF, 'resource "google_cloud_run_v2_service_iam_member" "edge_stg_invoker"'))
+        self.assertNotIn("invoker_iam_disabled", self.EDGE)
 
 
 class WarmPingTest(unittest.TestCase):
