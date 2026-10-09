@@ -28,6 +28,10 @@ class ImagesWorkflowTest(unittest.TestCase):
         for body in bodies:
             self.assertNotIn("${{", body)
 
+    def test_existing_commit_tag_is_reported_instead_of_rebuilt(self):
+        body = WF[WF.index('ref="$REGISTRY/$IMAGE:$SHA"'):]
+        self.assertLess(body.index('gcloud artifacts docker images describe "$ref"'), body.index("docker build"))
+
     def test_no_repository_secrets_are_used(self):
         self.assertNotIn("secrets.", WF)
 
