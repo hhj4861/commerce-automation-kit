@@ -192,6 +192,15 @@ resource "google_cloud_run_v2_service" "probe_stg" {
     ignore_changes = [template[0].containers[0].image, client, client_version]
   }
 }
+# The staging edge gets its own subnet: its Direct VPC egress addresses never compete with the
+# production edge on shared-ai-proxy, and the VM firewall (source: the proxy subnet) does not
+# trust it.
+resource "google_compute_subnetwork" "staging" {
+  name                     = "shared-ai-staging"
+  network                  = google_compute_network.ai.id
+  ip_cidr_range            = "10.79.0.64/26"
+  private_ip_google_access = true
+}
 resource "google_cloud_run_v2_service" "edge_stg" {
   name                = "shared-ai-stg"
   location            = local.region
@@ -211,7 +220,7 @@ resource "google_cloud_run_v2_service" "edge_stg" {
       egress = "ALL_TRAFFIC"
       network_interfaces {
         network    = google_compute_network.ai.name
-        subnetwork = google_compute_subnetwork.proxy.name
+        subnetwork = google_compute_subnetwork.staging.name
       }
     }
     containers {
@@ -266,6 +275,11 @@ resource "google_cloud_scheduler_job" "litellm_stg_warm" {
       service_account_email = google_service_account.scheduler_stg.email
       audience              = var.warm_ping_via_edge ? google_cloud_run_v2_service.edge_stg.uri : google_cloud_run_v2_service.litellm_stg.uri
     }
+  }
+  lifecycle {
+    # Created paused; resume and pause during the PoC are runtime state, so a later apply
+    # (for example warm_ping_via_edge=true) must not pause the job again.
+    ignore_changes = [paused]
   }
   depends_on = [google_project_service.api, google_cloud_run_v2_service_iam_member.edge_stg_scheduler]
 }

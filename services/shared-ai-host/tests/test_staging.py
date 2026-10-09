@@ -78,6 +78,13 @@ class EdgeStagingTest(unittest.TestCase):
         self.assertRegex(self.EDGE, r'egress\s*=\s*"ALL_TRAFFIC"')
         self.assertIn("google_cloud_run_v2_service.litellm_stg.uri", self.EDGE)
 
+    def test_egress_uses_its_own_subnet_with_private_google_access(self):
+        self.assertIn("google_compute_subnetwork.staging.name", self.EDGE)
+        self.assertNotIn("google_compute_subnetwork.proxy", self.EDGE)
+        subnet = block(TF, 'resource "google_compute_subnetwork" "staging"')
+        self.assertRegex(subnet, r'ip_cidr_range\s*=\s*"10\.79\.0\.64/26"')
+        self.assertRegex(subnet, r'private_ip_google_access\s*=\s*true')
+
     def test_is_private_to_the_operator(self):
         for public in ("allUsers", "allAuthenticatedUsers"):
             self.assertNotIn(public, TF)
@@ -92,6 +99,9 @@ class WarmPingTest(unittest.TestCase):
         self.assertEqual(len(re.findall(r'/health/liveliness"', self.JOB)), 2)
         self.assertIn("var.warm_ping_via_edge", self.JOB)
         self.assertIn("oidc_token", self.JOB)
+
+    def test_resume_and_pause_survive_a_later_apply(self):
+        self.assertRegex(self.JOB, r'ignore_changes\s*=\s*\[paused\]')
 
 
 class PinningTest(unittest.TestCase):
