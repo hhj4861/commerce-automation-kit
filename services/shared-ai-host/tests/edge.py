@@ -137,8 +137,13 @@ try:
         code, body, headers = request_with_headers(8082, path, KEY)
         assert code == 200 and json.loads(body)["path"] == path.removeprefix("/llm"), path
         assert headers["X-Echo-Host"] == "127.0.0.1:4100", (path, headers["X-Echo-Host"])
-    for path in ("/discovery/v1/discover", "/accounts/connections", "/v1/chat-messages", "/llm/key/generate",
-                 "/key/generate", "/llm/health/readiness", "/llm/v1/files"):
+    for path in ("/llm/key/generate", "/llm/key/info", "/llm/key/delete", "/llm/health/liveliness"):
+        assert request(8082, path)[0] == 401, path
+        code, body, headers = request_with_headers(8082, path, KEY)
+        assert code == 200 and json.loads(body)["path"] == path.removeprefix("/llm"), path
+        assert headers["X-Echo-Host"] == "127.0.0.1:4100", (path, headers["X-Echo-Host"])
+    for path in ("/discovery/v1/discover", "/accounts/connections", "/v1/chat-messages", "/llm/key/update",
+                 "/llm/user/new", "/key/generate", "/llm/health/readiness", "/llm/v1/files"):
         assert request(8082, path, KEY)[0] == 404, path
     assert request(8082, "/llm/typesafe/v1/systemone", KEY, "GET")[0] == 404
     assert request(8082, "/health") == (200, b"edge alive")

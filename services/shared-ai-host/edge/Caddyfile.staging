@@ -33,6 +33,15 @@
             header_up Host {upstream_hostport}
         }
     }
+    # Staging only: this edge is IAM-private (operator ID token, no public invoker), so the PoC
+    # reaches the LiteLLM admin API here. The production edge never routes these paths.
+    @admin path /llm/key/generate /llm/key/info /llm/key/delete /llm/health/liveliness
+    handle @admin {
+        uri strip_prefix /llm
+        reverse_proxy {$LLM_UPSTREAM} {
+            header_up Host {upstream_hostport}
+        }
+    }
     handle /health {
         respond "edge alive" 200
     }
