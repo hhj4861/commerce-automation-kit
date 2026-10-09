@@ -6,7 +6,9 @@ Cloud Run ID token, refreshed before it expires); NEON_API_KEY and NEON_PROJECT_
 measurement needs the Neon compute state. Output is redacted JSON lines.
 """
 import argparse
+import base64
 import hashlib
+import http.client
 import io
 import json
 import math
@@ -71,7 +73,7 @@ def call(base, path, token, key, body=None, method=None, timeout=30, opener=None
     except urllib.error.HTTPError as error:
         with error:
             raw, status = error.read(), error.code
-    except (urllib.error.URLError, TimeoutError, OSError) as error:
+    except (urllib.error.URLError, TimeoutError, OSError, http.client.HTTPException) as error:
         return {"path": path, "status": None, "ms": round((time.monotonic() - start) * 1000),
                 "error": type(error).__name__}
     result = {"path": path, "status": status, "ms": round((time.monotonic() - start) * 1000)}
@@ -85,7 +87,7 @@ def call(base, path, token, key, body=None, method=None, timeout=30, opener=None
 def stream(base, path, token, key, body, timeout=120, opener=None, clock=time.monotonic):
     """POST a streaming request and report when its SSE events arrived (flush check)."""
     request = _request(base, path, token, key, body, "POST", "application/json")
-    start, first, last, events, done = clock(), None, None, 0, False
+    start, first, last, events, done, status = clock(), None, None, 0, False, None
     try:
         with (opener or urllib.request.build_opener(NoRedirect)).open(request, timeout=timeout) as response:
             status = response.status
@@ -99,18 +101,29 @@ def stream(base, path, token, key, body, timeout=120, opener=None, clock=time.mo
     except urllib.error.HTTPError as error:
         error.close()
         return {"path": path, "status": error.code, "events": events, "done": False}
-    except (urllib.error.URLError, TimeoutError, OSError) as error:
-        return {"path": path, "status": None, "events": events, "done": False, "error": type(error).__name__}
+    except (urllib.error.URLError, TimeoutError, OSError, http.client.HTTPException) as error:
+        return {"path": path, "status": status, "events": events, "done": False, "error": type(error).__name__}
     ms = (lambda t: None if t is None else round((t - start) * 1000))
     return {"path": path, "status": status, "events": events, "done": done, "first_ms": ms(first), "last_ms": ms(last)}
 
 
-class IdToken:
-    """Cloud Run ID token from the personal gcloud account; tokens last an hour."""
-    MAX_AGE = 45 * 60
+def jwt_expiry(token):
+    """The exp claim of a JWT, or None when the token cannot be read."""
+    try:
+        payload = token.split(".")[1]
+        return float(json.loads(base64.urlsafe_b64decode(payload + "=" * (-len(payload) % 4)))["exp"])
+    except (IndexError, ValueError, KeyError, TypeError):
+        return None
 
-    def __init__(self, fetch=None, clock=time.monotonic):
-        self.fetch, self.clock, self.value, self.at = fetch or self._gcloud, clock, None, None
+
+class IdToken:
+    """Cloud Run ID token from the personal gcloud account, renewed 15 minutes before it expires.
+    gcloud may hand back a cached token, so the expiry comes from the token itself, and wall-clock
+    time keeps the check right across laptop sleep."""
+    MARGIN = 15 * 60
+
+    def __init__(self, fetch=None, clock=time.time):
+        self.fetch, self.clock, self.value, self.expires = fetch or self._gcloud, clock, None, 0.0
 
     @staticmethod
     def _gcloud():
@@ -120,8 +133,9 @@ class IdToken:
         return subprocess.run(argv, check=True, capture_output=True, text=True).stdout.strip()
 
     def __call__(self):
-        if self.value is None or self.clock() - self.at > self.MAX_AGE:
-            self.value, self.at = self.fetch(), self.clock()
+        if self.value is None or self.clock() >= self.expires - self.MARGIN:
+            self.value = self.fetch()
+            self.expires = jwt_expiry(self.value) or self.clock() + 3600
             observe.register_secret(self.value)
         return self.value
 
@@ -200,6 +214,31 @@ def warm_trial(base, token, key, neon_state, idle_seconds, max_wait, ping_second
             **call_fn(base, CHAT_PATH, token(), key, body=MOCK)}
 
 
+def cold_sample(base, token, key, path, body, neon, wait_seconds=900, call_fn=call):
+    """One cold-path sample: wait (control plane only) until Neon has idled, then call. The
+    instance from the previous sample flushes on scale-down and wakes the database again."""
+    start = time.time()
+    state = neon.wait_for("idle", timeout=wait_seconds)
+    return {"neon_before": state, "neon_waited_s": round(time.time() - start),
+            **call_fn(base, path, token(), key, body=body, timeout=60)}
+
+
+def idle_neon_shutdown(base, token, key, neon, n, call_fn=call, gcloud_fn=None):
+    """(f) with a suspended database: deploy the next revision without traffic first (its startup
+    connects to the database), send n calls to the serving revision, wait until Neon idles, then
+    move traffic only. The old instance's SIGTERM flush is then the first thing to wake Neon."""
+    gcloud_fn = gcloud_fn or gcloud
+    started = time.time()
+    deploy = gcloud_fn(["run", "services", "update", "litellm-stg", "--no-traffic",
+                        f"--update-env-vars=POC_REV={int(started)}"])
+    ok = sum(call_fn(base, CHAT_PATH, token(), key, body=MOCK)["status"] == 200 for _ in range(n))
+    waited = neon.wait_for("idle", timeout=900)  # control plane only; LiteLLM gets no CPU meanwhile
+    before = observe.safe(neon.state)
+    switch = gcloud_fn(["run", "services", "update-traffic", "litellm-stg", "--to-latest"])
+    return {"step": "shutdown", "mode": "idle-neon", "started": started, "sent": n, "ok": ok,
+            "neon_waited": waited, "neon_before": before, "deploy": deploy, "switch": switch}
+
+
 def gcloud(args, run=subprocess.run):
     done = run(["gcloud", *args, *GCLOUD_SCOPE], check=True, capture_output=True, text=True)
     lines = (done.stderr or "").strip().splitlines()
@@ -259,10 +298,12 @@ def main(argv=None):
         for name, measured, limit, passed in evaluate(json.loads(Path(args.summary).read_text())):
             observe.emit({"criterion": name, "measured": measured, "limit": limit, "passed": passed})
         return
+    neon = observe.neon_from_env()
+    if neon is None and (args.command in ("cold", "warm-neon") or getattr(args, "mode", None) == "idle-neon"):
+        parser.error(f"{args.command} needs NEON_API_KEY and NEON_PROJECT_ID to confirm the compute idled")
     base, token = os.environ["STG_EDGE"], IdToken()
     key = "" if args.command == "probe" else load_key()  # the probe needs no LiteLLM key
     observe.register_secret(key)
-    neon = observe.neon_from_env()
     if args.command == "smoke":
         observe.emit({"step": "no-id-token", **call(base, "/llm/v1/models", "", key)})
         observe.emit({"step": "bad-key", **call(base, "/llm/v1/models", token(), "sk-invalid-poc-key")})
@@ -295,9 +336,8 @@ def main(argv=None):
         for sample in range(args.samples):
             if sample:
                 time.sleep(args.gap_minutes * 60)
-            neon_before, bearer = observe.safe(neon.state) if neon else None, token()
-            observe.emit({"step": "cold-" + args.path, "sample": sample, "neon_before": neon_before,
-                          **call(base, path, bearer, key, body=body, timeout=60)})
+            observe.emit({"step": "cold-" + args.path, "sample": sample,
+                          **cold_sample(base, token, key, path, body, neon)})
     elif args.command == "burst":
         started = time.time()
         for sent in range(args.n):
@@ -321,8 +361,6 @@ def main(argv=None):
                           **call(base, path, token(), key, body=body, timeout=60, content_type=ctype)})
         observe.emit({"step": "feature", "feature": "stream", **stream(base, CHAT_PATH, token(), key, LONG_STREAM)})
     elif args.command == "warm-neon":
-        if neon is None:
-            parser.error("warm-neon needs NEON_API_KEY and NEON_PROJECT_ID to confirm the compute idled")
         observe.emit({"step": "warm-prime", **call(base, CHAT_PATH, token(), key, body=MOCK)})
         for trial in range(args.trials):
             observe.emit({"trial": trial, **warm_trial(base, token, key, lambda: observe.safe(neon.state),
@@ -331,13 +369,7 @@ def main(argv=None):
     elif args.command == "shutdown":
         started = time.time()
         if args.mode == "idle-neon":
-            if neon is None:
-                parser.error("shutdown --mode idle-neon needs NEON_API_KEY and NEON_PROJECT_ID")
-            ok = sum(call(base, CHAT_PATH, token(), key, body=MOCK)["status"] == 200 for _ in range(args.n))
-            state = neon.wait_for("idle", timeout=900)  # control plane only; LiteLLM gets no CPU meanwhile
-            revision = gcloud(["run", "services", "update", "litellm-stg", f"--update-env-vars=POC_REV={int(started)}"])
-            observe.emit({"step": "shutdown", "mode": args.mode, "started": started, "sent": args.n, "ok": ok,
-                          "neon_before": state, "deploy": revision})
+            observe.emit(idle_neon_shutdown(base, token, key, neon, args.n))
         else:
             gcloud(["run", "services", "update", "litellm-stg", "--no-traffic", f"--update-env-vars=POC_REV={int(started)}"])
             out = {}

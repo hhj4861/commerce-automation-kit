@@ -1,4 +1,6 @@
 """Unit tests for the staging PoC harness; no network, no gcloud."""
+import base64
+import http.client
 import io
 import json
 import os
@@ -9,6 +11,7 @@ import unittest
 import urllib.error
 import wave
 from pathlib import Path
+from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "poc"))
 import poc  # noqa: E402
@@ -43,6 +46,19 @@ class Opener:
         return self.outcome
 
 
+class FakeNeon:
+    def __init__(self, events):
+        self.events = events
+
+    def wait_for(self, wanted, timeout, **kwargs):
+        self.events.append(("wait", wanted))
+        return wanted
+
+    def state(self):
+        self.events.append(("state",))
+        return "idle"
+
+
 class CallTest(unittest.TestCase):
     def test_cloud_run_and_litellm_credentials_travel_in_separate_headers(self):
         opener = Opener(Response(200, b'{"data": []}'))
@@ -67,6 +83,26 @@ class CallTest(unittest.TestCase):
         failed = poc.call("https://edge.test", "/llm/v1/models", TOKEN, KEY, opener=Opener(urllib.error.URLError("timed out")))
         self.assertEqual((failed["status"], failed["error"]), (None, "URLError"))
 
+    def test_a_truncated_body_is_a_failed_sample_not_a_crash(self):
+        class Truncated(Response):
+            def read(self):
+                raise http.client.IncompleteRead(b"partial")
+
+        result = poc.call("https://edge.test", "/llm/v1/models", TOKEN, KEY, opener=Opener(Truncated(200)))
+        self.assertEqual((result["status"], result["error"]), (None, "IncompleteRead"))
+
+    def test_a_stream_cut_mid_way_keeps_its_events(self):
+        class Cut(Response):
+            def __iter__(self):
+                yield b'data: {"n": 1}\n'
+                raise http.client.IncompleteRead(b"")
+
+        ticks = iter([0.0, 0.5])
+        result = poc.stream("https://edge.test", "/llm/v1/chat/completions", TOKEN, KEY, {"stream": True},
+                            opener=Opener(Cut(200)), clock=lambda: next(ticks))
+        self.assertEqual((result["status"], result["events"], result["done"], result["error"]),
+                         (200, 1, False, "IncompleteRead"))
+
     def test_stream_reports_when_events_arrived(self):
         lines = [b'data: {"n": 1}\n', b"\n", b'data: {"n": 2}\n', b"\n", b"data: [DONE]\n"]
         ticks = iter([0.0, 0.5, 1.0, 1.5])
@@ -84,6 +120,16 @@ class SecretHandlingTest(unittest.TestCase):
         now[0] = 46 * 60
         self.assertEqual(token(), TOKEN + "x")
         self.assertNotIn(TOKEN, poc.observe.redact("token " + TOKEN))
+
+    def test_a_cached_token_close_to_expiry_is_replaced(self):
+        def jwt(exp):
+            body = base64.urlsafe_b64encode(json.dumps({"exp": exp}).encode()).decode().rstrip("=")
+            return "eyJhbGciOiJSUzI1NiJ9." + body + ".sig"
+
+        fetched = iter([jwt(1000 + 600), jwt(1000 + 3600)])
+        token = poc.IdToken(fetch=lambda: next(fetched), clock=lambda: 1000.0)
+        first = token()
+        self.assertNotEqual(token(), first)  # gcloud handed back a cached token with 10 minutes left
 
     def test_new_keys_go_to_a_private_file_and_only_their_hash_is_shown(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -149,6 +195,31 @@ class MeasurementTest(unittest.TestCase):
                        call_fn=lambda base, path, token, key, **kw: calls.append(path) or {"path": path, "status": 200, "ms": 1},
                        sleep=lambda s: clock.__setitem__(0, clock[0] + s), clock=lambda: clock[0])
         self.assertEqual(calls, ["/llm/v1/chat/completions"])
+
+    def test_cold_sample_waits_for_neon_to_idle_before_calling(self):
+        events = []
+        result = poc.cold_sample("https://edge.test", lambda: TOKEN, KEY, "/llm/typesafe/v1/systemone", {},
+                                 FakeNeon(events), call_fn=lambda base, path, token, key, **kw:
+                                 events.append(("call", path)) or {"path": path, "status": 200, "ms": 4100})
+        self.assertEqual(events, [("wait", "idle"), ("call", "/llm/typesafe/v1/systemone")])
+        self.assertEqual((result["neon_before"], result["status"]), ("idle", 200))
+
+    def test_traffic_moves_to_the_prebuilt_revision_only_after_neon_idles(self):
+        events = []
+        result = poc.idle_neon_shutdown(
+            "https://edge.test", lambda: TOKEN, KEY, FakeNeon(events), 2,
+            call_fn=lambda base, path, token, key, **kw: events.append(("call", path)) or {"status": 200},
+            gcloud_fn=lambda args: events.append(("gcloud", " ".join(args[:3]), "--no-traffic" in args)) or "done")
+        self.assertEqual(events, [("gcloud", "run services update", True), ("call", "/llm/v1/chat/completions"),
+                                  ("call", "/llm/v1/chat/completions"), ("wait", "idle"), ("state",),
+                                  ("gcloud", "run services update-traffic", False)])
+        self.assertEqual((result["ok"], result["neon_before"]), (2, "idle"))
+
+    def test_neon_measurements_refuse_to_run_without_neon(self):
+        with mock.patch.dict(os.environ, {"STG_EDGE": "https://edge.test", "STG_KEY": KEY}, clear=True):
+            for argv in (["cold", "--path", "jev", "--confirm-paid"], ["warm-neon"], ["shutdown", "--mode", "idle-neon"]):
+                with self.assertRaises(SystemExit):
+                    poc.main(argv)
 
     def test_paid_commands_need_explicit_confirmation(self):
         for argv in (["features", "--tts-voice", "v"], ["cold", "--path", "jev"]):
