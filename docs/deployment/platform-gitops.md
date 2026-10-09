@@ -30,7 +30,7 @@ Festa는 `feature/agent-test`였다. Vercel Git 연결 상태는 API 접근 제�
 
 1. 검증한 이 PR을 사용자 승인 후 `main`에 머지한다. 아직 배포 브랜치가 없으므로 서비스는 배포되지 않는다.
 2. 웹 배포 인증정보를 Cloudflare Secrets Store에 등록하고 broker를 활성화한다.
-3. LiteLLM 배포용 GCP Workload Identity Federation을 적용한다.
+3. LiteLLM 배포용 GCP Workload Identity Federation을 적용한다. (2026-10-09: 적용되지 않은 채 폐기됨. 아래 "LiteLLM의 GCP 인증과 배포" 참고)
 4. 검토된 머지 커밋에서 위 네 배포 브랜치를 만들고 보호한다. PR을 필수로 하고 force push와 삭제를 금지한다.
    `Platform GitOps verification`을 필수 검사로 지정한다. 보호되지 않은 브랜치는 배포 코드가 거부한다.
    `GITHUB_REF_PROTECTED`는 보호 규칙의 존재만 검증하므로 PR 필수 규칙은 관리자가 실제 설정해야 한다.
@@ -80,24 +80,23 @@ LiteLLM은 broker 배포 키를 사용하지 않는다.
 
 ## LiteLLM의 GCP 인증과 배포
 
+> **2026-10-09 변경:** 원래 설계한 VM 배포 신원(배포 SA, VM OS Admin Login, IAP 터널)은 적용된 적이 없다. WIF pool·배포 SA·STS API·저장소 변수가 모두 없었다. 서버리스 전환으로 VM이 퇴역하므로 이 신원은 만들지 않는다. `gcp-identity`에는 이미지 빌드 신원만 두고, Cloud Run 배포 신원은 전환 계획 Phase 5에서 추가한다(`docs/20261009-shared-ai-serverless-migration-plan.md`, `docs/plans/20261009-serverless-p1-foundation.md` R6). 그때까지 `deploy/litellm`은 GCP 인증 단계에서 멈춘다(이전과 같음).
+
 `gcp-identity/`는 기존 서버 인프라와 분리한 Terraform root module이다.
 회사 계정/프로젝트를 사용하지 않는다. 검증된 개인 계정으로 plan을 검토한 뒤 apply한다.
-기존 Terraform state에 임의로 합치지 않고, 해당 state는 접근 제한된 운영 저장소에 보존한다.
-리소스: 배포용 서비스 계정, WIF pool/provider, VM 조회 권한,
-**shared-ai 인스턴스에만** OS Admin Login, IP `10.78.0.2` 포트 22에 한정한 IAP 터널 권한.
-WIF는 정확한 저장소·배포 브랜치·워크플로의 push/manual 이벤트만 신뢰한다.
-VM의 OS Login이 활성화되어 있어야 한다. VM에 서비스 계정을 연결할 경우 추가 `actAs` 권한을 별도 검토한다.
+state는 GCS `gs://replay-live-508202-tfstate/gcp-identity`에 둔다(서버 인프라와 다른 prefix).
+리소스: WIF pool, main에서 수동 실행한 `shared-ai-images.yml`만 신뢰하는 provider, Artifact Registry `shared-ai` 쓰기만 가진 이미지 빌드 SA.
 
 ```sh
 cd ops/deploy/gcp-identity
-terraform init -lockfile=readonly
+terraform init -input=false -lockfile=readonly
 terraform plan -out=identity.tfplan
 # plan 검토와 적용 승인 이후
 terraform apply identity.tfplan
 ```
 
-출력 `github_provider_variable`, `github_service_account_variable`을 각각 GitHub **Variables**의
-`GCP_DEPLOY_WIF_PROVIDER`, `GCP_DEPLOY_SERVICE_ACCOUNT`에 설정한다. 이 값은 비밀이 아니다.
+출력 `images_provider_variable`, `images_service_account_variable`을 각각 GitHub **Variables**의
+`GCP_IMAGES_WIF_PROVIDER`, `GCP_IMAGES_SERVICE_ACCOUNT`에 설정한다. 이 값은 비밀이 아니다.
 장기 서비스 계정 JSON 키는 생성하지 않는다.
 
 릴리스는 triggering SHA의 소스를 archive해 IAP SSH로 전달하고 `/opt/shared-ai/releases/gitops-litellm-<SHA>`에 설치한다.

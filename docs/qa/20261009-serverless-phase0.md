@@ -19,7 +19,7 @@
 | 모듈 | 결과 |
 |---|---|
 | `services/shared-ai-host` | **찾음.** 저장소를 옮기기 전 위치인 iCloud `IdeaProjects/97.개인/workSpace/commerce-automation-kit/data/shared-ai/terraform.tfstate`에 있다. 형식 4, Terraform 1.5.7, serial 16, 2026-09-27 작성. 리소스 13종(인스턴스 16): Cloud Run proxy·공개 IAM, 디스크·스냅샷 정책·연결, 방화벽 2, VM, 네트워크·서브넷 2, API 4, SA |
-| `ops/deploy/gcp-identity`(WIF) | **찾지 못함.** 로컬 디스크, iCloud(Spotlight), 이 프로젝트의 GCS 버킷(없음)을 확인했다. Phase 1-2에서 `import` 블록으로 다시 등록한다 |
+| `ops/deploy/gcp-identity`(WIF) | **찾지 못함.** 로컬 디스크, iCloud(Spotlight), 이 프로젝트의 GCS 버킷(없음)을 확인했다. **후속 확인(Phase 1):** 모듈이 적용된 적이 없었다. WIF pool·배포 SA(`cak-litellm-deploy`)·STS API·저장소 변수가 모두 없다. import할 대상이 없으므로 Phase 1에서 새로 만든다 |
 
 **읽기 전용 `terraform plan`으로 검증했다.** `origin/main` 코드와 이 state로 plan을 실행한 결과는 `0 to add, 1 to change, 0 to destroy`이고, 바뀌는 속성은 `google_compute_instance.host`의 `machine_type`("e2-small" → "e2-standard-2") 하나다. D0에서 생긴 알려진 차이뿐이므로 state가 실제 인프라와 일치한다.
 
@@ -65,6 +65,6 @@
 | 기준 | 결과 |
 |---|---|
 | 결정 기록 | 완료 |
-| state 확보 | shared-ai-host는 확보·검증 완료(plan 차이는 D0의 machine_type뿐). WIF는 Phase 1-2에서 import |
+| state 확보 | shared-ai-host는 확보·검증 완료(plan 차이는 D0의 machine_type뿐). WIF는 적용된 적 없음(Phase 1에서 새로 만듦) |
 | VM 정상 기동과 공개 `/llm`·`/discovery` 응답 | 완료 |
 | 확인값 기록 | 완료(Hanmadi 변수는 간접 확인) |

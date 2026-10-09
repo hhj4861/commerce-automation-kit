@@ -1,0 +1,11 @@
+{
+  "models": {
+    "hanmadi": "gemini/gemini-flash-lite-latest",
+    "replay": "gemini/gemini-flash-lite-latest",
+    "festa": "gemini/gemini-3.5-flash-lite"
+  },
+  "targets": {
+    "staging": {"apps": ["hanmadi"], "elevenlabs": true},
+    "production": {"apps": ["hanmadi", "replay", "festa"], "elevenlabs": true}
+  }
+}

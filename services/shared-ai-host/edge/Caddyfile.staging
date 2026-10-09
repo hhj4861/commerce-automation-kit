@@ -1,0 +1,42 @@
+{
+    admin off
+    auto_https off
+}
+# Phase 2 staging edge: only the LiteLLM allowlist, proxied to an internal Cloud Run
+# service. LLM_UPSTREAM is that service's https run.app URL; Cloud Run sets PORT.
+:{$PORT:8080} {
+    @llm path /llm/v1/models /llm/v1/chat/completions /llm/v1/responses /llm/v1/embeddings /llm/v1/audio/speech /llm/v1/audio/transcriptions
+    handle @llm {
+        uri strip_prefix /llm
+        reverse_proxy {$LLM_UPSTREAM} {
+            header_up Host {upstream_hostport}
+            flush_interval -1
+        }
+    }
+    @hanmadiVideo {
+        method POST
+        path /llm/v1beta/models/hanmadi-chat:generateContent
+    }
+    handle @hanmadiVideo {
+        uri strip_prefix /llm
+        reverse_proxy {$LLM_UPSTREAM} {
+            header_up Host {upstream_hostport}
+        }
+    }
+    @jev {
+        method POST
+        path /llm/typesafe/v1/systemone
+    }
+    handle @jev {
+        uri strip_prefix /llm
+        reverse_proxy {$LLM_UPSTREAM} {
+            header_up Host {upstream_hostport}
+        }
+    }
+    handle /health {
+        respond "edge alive" 200
+    }
+    handle {
+        respond "Not found" 404
+    }
+}
