@@ -27,6 +27,7 @@
 | P2-R11 | (a)는 master key가 아니라 발급한 시험 키로 잰다 | master key는 DB를 조회하지 않아, 가상 키를 DB에서 찾는 운영보다 빠르게 나온다 | 없음 |
 | P2-R12 | 스테이징 자원을 두 번에 나눠 적용한다. 마이그레이션 Job을 먼저 만들어 실행한 뒤 서비스를 만든다 | 빈 DB에서 `DISABLE_SCHEMA_UPDATE=true`인 서비스가 먼저 뜨면 요청이 테이블 없음으로 실패할 수 있다 | `-target` apply 1회 |
 | P2-R13 | (e)는 liveliness ping 없이, 앞 요청 뒤 Neon이 정지할 때까지(7분 이상, 최대 12분) 기다린 다음 잰다. 마스터의 "10분 유휴"는 Neon 정지를 확실히 하려는 값이라, API로 정지를 확인하는 것으로 대신한다 | DB에 연결된 LiteLLM은 60초마다 하트비트를 DB에 쓴다(D1 확정, `LiteLLM_ProxyWorkerHeartbeat`). ping으로 CPU를 주면 이 쓰기가 Neon을 깨운다. 인스턴스 유휴 보존은 최대 15분이다 | 인스턴스가 12분 안에 회수되면 그 시행은 콜드로 분류해 뺀다(로그 대조) |
+| P2-R14 | 스테이징 edge는 운영 edge의 `shared-ai-proxy`(/26)가 아니라 새 서브넷 `shared-ai-staging`(10.79.0.64/26, Private Google Access)으로 나간다 | Direct VPC egress는 서브넷 IP를 블록 단위로 잡고 바뀐 리비전의 IP를 한동안 붙잡는다. 스테이징 리비전 교체가 운영 edge가 쓸 IP를 차지하면 Hanmadi·Festa 공개 경로가 실패할 수 있다. VM 방화벽(출발지: 프록시 서브넷)이 스테이징 edge를 신뢰하지 않게도 된다. 운영 /26에 edge와 admin Job을 함께 둘지는 마스터 §8.1의 미확인 항목으로 남는다 | 서브넷 1개(무료) |
 
 ## Global Constraints
 
@@ -39,18 +40,19 @@
 - 확실하지 않은 스펙은 `TODO(D1)`로 표기하고, 7-5 스모크나 해당 측정에서 실측한다.
 - 로컬 디스크가 부족하다. `terraform init`이 받는 `.terraform/`(약 120MB)은 검증·적용 직후 지운다.
 - 명령은 모두 저장소 루트(작업 worktree)에서 실행한다.
+- 몇 시간 이상 도는 측정((a), g1·g2의 `neon-watch`)은 전원을 연결하고 덮개를 연 노트북에서 `nohup caffeinate -ims <명령> > <로그> 2>&1 &`로 띄운다. 잠자기 동안의 Neon 상태는 알 수 없으므로 `neon-gap`으로 따로 기록된다.
 
 ## Review Focus
 
-1. **콜드 측정이 사실은 웜 인스턴스를 잰다.** 기대: 샘플 사이 20분 동안 다른 호출이 없고, Cloud Run 로그의 새 인스턴스 시작 시각이 샘플 직전이며, Neon이 정지 상태였다. → 태스크 5 `cold`가 샘플마다 `neon_before`를 남기고, 7-6이 로그와 대조한다.
+1. **콜드 측정이 사실은 웜 인스턴스를 잰다.** 기대: 샘플 사이 20분 동안 다른 호출이 없고, Cloud Run 로그의 새 인스턴스 시작 시각이 샘플 직전이며, Neon이 정지 상태였다. → 태스크 5 `cold_sample`이 Neon 정지를 기다린 뒤 보내고 `neon_before`·`neon_waited_s`를 남긴다(`test_cold_sample_waits_for_neon_to_idle_before_calling`). 7-6은 인스턴스 시작 로그와 대조해 무효 샘플을 빼고 다시 잰다.
 2. **하네스가 비밀을 남긴다.** 발급 키, ID 토큰, DB URL, Neon 키가 출력·결과 파일·오류 메시지에 섞일 수 있다. 기대: 모든 기록이 `observe.record()`를 거치고 응답 본문은 기록하지 않는다. 발급 키는 0600 파일에만 남고 해시만 보인다. → 태스크 4 `test_records_never_contain_secrets`, 태스크 5 `test_new_keys_go_to_a_private_file_and_only_their_hash_is_shown`.
 3. **측정이 측정 대상을 바꾼다.** 대기 중에 키를 실은 호출이나 psql 조회가 LiteLLM에 CPU를 주거나 Neon을 깨우면 (b)(e)(f)가 틀린다. 기대: 대기 중에는 키 없는 liveliness와 Neon 제어면 API만 쓰고, SQL은 측정 대상 사건이 끝난 뒤에만 실행한다. → 태스크 4 `test_wait_polls_only_the_control_plane_until_idle`, 태스크 5 `test_warm_wait_touches_only_liveliness_until_the_measured_call`·`test_without_pings_the_wait_only_polls_neon`.
-4. **장시간 측정이 ID 토큰 만료로 401이 된다.** gcloud ID 토큰은 1시간 유효하다. 기대: 45분이 지나면 다시 받는다. → 태스크 5 `test_id_token_is_refreshed_before_it_expires`.
+4. **장시간 측정이 ID 토큰 만료로 401이 된다.** gcloud ID 토큰은 1시간 유효하고, gcloud가 만료가 가까운 캐시 토큰을 돌려줄 수도 있다. 노트북이 잠들면 monotonic 시계는 멈춘다. 기대: 토큰 자체의 `exp`를 벽시계로 보고 15분 전에 다시 받는다. → 태스크 5 `test_id_token_is_refreshed_before_it_expires`·`test_a_cached_token_close_to_expiry_is_replaced`.
 5. **스테이징 관리 경로가 공개된다.** 기대: `allUsers`가 없고, ID 토큰 없는 요청은 Cloud Run이 막는다. → 태스크 1 `test_is_private_to_the_operator`, 7-5 스모크 `no-id-token`.
 
 ## 순서와 일정
 
-- 태스크 1~6(코드, 0.5일): PR 1개. CI가 `terraform validate`, 단위 테스트, 실제 Caddy `tests/edge.py`를 돌린다. 클라우드는 건드리지 않는다. 이 계획의 코드는 작성 때(2026-10-09) 로컬에서 그대로 실행해 확인했다. 단위 테스트 59개가 통과했고 `terraform validate`도 성공했다. `tests/edge.py`는 Docker가 필요해 CI에서 처음 돈다.
+- 태스크 1~6(코드, 0.5일): PR 1개. CI가 `terraform validate`, 단위 테스트, 실제 Caddy `tests/edge.py`를 돌린다. 클라우드는 건드리지 않는다. 이 계획의 코드는 작성 때(2026-10-09) 로컬에서 그대로 실행해 확인했다. 단위 테스트 71개가 통과했고 `terraform validate`도 성공했다(최종 리뷰 지적 반영 후 기준). `tests/edge.py`는 Docker가 필요해 CI에서 처음 돈다.
 - 태스크 7(운영): 준비 0.5일 → 측정 1일 → 관찰 2일(g1·g2 각 24시간) → 게이트 보고. 사용자 몫은 Neon 가입·URL·API 키 입력과 승인 묶음 A·B다.
 
 ---
@@ -63,7 +65,7 @@
 
 **Interfaces:**
 - Consumes: Phase 1의 시크릿 컨테이너 `google_secret_manager_secret.managed`, AR 이미지 digest, `google_service_account.proxy`, `google_compute_network.ai`, `google_compute_subnetwork.proxy`(Private Google Access 켜짐).
-- Produces: Cloud Run 서비스 `litellm-stg`(내부)·`shared-ai-probe-stg`(내부)·`shared-ai-stg`(edge), Job `litellm-stg-migrate`, Scheduler `litellm-stg-warm`(처음에는 멈춤), 출력 `staging_edge_url`·`staging_litellm_url`·`staging_probe_url`, 변수 `staging_images`·`staging_invoker`·`warm_ping_via_edge`.
+- Produces: 서브넷 `shared-ai-staging`(10.79.0.64/26), Cloud Run 서비스 `litellm-stg`(내부)·`shared-ai-probe-stg`(내부)·`shared-ai-stg`(edge), Job `litellm-stg-migrate`, Scheduler `litellm-stg-warm`(처음에는 멈춤, 이후 apply가 재개·정지 상태를 되돌리지 않음), 출력 `staging_edge_url`·`staging_litellm_url`·`staging_probe_url`, 변수 `staging_images`·`staging_invoker`·`warm_ping_via_edge`.
 
 - [ ] **Step 1: 실패하는 정책 테스트 작성** (`services/shared-ai-host/tests/test_staging.py`)
 
@@ -148,6 +150,13 @@ class EdgeStagingTest(unittest.TestCase):
         self.assertRegex(self.EDGE, r'egress\s*=\s*"ALL_TRAFFIC"')
         self.assertIn("google_cloud_run_v2_service.litellm_stg.uri", self.EDGE)
 
+    def test_egress_uses_its_own_subnet_with_private_google_access(self):
+        self.assertIn("google_compute_subnetwork.staging.name", self.EDGE)
+        self.assertNotIn("google_compute_subnetwork.proxy", self.EDGE)
+        subnet = block(TF, 'resource "google_compute_subnetwork" "staging"')
+        self.assertRegex(subnet, r'ip_cidr_range\s*=\s*"10\.79\.0\.64/26"')
+        self.assertRegex(subnet, r'private_ip_google_access\s*=\s*true')
+
     def test_is_private_to_the_operator(self):
         for public in ("allUsers", "allAuthenticatedUsers"):
             self.assertNotIn(public, TF)
@@ -162,6 +171,9 @@ class WarmPingTest(unittest.TestCase):
         self.assertEqual(len(re.findall(r'/health/liveliness"', self.JOB)), 2)
         self.assertIn("var.warm_ping_via_edge", self.JOB)
         self.assertIn("oidc_token", self.JOB)
+
+    def test_resume_and_pause_survive_a_later_apply(self):
+        self.assertRegex(self.JOB, r'ignore_changes\s*=\s*\[paused\]')
 
 
 class PinningTest(unittest.TestCase):
@@ -415,6 +427,15 @@ resource "google_cloud_run_v2_service" "probe_stg" {
     ignore_changes = [template[0].containers[0].image, client, client_version]
   }
 }
+# The staging edge gets its own subnet: its Direct VPC egress addresses never compete with the
+# production edge on shared-ai-proxy, and the VM firewall (source: the proxy subnet) does not
+# trust it.
+resource "google_compute_subnetwork" "staging" {
+  name                     = "shared-ai-staging"
+  network                  = google_compute_network.ai.id
+  ip_cidr_range            = "10.79.0.64/26"
+  private_ip_google_access = true
+}
 resource "google_cloud_run_v2_service" "edge_stg" {
   name                = "shared-ai-stg"
   location            = local.region
@@ -434,7 +455,7 @@ resource "google_cloud_run_v2_service" "edge_stg" {
       egress = "ALL_TRAFFIC"
       network_interfaces {
         network    = google_compute_network.ai.name
-        subnetwork = google_compute_subnetwork.proxy.name
+        subnetwork = google_compute_subnetwork.staging.name
       }
     }
     containers {
@@ -490,6 +511,11 @@ resource "google_cloud_scheduler_job" "litellm_stg_warm" {
       audience              = var.warm_ping_via_edge ? google_cloud_run_v2_service.edge_stg.uri : google_cloud_run_v2_service.litellm_stg.uri
     }
   }
+  lifecycle {
+    # Created paused; resume and pause during the PoC are runtime state, so a later apply
+    # (for example warm_ping_via_edge=true) must not pause the job again.
+    ignore_changes = [paused]
+  }
   depends_on = [google_project_service.api, google_cloud_run_v2_service_iam_member.edge_stg_scheduler]
 }
 output "staging_edge_url" { value = google_cloud_run_v2_service.edge_stg.uri }
@@ -500,7 +526,7 @@ output "staging_probe_url" { value = google_cloud_run_v2_service.probe_stg.uri }
 - [ ] **Step 5: 통과 확인**
 
 Run: `python3 -m unittest discover -s services/shared-ai-host/tests -p 'test_*.py'`
-Expected: `OK`(Phase 1 테스트 16개 + 새 테스트 14개 = 30개).
+Expected: `OK`(Phase 1 테스트 16개 + 새 테스트 16개 = 32개).
 
 Run: `cd services/shared-ai-host && terraform fmt -check && terraform init -backend=false -input=false -lockfile=readonly >/dev/null && terraform validate; rm -rf .terraform`
 Expected: `Success! The configuration is valid.`(2026-10-09 계획 작성 때 같은 파일로 확인함)
@@ -623,7 +649,7 @@ git commit -m "fix(shared-ai): report an existing commit image instead of failin
 - Create: `services/shared-ai-host/poc/observe.py`, `services/shared-ai-host/tests/test_observe.py`
 
 **Interfaces:**
-- Produces: `observe.register_secret(value)`, `observe.redact(text) -> str`, `observe.record(entry: dict) -> str`(`body` 키 제외), `observe.emit(entry)`, `observe.safe(fn)`(API·네트워크 오류를 `"error:<이름>"`으로 돌려줌), `observe.Neon(api_key, project_id, opener=None)`의 `.endpoint() -> dict`·`.state() -> str`(`init`·`active`·`idle`)·`.usage() -> dict`·`.wait_for(wanted, timeout, interval=30, sleep, clock) -> str`, `observe.neon_from_env() -> Neon | None`, `observe.non_idle_seconds(records, end=None) -> float`, `observe.pg_env(url) -> dict`, `observe.sql_text(name, key_hash=None, since=0.0) -> str`(`name` ∈ `spend-count`·`key-state`·`expire-budget`·`tables`), `observe.psql(sql, url, run=subprocess.run) -> str`, `observe.billable_seconds(service, start, end, access_token, opener=None) -> float`. CLI: `neon-state`, `neon-watch --hours H [--interval S]`, `neon-active FILE`, `neon-wait-idle [--timeout-minutes M]`, `sql {expire-budget,key-state,spend-count,tables} [--key-hash H] [--since EPOCH]`, `run-usage --start RFC3339 --end RFC3339`.
+- Produces: `observe.register_secret(value)`, `observe.redact(text) -> str`, `observe.record(entry: dict) -> str`(`body` 키 제외), `observe.emit(entry)`, `observe.safe(fn)`(API·네트워크 오류를 `"error:<이름>"`으로 돌려줌), `observe.Neon(api_key, project_id, opener=None)`의 `.endpoint() -> dict`·`.state() -> str`(`init`·`active`·`idle`)·`.usage() -> dict`·`.wait_for(wanted, timeout, interval=30, sleep, clock) -> str`, `observe.neon_from_env() -> Neon | None`, `observe.non_idle_seconds(records, end=None) -> float`(`neon-gap` 구간 제외), `observe.gap_seconds(records) -> float`, `observe.watch(neon, hours, interval, emit_fn=emit, sleep=time.sleep, clock=time.time)`(벽시계 마감, 폴링 간격이 3배를 넘으면 `neon-gap`, 시작·끝 줄은 항상 기록), `observe.pg_env(url) -> dict`, `observe.sql_text(name, key_hash=None, since=0.0) -> str`(`name` ∈ `spend-count`·`key-state`·`expire-budget`·`tables`), `observe.psql(sql, url, run=subprocess.run) -> str`, `observe.billable_seconds(service, start, end, access_token, opener=None) -> float`. CLI: `neon-state`, `neon-watch --hours H [--interval S]`, `neon-active FILE`, `neon-wait-idle [--timeout-minutes M]`, `sql {expire-budget,key-state,spend-count,tables} [--key-hash H] [--since EPOCH]`, `run-usage --start RFC3339 --end RFC3339`.
 
 - [ ] **Step 1: 실패하는 테스트 작성** (`services/shared-ai-host/tests/test_observe.py`)
 
@@ -710,6 +736,34 @@ class NeonTest(unittest.TestCase):
                    {"step": "neon-state", "at": 100, "state": "active"}, {"step": "neon-state", "at": 400, "state": "idle"},
                    {"step": "neon-state", "at": 1000, "state": "init"}, {"step": "neon-watch-end", "at": 1060}]
         self.assertEqual(observe.non_idle_seconds(records), 360.0)
+
+
+    def test_time_inside_a_sleep_gap_is_unknown_not_active(self):
+        records = [{"step": "neon-state", "at": 0, "state": "active"},
+                   {"step": "neon-gap", "at": 1000, "from": 100, "to": 1000},
+                   {"step": "neon-state", "at": 1000, "state": "active"},
+                   {"step": "neon-state", "at": 1100, "state": "idle"}, {"step": "neon-watch-end", "at": 1200}]
+        self.assertEqual(observe.non_idle_seconds(records), 200.0)
+        self.assertEqual(observe.gap_seconds(records), 900.0)
+
+    def test_watch_marks_a_sleep_gap_and_logs_the_state_again(self):
+        now, steps, sleeps = [0.0], [], iter([60, 3600, 60])
+        neon = observe.Neon("k", "p", opener=None)
+        neon.endpoint = lambda: {"type": "read_write", "current_state": "idle", "last_active": "t0"}
+        neon.usage = lambda: {"active_time_seconds": 1}
+        observe.watch(neon, hours=3700 / 3600, interval=60, emit_fn=lambda e: steps.append(e["step"]),
+                      sleep=lambda s: now.__setitem__(0, now[0] + next(sleeps)), clock=lambda: now[0])
+        self.assertEqual(steps, ["neon-watch-start", "neon-state", "neon-gap", "neon-state", "neon-watch-end"])
+
+    def test_watch_writes_its_end_line_even_when_usage_fails(self):
+        def fail():
+            raise urllib.error.URLError("timed out")
+
+        neon, entries = observe.Neon("k", "p", opener=None), []
+        neon.usage = fail
+        observe.watch(neon, hours=0, interval=60, emit_fn=entries.append, sleep=lambda s: None, clock=lambda: 0.0)
+        self.assertEqual([e["step"] for e in entries], ["neon-watch-start", "neon-watch-end"])
+        self.assertEqual(entries[-1]["usage_error"], "error:URLError")
 
 
 class DatabaseTest(unittest.TestCase):
@@ -875,14 +929,50 @@ def neon_from_env():
 
 
 def non_idle_seconds(records, end=None):
-    """Seconds the compute was not idle, from neon-watch lines (state changes with times)."""
-    changes = [(r["at"], r["state"]) for r in records if r.get("step") == "neon-state"]
+    """Seconds the compute was not idle, from neon-watch lines (state changes with times).
+    Time inside neon-gap lines (the watcher was not polling) is unknown, so it is left out
+    here and reported by gap_seconds()."""
+    changes = sorted((r["at"], r["state"]) for r in records if r.get("step") == "neon-state")
+    gaps = [(r["from"], r["to"]) for r in records if r.get("step") == "neon-gap"]
     end = end if end is not None else max([r["at"] for r in records] or [0])
     total = 0.0
     for (at, state), (next_at, _) in zip(changes, changes[1:] + [(end, None)]):
         if state != "idle":
-            total += max(0.0, next_at - at)
+            unknown = sum(max(0.0, min(next_at, stop) - max(at, start)) for start, stop in gaps)
+            total += max(0.0, next_at - at - unknown)
     return total
+
+
+def gap_seconds(records):
+    return float(sum(r["to"] - r["from"] for r in records if r.get("step") == "neon-gap"))
+
+
+def watch(neon, hours, interval, emit_fn=emit, sleep=time.sleep, clock=time.time):
+    """Log Neon state changes for `hours` of wall-clock time. A poll gap over three intervals
+    (laptop asleep, process stopped) is logged as neon-gap and the state is logged again, so
+    unknown time is never counted as a known state. Start and end lines are always written."""
+    def usage():
+        result = safe(neon.usage)
+        return {"usage_error": result} if isinstance(result, str) else result
+
+    emit_fn({"step": "neon-watch-start", **usage()})
+    deadline, last, last_poll = clock() + hours * 3600, None, None
+    while clock() < deadline:
+        now = clock()
+        if last_poll is not None and now - last_poll > 3 * interval:
+            emit_fn({"step": "neon-gap", "from": last_poll, "to": now})
+            last = None
+        last_poll = now
+        endpoint = safe(neon.endpoint)
+        if isinstance(endpoint, str):
+            emit_fn({"step": "neon-error", "error": endpoint})
+        else:
+            seen = (endpoint["current_state"], endpoint.get("last_active"))
+            if seen != last:  # an unchanged last_active while idle shows polling does not wake it
+                emit_fn({"step": "neon-state", "state": seen[0], "last_active": seen[1]})
+                last = seen
+        sleep(interval)
+    emit_fn({"step": "neon-watch-end", **usage()})
 
 
 def pg_env(url):
@@ -960,7 +1050,8 @@ def main(argv=None):
         return
     if args.command == "neon-active":
         records = [json.loads(line) for line in open(args.file) if line.strip()]
-        emit({"step": "neon-active", "file": os.path.basename(args.file), "active_seconds": non_idle_seconds(records)})
+        emit({"step": "neon-active", "file": os.path.basename(args.file), "active_seconds": non_idle_seconds(records),
+              "unknown_seconds": gap_seconds(records)})
         return
     if args.command == "run-usage":
         token = access_token()
@@ -976,20 +1067,7 @@ def main(argv=None):
     elif args.command == "neon-wait-idle":
         emit({"step": "neon-wait-idle", "state": neon.wait_for("idle", args.timeout_minutes * 60)})
     elif args.command == "neon-watch":
-        emit({"step": "neon-watch-start", **neon.usage()})
-        deadline, last = time.monotonic() + args.hours * 3600, None
-        while time.monotonic() < deadline:
-            endpoint = safe(neon.endpoint)
-            if isinstance(endpoint, str):
-                emit({"step": "neon-error", "error": endpoint})
-                time.sleep(args.interval)
-                continue
-            seen = (endpoint["current_state"], endpoint.get("last_active"))
-            if seen != last:  # an unchanged last_active while idle shows polling does not wake it
-                emit({"step": "neon-state", "state": seen[0], "last_active": seen[1]})
-                last = seen
-            time.sleep(args.interval)
-        emit({"step": "neon-watch-end", **neon.usage()})
+        watch(neon, args.hours, args.interval)
 
 
 if __name__ == "__main__":
@@ -999,7 +1077,7 @@ if __name__ == "__main__":
 - [ ] **Step 4: 통과 확인**
 
 Run: `python3 -m unittest discover -s services/shared-ai-host/tests -p 'test_observe.py' -v`
-Expected: PASS 9/9.
+Expected: PASS 12/12.
 
 - [ ] **Step 5: 커밋**
 
@@ -1015,12 +1093,14 @@ git commit -m "feat(shared-ai): add Neon, database and Cloud Run observation hel
 
 **Interfaces:**
 - Consumes: 태스크 4의 `observe.register_secret`·`observe.record`·`observe.emit`·`observe.redact`·`observe.safe`·`observe.neon_from_env`·`Neon.state`·`Neon.wait_for`, 태스크 2의 스테이징 관리 경로, 태스크 1의 서비스 이름 `litellm-stg`.
-- Produces: `poc.call(base, path, token, key, body=None, method=None, timeout=30, opener=None, content_type="application/json") -> dict`(`path`·`status`·`ms`, 성공 시 `body`, 네트워크 실패 시 `error`), `poc.stream(...) -> dict`(`events`·`done`·`first_ms`·`last_ms`), `poc.IdToken`, `poc.key_hash(key) -> str`, `poc.write_secret_file(path, value)`, `poc.silent_wav()`, `poc.multipart(fields, files)`, `poc.percentile(values, p)`, `poc.stats(records) -> dict`, `poc.evaluate(summary) -> list[tuple[name, measured, limit, passed]]`, `poc.warm_trial(base, token, key, neon_state, idle_seconds, max_wait, ping_seconds=None, poll_seconds=30, ...) -> dict`. CLI: `smoke`, `probe`, `new-key --alias A --out PATH`, `cold --path {jev,chat} --confirm-paid`, `burst --n N [--every S] [--real]`, `features --tts-voice ID --confirm-paid`, `warm-neon [--db-idle-minutes 7] [--max-wait-minutes 12] [--ping-seconds 0]`, `shutdown --mode {idle-neon,stream}`, `stats FILE --step STEP`, `evaluate SUMMARY.json`.
+- Produces: `poc.call(base, path, token, key, body=None, method=None, timeout=30, opener=None, content_type="application/json") -> dict`(`path`·`status`·`ms`, 성공 시 `body`, 네트워크 실패 시 `error`), `poc.stream(...) -> dict`(`events`·`done`·`first_ms`·`last_ms`), `poc.IdToken`(토큰의 `exp`를 벽시계로 보고 15분 전에 갱신), `poc.jwt_expiry(token) -> float | None`, `poc.cold_sample(base, token, key, path, body, neon, wait_seconds=900, call_fn=call) -> dict`, `poc.idle_neon_shutdown(base, token, key, neon, n, call_fn=call, gcloud_fn=None) -> dict`, `poc.key_hash(key) -> str`, `poc.write_secret_file(path, value)`, `poc.silent_wav()`, `poc.multipart(fields, files)`, `poc.percentile(values, p)`, `poc.stats(records) -> dict`, `poc.evaluate(summary) -> list[tuple[name, measured, limit, passed]]`, `poc.warm_trial(base, token, key, neon_state, idle_seconds, max_wait, ping_seconds=None, poll_seconds=30, ...) -> dict`. CLI: `smoke`, `probe`, `new-key --alias A --out PATH`, `cold --path {jev,chat} --confirm-paid`, `burst --n N [--every S] [--real]`, `features --tts-voice ID --confirm-paid`, `warm-neon [--db-idle-minutes 7] [--max-wait-minutes 12] [--ping-seconds 0]`, `shutdown --mode {idle-neon,stream}`, `stats FILE --step STEP`, `evaluate SUMMARY.json`.
 
 - [ ] **Step 1: 실패하는 테스트 작성** (`services/shared-ai-host/tests/test_poc.py`)
 
 ```python
 """Unit tests for the staging PoC harness; no network, no gcloud."""
+import base64
+import http.client
 import io
 import json
 import os
@@ -1031,6 +1111,7 @@ import unittest
 import urllib.error
 import wave
 from pathlib import Path
+from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "poc"))
 import poc  # noqa: E402
@@ -1065,6 +1146,19 @@ class Opener:
         return self.outcome
 
 
+class FakeNeon:
+    def __init__(self, events):
+        self.events = events
+
+    def wait_for(self, wanted, timeout, **kwargs):
+        self.events.append(("wait", wanted))
+        return wanted
+
+    def state(self):
+        self.events.append(("state",))
+        return "idle"
+
+
 class CallTest(unittest.TestCase):
     def test_cloud_run_and_litellm_credentials_travel_in_separate_headers(self):
         opener = Opener(Response(200, b'{"data": []}'))
@@ -1089,6 +1183,26 @@ class CallTest(unittest.TestCase):
         failed = poc.call("https://edge.test", "/llm/v1/models", TOKEN, KEY, opener=Opener(urllib.error.URLError("timed out")))
         self.assertEqual((failed["status"], failed["error"]), (None, "URLError"))
 
+    def test_a_truncated_body_is_a_failed_sample_not_a_crash(self):
+        class Truncated(Response):
+            def read(self):
+                raise http.client.IncompleteRead(b"partial")
+
+        result = poc.call("https://edge.test", "/llm/v1/models", TOKEN, KEY, opener=Opener(Truncated(200)))
+        self.assertEqual((result["status"], result["error"]), (None, "IncompleteRead"))
+
+    def test_a_stream_cut_mid_way_keeps_its_events(self):
+        class Cut(Response):
+            def __iter__(self):
+                yield b'data: {"n": 1}\n'
+                raise http.client.IncompleteRead(b"")
+
+        ticks = iter([0.0, 0.5])
+        result = poc.stream("https://edge.test", "/llm/v1/chat/completions", TOKEN, KEY, {"stream": True},
+                            opener=Opener(Cut(200)), clock=lambda: next(ticks))
+        self.assertEqual((result["status"], result["events"], result["done"], result["error"]),
+                         (200, 1, False, "IncompleteRead"))
+
     def test_stream_reports_when_events_arrived(self):
         lines = [b'data: {"n": 1}\n', b"\n", b'data: {"n": 2}\n', b"\n", b"data: [DONE]\n"]
         ticks = iter([0.0, 0.5, 1.0, 1.5])
@@ -1106,6 +1220,16 @@ class SecretHandlingTest(unittest.TestCase):
         now[0] = 46 * 60
         self.assertEqual(token(), TOKEN + "x")
         self.assertNotIn(TOKEN, poc.observe.redact("token " + TOKEN))
+
+    def test_a_cached_token_close_to_expiry_is_replaced(self):
+        def jwt(exp):
+            body = base64.urlsafe_b64encode(json.dumps({"exp": exp}).encode()).decode().rstrip("=")
+            return "eyJhbGciOiJSUzI1NiJ9." + body + ".sig"
+
+        fetched = iter([jwt(1000 + 600), jwt(1000 + 3600)])
+        token = poc.IdToken(fetch=lambda: next(fetched), clock=lambda: 1000.0)
+        first = token()
+        self.assertNotEqual(token(), first)  # gcloud handed back a cached token with 10 minutes left
 
     def test_new_keys_go_to_a_private_file_and_only_their_hash_is_shown(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -1172,6 +1296,31 @@ class MeasurementTest(unittest.TestCase):
                        sleep=lambda s: clock.__setitem__(0, clock[0] + s), clock=lambda: clock[0])
         self.assertEqual(calls, ["/llm/v1/chat/completions"])
 
+    def test_cold_sample_waits_for_neon_to_idle_before_calling(self):
+        events = []
+        result = poc.cold_sample("https://edge.test", lambda: TOKEN, KEY, "/llm/typesafe/v1/systemone", {},
+                                 FakeNeon(events), call_fn=lambda base, path, token, key, **kw:
+                                 events.append(("call", path)) or {"path": path, "status": 200, "ms": 4100})
+        self.assertEqual(events, [("wait", "idle"), ("call", "/llm/typesafe/v1/systemone")])
+        self.assertEqual((result["neon_before"], result["status"]), ("idle", 200))
+
+    def test_traffic_moves_to_the_prebuilt_revision_only_after_neon_idles(self):
+        events = []
+        result = poc.idle_neon_shutdown(
+            "https://edge.test", lambda: TOKEN, KEY, FakeNeon(events), 2,
+            call_fn=lambda base, path, token, key, **kw: events.append(("call", path)) or {"status": 200},
+            gcloud_fn=lambda args: events.append(("gcloud", " ".join(args[:3]), "--no-traffic" in args)) or "done")
+        self.assertEqual(events, [("gcloud", "run services update", True), ("call", "/llm/v1/chat/completions"),
+                                  ("call", "/llm/v1/chat/completions"), ("wait", "idle"), ("state",),
+                                  ("gcloud", "run services update-traffic", False)])
+        self.assertEqual((result["ok"], result["neon_before"]), (2, "idle"))
+
+    def test_neon_measurements_refuse_to_run_without_neon(self):
+        with mock.patch.dict(os.environ, {"STG_EDGE": "https://edge.test", "STG_KEY": KEY}, clear=True):
+            for argv in (["cold", "--path", "jev", "--confirm-paid"], ["warm-neon"], ["shutdown", "--mode", "idle-neon"]):
+                with self.assertRaises(SystemExit):
+                    poc.main(argv)
+
     def test_paid_commands_need_explicit_confirmation(self):
         for argv in (["features", "--tts-voice", "v"], ["cold", "--path", "jev"]):
             with self.assertRaises(SystemExit):
@@ -1189,7 +1338,7 @@ Expected: ERROR. `ModuleNotFoundError: No module named 'poc'`(저장소 루트�
 
 - [ ] **Step 3: 구현** (`services/shared-ai-host/poc/poc.py`)
 
-가상 키는 sha256 hex로 저장·기록된다(D1 확정, master key 호출은 해시 대신 별칭으로 남는다). `new-key`는 시험 키에 `max_budget` $0.05, `budget_duration` 30d, `duration` 7d, `metadata.allow_client_mock_response`를 준다. JEV 본문은 `packages/litellm-client/jev.mjs`가 만드는 형태(`model`·`state`·`questions`)와 같다. `shutdown --mode stream`은 새 리비전을 트래픽 없이 배포한 뒤, 스트리밍 응답 도중에 트래픽을 옮긴다. 처리 중인 요청은 끝까지 처리된다(D1 확정, 예외적으로 처리 중 SIGTERM 가능).
+가상 키는 sha256 hex로 저장·기록된다(D1 확정, master key 호출은 해시 대신 별칭으로 남는다). `new-key`는 시험 키에 `max_budget` $0.05, `budget_duration` 30d, `duration` 7d, `metadata.allow_client_mock_response`를 준다. JEV 본문은 `packages/litellm-client/jev.mjs`가 만드는 형태(`model`·`state`·`questions`)와 같다. `shutdown`은 두 모드 모두 다음 리비전을 트래픽 없이 먼저 배포한다. 새 리비전이 기동하면서 DB에 연결해 Neon을 깨우기 때문이다. `idle-neon`은 그 뒤 호출 → Neon 정지 대기 → 트래픽만 이동 순서로 진행해, 옛 인스턴스의 종료 flush가 정지한 Neon을 처음 깨우게 한다. `stream`은 스트리밍 응답 도중에 트래픽을 옮긴다. 처리 중인 요청은 끝까지 처리된다(D1 확정, 예외적으로 처리 중 SIGTERM 가능). `cold`·`warm-neon`·`shutdown --mode idle-neon`은 Neon API 정보가 없으면 시작하지 않는다. 끊긴 응답(`http.client.HTTPException`)은 실패 샘플로 기록한다.
 
 ```python
 """Phase 2 staging PoC harness (stdlib only). Never prints keys, ID tokens or DB URLs.
@@ -1200,7 +1349,9 @@ Cloud Run ID token, refreshed before it expires); NEON_API_KEY and NEON_PROJECT_
 measurement needs the Neon compute state. Output is redacted JSON lines.
 """
 import argparse
+import base64
 import hashlib
+import http.client
 import io
 import json
 import math
@@ -1265,7 +1416,7 @@ def call(base, path, token, key, body=None, method=None, timeout=30, opener=None
     except urllib.error.HTTPError as error:
         with error:
             raw, status = error.read(), error.code
-    except (urllib.error.URLError, TimeoutError, OSError) as error:
+    except (urllib.error.URLError, TimeoutError, OSError, http.client.HTTPException) as error:
         return {"path": path, "status": None, "ms": round((time.monotonic() - start) * 1000),
                 "error": type(error).__name__}
     result = {"path": path, "status": status, "ms": round((time.monotonic() - start) * 1000)}
@@ -1279,7 +1430,7 @@ def call(base, path, token, key, body=None, method=None, timeout=30, opener=None
 def stream(base, path, token, key, body, timeout=120, opener=None, clock=time.monotonic):
     """POST a streaming request and report when its SSE events arrived (flush check)."""
     request = _request(base, path, token, key, body, "POST", "application/json")
-    start, first, last, events, done = clock(), None, None, 0, False
+    start, first, last, events, done, status = clock(), None, None, 0, False, None
     try:
         with (opener or urllib.request.build_opener(NoRedirect)).open(request, timeout=timeout) as response:
             status = response.status
@@ -1293,18 +1444,29 @@ def stream(base, path, token, key, body, timeout=120, opener=None, clock=time.mo
     except urllib.error.HTTPError as error:
         error.close()
         return {"path": path, "status": error.code, "events": events, "done": False}
-    except (urllib.error.URLError, TimeoutError, OSError) as error:
-        return {"path": path, "status": None, "events": events, "done": False, "error": type(error).__name__}
+    except (urllib.error.URLError, TimeoutError, OSError, http.client.HTTPException) as error:
+        return {"path": path, "status": status, "events": events, "done": False, "error": type(error).__name__}
     ms = (lambda t: None if t is None else round((t - start) * 1000))
     return {"path": path, "status": status, "events": events, "done": done, "first_ms": ms(first), "last_ms": ms(last)}
 
 
-class IdToken:
-    """Cloud Run ID token from the personal gcloud account; tokens last an hour."""
-    MAX_AGE = 45 * 60
+def jwt_expiry(token):
+    """The exp claim of a JWT, or None when the token cannot be read."""
+    try:
+        payload = token.split(".")[1]
+        return float(json.loads(base64.urlsafe_b64decode(payload + "=" * (-len(payload) % 4)))["exp"])
+    except (IndexError, ValueError, KeyError, TypeError):
+        return None
 
-    def __init__(self, fetch=None, clock=time.monotonic):
-        self.fetch, self.clock, self.value, self.at = fetch or self._gcloud, clock, None, None
+
+class IdToken:
+    """Cloud Run ID token from the personal gcloud account, renewed 15 minutes before it expires.
+    gcloud may hand back a cached token, so the expiry comes from the token itself, and wall-clock
+    time keeps the check right across laptop sleep."""
+    MARGIN = 15 * 60
+
+    def __init__(self, fetch=None, clock=time.time):
+        self.fetch, self.clock, self.value, self.expires = fetch or self._gcloud, clock, None, 0.0
 
     @staticmethod
     def _gcloud():
@@ -1314,8 +1476,9 @@ class IdToken:
         return subprocess.run(argv, check=True, capture_output=True, text=True).stdout.strip()
 
     def __call__(self):
-        if self.value is None or self.clock() - self.at > self.MAX_AGE:
-            self.value, self.at = self.fetch(), self.clock()
+        if self.value is None or self.clock() >= self.expires - self.MARGIN:
+            self.value = self.fetch()
+            self.expires = jwt_expiry(self.value) or self.clock() + 3600
             observe.register_secret(self.value)
         return self.value
 
@@ -1394,6 +1557,31 @@ def warm_trial(base, token, key, neon_state, idle_seconds, max_wait, ping_second
             **call_fn(base, CHAT_PATH, token(), key, body=MOCK)}
 
 
+def cold_sample(base, token, key, path, body, neon, wait_seconds=900, call_fn=call):
+    """One cold-path sample: wait (control plane only) until Neon has idled, then call. The
+    instance from the previous sample flushes on scale-down and wakes the database again."""
+    start = time.time()
+    state = neon.wait_for("idle", timeout=wait_seconds)
+    return {"neon_before": state, "neon_waited_s": round(time.time() - start),
+            **call_fn(base, path, token(), key, body=body, timeout=60)}
+
+
+def idle_neon_shutdown(base, token, key, neon, n, call_fn=call, gcloud_fn=None):
+    """(f) with a suspended database: deploy the next revision without traffic first (its startup
+    connects to the database), send n calls to the serving revision, wait until Neon idles, then
+    move traffic only. The old instance's SIGTERM flush is then the first thing to wake Neon."""
+    gcloud_fn = gcloud_fn or gcloud
+    started = time.time()
+    deploy = gcloud_fn(["run", "services", "update", "litellm-stg", "--no-traffic",
+                        f"--update-env-vars=POC_REV={int(started)}"])
+    ok = sum(call_fn(base, CHAT_PATH, token(), key, body=MOCK)["status"] == 200 for _ in range(n))
+    waited = neon.wait_for("idle", timeout=900)  # control plane only; LiteLLM gets no CPU meanwhile
+    before = observe.safe(neon.state)
+    switch = gcloud_fn(["run", "services", "update-traffic", "litellm-stg", "--to-latest"])
+    return {"step": "shutdown", "mode": "idle-neon", "started": started, "sent": n, "ok": ok,
+            "neon_waited": waited, "neon_before": before, "deploy": deploy, "switch": switch}
+
+
 def gcloud(args, run=subprocess.run):
     done = run(["gcloud", *args, *GCLOUD_SCOPE], check=True, capture_output=True, text=True)
     lines = (done.stderr or "").strip().splitlines()
@@ -1453,10 +1641,12 @@ def main(argv=None):
         for name, measured, limit, passed in evaluate(json.loads(Path(args.summary).read_text())):
             observe.emit({"criterion": name, "measured": measured, "limit": limit, "passed": passed})
         return
+    neon = observe.neon_from_env()
+    if neon is None and (args.command in ("cold", "warm-neon") or getattr(args, "mode", None) == "idle-neon"):
+        parser.error(f"{args.command} needs NEON_API_KEY and NEON_PROJECT_ID to confirm the compute idled")
     base, token = os.environ["STG_EDGE"], IdToken()
     key = "" if args.command == "probe" else load_key()  # the probe needs no LiteLLM key
     observe.register_secret(key)
-    neon = observe.neon_from_env()
     if args.command == "smoke":
         observe.emit({"step": "no-id-token", **call(base, "/llm/v1/models", "", key)})
         observe.emit({"step": "bad-key", **call(base, "/llm/v1/models", token(), "sk-invalid-poc-key")})
@@ -1489,9 +1679,8 @@ def main(argv=None):
         for sample in range(args.samples):
             if sample:
                 time.sleep(args.gap_minutes * 60)
-            neon_before, bearer = observe.safe(neon.state) if neon else None, token()
-            observe.emit({"step": "cold-" + args.path, "sample": sample, "neon_before": neon_before,
-                          **call(base, path, bearer, key, body=body, timeout=60)})
+            observe.emit({"step": "cold-" + args.path, "sample": sample,
+                          **cold_sample(base, token, key, path, body, neon)})
     elif args.command == "burst":
         started = time.time()
         for sent in range(args.n):
@@ -1515,8 +1704,6 @@ def main(argv=None):
                           **call(base, path, token(), key, body=body, timeout=60, content_type=ctype)})
         observe.emit({"step": "feature", "feature": "stream", **stream(base, CHAT_PATH, token(), key, LONG_STREAM)})
     elif args.command == "warm-neon":
-        if neon is None:
-            parser.error("warm-neon needs NEON_API_KEY and NEON_PROJECT_ID to confirm the compute idled")
         observe.emit({"step": "warm-prime", **call(base, CHAT_PATH, token(), key, body=MOCK)})
         for trial in range(args.trials):
             observe.emit({"trial": trial, **warm_trial(base, token, key, lambda: observe.safe(neon.state),
@@ -1525,13 +1712,7 @@ def main(argv=None):
     elif args.command == "shutdown":
         started = time.time()
         if args.mode == "idle-neon":
-            if neon is None:
-                parser.error("shutdown --mode idle-neon needs NEON_API_KEY and NEON_PROJECT_ID")
-            ok = sum(call(base, CHAT_PATH, token(), key, body=MOCK)["status"] == 200 for _ in range(args.n))
-            state = neon.wait_for("idle", timeout=900)  # control plane only; LiteLLM gets no CPU meanwhile
-            revision = gcloud(["run", "services", "update", "litellm-stg", f"--update-env-vars=POC_REV={int(started)}"])
-            observe.emit({"step": "shutdown", "mode": args.mode, "started": started, "sent": args.n, "ok": ok,
-                          "neon_before": state, "deploy": revision})
+            observe.emit(idle_neon_shutdown(base, token, key, neon, args.n))
         else:
             gcloud(["run", "services", "update", "litellm-stg", "--no-traffic", f"--update-env-vars=POC_REV={int(started)}"])
             out = {}
@@ -1551,7 +1732,7 @@ if __name__ == "__main__":
 - [ ] **Step 4: 통과 확인**
 
 Run: `python3 -W error::ResourceWarning -m unittest discover -s services/shared-ai-host/tests -p 'test_poc.py' -v`
-Expected: PASS 13/13(argparse 오류 메시지 두 줄은 유료 확인 테스트의 정상 출력이다).
+Expected: PASS 19/19(argparse 오류 메시지 몇 줄은 유료 확인·Neon 필수 테스트의 정상 출력이다).
 
 - [ ] **Step 5: 커밋**
 
@@ -1566,7 +1747,7 @@ git commit -m "feat(shared-ai): add the stdlib staging PoC harness"
 - Create: `services/shared-ai-host/poc/neon_estimate.py`, `services/shared-ai-host/tests/test_neon_estimate.py`
 
 **Interfaces:**
-- Produces: `neon_estimate.db_touches(requests, shutdown_after=None, periodic=None, window=None) -> list`, `neon_estimate.active_seconds(touches, idle=300) -> float`, `neon_estimate.monthly_cost(active_seconds_per_day, cu=0.25, price=0.106, days=30.4) -> dict`. CLI: 표준 입력의 epoch 초(한 줄에 하나) → JSON 한 줄. 옵션 `--days`(필수), `--idle`, `--shutdown-after`, `--periodic`.
+- Produces: `neon_estimate.db_touches(requests, shutdown_after=None, periodic=None, window=None) -> list`, `neon_estimate.sessions(requests, shutdown_after) -> int`(인스턴스 세션 수 = 콜드 스타트 수), `neon_estimate.active_seconds(touches, idle=300) -> float`, `neon_estimate.monthly_cost(active_seconds_per_day, cu=0.25, price=0.106, days=30.4) -> dict`. CLI: 표준 입력의 epoch 초(한 줄에 하나) → JSON 한 줄(`sessions_per_day` 포함). 옵션 `--days`(필수), `--idle`, `--shutdown-after`, `--periodic`.
 
 - [ ] **Step 1: 실패하는 테스트 작성** (`services/shared-ai-host/tests/test_neon_estimate.py`)
 
@@ -1589,6 +1770,10 @@ class EstimateTest(unittest.TestCase):
 
     def test_each_instance_session_ends_with_a_shutdown_flush(self):
         self.assertEqual(ne.db_touches([2000, 0, 100], shutdown_after=900), [0, 100, 1000, 2000, 2900])
+
+    def test_each_instance_session_is_one_cold_start(self):
+        self.assertEqual(ne.sessions([2000, 0, 100], shutdown_after=900), 2)
+        self.assertEqual(ne.sessions([], shutdown_after=900), 0)
 
     def test_a_warm_instance_touches_the_database_periodically(self):
         self.assertEqual(ne.db_touches([50], periodic=600, window=(0, 1800)), [0, 50, 600, 1200, 1800])
@@ -1642,6 +1827,12 @@ def db_touches(requests, shutdown_after=None, periodic=None, window=None):
     return sorted(touches)
 
 
+def sessions(requests, shutdown_after):
+    """Instance sessions in the request times: each one starts cold and ends with a flush."""
+    ordered = sorted(requests)
+    return sum(1 for a, b in zip(ordered, ordered[1:] + [math.inf]) if b - a > shutdown_after)
+
+
 def active_seconds(touches, idle=300):
     total, end = 0.0, -math.inf
     for touch in sorted(touches):
@@ -1673,8 +1864,10 @@ def main(argv=None):
     end = max(stamps)
     touches = db_touches(stamps, args.shutdown_after, args.periodic, (end - args.days * 86400, end))
     per_day = active_seconds(touches, args.idle) / args.days
+    # Cold starts per day (master plan (g)); a warm ping keeps one instance, so there is none to count.
+    cold = None if args.shutdown_after is None else round(sessions(stamps, args.shutdown_after) / args.days, 1)
     print(json.dumps({"requests": len(stamps), "days": args.days, "shutdown_after": args.shutdown_after,
-                      "periodic": args.periodic, **monthly_cost(per_day)}))
+                      "periodic": args.periodic, "sessions_per_day": cold, **monthly_cost(per_day)}))
 
 
 if __name__ == "__main__":
@@ -1684,12 +1877,12 @@ if __name__ == "__main__":
 - [ ] **Step 4: 통과 확인**
 
 Run: `python3 -m unittest discover -s services/shared-ai-host/tests -p 'test_neon_estimate.py' -v && printf '0\n100\n2000\n' | python3 services/shared-ai-host/poc/neon_estimate.py --days 1 --shutdown-after 900`
-Expected: PASS 5/5, 그리고 `"active_hours_per_day": 0.36`이 든 JSON 한 줄.
+Expected: PASS 6/6, 그리고 `"sessions_per_day": 2.0`과 `"active_hours_per_day": 0.36`이 든 JSON 한 줄.
 
 - [ ] **Step 5: 전체 테스트와 커밋**
 
 Run: `python3 -W error::ResourceWarning -m unittest discover -s services/shared-ai-host/tests -p 'test_*.py'`
-Expected: `Ran 59 tests` … `OK`.
+Expected: `Ran 71 tests` … `OK`.
 
 ```bash
 git add services/shared-ai-host/poc/neon_estimate.py services/shared-ai-host/tests/test_neon_estimate.py
@@ -1702,7 +1895,7 @@ git commit -m "feat(shared-ai): estimate Neon compute hours from request times"
 
 | 묶음 | 내용 | 비용 |
 |---|---|---|
-| A 준비 | 7-2 시크릿 채우기(VM `.env`의 공급자 키 3개 복사 포함), 7-3 `edge-staging` 재빌드, 7-4 Terraform apply 2회(10개 + 7개 추가), 7-5 마이그레이션 Job 실행·스모크·프로브(공급자 호출 없음, edge 리비전 교체 2회) | 유휴 비용 거의 0. 시크릿 활성 버전 7개 추가(무료 6개는 청구 계정 합산이라 월 최대 약 $0.42) |
+| A 준비 | 7-2 시크릿 채우기(VM `.env`의 공급자 키 3개 복사 포함), 7-3 `edge-staging` 재빌드, 7-4 Terraform apply 2회(10개 + 8개 추가), 7-5 마이그레이션 Job 실행·스모크·프로브(공급자 호출 없음, edge 리비전 교체 2회) | 유휴 비용 거의 0. 시크릿 활성 버전 7개 추가(무료 6개는 청구 계정 합산이라 월 최대 약 $0.42) |
 | B 측정 | 7-6 측정 (a)~(g): 유료 호출 약 50건, `litellm-stg` 리비전 교체 4회, 스테이징 DB 쓰기(시험 키 예산 만료 설정 2회), Scheduler 재개·정지. 7-7 VM DB 읽기 전용 조회 2회 | 합계 $0.01 미만 예상(JEV 1건 약 $0.0002라는 기존 기록 기준, Gemini `max_tokens` 1~800, ElevenLabs 3글자·1초). 시험 키마다 $0.05 상한 |
 
 유료 호출 내역: (a) JEV 10 + Hanmadi chat 10, (b) chat 20, (d) JEV·Gemini native·json_schema·TTS·STT·스트리밍 각 1, (f) 긴 스트리밍 2. 합계 48건이다. 스모크와 (c)(e)(f) 유휴 사례는 mock이라 공급자 호출이 없다(mock이 막혀 있으면 1토큰 호출로 바뀌어 약 40건이 늘어난다. 여전히 $0.001 미만).
@@ -1793,7 +1986,7 @@ terraform apply -input=false p2b.tfplan
 rm -f p2a.tfplan p2b.tfplan; rm -rf .terraform
 ```
 
-Expected 7-4b: `Plan: 7 to add, 0 to change, 0 to destroy.` 대상은 서비스 `litellm-stg`·`shared-ai-probe-stg`·`shared-ai-stg`, IAM 2개, SA `shared-ai-scheduler-stg`, Scheduler `litellm-stg-warm`(paused)이다.
+Expected 7-4b: `Plan: 8 to add, 0 to change, 0 to destroy.` 대상은 서브넷 `shared-ai-staging`, 서비스 `litellm-stg`·`shared-ai-probe-stg`·`shared-ai-stg`, IAM 2개, SA `shared-ai-scheduler-stg`, Scheduler `litellm-stg-warm`(paused)이다.
 
 - [ ] **7-5 마이그레이션·스모크·프로브(묶음 A, 무과금).**
   - **a. 마이그레이션(7-4a와 7-4b 사이).**
@@ -1843,11 +2036,14 @@ Expected 7-4b: `Plan: 7 to add, 0 to change, 0 to destroy.` 대상은 서비스 
 
     Expected: 프로브 3줄 모두 `"ok": true`다. 즉 `content_length`가 `sent_length`와 같고(chunked로 바뀌지 않음), `path`에 `/llm`이 없다. `host`는 프로브 호스트이며 `:443` 포함 여부를 기록한다. 되돌린 뒤 `models`가 200이다. `seen`에 `{http.request...}`가 그대로 보이면 프로브가 자리표시자를 치환하지 않은 것이다. 그때는 이 확인을 Phase 4로 넘긴다(P2-R8).
 
-  - **e. Neon 조회가 compute를 깨우지 않는지 확인.** 문서에 없는 내용이라(D1 미확인) 측정 전에 확인한다. `neon_env; python3 $P/observe.py neon-wait-idle --timeout-minutes 15` 뒤 `python3 $P/observe.py neon-watch --hours 0.25 --interval 60 > "$OUT/neon-poll-check.jsonl"`을 실행한다.
+  - **e. Neon 조회가 compute를 깨우지 않는지 확인.** 문서에 없는 내용이라(D1 미확인) 측정 전에 확인한다. 7-5d의 마지막 요청 뒤 `litellm-stg` 인스턴스가 내려가면 종료 flush가 Neon을 다시 깨운다. 그래서 그 뒤에 시작한다.
+    1. 마지막 요청 뒤 20분 이상 아무 요청도 보내지 않는다.
+    2. `gcloud logging read 'resource.type="cloud_run_revision" AND resource.labels.service_name="litellm-stg"' --project=replay-live-508202 --freshness=1h --format='value(timestamp,textPayload)' | grep -i -E "shutting down|finished server process"`로 종료 로그를 확인한다(문구는 `TODO(D1)`).
+    3. `neon_env; python3 $P/observe.py neon-wait-idle --timeout-minutes 15` 뒤 `python3 $P/observe.py neon-watch --hours 0.25 --interval 60 > "$OUT/neon-poll-check.jsonl"`을 실행한다.
 
-    Expected: `neon-state` 줄이 하나뿐이다(`idle`, `last_active` 그대로). 줄이 더 생기면 1분 간격 조회가 compute를 깨우는 것이다. 그때는 모든 `--interval`을 600으로 늘리고, Neon 상태 판정은 600초 해상도로 한다고 기록한다.
+    Expected: `neon-state` 줄이 하나뿐이다(`idle`, `last_active` 그대로). 줄이 더 생기면 먼저 그 시각을 `litellm-stg` 인스턴스 시작·종료 로그와 대조한다. Neon이 스스로 하는 점검(D1)일 수도 있다. 우리 쪽 원인이 없는데도 조회 때마다 깨어나면, 1분 간격 조회가 compute를 깨운다고 결론 낸다. 그때는 모든 `--interval`을 600으로 늘리고, Neon 상태 판정은 600초 해상도로 한다고 기록한다.
 
-- [ ] **7-6 측정 (a)~(g)(묶음 B).** 측정마다 시험 키를 새로 발급하고(`new_key`), 그 키의 해시로만 사용 기록을 센다. 순서는 (d) → (b) → (c) → (f) → (e) → (a)+g1 → g2다. (e)까지는 Scheduler가 멈춘 상태여야 한다. 보온 ping이 LiteLLM 하트비트를 깨워 Neon이 정지하지 않기 때문이다(P2-R13). (a)는 앞 측정이 끝나고 20분 이상 지난 뒤 시작한다. 대기 시간 동안에는 `litellm-stg`에 어떤 요청도 보내지 않는다(Review Focus 3). Neon은 오래 정지한 compute를 점검하려고 스스로 깨우기도 한다(D1). 그래서 우리 호출과 무관한 `active` 전환은 따로 표시한다.
+- [ ] **7-6 측정 (a)~(g)(묶음 B).** 측정마다 시험 키를 새로 발급하고(`new_key`), 그 키의 해시로만 사용 기록을 센다. 몇 시간 이상 도는 명령은 Global Constraints대로 `nohup caffeinate -ims`로 띄운다. 순서는 (d) → (b) → (c) → (f) → (e) → (a)+g1 → g2다. (e)까지는 Scheduler가 멈춘 상태여야 한다. 보온 ping이 LiteLLM 하트비트를 깨워 Neon이 정지하지 않기 때문이다(P2-R13). (a)는 앞 측정이 끝나고 20분 이상 지난 뒤 시작한다. 대기 시간 동안에는 `litellm-stg`에 어떤 요청도 보내지 않는다(Review Focus 3). Neon은 오래 정지한 compute를 점검하려고 스스로 깨우기도 한다(D1). 그래서 우리 호출과 무관한 `active` 전환은 따로 표시한다.
 
   - **(d) 기능.** `new_key d-features` 뒤에 `STG_KEY_FILE="$KEYS/d-features" python3 $P/poc.py features --tts-voice <7-1의 음성 ID> --confirm-paid | tee "$OUT/d.jsonl"`을 실행한다.
 
@@ -1866,11 +2062,11 @@ Expected 7-4b: `Plan: 7 to add, 0 to change, 0 to destroy.` 대상은 서비스 
 
     Expected: 두 경우 모두 `budget_reset_at`이 약 30일 뒤로 옮겨지고 `spend`가 초기화된다. `c_reset_missed`는 초기화되지 않은 경우의 수(0~2)다. ②만 실패하면 마스터 플랜 게이트 규칙대로 Phase 3 admin Job에 월초 보정을 넣는다. 관리 API 지원 여부는 원문으로 확인한다(P2-R10).
   - **(f) 종료.** `new_key f-shutdown`을 하고 `neon_env`를 실행한다.
-    - `STG_KEY_FILE="$KEYS/f-shutdown" python3 $P/poc.py shutdown --mode idle-neon --n 10 | tee -a "$OUT/f.jsonl"`을 2회 실행한다.
+    - `STG_KEY_FILE="$KEYS/f-shutdown" python3 $P/poc.py shutdown --mode idle-neon --n 10 | tee -a "$OUT/f.jsonl"`을 2회 실행한다. 하네스가 다음 리비전을 트래픽 없이 먼저 배포한다. 그다음 옛 리비전으로 10건을 보내고, Neon 정지를 기다린 뒤 트래픽만 옮긴다(옛 인스턴스의 유휴는 약 6분이라 15분 안이다).
     - `... shutdown --mode stream --confirm-paid | tee -a "$OUT/f.jsonl"`을 2회 실행한다.
-    - 회차마다 3분 뒤 `sql spend-count --key-hash <해시> --since <그 회차 started>`를 실행한다.
+    - 회차마다 옛 리비전의 종료 로그(7-5c의 grep)가 나온 뒤에 센다. 종료 로그가 20분 안에 안 보이면 20분 시점에 센다. `sql spend-count --key-hash <해시> --since <그 회차 started - 60>`을 쓴다. 60초를 빼는 것은 노트북과 서버의 시계 차이 때문이다.
 
-    Expected: idle-neon 회차는 `neon_before`가 `"idle"`이고 10건이 기록된다. stream 회차는 `stream.done`이 true이고 1건이 기록된다. `f_lost_spend`는 보낸 수와 기록 수의 차를 모두 더한 값이다. `litellm-stg` 종료 로그에서 drain 3초 설정이 보이는지도 확인한다. idle-neon 회차에서 Neon이 멈추기 전에 인스턴스가 먼저 축소됐으면(로그) 그 회차는 "축소 flush"로 따로 적는다.
+    Expected: idle-neon 회차는 `neon_before`(트래픽 이동 직전 상태)가 `"idle"`이고 10건이 기록된다. stream 회차는 `stream.done`이 true이고 1건이 기록된다. `f_lost_spend`는 회차마다 `ok` 수(응답 200)에서 기록 수를 뺀 값을 모두 더한 것이다. `litellm-stg` 종료 로그에서 drain 3초 설정이 보이는지도 확인한다. idle-neon 회차에서 트래픽 이동 전에 옛 인스턴스가 먼저 축소됐으면(로그) 그 회차는 "축소 flush"로 따로 적는다.
   - **(e) 웜 LiteLLM + 정지 Neon.** `new_key e-warm`을 하고 `neon_env` 뒤 `STG_KEY_FILE="$KEYS/e-warm" python3 $P/poc.py warm-neon --trials 10 > "$OUT/e.jsonl"`을 실행한다(기본값: ping 없음, 7분 이상 대기, 최대 12분). 끝나면 `gcloud logging read 'resource.type="cloud_run_revision" AND resource.labels.service_name="litellm-stg" AND textPayload:"Starting new instance"' --project=replay-live-508202 --freshness=3h --format='value(timestamp)' > "$OUT/e-instance-starts.txt"`로 인스턴스 시작 시각을 받는다.
 
     Expected:
@@ -1894,13 +2090,19 @@ Expected 7-4b: `Plan: 7 to add, 0 to change, 0 to destroy.` 대상은 서비스 
       --project=replay-live-508202 --freshness=1d --format='value(timestamp)' > "$OUT/a-instance-starts.txt"
     ```
 
+    하네스는 간격(20분)을 기다린 뒤, 제어면만 보며 Neon이 정지할 때까지 더 기다렸다가 보낸다(`neon_waited_s`). 앞 샘플 인스턴스의 종료 flush가 Neon을 다시 깨우기 때문이다.
+
     Expected:
-    - 샘플마다 `neon_before`가 `"idle"`이다.
-    - 샘플마다 직전 1분 안에 새 인스턴스 시작 로그가 있다. 없는 샘플은 웜이므로 따로 표시하고 p95에서 뺀다(Review Focus 1).
-    - `a_jev_p95_ms`·`a_chat_p95_ms`·`a_chat_over_3s_rate`를 기록하고, `a_failures`는 200이 아닌 샘플 수다.
+    - 샘플마다 `neon_before`가 `"idle"`이고, 직전 1분 안에 새 인스턴스 시작 로그가 있다.
+    - 둘 중 하나라도 아닌 샘플은 무효다. p95와 실패 집계에서 빼고, 유효 샘플이 경로마다 10개가 될 때까지 같은 명령(`--samples`에 모자란 수)으로 다시 잰다(Review Focus 1).
+    - `a_jev_p95_ms`·`a_chat_p95_ms`·`a_chat_over_3s_rate`를 유효 샘플로 기록하고, `a_failures`는 유효 샘플 중 200이 아닌 수다.
     - g1이 끝나면(24시간) `python3 $P/observe.py neon-active "$OUT/g1-neon.jsonl"`로 Neon 활성 초를 내고, `python3 $P/observe.py run-usage --start <g1 시작 RFC3339> --end <g1 끝> | tee "$OUT/g1-usage.jsonl"`로 Cloud Run 과금 시간을 기록한다. 두 창의 Neon 사용량 값(`neon-watch-start`·`end`의 `active_time_seconds`)은 최대 1시간 늦게 반영되므로 교차 확인에만 쓴다.
   - **g2(보온 5분 24시간).** g1이 끝나면 `gcloud scheduler jobs resume litellm-stg-warm --location=us-central1 --project=replay-live-508202`를 실행한다.
-    - 6분 뒤 `gcloud logging read 'resource.type="cloud_scheduler_job" AND resource.labels.job_id="litellm-stg-warm"' --project=replay-live-508202 --freshness=15m --format='value(timestamp,httpRequest.status,jsonPayload.status)'`로 첫 실행이 성공했는지 본다. 403·404면 `terraform apply -var warm_ping_via_edge=true -var "$IMAGES"`로 edge 경유로 바꾼다(P2-R9, 묶음 B 범위).
+    - 6분 뒤 `gcloud logging read 'resource.type="cloud_scheduler_job" AND resource.labels.job_id="litellm-stg-warm"' --project=replay-live-508202 --freshness=15m --format='value(timestamp,httpRequest.status,jsonPayload.status)'`로 첫 실행이 성공했는지 본다. 403·404면 edge 경유로 바꾼다(P2-R9, 묶음 B 범위).
+      - `cd services/shared-ai-host`에서 7-4처럼 `GOOGLE_OAUTH_ACCESS_TOKEN`·`TF_VAR_project_id`를 다시 설정하고 `terraform init -input=false -lockfile=readonly`를 실행한다(7-4b에서 `.terraform`을 지웠다).
+      - `terraform plan -input=false -target=google_cloud_scheduler_job.litellm_stg_warm -var warm_ping_via_edge=true -out=p2c.tfplan`을 실행한다. 기대값은 `1 to change`(URI·audience)다. 이미지는 무시 대상이라 `-var "$IMAGES"`는 필요 없다. `paused`도 무시 대상이라 재개 상태가 유지된다.
+      - apply한 뒤 `rm -rf .terraform p2c.tfplan`을 실행한다.
+      - `gcloud scheduler jobs describe litellm-stg-warm --location=us-central1 --project=replay-live-508202 --format='value(state)'`가 `ENABLED`인지 보고, 다음 실행이 성공하는지 다시 확인한다.
     - 그다음 `neon_env`를 실행하고 `python3 $P/observe.py neon-watch --hours 24 --interval 60 > "$OUT/g2-neon.jsonl"`을 백그라운드로 띄운다. g2 동안에는 하네스 호출을 하지 않는다.
 
     Expected: 하트비트(60초) 때문에 ping마다 Neon이 깨어 거의 24시간 `active`일 가능성이 크다(D1 근거의 추론). `python3 $P/observe.py neon-active "$OUT/g2-neon.jsonl"`로 활성 초를 내고, `active` 전환 간격을 `periodic`(초)으로 기록한다. 계속 `active`였다면 300으로 적는다. g2가 끝나면 `run-usage`로 과금 시간을 기록하고 Scheduler를 `pause`한다.
@@ -1925,9 +2127,11 @@ python3 $P/neon_estimate.py --days 14 --shutdown-after <(b)의 shutdown_after> <
 python3 $P/neon_estimate.py --days 14 --periodic <g2의 periodic> < "$OUT/prod-epochs.txt"
 ```
 
-Expected: 보온 없음과 보온 5분 각각의 `usd_per_month`와 `cloud_sql_cheaper`가 나온다. 마지막 SQL의 요청 처리 시간 합은 Cloud Run 요청 기반 과금 추정에 쓴다. LiteLLM 몫은 요청 처리 초 × (vCPU $0.000024 + 1GiB × $0.0000025) × 30.4/14이다. edge(1 vCPU, 0.5GiB)도 같은 시간을 점유하므로 메모리를 0.5GiB로 바꾼 같은 식을 더한다. 무료 등급 적용값과 0값을 함께 낸다. 한계도 적는다. 키 조회처럼 spend log에 없는 DB 접근은 빠진다.
+Expected: 보온 없음과 보온 5분 각각의 `usd_per_month`와 `cloud_sql_cheaper`가 나온다. 보온 없음 결과의 `sessions_per_day`가 운영 트래픽 기준 콜드 스타트 빈도다(마스터 (g)). 마지막 SQL의 요청 처리 시간 합은 Cloud Run 요청 기반 과금 추정에 쓴다.
+    - LiteLLM 몫은 (요청 처리 초 + 세션 수 × (기동 초 + 종료 유예 10초)) × (vCPU $0.000024 + 1GiB × $0.0000025) × 30.4/14이다. 기동 초는 (a)의 유효 샘플 p50에서 공급자 응답 시간을 뺀 값으로 잡는다. 기동 중 startup CPU boost로 늘어난 vCPU 과금은 한계로 적는다.
+    - edge(1 vCPU, 0.5GiB)도 같은 시간을 점유하므로 메모리를 0.5GiB로 바꾼 같은 식을 더한다. 무료 등급 적용값과 0값을 함께 낸다. 한계도 적는다. 키 조회처럼 spend log에 없는 DB 접근은 빠진다.
 
-- [ ] **7-8 게이트 보고.** 측정 기록은 `docs/qa/<날짜>-serverless-phase2.md`에 쓴다. 명령, 시험 키 별칭과 해시, 건수, 지연, 프로브 결과를 담고 비밀값은 넣지 않는다. 7-6의 값으로 `summary.json`을 만들고(키: `a_jev_p95_ms`, `a_chat_p95_ms`, `a_failures`, `a_chat_over_3s_rate`, `b_missing_spend`, `c_reset_missed`, `d_failures`, `e_failures`, `f_lost_spend`), `python3 $P/poc.py evaluate summary.json`으로 판정표를 낸다. 여기에 (g) 비용표(g1·g2 실측과 7-7 운영 추정, 무료 등급 적용과 0, VM e2-small 기준과 비교)를 더해 `docs/qa/<날짜>-serverless-phase2-gate.md`에 쓴다. 권고는 마스터 플랜 게이트 규칙을 그대로 따른다.
+- [ ] **7-8 게이트 보고.** 측정 기록은 `docs/qa/<날짜>-serverless-phase2.md`에 쓴다. 명령, 시험 키 별칭과 해시, 건수, 지연, 프로브 결과를 담고 비밀값은 넣지 않는다. 7-6의 값으로 `summary.json`을 만들고(키: `a_jev_p95_ms`, `a_chat_p95_ms`, `a_failures`, `a_chat_over_3s_rate`, `b_missing_spend`, `c_reset_missed`, `d_failures`, `e_failures`, `f_lost_spend`), `python3 $P/poc.py evaluate summary.json`으로 판정표를 낸다. 여기에 (g) 비용표(g1·g2 실측과 7-7 운영 추정, 운영 기준 콜드 스타트 빈도, 무료 등급 적용과 0, VM e2-small 기준과 비교)를 더해 `docs/qa/<날짜>-serverless-phase2-gate.md`에 쓴다. 권고는 마스터 플랜 게이트 규칙을 그대로 따른다.
   - (a)(b)(d)(e)(f)가 통과하고 월 비용이 VM 축소안보다 낮으면 Phase 3로 간다. litellm DB는 (g)의 활성 시간으로 D2 기준에 따라 고른다.
   - (a)나 (e)가 보온으로도 실패하면 최소 인스턴스 1이 필요하다. (b)나 (f)가 실패하면 instance 기반 과금이 필요하다. 이 경우 서버리스를 계속할지 다시 묻는다.
   - (c)만 실패하면 Phase 3 admin Job에 월초 보정을 넣는다.
@@ -1939,4 +2143,4 @@ Expected: 보온 없음과 보온 5분 각각의 `usd_per_month`와 `cloud_sql_c
   - `gcloud run services update litellm-stg --region=us-central1 --project=replay-live-508202 --quiet --remove-env-vars=POC_REV`로 Terraform과의 차이를 없앤다.
   - 결과를 `docs/qa`로 옮긴 뒤 `$OUT`을 지운다.
   - **계속하면** 스테이징을 Phase 3까지 둔다(유휴 비용 거의 0).
-  - **중단하면** `staging.tf`와 `main.tf` 추가분을 지우는 PR을 머지하고 apply한다(17개 삭제). Neon 프로젝트를 지우고, 스테이징 시크릿 버전(master·salt·DB URL·Neon 키와 복사한 공급자 키)을 `gcloud secrets versions destroy`로 없앤다. VM은 e2-small로 유지한다.
+  - **중단하면** `staging.tf`와 `main.tf` 추가분을 지우는 PR을 머지하고 apply한다(18개 삭제). Neon 프로젝트를 지우고, 스테이징 시크릿 버전(master·salt·DB URL·Neon 키와 복사한 공급자 키)을 `gcloud secrets versions destroy`로 없앤다. VM은 e2-small로 유지한다.
