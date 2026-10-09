@@ -21,11 +21,11 @@
 | `services/shared-ai-host` | **찾음.** 저장소를 옮기기 전 위치인 iCloud `IdeaProjects/97.개인/workSpace/commerce-automation-kit/data/shared-ai/terraform.tfstate`에 있다. 형식 4, Terraform 1.5.7, serial 16, 2026-09-27 작성. 리소스 13종(인스턴스 16): Cloud Run proxy·공개 IAM, 디스크·스냅샷 정책·연결, 방화벽 2, VM, 네트워크·서브넷 2, API 4, SA |
 | `ops/deploy/gcp-identity`(WIF) | **찾지 못함.** 로컬 디스크, iCloud(Spotlight), 이 프로젝트의 GCS 버킷(없음)을 확인했다. Phase 1-2에서 `import` 블록으로 다시 등록한다 |
 
-**읽기 전용 `terraform plan` 검증은 하지 못했다.** state 메타데이터(위 리소스 목록)는 한 차례 읽었지만, 그 뒤 iCloud가 파일을 다시 비운(dataless) 상태에서 내려받지 못해 Terraform 읽기가 `operation timed out`으로 실패했다. 로컬 디스크 여유가 약 11GB(98% 사용)이고 iCloud 데몬이 상태 조회(`brctl status`)에도 응답하지 않았다.
+**읽기 전용 `terraform plan`으로 검증했다.** `origin/main` 코드와 이 state로 plan을 실행한 결과는 `0 to add, 1 to change, 0 to destroy`이고, 바뀌는 속성은 `google_compute_instance.host`의 `machine_type`("e2-small" → "e2-standard-2") 하나다. D0에서 생긴 알려진 차이뿐이므로 state가 실제 인프라와 일치한다.
 
-- 이 state가 최신인지는 이력으로 확인했다. 모듈의 마지막 코드 변경은 9/27 15:21(`563a72c`)이고 state는 같은 날 18:17에 쓰였다.
-- 검증은 Phase 1-1에서 state를 GCS backend로 옮길 때 한다. 끝내 읽지 못하면 WIF와 같은 방식으로 `import` 블록으로 state를 다시 만든다.
-- GCS backend 이전에는 버킷이 필요하므로 Phase 1-1 Terraform 변경과 함께 한다. 그때까지 state는 원래 위치에 둔다.
+- 이력도 맞다. 모듈의 마지막 코드 변경은 9/27 15:21(`563a72c`)이고 state는 같은 날 18:17에 쓰였다.
+- iCloud가 파일을 비운(dataless) 상태에서는 Terraform이 직접 읽지 못했다(`operation timed out`). 로컬 디스크 여유가 약 11GB(98% 사용)이고 iCloud 데몬이 한동안 I/O 대기에 묶여 있었다. 파일을 읽는 즉시 로컬(0600)에 쓰는 방식으로 사본을 만들어 plan에 썼다. 이 사본은 Phase 1-1의 GCS 이전에 쓰고 지운다.
+- GCS backend 이전에는 버킷이 필요하므로 Phase 1-1 Terraform 변경과 함께 한다. 그때까지 원본은 원래 위치에 둔다.
 
 ## VM 확인값
 
@@ -65,6 +65,6 @@
 | 기준 | 결과 |
 |---|---|
 | 결정 기록 | 완료 |
-| state 확보 | shared-ai-host는 위치 확보, plan 검증은 Phase 1-1로 이월. WIF는 Phase 1-2에서 import |
+| state 확보 | shared-ai-host는 확보·검증 완료(plan 차이는 D0의 machine_type뿐). WIF는 Phase 1-2에서 import |
 | VM 정상 기동과 공개 `/llm`·`/discovery` 응답 | 완료 |
 | 확인값 기록 | 완료(Hanmadi 변수는 간접 확인) |

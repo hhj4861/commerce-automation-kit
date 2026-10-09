@@ -136,7 +136,7 @@ GitHub Actions(WIF)             — 이미지 빌드·푸시(로컬 Docker 없�
   - 청구 보고서에서 같은 청구 계정의 다른 프로젝트 2개가 쓰는 Cloud Run·Secret Manager·Artifact Registry 무료 등급 사용량 확인
   - 새 `deploy/*` 브랜치 보호 규칙(저장소 관리자 권한, `deploy.mjs`가 요구)
 - **완료 기준:** 결정 기록, state 확보, (D0) VM 정상 기동과 공개 `/llm`·`/discovery` 응답, 확인값 기록.
-- **실행 결과(2026-10-09):** `docs/qa/20261009-serverless-phase0.md`. D0~D7 권장안 채택, VM e2-small 기동, shared-ai-host state 위치 확보(plan 검증은 1-1로 이월), WIF state 미발견(1-2에서 import).
+- **실행 결과(2026-10-09):** `docs/qa/20261009-serverless-phase0.md`. D0~D7 권장안 채택, VM e2-small 기동, shared-ai-host state 확보·plan 검증(차이는 machine_type뿐), WIF state 미발견(1-2에서 import).
 
 ### Phase 1 — 기반 (2일)
 
