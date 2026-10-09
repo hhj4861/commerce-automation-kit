@@ -27,3 +27,26 @@
 `blender -b --factory-startup --python-exit-code 1 --python immersive-scene.py -- --out <cache>/final --percent 100 --samples 64`.
 Then `python3 lookdev-verify.py --render-dir <cache>/final --deliver-dir <Downloads>/vedio/falkirk-lookdev-v3 --report <verification.json>`.
 Scene sources and Blender-generated manifests remain together under the task's source/cache paths. The final frames are computed Blender pixels, not AI-enhanced stills that the renderer cannot reproduce.
+
+## Motion follow-up — user request 2026-10-09
+
+- User requested a video from the new keyframes. Base `1dfe630`; same owner/branch. Scope now includes `immersive-motion.py`, `motion-finish.py`, and a motion verification report.
+- Produce a 17-second body-motion excerpt with the previously generated complete displacement narration (Kyle, 1.1×); no new paid calls. Preserve original full film and all rejected samples.
+- Camera sequence: contextual wide → entering boat → same bow and moving water. Gate stays open, wheel stationary throughout boat entry. Constant mean water height; waves are illustrative, not CFD or a quantified displacement simulation.
+- Acceptance: motion frames inspected before full render, direct MP4 output without large frame sequences, complete audio/captions and ending pause, full decode/A/V/frame checks, own commit/push. No production default changes or deployment.
+- Current: implementation prepared; animation rendering/verification pending. Historical keyframe report records the earlier source hash; it is not evidence for the new animated frames.
+
+- Motion preview 1: entry/close views retain the same hull and unobstructed waterline. The establishing view cropped the stern at the right edge; widened its lens and aimed slightly lower before the final render. Original static cameras remain unchanged.
+
+
+## Motion result
+
+- Delivered `/Users/admin/Downloads/vedio/falkirk-immersive-motion-v3.mp4`: 17.000s, 408 frames, 1080×1920, 24fps, H.264/AAC, 11,192,677 bytes. File SHA-256 and exact input/source hashes are in `motion-verification.json`.
+- Same Cycles Metal renderer/64 samples, direct MP4 output. Actual animation render: 2616.98 seconds (43m37s), excluding scene construction and final assembly. Two small preview passes preceded the final render; one camera-framing rework. No model token/cost metrics available and no paid generation calls.
+- Rendering and assembly processes both exited 0. Full ffmpeg decode passed; audio/video duration difference 0.000s; audio mean -18.0dB, peak -1.5dB. Complete original displacement narration reused at Kyle 1.1×, with 2.016s after the spoken ending. All original words included in captions.
+- Inspected eight frames including both sides of the cuts at 3.5s and 10.5s. Whole boat in wide frame, monotonic entry, consistent hull and waterline, moving water highlights, unobstructed bow close-up; caption placement checked on actual output. This is representative frame inspection, not a claim of watching every frame in real time or matching the user's reference quality.
+- This is a body-motion proof, not the complete Falkirk film. No new Higgsfield introduction, wheel rotation sequence, production integration or upload. Original finished film preserved. Water is illustrative, not a quantitative hydrodynamics simulation.
+- Next useful action: user reviews this actual moving sample before approving a full-film visual replacement. The branch contains the reproducible scene, animation and finishing scripts; do not promote the older rejected renderer into production.
+
+Reproduce motion: `blender -b --factory-startup --python-exit-code 1 --python immersive-motion.py -- --out <cache>/final --percent 100 --samples 64`.
+Then `python3 motion-finish.py --cache <cache>/final --source-cache <original-falkirk-cache> --output <Downloads>/vedio/falkirk-immersive-motion-v3.mp4 --report motion-verification.json`.

@@ -1,0 +1,239 @@
+{
+  "status": "technical checks passed; representative rendered frames inspected",
+  "file": "/Users/admin/Downloads/vedio/falkirk-immersive-motion-v3.mp4",
+  "sha256": "89f180b030b2476020e4a3ff1884aceed941051d716a2cc52b5d14ed61fe5117",
+  "duration": 17,
+  "frames": 408,
+  "size": [
+    1080,
+    1920
+  ],
+  "fps": 24,
+  "decode": true,
+  "avDelta": 0.0,
+  "audio": {
+    "source": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261009-falkirk-wheel/audio.wav",
+    "sourceHash": "30f052b0b31649e2c5139dd837803f854b6b790b77504847ccefe1753dde32d7",
+    "sourceStart": 12.958333333333334,
+    "sourceDuration": 15.208333333333334,
+    "voiceId": "RU7aSi6lT4uQBXMLgDxK",
+    "speed": 1.1,
+    "meanDb": -18.0,
+    "peakDb": -1.5,
+    "newTtsCalls": 0,
+    "endingPause": 2.015850340136055
+  },
+  "captions": {
+    "complete": true,
+    "lastEnd": 14.984149659863947,
+    "font": "Pretendard SemiBold",
+    "size": 54,
+    "lineY": [
+      1330,
+      1400
+    ]
+  },
+  "renderer": {
+    "sourceHash": "4be1f9bd7dcc67cd8fd8a49f14f454cbc8585e140483581eff7804b1cd32ad10",
+    "motionHash": "97f502b0ccc9f67c701bdfa009aaf4ffae9b3e2d5a04a0ea9ba4ffad369f1f45",
+    "frames": 408,
+    "fps": 24,
+    "duration": 17,
+    "size": [
+      1080,
+      1920
+    ],
+    "engine": "CYCLES",
+    "samples": 64,
+    "preview": false,
+    "checks": [
+      {
+        "frame": 1,
+        "time": 0.0,
+        "shot": "site",
+        "boatY": -14.0,
+        "waterLevel": 2,
+        "camera": [
+          -24.0,
+          -51.0,
+          20.0
+        ],
+        "target": [
+          0.0,
+          2.0,
+          15.300000190734863
+        ],
+        "gate": "open/lowered",
+        "wheelAngle": 0
+      },
+      {
+        "frame": 84,
+        "time": 3.4583333333333335,
+        "shot": "site",
+        "boatY": -11.96591,
+        "waterLevel": 2,
+        "camera": [
+          -22.814285278320312,
+          -49.51785659790039,
+          19.703571319580078
+        ],
+        "target": [
+          0.0,
+          2.0,
+          15.300000190734863
+        ],
+        "gate": "open/lowered",
+        "wheelAngle": 0
+      },
+      {
+        "frame": 85,
+        "time": 3.5,
+        "shot": "entry",
+        "boatY": -11.92098,
+        "waterLevel": 2,
+        "camera": [
+          10.0,
+          -32.0,
+          5.0
+        ],
+        "target": [
+          0.0,
+          -9.92098331451416,
+          3.4000000953674316
+        ],
+        "gate": "open/lowered",
+        "wheelAngle": 0
+      },
+      {
+        "frame": 168,
+        "time": 6.958333333333333,
+        "shot": "entry",
+        "boatY": -7.22154,
+        "waterLevel": 2,
+        "camera": [
+          9.505952835083008,
+          -32.0,
+          5.098809719085693
+        ],
+        "target": [
+          0.0,
+          -5.221542835235596,
+          3.4000000953674316
+        ],
+        "gate": "open/lowered",
+        "wheelAngle": 0
+      },
+      {
+        "frame": 252,
+        "time": 10.458333333333334,
+        "shot": "entry",
+        "boatY": -1.97716,
+        "waterLevel": 2,
+        "camera": [
+          9.005952835083008,
+          -32.0,
+          5.198809623718262
+        ],
+        "target": [
+          0.0,
+          0.022837519645690918,
+          3.4000000953674316
+        ],
+        "gate": "open/lowered",
+        "wheelAngle": 0
+      },
+      {
+        "frame": 253,
+        "time": 10.5,
+        "shot": "water",
+        "boatY": -1.92065,
+        "waterLevel": 2,
+        "camera": [
+          -3.0,
+          8.679352760314941,
+          3.0
+        ],
+        "target": [
+          -0.44999998807907104,
+          4.079353332519531,
+          2.1500000953674316
+        ],
+        "gate": "open/lowered",
+        "wheelAngle": 0
+      },
+      {
+        "frame": 336,
+        "time": 13.958333333333334,
+        "shot": "water",
+        "boatY": 1.55663,
+        "waterLevel": 2,
+        "camera": [
+          -2.8669872283935547,
+          12.156634330749512,
+          3.0266025066375732
+        ],
+        "target": [
+          -0.44999998807907104,
+          7.556633949279785,
+          2.1500000953674316
+        ],
+        "gate": "open/lowered",
+        "wheelAngle": 0
+      },
+      {
+        "frame": 408,
+        "time": 16.958333333333332,
+        "shot": "water",
+        "boatY": 2.0,
+        "waterLevel": 2,
+        "camera": [
+          -2.7516026496887207,
+          12.600000381469727,
+          3.0496795177459717
+        ],
+        "target": [
+          -0.44999998807907104,
+          8.0,
+          2.1500000953674316
+        ],
+        "gate": "open/lowered",
+        "wheelAngle": 0
+      }
+    ],
+    "seconds": 2616.98,
+    "paidCalls": 0,
+    "limitations": [
+      "illustrative geometry, not a surveyed model",
+      "surface waves and bow wakes, not a fluid-volume simulation",
+      "body motion excerpt; no wheel rotation or Higgsfield introduction in this test"
+    ]
+  },
+  "assemblerHash": "85a7cf814ea70bf77bb7b1ad31afad6e1c294ed2350110eeab7771892d6691de",
+  "paidCalls": 0,
+  "scope": "17-second motion proof, not a full-film replacement or production deployment",
+  "contact": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261009-falkirk-immersive-motion/final/qa/motion-contact.jpg",
+  "visualReview": {
+    "inspectedSeconds": [
+      0.5,
+      3.4,
+      3.6,
+      7,
+      10.4,
+      10.6,
+      14,
+      16.5
+    ],
+    "observed": [
+      "Establishing frame includes whole boat after framing correction",
+      "The orange boat approaches and enters the same open lower gondola",
+      "Cut-adjacent frames preserve the same hull, water height and stationary wheel",
+      "Close views show changing water highlights, the hull waterline and the same deck",
+      "Captions are legible, no additional explanatory title overlay; final silent hold has no lingering caption"
+    ],
+    "limitations": [
+      "Representative frame inspection, not a claim of continuous human playback",
+      "No scientific validation of simulated displaced volume; water animation is illustrative",
+      "User aesthetic approval remains separate from technical checks"
+    ]
+  }
+}

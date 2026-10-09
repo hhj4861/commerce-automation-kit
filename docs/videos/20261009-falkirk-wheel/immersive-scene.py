@@ -1,6 +1,6 @@
 """Falkirk architectural look-development: one continuous place, three cameras.
 Original illustrative geometry. No borrowed imagery, physics claim or API calls.
-Run in Blender 4.5; output path is mandatory. Keyframes only, not a video.
+Run in Blender 4.5; output path is mandatory. Static keyframes; --build-only exposes this same scene to the motion renderer.
 """
 import argparse, hashlib, json, math, random, sys
 from pathlib import Path
@@ -8,6 +8,7 @@ sys.dont_write_bytecode = True
 import bpy
 from mathutils import Vector
 p=argparse.ArgumentParser();p.add_argument('--out',type=Path,required=True);p.add_argument('--shot',choices=['all','site','entry','water'],default='all');p.add_argument('--percent',type=int,default=50);p.add_argument('--samples',type=int,default=48)
+p.add_argument('--build-only',action='store_true')
 a=p.parse_args(sys.argv[sys.argv.index('--')+1:]);a.out.mkdir(parents=True,exist_ok=True)
 random.seed(4109)
 S=bpy.context.scene;bpy.ops.object.select_all(action='SELECT');bpy.ops.object.delete(use_global=False)
@@ -231,7 +232,7 @@ SHOTS={
 assert abs(B.location.z-2.05)<1e-5;assert WATER_Z==2;assert BOAT_Y+6.65>-4.7;assert len(SHOTS)==3
 records=[]
 for name,c in SHOTS.items():
- if a.shot not in ['all',name]:continue
+ if a.build_only or a.shot not in ['all',name]:continue
  cam.location=c['camera'];cam.rotation_euler=(Vector(c['target'])-cam.location).to_track_quat('-Z','Y').to_euler();d.type='PERSP';d.lens=c['lens'];d.clip_end=1500;d.dof.use_dof=True;d.dof.focus_distance=(Vector(c['focus'])-cam.location).length;d.dof.aperture_fstop=c['fstop']
  S.render.filepath=str(a.out/(name+'.png'));bpy.ops.render.render(write_still=True)
  records.append(dict(shot=name,**c,file=str(a.out/(name+'.png')),sha256=hashlib.sha256((a.out/(name+'.png')).read_bytes()).hexdigest()))
