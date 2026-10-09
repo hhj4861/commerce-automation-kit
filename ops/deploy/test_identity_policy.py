@@ -46,7 +46,10 @@ class IdentityPolicy(unittest.TestCase):
 
     def test_image_builder_can_only_write_the_shared_ai_repository(self):
         binding = block(MAIN, 'resource "google_service_account_iam_member" "images_federation"')
-        self.assertIn("/subject/repo:hhj4861/commerce-automation-kit:ref:refs/heads/main", binding)
+        # The repository uses GitHub's immutable subject (owner and repo ids in the sub claim);
+        # the default "repo:owner/name" form was denied on the first build (2026-10-09).
+        self.assertIn("/subject/repo:hhj4861@71001056/commerce-automation-kit@1310729493:ref:refs/heads/main", binding)
+        self.assertNotIn("/subject/repo:hhj4861/commerce-automation-kit:", binding)
         writer = block(MAIN, 'resource "google_artifact_registry_repository_iam_member" "images_writer"')
         self.assertRegex(writer, r'repository\s*=\s*"shared-ai"')
         self.assertRegex(writer, r'role\s*=\s*"roles/artifactregistry\.writer"')
