@@ -53,8 +53,8 @@ resource "google_service_account" "images" {
 resource "google_service_account_iam_member" "images_federation" {
   service_account_id = google_service_account.images.name
   role               = "roles/iam.workloadIdentityUser"
-  # GitHub's default subject for a job without an environment.
-  member = "principal://iam.googleapis.com/${google_iam_workload_identity_pool.images.name}/subject/repo:hhj4861/commerce-automation-kit:ref:refs/heads/main"
+  # This repository uses GitHub's immutable subject (owner/repo ids), not "repo:owner/name".
+  member = "principal://iam.googleapis.com/${google_iam_workload_identity_pool.images.name}/subject/repo:hhj4861@71001056/commerce-automation-kit@1310729493:ref:refs/heads/main"
 }
 resource "google_artifact_registry_repository_iam_member" "images_writer" {
   project    = data.google_project.personal.project_id

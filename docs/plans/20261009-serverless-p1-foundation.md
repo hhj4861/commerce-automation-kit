@@ -1028,7 +1028,7 @@ Expected: 버킷 생성, `versioning_enabled: true`.
 - [x] **6-3 shared-ai-host apply(승인).** 6-2의 plan을 저장한 파일로 apply한다. 6-4·6-5까지 마치면 PR 머지를 요청한다.
 - [x] **6-4 WIF 이미지 신원 apply(승인).** 6-3(Artifact Registry 생성) 뒤에 한다. `terraform init -input=false`(빈 GCS prefix) 뒤 plan의 기대값은 `7 to add, 0 to change, 0 to destroy`다(R6, 사전 읽기 전용 plan과 같음). 다른 값이 보이면 멈추고 원인을 기록한다.
 - [x] **6-5 저장소 변수 설정(승인).** `gh variable set GCP_IMAGES_WIF_PROVIDER --body "<output>"`, `gh variable set GCP_IMAGES_SERVICE_ACCOUNT --body "<output>"`. 둘 다 비밀이 아니다(기존 `GCP_DEPLOY_*`와 같은 성격).
-- [ ] **6-6 머지 뒤 이미지 빌드(사용자 머지 + 승인).** PR이 main에 들어간 뒤 `gh workflow run shared-ai-images.yml -f image=litellm-staging`과 `-f image=edge-staging`을 실행한다. 실행 요약의 digest를 기록한다. 첫 실행에서 토큰 교환이 실패하면 GitHub OIDC `sub` 형식(`repo:hhj4861/commerce-automation-kit:ref:refs/heads/main`)을 확인한다(`TODO(D1)`).
+- [x] **6-6 머지 뒤 이미지 빌드(사용자 머지 + 승인).** PR이 main에 들어간 뒤 `gh workflow run shared-ai-images.yml -f image=litellm-staging`과 `-f image=edge-staging`을 실행한다. 실행 요약의 digest를 기록한다. 첫 실행에서 토큰 교환이 실패하면 GitHub OIDC `sub` 형식을 확인한다. (2026-10-09 결과: 이 저장소는 immutable subject `repo:hhj4861@71001056/commerce-automation-kit@1310729493:ref:refs/heads/main`을 써서 바인딩을 고쳤다. `docs/qa/20261009-serverless-phase1.md`)
 - [ ] **6-6b (선택, 승인) 다른 브랜치 토큰 거부 실측.** 마스터 플랜 1-2의 검증 항목이다. job의 `if:`를 뺀 임시 브랜치 사본을 dispatch해 STS가 토큰을 거부하는지 기록하고, 임시 브랜치를 지운다. 하지 않으면 정적 정책 테스트(provider 조건의 ref·workflow_ref 고정)가 이 검증을 대신한다.
 - [ ] **6-7 Neon 스테이징(사용자).** Neon 가입 → 프로젝트 `shared-ai-stg`(aws-us-east-2, PostgreSQL 16) 생성 → direct(비풀러) 연결 문자열에 `sslmode=require&connect_timeout=15`를 붙여 Secret Manager `litellm-stg-database-url`에 새 버전으로 넣는다(콘솔). 값은 대화에 붙여 넣지 않는다.
 
