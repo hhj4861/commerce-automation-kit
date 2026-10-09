@@ -18,10 +18,10 @@
 | VM `shared-ai` | GCE e2-standard-2, pd-balanced 80GB, us-central1-a | **10/09 06:13 사용자 계정으로 정지.** 지난 14일 CPU 평균 12%·최대 27% |
 | edge | Cloud Run `shared-ai`(공개 caddy 이미지, `reverse-proxy --to <VM IP>:8080` 인자, Terraform 관리, `allUsers`) → Direct VPC(egress `PRIVATE_RANGES_ONLY`, 프록시 서브넷 /26, Private Google Access 켜짐) → VM Caddy | VM Caddy가 접두사를 떼고 `/llm/*`(허용목록 6개), `/discovery/*`, `/accounts/*`, Dify 경로, `/health`를 라우팅한다. 그 외 404 |
 | LiteLLM + Postgres 16 | VM(:4100, 루프백) | 메모리 638MiB(+DB 53MiB). 앱별 가상 키(팀·모델 허용목록·30일 예산·RPM 30), JEV(TypeSafe) 패스스루, Gemini native `generateContent`, ElevenLabs STT/TTS. `STORE_MODEL_IN_DB=False`. 관리 작업은 IAP SSH 뒤 루프백에서 `gateway.py`로 한다 |
-| topic-discovery | VM(:4195), SQLite | 70MiB. **운영은 v1.1(`3857765`)**이고, main의 v1.2·v2.x는 미배포다(클라이언트와 공동 배포 필요). `BEGIN IMMEDIATE`, scope 잠금, 멱등성, 일일 예산. JEV는 node bridge로 호출한다(클라이언트 제한 5초, 서브프로세스 12초). 운영 JEV 키 만료 **2026-11-02 06:00 UTC**. 자동 백업 없음, 수동 배포 |
-| accounts v1 | VM(:4190), SQLite + Fernet | 68MiB. **운영 사용 기록 없음**(Hanmadi 변수 미주입). `codex`는 ChatGPT 기기 로그인 전용이다(API 키는 400). `claude`는 API 키 또는 `claude-code` 로그인이다. POST는 202를 돌려주고 비동기로 검증한다. provider당 미해제 연결은 1개(409)이고, 만료되면 행을 남긴 채 `expired`로 바꾼다. fcntl 잠금, 서브프로세스, 최대 15분 로그인, 60초 정리 루프 |
-| Dify | VM(:4180) | **10/09 중지**(재시작 정책 `no`, 데이터 보존). 운영 미사용 |
-| 배포 | `deploy/litellm` → WIF(단일 SA) → IAP SSH → `litellm-release.py`(pg_dump·롤백) | discovery·edge·accounts는 수동 배포다. Terraform은 수동으로 apply한다. **state 파일 위치 미확인**: README는 git에서 제외한 `data/shared-ai/`에 둔다고 적었지만 지금 그곳에 없다 |
+| topic-discovery | VM(:4195), SQLite | 70MiB. **운영 이미지는 `7e9d866`(PR #156 머지, 코드 `discovery-v1.2`)**이다. README의 "v1.1(`3857765`)"은 오래된 기록이다(Phase 0 확인). main의 v2.x·native review는 미배포다(클라이언트와 공동 배포 필요). DB 행 수는 requests 11, active 0, action_results 8. `BEGIN IMMEDIATE`, scope 잠금, 멱등성, 일일 예산. JEV는 node bridge로 호출한다(클라이언트 제한 5초, 서브프로세스 12초). 운영 JEV 키 만료 **2026-11-02 06:00 UTC**. 자동 백업 없음, 수동 배포 |
+| accounts v1 | VM(:4190), SQLite + Fernet | 68MiB. **실사용자 없음**(Hanmadi 변수 미주입). 행은 9/29 QA 연결 15건뿐이다: festa claude(connected 1·disconnected 5), festa codex(connected 1·disconnected 4), hanmadi codex(disconnected 3·error 1). `codex`는 ChatGPT 기기 로그인 전용이다(API 키는 400). `claude`는 API 키 또는 `claude-code` 로그인이다. POST는 202를 돌려주고 비동기로 검증한다. provider당 미해제 연결은 1개(409)이고, 만료되면 행을 남긴 채 `expired`로 바꾼다. fcntl 잠금, 서브프로세스, 최대 15분 로그인, 60초 정리 루프 |
+| Dify | VM(:4180) | **10/09 중지**(재시작 정책 `no`, 데이터 보존). 운영 미사용: nginx 접근 로그에 9/27~28 구축·QA 호출만 있고 그 뒤 API 호출 0건 |
+| 배포 | `deploy/litellm` → WIF(단일 SA) → IAP SSH → `litellm-release.py`(pg_dump·롤백) | discovery·edge·accounts는 수동 배포다. Terraform은 수동으로 apply한다. **shared-ai-host state는 저장소를 옮기기 전 위치(iCloud `IdeaProjects/97.개인/workSpace/commerce-automation-kit/data/shared-ai/`)에 있다**(serial 16, 2026-09-27). **WIF 모듈(`ops/deploy/gcp-identity`) state는 찾지 못했다** |
 | 비밀값 | VM `.env`(0600), Cloudflare `cak-credential-broker`(discovery 클라이언트 키·JEV 키) | Secret Manager 미사용 |
 | 백업 | 디스크 스냅샷 매일 7일, LiteLLM은 배포 때 pg_dump | discovery·accounts 논리 백업 없음 |
 
@@ -97,7 +97,7 @@ GitHub Actions(WIF)             — 이미지 빌드·푸시(로컬 Docker 없�
 | **D4** | **accounts** | **API 키 연결 전용으로 재설계하고 VM 폐기와 분리.** 폐기 때 `/accounts`는 404로 바꾸고, v2는 크리티컬 패스 밖의 Phase 7에서 만든다. `openai` provider를 추가하고, `codex`는 구독 로그인 값으로 남겨 400으로 거부한다 | 제공사 원문(§8.2): Anthropic은 사용자 대신 구독 자격으로 요청하거나 Claude.ai 자격·세션 토큰을 수집·저장·중개하는 것을 허용하지 않는다. OpenAI가 제3자 앱에 ChatGPT 플랜 사용을 여는 것은 일부 상업 파트너 대상 제한 시험이다. 실사용자가 없다. 기존 `codex` 값의 의미를 바꾸면 append-only 규칙에 어긋난다 |
 | D5 | LiteLLM `codex-<id>` 구독 워커 라우트 | **폐기** | 실행 중인 컨테이너가 없고 관리자 CLI 전용이다. D4와 같은 약관 쟁점이 있다 |
 | D6 | Dify | **폐기**(최종 스냅샷 보관 후 삭제) | 운영 미사용(Phase 0에서 Hanmadi `DIFY_*` 변수 부재 확인) |
-| **D7** | discovery 앱 버전 | **인프라 이전 전에 VM에서 v1.1 → main(+#161) 릴리스를 먼저 한다. 인프라는 같은 앱 버전에 저장소 계층만 바꿔 옮긴다** | 앱 변화와 인프라 회귀를 한 번에 섞으면 원인을 구분할 수 없다. 대기 중인 v2.7 실검증도 이 릴리스에서 한다. 대안은 v1.1에 `PostgresStore`만 백포트하는 것이다(저장소 코드를 두 번 작성) |
+| **D7** | discovery 앱 버전 | **인프라 이전 전에 VM에서 운영 `7e9d866`(v1.2) → main(+#161) 릴리스를 먼저 한다. 인프라는 같은 앱 버전에 저장소 계층만 바꿔 옮긴다** | 앱 변화와 인프라 회귀를 한 번에 섞으면 원인을 구분할 수 없다. 대기 중인 v2.7 실검증도 이 릴리스에서 한다. 대안은 `7e9d866`에 `PostgresStore`만 백포트하는 것이다(저장소 코드를 두 번 작성) |
 
 ## 4. Global Constraints
 
@@ -136,13 +136,14 @@ GitHub Actions(WIF)             — 이미지 빌드·푸시(로컬 Docker 없�
   - 청구 보고서에서 같은 청구 계정의 다른 프로젝트 2개가 쓰는 Cloud Run·Secret Manager·Artifact Registry 무료 등급 사용량 확인
   - 새 `deploy/*` 브랜치 보호 규칙(저장소 관리자 권한, `deploy.mjs`가 요구)
 - **완료 기준:** 결정 기록, state 확보, (D0) VM 정상 기동과 공개 `/llm`·`/discovery` 응답, 확인값 기록.
+- **실행 결과(2026-10-09):** `docs/qa/20261009-serverless-phase0.md`. D0~D7 권장안 채택, VM e2-small 기동, shared-ai-host state 위치 확보(plan 검증은 1-1로 이월), WIF state 미발견(1-2에서 import).
 
 ### Phase 1 — 기반 (2일)
 
 | 태스크 | 산출물 | 검증 |
 |---|---|---|
 | 1-1 Terraform 기반 | `services/shared-ai-host/`에 다음을 추가한다. Artifact Registry(정리 정책: 이미지별 최근 5개). 런타임 SA(litellm·discovery·maintenance·admin, edge는 기존 `shared-ai-proxy` 재사용). Secret Manager 시크릿 정의(값 없음, 버전 변수는 숫자만 허용). GCS 백업 버킷(us-central1 Standard, 객체 버전 관리, 이전 버전 14개 초과분 삭제). Cloud Monitoring 알림 정책(Job 실패, 백업 신선도 26시간, 메일 채널). 각 Cloud Run 서비스·Job 골격(`ignore_changes`: image·traffic·client 필드, 백엔드는 `invoker_iam_disabled`) | `terraform fmt/validate`, `shared-ai-host.yml` CI, plan 출력을 PR에 첨부. apply는 사용자 승인 후 수동 |
-| 1-2 WIF 분리 | `ops/deploy/gcp-identity/main.tf`: `attribute.ref` 매핑, 대상별 배포 SA(litellm·discovery·edge·maintenance)와 브랜치 조건. 빌드 토큰은 main과 보호된 `deploy/*`에서만 발급한다. 권한은 자원 단위로 준다(`run.developer`, 런타임 SA `serviceAccountUser`, 저장소 단위 `artifactregistry.writer`). IAP·OS Login 권한은 Phase 6까지 유지 | terraform validate, `platform-gitops-check.yml`, 다른 브랜치에서 토큰 발급 거부 확인 |
+| 1-2 WIF 분리 | `ops/deploy/gcp-identity/main.tf`: `attribute.ref` 매핑, 대상별 배포 SA(litellm·discovery·edge·maintenance)와 브랜치 조건. 빌드 토큰은 main과 보호된 `deploy/*`에서만 발급한다. 권한은 자원 단위로 준다(`run.developer`, 런타임 SA `serviceAccountUser`, 저장소 단위 `artifactregistry.writer`). IAP·OS Login 권한은 Phase 6까지 유지. 이 모듈의 state는 Phase 0에서 찾지 못했으므로, 먼저 `import` 블록으로 기존 pool·provider·SA·IAM을 다시 등록하고 `plan`이 변경 없음을 보인 뒤 수정한다 | terraform validate, `platform-gitops-check.yml`, import 뒤 plan 무변경, 다른 브랜치에서 토큰 발급 거부 확인 |
 | 1-3 빌드 경로 | `.github/workflows/shared-ai-images.yml`(WIF → AR 푸시, digest 출력). 이미지는 edge(caddy digest + Caddyfile), litellm(공식 digest + `/etc/litellm/config.yaml`, `/app`은 건드리지 않음), maintenance(postgres:16 digest + 스크립트)다. `gateway.py render --target cloudrun`은 `.env` 대신 저장소의 비밀 없는 모델 설정 파일로 렌더하고 구독 라우트(D5)를 넣지 않는다 | 렌더 테스트: 비밀값 없음, 모델 별칭이 VM과 같음, 비밀은 `os.environ/` 참조만. 빌드 1회, digest 기록 |
 | 1-4 Neon 스테이징 | Free 프로젝트 1개(PoC 전용), PG 16. us-central1 Cloud Run에서 aws-us-east-1·us-east-2 왕복 지연을 재고 리전을 정한다 | psql 접속, 지연 기록 |
 
@@ -194,7 +195,7 @@ GitHub Actions(WIF)             — 이미지 빌드·푸시(로컬 Docker 없�
 
 ### Phase 4 — discovery 운영 전환 (작업 3.5일, 코드는 Phase 2부터 병렬)
 
-**선행 조건(D7):** VM에서 v1.1 → main(+#161) 릴리스를 별도 승인으로 마치고 관찰한다. 클라이언트 공동 배포 순서는 `services/topic-discovery/README.md`를 따른다. #161이 아직 머지 전이면 4-1은 그 브랜치 위에 쌓아 작업하고 머지 뒤 rebase한다. 운영 JEV 키를 갱신한다.
+**선행 조건(D7):** VM에서 운영 `7e9d866`(v1.2) → main(+#161) 릴리스를 별도 승인으로 마치고 관찰한다. 클라이언트 공동 배포 순서는 `services/topic-discovery/README.md`를 따른다. #161이 아직 머지 전이면 4-1은 그 브랜치 위에 쌓아 작업하고 머지 뒤 rebase한다. 운영 JEV 키를 갱신한다.
 
 | 태스크 | 산출물 | 검증 |
 |---|---|---|
@@ -220,7 +221,7 @@ GitHub Actions(WIF)             — 이미지 빌드·푸시(로컬 Docker 없�
 
 - 7일 동안 관찰한다: 오류율, 콜드 스타트, spend 기록 일치, Neon CU-시간, 청구 계정 무료 등급 사용량, 백업 성공과 신선도 알림.
 - 사용자 승인 후 폐기한다.
-  1. edge에서 `/accounts/*`를 404로 바꾼 리비전을 배포한다(실사용 없음 재확인).
+  1. accounts v1에 남은 QA 연결(9/29 festa claude·codex connected 각 1건)을 `DELETE`로 해제하고, 제공사 쪽 세션·키 폐기는 사용자가 확인한다. 그다음 edge에서 `/accounts/*`를 404로 바꾼 리비전을 배포한다(실사용 없음 재확인).
   2. VM 최종 스냅샷을 만든다(30일 보관 후 삭제).
   3. Terraform에서 `prevent_destroy`와 `deletion_protection`을 해제한다.
   4. VM, 디스크, 스냅샷 정책, VM용 방화벽(IAP 22·8080), Dify 자산을 삭제한다. `KEEP_AUTO_SNAPSHOTS` 때문에 남는 자동 스냅샷도 지운다(최종 스냅샷 제외).
