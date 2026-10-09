@@ -19,6 +19,7 @@
 | R3 | 대상별 배포 SA는 Phase 5로 미룬다. 1-2는 import와 이미지 빌드 provider·SA만 한다 | 자동 배포는 Phase 5에서 붙는다. 그 전 배포는 승인받은 수동 `gcloud`다 | Phase 5가 반나절 늘어남 |
 | R4 | Neon 리전은 지리상 가까운 aws-us-east-2로 정한다. Phase 2에서 왕복 지연을 재고 30ms를 넘으면 바꾼다 | 지연 비교용 프로젝트를 두 개 만드는 비용을 아낀다 | DB 조회마다 수 ms |
 | R5 | 작업 worktree는 로컬(`commerce-automation-kit-worktrees/shared-ai-serverless`)에 두고 Phase가 끝나면 지운다 | iCloud 데몬이 I/O 대기에 묶여 git·Terraform 파일 읽기가 시간 초과된다(Phase 0 기록) | 로컬 디스크 약 0.3GB를 일시 사용 |
+| R6 | (실행 중 추가) WIF는 import하지 않고 새로 만든다. 퇴역할 VM에 SSH·IAP 권한을 주는 기존 VM 배포 신원은 코드에서 지운다. 태스크 2의 `imports.tf`와 import 테스트는 쓰지 않았다 | 읽기 전용 plan과 gcloud 조회 결과 모듈이 적용된 적이 없었다(WIF pool·`cak-litellm-deploy` SA·STS API·저장소 변수 없음). 만들면 곧 퇴역할 VM에 새 권한만 생긴다 | 전환 기간에 VM용 GitOps 배포를 쓸 수 없다(원래도 동작한 적 없음) |
 
 ## Global Constraints
 
@@ -258,6 +259,8 @@ git commit -m "feat(shared-ai): add GCS state backend, registry and secret conta
 ```
 
 ### Task 2: WIF import와 이미지 빌드 신원
+
+> **실행 중 변경(R6):** 모듈이 적용된 적이 없어 아래 Step 3의 `imports.tf`는 만들지 않았다. 대신 VM 배포 신원(배포 provider·SA·OS Login·IAP)을 코드에서 지우고, import 테스트를 `test_token_exchange_apis_are_enabled`·`test_no_vm_deploy_identity_is_created`로 바꿨다. 읽기 전용 plan 결과는 `7 to add, 0 to change, 0 to destroy`다.
 
 **Files:**
 - Create: `ops/deploy/gcp-identity/imports.tf`
@@ -1023,7 +1026,7 @@ Expected: 버킷 생성, `versioning_enabled: true`.
 
 - [ ] **6-2 shared-ai-host state 이전과 plan(승인).** 로컬 0600 사본을 모듈 디렉터리의 `terraform.tfstate`로 둔다(`.gitignore`가 `*.tfstate*` 제외). `terraform init -input=false -force-copy`로 GCS에 복사하고, `terraform state list | wc -l`이 16인지 확인한다. 로컬 `terraform.tfstate*`와 스크래치패드 사본을 지운다. `terraform plan`의 기대값은 `11 to add, 0 to change, 0 to destroy`(API 2, AR 1, 시크릿 8)다. machine_type 변경이 없어야 한다.
 - [ ] **6-3 shared-ai-host apply(승인).** 6-2의 plan을 저장한 파일로 apply한다.
-- [ ] **6-4 WIF import와 이미지 신원 apply(승인).** `terraform init -input=false`(빈 GCS prefix) 뒤 plan의 기대값은 `10 to import, 4 to add, 0 to change, 0 to destroy`다. 변경(change)이 보이면 멈추고 원인을 기록한다. apply 뒤 `imports.tf`를 지우는 커밋을 만든다(그때 import 테스트는 skip된다).
+- [ ] **6-4 WIF 이미지 신원 apply(승인).** 6-3(Artifact Registry 생성) 뒤에 한다. `terraform init -input=false`(빈 GCS prefix) 뒤 plan의 기대값은 `7 to add, 0 to change, 0 to destroy`다(R6, 사전 읽기 전용 plan과 같음). 다른 값이 보이면 멈추고 원인을 기록한다.
 - [ ] **6-5 저장소 변수 설정(승인).** `gh variable set GCP_IMAGES_WIF_PROVIDER --body "<output>"`, `gh variable set GCP_IMAGES_SERVICE_ACCOUNT --body "<output>"`. 둘 다 비밀이 아니다(기존 `GCP_DEPLOY_*`와 같은 성격).
 - [ ] **6-6 머지 뒤 이미지 빌드(사용자 머지 + 승인).** PR이 main에 들어간 뒤 `gh workflow run shared-ai-images.yml -f image=litellm-staging`과 `-f image=edge-staging`을 실행한다. 실행 요약의 digest를 기록한다. 첫 실행에서 토큰 교환이 실패하면 GitHub OIDC `sub` 형식(`repo:hhj4861/commerce-automation-kit:ref:refs/heads/main`)을 확인한다(`TODO(D1)`).
 - [ ] **6-7 Neon 스테이징(사용자).** Neon 가입 → 프로젝트 `shared-ai-stg`(aws-us-east-2, PostgreSQL 16) 생성 → direct(비풀러) 연결 문자열에 `sslmode=require&connect_timeout=15`를 붙여 Secret Manager `litellm-stg-database-url`에 새 버전으로 넣는다(콘솔). 값은 대화에 붙여 넣지 않는다.

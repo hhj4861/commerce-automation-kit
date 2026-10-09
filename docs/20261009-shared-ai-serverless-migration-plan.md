@@ -21,7 +21,7 @@
 | topic-discovery | VM(:4195), SQLite | 70MiB. **운영 이미지는 `7e9d866`(PR #156 머지, 코드 `discovery-v1.2`)**이다. README의 "v1.1(`3857765`)"은 오래된 기록이다(Phase 0 확인). main의 v2.x·native review는 미배포다(클라이언트와 공동 배포 필요). DB 행 수는 requests 11, active 0, action_results 8. `BEGIN IMMEDIATE`, scope 잠금, 멱등성, 일일 예산. JEV는 node bridge로 호출한다(클라이언트 제한 5초, 서브프로세스 12초). 운영 JEV 키 만료 **2026-11-02 06:00 UTC**. 자동 백업 없음, 수동 배포 |
 | accounts v1 | VM(:4190), SQLite + Fernet | 68MiB. **실사용자 없음**(Hanmadi 변수 미주입). 행은 9/29 QA 연결 15건뿐이다: festa claude(connected 1·disconnected 5), festa codex(connected 1·disconnected 4), hanmadi codex(disconnected 3·error 1). `codex`는 ChatGPT 기기 로그인 전용이다(API 키는 400). `claude`는 API 키 또는 `claude-code` 로그인이다. POST는 202를 돌려주고 비동기로 검증한다. provider당 미해제 연결은 1개(409)이고, 만료되면 행을 남긴 채 `expired`로 바꾼다. fcntl 잠금, 서브프로세스, 최대 15분 로그인, 60초 정리 루프 |
 | Dify | VM(:4180) | **10/09 중지**(재시작 정책 `no`, 데이터 보존). 운영 미사용: nginx 접근 로그에 9/27~28 구축·QA 호출만 있고 그 뒤 API 호출 0건 |
-| 배포 | `deploy/litellm` → WIF(단일 SA) → IAP SSH → `litellm-release.py`(pg_dump·롤백) | discovery·edge·accounts는 수동 배포다. Terraform은 수동으로 apply한다. **shared-ai-host state는 저장소를 옮기기 전 위치(iCloud `IdeaProjects/97.개인/workSpace/commerce-automation-kit/data/shared-ai/`)에 있다**(serial 16, 2026-09-27). **WIF 모듈(`ops/deploy/gcp-identity`) state는 찾지 못했다** |
+| 배포 | (설계만) `deploy/litellm` → WIF(단일 SA) → IAP SSH → `litellm-release.py`(pg_dump·롤백) | **WIF는 적용된 적이 없어(Phase 1 확인) `deploy/litellm` 자동 배포는 동작한 적이 없다.** 실제 배포는 모두 수동이다. Terraform은 수동으로 apply한다. **shared-ai-host state는 저장소를 옮기기 전 위치(iCloud `IdeaProjects/97.개인/workSpace/commerce-automation-kit/data/shared-ai/`)에 있다**(serial 16, 2026-09-27). WIF 모듈(`ops/deploy/gcp-identity`)은 state가 없는데, 적용된 적이 없기 때문이다 |
 | 비밀값 | VM `.env`(0600), Cloudflare `cak-credential-broker`(discovery 클라이언트 키·JEV 키) | Secret Manager 미사용 |
 | 백업 | 디스크 스냅샷 매일 7일, LiteLLM은 배포 때 pg_dump | discovery·accounts 논리 백업 없음 |
 
@@ -136,14 +136,14 @@ GitHub Actions(WIF)             — 이미지 빌드·푸시(로컬 Docker 없�
   - 청구 보고서에서 같은 청구 계정의 다른 프로젝트 2개가 쓰는 Cloud Run·Secret Manager·Artifact Registry 무료 등급 사용량 확인
   - 새 `deploy/*` 브랜치 보호 규칙(저장소 관리자 권한, `deploy.mjs`가 요구)
 - **완료 기준:** 결정 기록, state 확보, (D0) VM 정상 기동과 공개 `/llm`·`/discovery` 응답, 확인값 기록.
-- **실행 결과(2026-10-09):** `docs/qa/20261009-serverless-phase0.md`. D0~D7 권장안 채택, VM e2-small 기동, shared-ai-host state 확보·plan 검증(차이는 machine_type뿐), WIF state 미발견(1-2에서 import).
+- **실행 결과(2026-10-09):** `docs/qa/20261009-serverless-phase0.md`. D0~D7 권장안 채택, VM e2-small 기동, shared-ai-host state 확보·plan 검증(차이는 machine_type뿐), WIF는 적용된 적 없음(Phase 1에서 확인, import 불필요).
 
 ### Phase 1 — 기반 (2일)
 
 | 태스크 | 산출물 | 검증 |
 |---|---|---|
 | 1-1 Terraform 기반 | `services/shared-ai-host/`에 다음을 추가한다. Artifact Registry(정리 정책: 이미지별 최근 5개). 런타임 SA(litellm·discovery·maintenance·admin, edge는 기존 `shared-ai-proxy` 재사용). Secret Manager 시크릿 정의(값 없음, 버전 변수는 숫자만 허용). GCS 백업 버킷(us-central1 Standard, 객체 버전 관리, 이전 버전 14개 초과분 삭제). Cloud Monitoring 알림 정책(Job 실패, 백업 신선도 26시간, 메일 채널). 각 Cloud Run 서비스·Job 골격(`ignore_changes`: image·traffic·client 필드, 백엔드는 `invoker_iam_disabled`) | `terraform fmt/validate`, `shared-ai-host.yml` CI, plan 출력을 PR에 첨부. apply는 사용자 승인 후 수동 |
-| 1-2 WIF 분리 | `ops/deploy/gcp-identity/main.tf`: `attribute.ref` 매핑, 대상별 배포 SA(litellm·discovery·edge·maintenance)와 브랜치 조건. 빌드 토큰은 main과 보호된 `deploy/*`에서만 발급한다. 권한은 자원 단위로 준다(`run.developer`, 런타임 SA `serviceAccountUser`, 저장소 단위 `artifactregistry.writer`). IAP·OS Login 권한은 Phase 6까지 유지. 이 모듈의 state는 Phase 0에서 찾지 못했으므로, 먼저 `import` 블록으로 기존 pool·provider·SA·IAM을 다시 등록하고 `plan`이 변경 없음을 보인 뒤 수정한다 | terraform validate, `platform-gitops-check.yml`, import 뒤 plan 무변경, 다른 브랜치에서 토큰 발급 거부 확인 |
+| 1-2 WIF 분리 | `ops/deploy/gcp-identity/main.tf`: `attribute.ref` 매핑, 대상별 배포 SA(litellm·discovery·edge·maintenance)와 브랜치 조건. 빌드 토큰은 main과 보호된 `deploy/*`에서만 발급한다. 권한은 자원 단위로 준다(`run.developer`, 런타임 SA `serviceAccountUser`, 저장소 단위 `artifactregistry.writer`). **이 모듈은 적용된 적이 없다**(Phase 1 확인: pool·배포 SA·STS API·저장소 변수 없음). 그래서 import 없이 새로 만들고, 퇴역할 VM에 SSH·IAP 권한을 주는 배포 신원은 만들지 않는다. 대상별 배포 SA는 Phase 5로 미룬다(Phase 1 계획 R3·R6) | terraform validate, `platform-gitops-check.yml`, plan은 추가만(변경·삭제 0), 다른 브랜치에서 토큰 발급 거부 확인 |
 | 1-3 빌드 경로 | `.github/workflows/shared-ai-images.yml`(WIF → AR 푸시, digest 출력). 이미지는 edge(caddy digest + Caddyfile), litellm(공식 digest + `/etc/litellm/config.yaml`, `/app`은 건드리지 않음), maintenance(postgres:16 digest + 스크립트)다. `gateway.py render --target cloudrun`은 `.env` 대신 저장소의 비밀 없는 모델 설정 파일로 렌더하고 구독 라우트(D5)를 넣지 않는다 | 렌더 테스트: 비밀값 없음, 모델 별칭이 VM과 같음, 비밀은 `os.environ/` 참조만. 빌드 1회, digest 기록 |
 | 1-4 Neon 스테이징 | Free 프로젝트 1개(PoC 전용), PG 16. us-central1 Cloud Run에서 aws-us-east-1·us-east-2 왕복 지연을 재고 리전을 정한다 | psql 접속, 지연 기록 |
 
@@ -225,7 +225,7 @@ GitHub Actions(WIF)             — 이미지 빌드·푸시(로컬 Docker 없�
   2. VM 최종 스냅샷을 만든다(30일 보관 후 삭제).
   3. Terraform에서 `prevent_destroy`와 `deletion_protection`을 해제한다.
   4. VM, 디스크, 스냅샷 정책, VM용 방화벽(IAP 22·8080), Dify 자산을 삭제한다. `KEEP_AUTO_SNAPSHOTS` 때문에 남는 자동 스냅샷도 지운다(최종 스냅샷 제외).
-  5. WIF의 IAP·OS Login 권한을 회수하고 `litellm-release.py`와 IAP SSH 배포 경로를 지운다.
+  5. `litellm-release.py`와 IAP SSH 배포 경로를 지운다. VM 배포 WIF는 적용된 적이 없으므로 회수할 권한은 없다.
   6. accounts v1 코드와 CI를 지운다. 대상은 v1 `account_service.py`·`account_worker.py`·`claude_code.py`·`subscription_runtime.py`·`Dockerfile.accounts`와 `hanmadi-model-connections.yml`의 native-runtime·v1 스모크다. Hanmadi 연결 기능의 CI 공백은 기록하고 Phase 7에서 v2 기준으로 되살린다.
 - edge의 VPC egress와 프록시 서브넷은 유지한다(internal 경로).
 - **완료 기준:** 다음 청구 주기에 Compute Engine 항목이 없다(콘솔 확인). 롤백 후보가 참조하던 시크릿 버전을 정리한다.
