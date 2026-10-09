@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { contextReferences, parseContextReviews, reviewVideoContext } from "./video-language-review";
-import { applyContextReview, classifyVideoChecks, needsContextReview, VIDEO_CHECKS, videoJudgmentReason, type VideoChecks, type VideoReviewContext } from "./video-policy";
+import { applyContextReview, classifyVideoChecks, crossReviewedOnly, needsContextReview, VIDEO_CHECKS, videoJudgmentReason, type VideoChecks, type VideoReviewContext } from "./video-policy";
 import { judgmentState, judgeVideo } from "./video-provider";
 
 const unit = { text: "ナプキンをください。", meaning: "냅킨을 주세요.", reading: "나푸킨오 쿠다사이", at: 12, evidence: "카페에서 냅킨을 요청하는 일본어 표현을 설명한다." };
@@ -303,4 +303,12 @@ test("bound corpus claims need independent JEV agreement; mismatch, uncertainty 
     assert.equal(counters.jevInputTokens, ["error", "malformed"].includes(outcome) ? null : 20);
     assert.equal(JSON.stringify(judged).includes("private error"), false);
   }
+});
+
+test("drafts surface candidates that only a secondary LLM review accepted", () => {
+  const base = classifyVideoChecks(0, checks());
+  const accepted = (reason: "context_review" | "language_review" | "qualified") => ({ ...base, accepted: true, disposition: "accepted" as const, reason });
+  assert.equal(crossReviewedOnly([accepted("context_review"), accepted("language_review"), accepted("qualified"),
+    { ...base, reason: "context_review_attention" as const }]), 2);
+  assert.equal(crossReviewedOnly([]), 0);
 });
