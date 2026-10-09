@@ -28,7 +28,15 @@ variable "machine_type" {
 variable "secret_versions" {
   description = "Secret Manager versions referenced by Cloud Run, pinned to numbers (never latest)."
   type        = map(string)
-  default     = {}
+  # Version 1 is the first value added to each container; bump after adding a new version.
+  default = {
+    "litellm-stg-master-key"   = "1"
+    "litellm-stg-salt-key"     = "1"
+    "litellm-stg-database-url" = "1"
+    "hanmadi-chat-api-key"     = "1"
+    "elevenlabs-api-key"       = "1"
+    "typesafe-api-key"         = "1"
+  }
   validation {
     condition     = alltrue([for v in values(var.secret_versions) : can(regex("^[1-9][0-9]*$", v))])
     error_message = "Pin Secret Manager versions to positive integers; latest is not allowed."
@@ -43,6 +51,7 @@ locals {
   secrets = toset([
     "litellm-stg-master-key", "litellm-stg-salt-key", "litellm-stg-database-url",
     "hanmadi-chat-api-key", "replay-chat-api-key", "festa-chat-api-key", "elevenlabs-api-key", "typesafe-api-key",
+    "neon-stg-api-key",
   ])
 }
 provider "google" {
@@ -53,7 +62,7 @@ provider "google" {
   # account via GOOGLE_OAUTH_ACCESS_TOKEN. Never write it into tfvars or state.
 }
 resource "google_project_service" "api" {
-  for_each           = toset(["compute.googleapis.com", "run.googleapis.com", "iam.googleapis.com", "iap.googleapis.com", "artifactregistry.googleapis.com", "secretmanager.googleapis.com"])
+  for_each           = toset(["compute.googleapis.com", "run.googleapis.com", "iam.googleapis.com", "iap.googleapis.com", "artifactregistry.googleapis.com", "secretmanager.googleapis.com", "cloudscheduler.googleapis.com"])
   service            = each.value
   disable_on_destroy = false
 }
