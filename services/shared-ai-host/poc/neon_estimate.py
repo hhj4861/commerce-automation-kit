@@ -28,6 +28,12 @@ def db_touches(requests, shutdown_after=None, periodic=None, window=None):
     return sorted(touches)
 
 
+def sessions(requests, shutdown_after):
+    """Instance sessions in the request times: each one starts cold and ends with a flush."""
+    ordered = sorted(requests)
+    return sum(1 for a, b in zip(ordered, ordered[1:] + [math.inf]) if b - a > shutdown_after)
+
+
 def active_seconds(touches, idle=300):
     total, end = 0.0, -math.inf
     for touch in sorted(touches):
@@ -59,8 +65,10 @@ def main(argv=None):
     end = max(stamps)
     touches = db_touches(stamps, args.shutdown_after, args.periodic, (end - args.days * 86400, end))
     per_day = active_seconds(touches, args.idle) / args.days
+    # Cold starts per day (master plan (g)); a warm ping keeps one instance, so there is none to count.
+    cold = None if args.shutdown_after is None else round(sessions(stamps, args.shutdown_after) / args.days, 1)
     print(json.dumps({"requests": len(stamps), "days": args.days, "shutdown_after": args.shutdown_after,
-                      "periodic": args.periodic, **monthly_cost(per_day)}))
+                      "periodic": args.periodic, "sessions_per_day": cold, **monthly_cost(per_day)}))
 
 
 if __name__ == "__main__":

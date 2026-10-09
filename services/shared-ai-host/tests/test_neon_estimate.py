@@ -17,6 +17,10 @@ class EstimateTest(unittest.TestCase):
     def test_each_instance_session_ends_with_a_shutdown_flush(self):
         self.assertEqual(ne.db_touches([2000, 0, 100], shutdown_after=900), [0, 100, 1000, 2000, 2900])
 
+    def test_each_instance_session_is_one_cold_start(self):
+        self.assertEqual(ne.sessions([2000, 0, 100], shutdown_after=900), 2)
+        self.assertEqual(ne.sessions([], shutdown_after=900), 0)
+
     def test_a_warm_instance_touches_the_database_periodically(self):
         self.assertEqual(ne.db_touches([50], periodic=600, window=(0, 1800)), [0, 50, 600, 1200, 1800])
 
