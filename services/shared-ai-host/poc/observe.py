@@ -105,14 +105,50 @@ def neon_from_env():
 
 
 def non_idle_seconds(records, end=None):
-    """Seconds the compute was not idle, from neon-watch lines (state changes with times)."""
-    changes = [(r["at"], r["state"]) for r in records if r.get("step") == "neon-state"]
+    """Seconds the compute was not idle, from neon-watch lines (state changes with times).
+    Time inside neon-gap lines (the watcher was not polling) is unknown, so it is left out
+    here and reported by gap_seconds()."""
+    changes = sorted((r["at"], r["state"]) for r in records if r.get("step") == "neon-state")
+    gaps = [(r["from"], r["to"]) for r in records if r.get("step") == "neon-gap"]
     end = end if end is not None else max([r["at"] for r in records] or [0])
     total = 0.0
     for (at, state), (next_at, _) in zip(changes, changes[1:] + [(end, None)]):
         if state != "idle":
-            total += max(0.0, next_at - at)
+            unknown = sum(max(0.0, min(next_at, stop) - max(at, start)) for start, stop in gaps)
+            total += max(0.0, next_at - at - unknown)
     return total
+
+
+def gap_seconds(records):
+    return float(sum(r["to"] - r["from"] for r in records if r.get("step") == "neon-gap"))
+
+
+def watch(neon, hours, interval, emit_fn=emit, sleep=time.sleep, clock=time.time):
+    """Log Neon state changes for `hours` of wall-clock time. A poll gap over three intervals
+    (laptop asleep, process stopped) is logged as neon-gap and the state is logged again, so
+    unknown time is never counted as a known state. Start and end lines are always written."""
+    def usage():
+        result = safe(neon.usage)
+        return {"usage_error": result} if isinstance(result, str) else result
+
+    emit_fn({"step": "neon-watch-start", **usage()})
+    deadline, last, last_poll = clock() + hours * 3600, None, None
+    while clock() < deadline:
+        now = clock()
+        if last_poll is not None and now - last_poll > 3 * interval:
+            emit_fn({"step": "neon-gap", "from": last_poll, "to": now})
+            last = None
+        last_poll = now
+        endpoint = safe(neon.endpoint)
+        if isinstance(endpoint, str):
+            emit_fn({"step": "neon-error", "error": endpoint})
+        else:
+            seen = (endpoint["current_state"], endpoint.get("last_active"))
+            if seen != last:  # an unchanged last_active while idle shows polling does not wake it
+                emit_fn({"step": "neon-state", "state": seen[0], "last_active": seen[1]})
+                last = seen
+        sleep(interval)
+    emit_fn({"step": "neon-watch-end", **usage()})
 
 
 def pg_env(url):
@@ -190,7 +226,8 @@ def main(argv=None):
         return
     if args.command == "neon-active":
         records = [json.loads(line) for line in open(args.file) if line.strip()]
-        emit({"step": "neon-active", "file": os.path.basename(args.file), "active_seconds": non_idle_seconds(records)})
+        emit({"step": "neon-active", "file": os.path.basename(args.file), "active_seconds": non_idle_seconds(records),
+              "unknown_seconds": gap_seconds(records)})
         return
     if args.command == "run-usage":
         token = access_token()
@@ -206,20 +243,7 @@ def main(argv=None):
     elif args.command == "neon-wait-idle":
         emit({"step": "neon-wait-idle", "state": neon.wait_for("idle", args.timeout_minutes * 60)})
     elif args.command == "neon-watch":
-        emit({"step": "neon-watch-start", **neon.usage()})
-        deadline, last = time.monotonic() + args.hours * 3600, None
-        while time.monotonic() < deadline:
-            endpoint = safe(neon.endpoint)
-            if isinstance(endpoint, str):
-                emit({"step": "neon-error", "error": endpoint})
-                time.sleep(args.interval)
-                continue
-            seen = (endpoint["current_state"], endpoint.get("last_active"))
-            if seen != last:  # an unchanged last_active while idle shows polling does not wake it
-                emit({"step": "neon-state", "state": seen[0], "last_active": seen[1]})
-                last = seen
-            time.sleep(args.interval)
-        emit({"step": "neon-watch-end", **neon.usage()})
+        watch(neon, args.hours, args.interval)
 
 
 if __name__ == "__main__":

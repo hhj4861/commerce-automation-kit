@@ -82,6 +82,34 @@ class NeonTest(unittest.TestCase):
         self.assertEqual(observe.non_idle_seconds(records), 360.0)
 
 
+    def test_time_inside_a_sleep_gap_is_unknown_not_active(self):
+        records = [{"step": "neon-state", "at": 0, "state": "active"},
+                   {"step": "neon-gap", "at": 1000, "from": 100, "to": 1000},
+                   {"step": "neon-state", "at": 1000, "state": "active"},
+                   {"step": "neon-state", "at": 1100, "state": "idle"}, {"step": "neon-watch-end", "at": 1200}]
+        self.assertEqual(observe.non_idle_seconds(records), 200.0)
+        self.assertEqual(observe.gap_seconds(records), 900.0)
+
+    def test_watch_marks_a_sleep_gap_and_logs_the_state_again(self):
+        now, steps, sleeps = [0.0], [], iter([60, 3600, 60])
+        neon = observe.Neon("k", "p", opener=None)
+        neon.endpoint = lambda: {"type": "read_write", "current_state": "idle", "last_active": "t0"}
+        neon.usage = lambda: {"active_time_seconds": 1}
+        observe.watch(neon, hours=3700 / 3600, interval=60, emit_fn=lambda e: steps.append(e["step"]),
+                      sleep=lambda s: now.__setitem__(0, now[0] + next(sleeps)), clock=lambda: now[0])
+        self.assertEqual(steps, ["neon-watch-start", "neon-state", "neon-gap", "neon-state", "neon-watch-end"])
+
+    def test_watch_writes_its_end_line_even_when_usage_fails(self):
+        def fail():
+            raise urllib.error.URLError("timed out")
+
+        neon, entries = observe.Neon("k", "p", opener=None), []
+        neon.usage = fail
+        observe.watch(neon, hours=0, interval=60, emit_fn=entries.append, sleep=lambda s: None, clock=lambda: 0.0)
+        self.assertEqual([e["step"] for e in entries], ["neon-watch-start", "neon-watch-end"])
+        self.assertEqual(entries[-1]["usage_error"], "error:URLError")
+
+
 class DatabaseTest(unittest.TestCase):
     def test_password_reaches_libpq_through_the_environment(self):
         env = observe.pg_env(URL)
