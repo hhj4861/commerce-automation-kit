@@ -1,0 +1,55 @@
+name: Shared AI images
+on:
+  workflow_dispatch:
+    inputs:
+      image:
+        description: Image to build from this main commit
+        type: choice
+        options: [litellm-staging, litellm-production, edge-staging]
+permissions:
+  contents: read
+  id-token: write
+concurrency:
+  group: shared-ai-images-${{ inputs.image }}
+  cancel-in-progress: false
+jobs:
+  build:
+    # WIF trusts only this workflow dispatched on main; the guard fails fast elsewhere.
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      REGISTRY: us-central1-docker.pkg.dev/replay-live-508202/shared-ai
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Check image builder identity configuration
+        env:
+          PROVIDER: ${{ vars.GCP_IMAGES_WIF_PROVIDER }}
+          ACCOUNT: ${{ vars.GCP_IMAGES_SERVICE_ACCOUNT }}
+        run: |
+          test -n "$PROVIDER" && test -n "$ACCOUNT"
+      - uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: ${{ vars.GCP_IMAGES_WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_IMAGES_SERVICE_ACCOUNT }}
+      - uses: google-github-actions/setup-gcloud@v3
+      - name: Build and push ${{ inputs.image }}
+        env:
+          IMAGE: ${{ inputs.image }}
+          SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          case "$IMAGE" in
+            litellm-staging) context=services/ai-gateway/cloudrun; arg="TARGET=staging" ;;
+            litellm-production) context=services/ai-gateway/cloudrun; arg="TARGET=production" ;;
+            edge-staging) context=services/shared-ai-host/edge; arg="VARIANT=staging" ;;
+            *) echo "Unknown image" >&2; exit 1 ;;
+          esac
+          gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
+          ref="$REGISTRY/$IMAGE:$SHA"
+          docker build --build-arg "$arg" -t "$ref" "$context"
+          docker push "$ref"
+          digest=$(docker inspect --format '{{index .RepoDigests 0}}' "$ref")
+          echo "$IMAGE from $SHA: \`$digest\`" >> "$GITHUB_STEP_SUMMARY"

@@ -1,10 +1,10 @@
 name: Shared AI cloud deployment
 on:
   pull_request:
-    paths: ["services/shared-ai-host/**", "services/ai-gateway/Caddyfile", ".github/workflows/shared-ai-host.yml"]
+    paths: ["services/shared-ai-host/**", "services/ai-gateway/Caddyfile", ".github/workflows/shared-ai-host.yml", ".github/workflows/shared-ai-images.yml"]
   push:
     branches: [main]
-    paths: ["services/shared-ai-host/**", "services/ai-gateway/Caddyfile", ".github/workflows/shared-ai-host.yml"]
+    paths: ["services/shared-ai-host/**", "services/ai-gateway/Caddyfile", ".github/workflows/shared-ai-host.yml", ".github/workflows/shared-ai-images.yml"]
 permissions:
   contents: read
 jobs:
