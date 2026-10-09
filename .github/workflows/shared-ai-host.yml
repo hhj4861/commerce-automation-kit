@@ -22,6 +22,7 @@ jobs:
         working-directory: services/shared-ai-host
       - run: terraform validate
         working-directory: services/shared-ai-host
+      - run: python3 -m unittest discover -s services/shared-ai-host/tests -p 'test_*.py' -v
       - run: bash -n services/shared-ai-host/startup.sh
       - run: docker pull caddy:2@sha256:0c994536bddb66445885237f1a5dcc1916bccea922661c76b4e9fc24061f9b52
       - run: python3 services/shared-ai-host/tests/edge.py

@@ -3,6 +3,11 @@ terraform {
   required_providers {
     google = { source = "hashicorp/google", version = "~> 7.0" }
   }
+  # Bucket bootstrapped once with gcloud (versioned, uniform access, public access prevention).
+  backend "gcs" {
+    bucket = "replay-live-508202-tfstate"
+    prefix = "shared-ai-host"
+  }
 }
 
 variable "project_id" {
@@ -14,10 +19,19 @@ variable "project_id" {
 }
 variable "machine_type" {
   type    = string
-  default = "e2-standard-2"
+  default = "e2-small"
   validation {
-    condition     = contains(["e2-standard-2", "e2-standard-4"], var.machine_type)
-    error_message = "Choose the reviewed 2-vCPU/8-GiB or 4-vCPU/16-GiB configuration."
+    condition     = contains(["e2-small", "e2-standard-2", "e2-standard-4"], var.machine_type)
+    error_message = "Choose e2-small (serverless transition) or the reviewed 8-GiB/16-GiB configurations."
+  }
+}
+variable "secret_versions" {
+  description = "Secret Manager versions referenced by Cloud Run, pinned to numbers (never latest)."
+  type        = map(string)
+  default     = {}
+  validation {
+    condition     = alltrue([for v in values(var.secret_versions) : can(regex("^[1-9][0-9]*$", v))])
+    error_message = "Pin Secret Manager versions to positive integers; latest is not allowed."
   }
 }
 locals {
@@ -25,6 +39,11 @@ locals {
   zone   = "us-central1-a"
   name   = "shared-ai"
   caddy  = "docker.io/library/caddy@sha256:0c994536bddb66445885237f1a5dcc1916bccea922661c76b4e9fc24061f9b52"
+  # Containers only; values are added out of band and referenced by numeric version.
+  secrets = toset([
+    "litellm-stg-master-key", "litellm-stg-salt-key", "litellm-stg-database-url",
+    "hanmadi-chat-api-key", "replay-chat-api-key", "festa-chat-api-key", "elevenlabs-api-key", "typesafe-api-key",
+  ])
 }
 provider "google" {
   project = var.project_id
@@ -34,9 +53,44 @@ provider "google" {
   # account via GOOGLE_OAUTH_ACCESS_TOKEN. Never write it into tfvars or state.
 }
 resource "google_project_service" "api" {
-  for_each           = toset(["compute.googleapis.com", "run.googleapis.com", "iam.googleapis.com", "iap.googleapis.com"])
+  for_each           = toset(["compute.googleapis.com", "run.googleapis.com", "iam.googleapis.com", "iap.googleapis.com", "artifactregistry.googleapis.com", "secretmanager.googleapis.com"])
   service            = each.value
   disable_on_destroy = false
+}
+resource "google_artifact_registry_repository" "images" {
+  location               = local.region
+  repository_id          = "shared-ai"
+  description            = "Shared AI images built from reviewed main commits"
+  format                 = "DOCKER"
+  cleanup_policy_dry_run = false
+  docker_config {
+    immutable_tags = true
+  }
+  # Rollback candidates reference older digests: keep the newest five per image and
+  # delete only versions older than 30 days.
+  cleanup_policies {
+    id     = "keep-recent"
+    action = "KEEP"
+    most_recent_versions {
+      keep_count = 5
+    }
+  }
+  cleanup_policies {
+    id     = "delete-old"
+    action = "DELETE"
+    condition {
+      older_than = "2592000s"
+    }
+  }
+  depends_on = [google_project_service.api]
+}
+resource "google_secret_manager_secret" "managed" {
+  for_each  = local.secrets
+  secret_id = each.value
+  replication {
+    auto {}
+  }
+  depends_on = [google_project_service.api]
 }
 resource "google_compute_network" "ai" {
   name                    = local.name

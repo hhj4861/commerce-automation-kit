@@ -15,14 +15,15 @@ Terraform 1.5.7 / Google provider 7.46.1의 fmt·validate·시작 스크립트 �
 - 실제 공개 HTTPS 일본어 회화 HTTP 200, 일본어 TTS HTTP 200/audio-mpeg/47,273 bytes, 같은 음성의 STT HTTP 200 및 원문 일치를 확인했다. 미인증 401, Replay 키의 Hanmadi 모델 접근 403, 관리 경로 404를 확인했다.
 - LiteLLM/DB 재시작 후 기존 앱 키로 모델 조회 HTTP 200. salt 및 앱 키 파일 권한은 0600.
 - 서버 내 `/opt/shared-ai/backups/20260927-pre-apps`에 두 DB의 논리 백업과 비공개 설정을 보관했다. 네트워크가 없는 임시 DB에 복원하여 LiteLLM 86개·Dify 144개 public 테이블을 확인했고, 검사 컨테이너는 제거했다. 이는 아직 앱/대화가 없는 초기 상태의 복원 검증이며 전체 서버 재해 복구 시험은 아니다.
-- Terraform state와 이전 Hanmadi 배포 ID는 개발 프로젝트의 Git 제외 `data/shared-ai/`에도 0600으로 보관한다. 공급자·앱 키는 이 로컬 디렉터리에 복사하지 않았다.
+- 이전 Hanmadi 배포 ID는 개발 프로젝트의 Git 제외 `data/shared-ai/`에 0600으로 보관한다. 공급자·앱 키는 이 로컬 디렉터리에 복사하지 않았다.
+- Terraform state는 GCS `gs://replay-live-508202-tfstate/shared-ai-host`(객체 버전 관리)에 있다(2026-10-09 서버리스 Phase 1에서 이전). `terraform init -input=false`로 초기화한다. 저장소를 옮기기 전 위치의 로컬 state는 이전 직후 보관용으로만 남기고 쓰지 않는다.
 - **대기:** Dify 최초 관리자·워크스페이스 생성, 공식 플러그인/두 앱 설정, Dify 실회화, Hanmadi Vercel 비공개 변수 주입과 운영 E2E. 자동 승인 검토가 관리자 이메일·권한 범위의 구체적 승인을 요구하여 `guswhd1085@gmail.com` 단일 워크스페이스 소유자 생성 승인을 요청했다. 거부된 초기화는 실행되지 않았다.
 - Hanmadi 기존 운영 배포 `dpl_5Humr4Kq3GBe47nTWboLqHFwpYu1`와 기존 변수는 변경하지 않았다. 개인 Codex OAuth도 클라우드에 복사하지 않았다.
 - 배포된 이전 `/healthz`는 VM 내부에서 200, 공개 Cloud Run에서 404였다. 이 수정본은 공개 상태 경로를 `/health`로 변경한다. 적용 전까지 공개 상태 검사 성공으로 보고하지 않는다.
 
 ## 구성
 
-- Iowa VM: 기본 `e2-standard-2`(2 vCPU/8 GiB), 80 GiB balanced 영구 디스크. 여유 구성은 `e2-standard-4`(4 vCPU/16 GiB).
+- Iowa VM: 2026-10-09부터 `e2-small`(공유 2 vCPU/2 GiB, Dify 중지 뒤 상주 약 1.1GB), 80 GiB balanced 영구 디스크. 서버리스 전환(`docs/20261009-shared-ai-serverless-migration-plan.md`) 기간의 축소 구성이며, 이전 구성 `e2-standard-2`(2 vCPU/8 GiB)·`e2-standard-4`(4 vCPU/16 GiB)도 허용값으로 남긴다.
 - Dify/LiteLLM은 기존 Compose와 별도 DB를 유지한다. 개인 Codex 워커는 계정별로 추가한다.
 - Cloud Run은 TLS 프록시만 담당하며 관리형 `run.app` 주소를 제공한다. 별도 도메인을 구매하지 않는다.
 - Direct VPC로 VM의 8080 포트에 연결한다. 프록시 전용 서브넷(`10.79.0.0/26`)만 해당 포트에 접근한다. Cloud Run 네트워크 태그는 egress 규칙용이므로 VM ingress의 source tag로 사용하지 않는다.
@@ -30,7 +31,7 @@ Terraform 1.5.7 / Google provider 7.46.1의 fmt·validate·시작 스크립트 �
 - VM에는 서비스 계정을 붙이지 않는다. 프록시 서비스 계정에도 프로젝트 역할을 부여하지 않는다.
 - 디스크 자동 삭제 방지, VM/Cloud Run 삭제 방지, 매일 스냅샷/7일 보존을 설정한다. 스냅샷은 crash-consistent이며 DB 논리 백업·복원 시험의 대체가 아니다.
 
-기본 상시 비용 예산용 계산(730시간, USD, 할인/무료 크레딧 미반영): VM 약 $48.92 + 디스크 약 $8 + IPv4 약 $3.65 = **약 $60.57/월**. 스냅샷·Cloud Run·트래픽·세금·모델 API는 별도다. 4-vCPU 구성은 같은 고정 항목 기준 약 $109.49/월이다. $70/$120은 초기 예산 후보이며 청구 상한 보장이 아니다. 리전이나 가격이 바뀌면 apply 전에 다시 계산한다.
+기본 상시 비용 예산용 계산(730시간, USD, 할인/무료 크레딧 미반영): VM 약 $48.92 + 디스크 약 $8 + IPv4 약 $3.65 = **약 $60.57/월**. 스냅샷·Cloud Run·트래픽·세금·모델 API는 별도다. 4-vCPU 구성은 같은 고정 항목 기준 약 $109.49/월이다. $70/$120은 초기 예산 후보이며 청구 상한 보장이 아니다. 리전이나 가격이 바뀌면 apply 전에 다시 계산한다. 2026-10-09 이후 e2-small 기준은 VM 약 $12.2(e2-standard-2 단가의 1/4로 추정, 공식 단가 `TODO(D1)`) + 디스크 약 $8 + IPv4 약 $3.65 ≈ **$23.9/월**이다.
 
 근거: [VM 가격](https://cloud.google.com/products/compute/pricing/general-purpose), [디스크 가격](https://cloud.google.com/compute/disks-image-pricing), [IPv4/트래픽 가격](https://cloud.google.com/vpc/network-pricing), [Cloud Run Direct VPC](https://docs.cloud.google.com/run/docs/configuring/vpc-direct-vpc).
 
