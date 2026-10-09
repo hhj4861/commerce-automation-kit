@@ -171,7 +171,7 @@ GitHub Actions(WIF)             — 이미지 빌드·푸시(로컬 Docker 없�
 
 유료 호출은 약 15건이며 합계 $0.10 미만으로 예상한다. 착수 전에 승인을 받는다.
 
-보온 ping은 DB를 건드리지 않는 `/health/liveliness`로 보낸다. Scheduler가 internal 서비스를 직접 호출할 수 있는지는 `TODO(D1)`이다. 안 되면 edge 허용목록에 이 경로 하나만 더한다.
+보온 ping은 DB를 건드리지 않는 `/health/liveliness`로 보낸다. 같은 프로젝트의 Scheduler는 internal 서비스를 직접 호출할 수 있으므로(§8.1, 2026-10-09 확정) edge 허용목록은 바꾸지 않는다. 다만 LiteLLM은 CPU가 있을 때 60초마다 DB에 하트비트를 써서, ping이 Neon을 깨울 수 있다(§8.2). 그래서 (g)에서 잰다. 상세 실행 계획은 `docs/plans/20261009-serverless-p2-staging-poc.md`에 있다.
 
 **게이트 판단:**
 
@@ -328,7 +328,7 @@ VM accounts v1 SQLite는 Phase 0에서 연결 행 수만 확인한다(토큰 내
 | startup CPU boost | 확정 | 시작 시간 동안 부스트된 CPU만큼 과금, 새 서비스 기본 활성 | [cpu](https://docs.cloud.google.com/run/docs/configuring/services/cpu) |
 | internal ingress 조건 | 확정(조건부) | Direct VPC egress만으로는 internal이 아니다. 호출 측 egress `all-traffic` + 서브넷 Private Google Access 등으로 VPC를 거쳐야 한다. 프록시 서브넷 PGA는 이미 켜져 있다 | [private-networking](https://docs.cloud.google.com/run/docs/securing/private-networking), [ingress](https://docs.cloud.google.com/run/docs/securing/ingress) |
 | Direct VPC egress | 확정 | 컴퓨트 요금 없음, 같은 리전 Cloud Run 간 전송 무료. Cloud NAT를 쓰면 콜드 스타트가 30초 이상 늘 수 있다 → 백엔드는 VPC egress를 쓰지 않음(admin Job만 internal 호출용으로 사용, 인터넷 불필요) | [connecting-vpc](https://docs.cloud.google.com/run/docs/configuring/connecting-vpc) |
-| Scheduler → internal ingress | **미확인** | 보온 ping 경로 결정에 필요 | `TODO(D1)` |
+| Scheduler → internal ingress | 확정(2026-10-09) | 같은 프로젝트의 Cloud Scheduler가 기본 run.app URL로 호출하면 internal로 인정된다. IAM 인증은 따로 적용된다 | [ingress](https://docs.cloud.google.com/run/docs/securing/ingress), [Scheduler](https://docs.cloud.google.com/scheduler/docs/creating) |
 | Direct VPC egress IP 소요 | **미확인** | 프록시 서브넷 /26에 edge와 admin Job을 함께 두어도 되는지 | `TODO(D1)` |
 | ghcr 이미지 직접 배포 | 해당 없음 | 문서가 상충했으나("Cloud Run cannot pull from ghcr.io" 대 공개 이미지 가능), 자체 빌드 이미지를 AR에서만 배포하므로 무관 | [AR remote](https://docs.cloud.google.com/artifact-registry/docs/repositories/remote-repo), [LiteLLM deploy](https://docs.litellm.ai/docs/proxy/deploy) |
 | Neon Free | 확정 | 프로젝트당 1GB(계정 20GB), 월 100 CU-시간(소진 시 다음 주기까지 compute 정지), 5분 유휴 시 자동 중지(해제 불가), PITR 6시간 | [plans](https://neon.com/docs/introduction/plans), [pricing](https://neon.com/pricing), [scale-to-zero](https://neon.com/docs/introduction/scale-to-zero) |
@@ -359,7 +359,10 @@ VM accounts v1 SQLite는 Phase 0에서 연결 행 수만 확인한다(토큰 내
 | Cloud Run 권고 | 확정 | 공식 Terraform 기본 `gateway_min_instances = 1`: "keep … >= 1 if spend must keep draining while an instance is otherwise idle". 마이그레이션은 별도 Job | `litellm-migrate`, Phase 2 게이트 |
 | 시작 시 마이그레이션 | 확정 | 기본으로 매 시작 `prisma migrate deploy`. `DISABLE_SCHEMA_UPDATE=true`(env)로 생략(diff 점검은 남음) | §2 env, 2-1 기동 로그 확인 |
 | 필요 기능 지원 | 확정 | TypeSafe(`/typesafe/{endpoint}`), Gemini native `generateContent`, ElevenLabs speech/transcriptions 모두 1.102.1이 지원 | 버전 유지 |
-| 예산 초기화 관리 API, spend log 보존 설정, DB 연결 풀 상한 설정 이름 | **미확인** | 1.102.1 원문 확인 필요 | `TODO(D1)` |
+| 예산 보정 관리 API | 확정(소스, 2026-10-09) | `/key/update`의 `spend`(관리자 전용), `POST /key/{key}/reset_spend`(0 이상 현재 spend 이하). 초기화 작업은 만료되지 않았고 `budget_reset_at < now`이며 `budget_duration`이 있는 키를 고른다 | Phase 2 (c) 실패 시 3-2 admin Job |
+| DB 하트비트 | 확정(소스, 2026-10-09) | DB에 연결된 프록시는 60초마다 `LiteLLM_ProxyWorkerHeartbeat`에 쓴다(`PROXY_WORKER_HEARTBEAT_INTERVAL_SECONDS = 60`). 요청 기반 과금에서는 CPU가 있을 때만 돈다 | 보온 ping이 Neon을 깨울 수 있음 → Phase 2 (e)는 ping 없이, (g) g2에서 실측 |
+| `mock_response` | 확정(소스, 2026-10-09) | 기본으로 요청에서 제거된다. 키나 팀 metadata의 `allow_client_mock_response`가 true일 때만 허용된다. mock 응답도 spend log에 비용과 함께 남는다 | Phase 2 시험 키 발급 |
+| spend log 보존 설정, DB 연결 풀 상한 설정 이름 | **미확인** | 1.102.1 원문 확인 필요 | `TODO(D1)` |
 | Anthropic 구독 자격 | 확정(원문) | "Anthropic does not permit third-party developers to offer Claude.ai login into their own applications, or to route requests through Free, Pro, or Max plan credentials on behalf of their users. Moreover, developers may not collect, store, or intermediate Claude.ai credentials or session tokens" ([legal-and-compliance](https://code.claude.com/docs/en/legal-and-compliance)) | D4: 구독 경로 폐기 |
 | Anthropic Consumer Terms | 확정(원문) | 계정 자격 공유 금지, API 키 외 자동 접근은 명시 허용 시만 ([consumer-terms](https://www.anthropic.com/legal/consumer-terms)) | D4 |
 | OpenAI 제3자 앱의 ChatGPT 플랜 사용 | 확정(원문) | "currently available to selected commercial partners through a limited trial." 원격 호스팅 앱은 interest form ([SIWC](https://developers.openai.com/siwc)). 자동화에는 API 키 권장 | D4 |
