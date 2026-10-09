@@ -294,6 +294,19 @@ class Tests(unittest.TestCase):
         self.assertEqual(result['state'],'held');self.assertEqual(result['reasonCodes'],['request_expired'])
         self.assertEqual(result['usage']['generationClaims'],1);self.assertEqual(result['usage']['searchCalls'],2)
         self.assertIsNone(result['action']);self.jev.assert_not_called()
+    def test_empty_draft_after_unmatched_followup_search_is_distinguished(self):
+        first=self.research_start('research-unmatched')
+        self.search.return_value=[{'url':'https://dictionary.example/fer','title':'Dictionnaire','excerpt':'fer puddlé : définition du terme'}]
+        second,_=self.finish_action(first,self.lead_output())
+        self.assertEqual(second['researchDiagnostics'],[{'leadId':'lead-1','results':1,'entityMatches':0}])
+        result,_=self.finish_action(second,{'candidates':[]})
+        self.assertEqual(result['state'],'held');self.assertEqual(result['reasonCodes'],['research_evidence_unmatched'])
+        self.assertNotIn('Dictionnaire',json.dumps(result['researchDiagnostics']))
+        second,_=self.finish_action(self.research_start('research-matched'),self.lead_output())
+        self.assertEqual(second['researchDiagnostics'],[{'leadId':'lead-1','results':1,'entityMatches':1}])
+        result,_=self.finish_action(second,{'candidates':[]})
+        self.assertEqual(result['reasonCodes'],['no_grounded_candidates'])
+
     def test_second_generation_failure_and_empty_draft_are_terminal(self):
         for i,options in enumerate([{'generationError':True},{'output':{'candidates':[]}}]):
             second,_=self.finish_action(self.research_start('research-draft-error-'+str(i)),self.lead_output())
@@ -630,8 +643,50 @@ class Tests(unittest.TestCase):
             self.assertEqual(result['usage']['jevCalls'],1)
         finally:server.shutdown();server.server_close();thread.join()
 
+    def test_bridge_keeps_failure_code_and_records_whitelisted_jev_error(self):
+        from service import Jev
+        from http.server import BaseHTTPRequestHandler,ThreadingHTTPServer
+        class Limited(BaseHTTPRequestHandler):
+            def log_message(self,*args):pass
+            def do_POST(self):
+                self.rfile.read(int(self.headers['Content-Length']))
+                self.send_response(429);self.send_header('Content-Type','application/json');self.end_headers();self.wfile.write(b'{"error":"secret upstream text"}')
+        server=ThreadingHTTPServer(('127.0.0.1',0),Limited)
+        thread=threading.Thread(target=server.serve_forever,daemon=True);thread.start()
+        try:
+            self.d.jev=Jev({'PATH':os.environ['PATH'],'JEV_BASE_URL':'http://127.0.0.1:'+str(server.server_port),'JEV_API_KEY':'synthetic-jev-key','JEV_ALLOW_LOCALHOST':'1'})
+            result,_=self.complete(self.start())
+            row=result['candidates'][0]
+            self.assertEqual(row['decision'],'held')
+            self.assertEqual(row['reasonCodes'],['jev_unavailable'])
+            self.assertEqual(row['jevError'],'rate_limited')
+            self.assertNotIn('secret upstream text',json.dumps(result))
+        finally:server.shutdown();server.server_close();thread.join()
+
+    def test_new_requests_pin_the_jev_model_and_hold_a_different_answering_model(self):
+        sent=[]
+        def answer(model):
+            def run(payload):
+                sent.append(payload.get('jevModel'));return {**pass_result(payload),'model':model}
+            return run
+        self.jev.side_effect=answer('jev-1.13.0')
+        result,_=self.complete(self.start())
+        self.assertEqual(result['jevModel'],'jev-1.13.0');self.assertEqual(sent,['jev-1.13.0'])
+        self.assertEqual(result['candidates'][0]['decision'],'accepted')
+        self.jev.side_effect=answer('jev-2.0.0')
+        result,_=self.complete(self.start(key='model-drift-001',subject='b'*64),subject='b'*64)
+        self.assertEqual(result['candidates'][0]['decision'],'held')
+        self.assertEqual(result['candidates'][0]['reasonCodes'],['jev_model_mismatch'])
+        # Requests persisted before pinning keep accepting whatever model answered.
+        request=self.start(key='legacy-model-001',subject='c'*64)
+        with self.store.db() as db:
+            data=json.loads(db.execute('SELECT data FROM requests WHERE id=?',(request['requestId'],)).fetchone()[0])
+            data.pop('jevModel');db.execute('UPDATE requests SET data=? WHERE id=?',(json.dumps(data),request['requestId']))
+        sent.clear();result,_=self.complete(request,subject='c'*64)
+        self.assertEqual(result['candidates'][0]['decision'],'accepted');self.assertEqual(sent,[None])
+
     def test_experimental_version_requires_internal_opt_in_and_pins_requests(self):
-        self.assertEqual(RESEARCH_VERSION,'discovery-v2.2')
+        self.assertEqual(RESEARCH_VERSION,'discovery-v2.8')
         self.assertEqual(self.d.research_version,RESEARCH_VERSION)
         for version in ('unknown','discovery-v2.1'):
             with self.assertRaises(Failure):Discovery(self.store,self.search,self.jev,research_version=version)
@@ -718,6 +773,36 @@ class Tests(unittest.TestCase):
             second,_=self.finish_action(self.research_start('split-invalid-'+str(i)),self.lead_output())
             result,_=self.finish_action(second,self.draft_output())
             self.assertEqual(result['candidates'][0]['decision'],'held')
+
+    def test_location_is_required_only_for_architecture_from_v28(self):
+        from service import grounded_prompt
+        subjects=iter(('d'*64,'e'*64,'f'*64))
+        def location_question(category,rubric=None):
+            self.jev.reset_mock();subject=next(subjects)
+            first=self.start(key='location-'+subject[0],subject=subject,value={**INPUT,'category':category,'workflow':'research-v2'})
+            if rubric:
+                with self.store.db() as db:
+                    data=json.loads(db.execute('SELECT data FROM requests WHERE id=?',(first['requestId'],)).fetchone()[0])
+                    data['rubricVersion']=rubric;db.execute('UPDATE requests SET data=? WHERE id=?',(json.dumps(data),first['requestId']))
+            scope=self.d.scope('shopshorts',subject)
+            self.store.claim(scope,first['requestId'],first['action']['id'])
+            second=self.d.complete('shopshorts',subject,first['requestId'],{'actionId':first['action']['id'],'runtime':INPUT['runtime'],'output':self.lead_output()})
+            self.store.claim(scope,second['requestId'],second['action']['id'])
+            self.d.complete('shopshorts',subject,second['requestId'],{'actionId':second['action']['id'],'runtime':INPUT['runtime'],'output':self.draft_output()})
+            return second,self.jev.call_args.args[0]['questions']['support_location']
+        self.search.return_value=[{**SOURCE,'title':'공식 회전교1 회전교2 회전교3 설명'}]
+        second,q=location_question('과학')
+        self.assertEqual(second['rubricVersion'],'discovery-v2.8')
+        self.assertIn('not_applicable',q['criteria'])
+        self.assertIn('location is not established',second['action']['prompt'])
+        self.assertIn('never guess',second['action']['prompt'])
+        second,q=location_question('건축학')
+        self.assertNotIn('not_applicable',q['criteria'])
+        self.assertIn('omit that lead',second['action']['prompt'])
+        # Stored v2.2 requests keep the pinned questions and draft wording.
+        second,q=location_question('과학','discovery-v2.2')
+        self.assertNotIn('not_applicable',q['criteria'])
+        self.assertNotIn('never guess',second['action']['prompt'])
 
     def test_inflight_v22_payload_and_prompt_unchanged(self):
         first=self.research_start(rubric='discovery-v2.2')

@@ -1,8 +1,28 @@
 import {createDiscoveryClient} from '../../../services/topic-discovery/client.mjs';
 import {accountFailureCode,accountFailureMessage} from './llm-account-errors.js';
-const unavailable=reason=>{
-  const code=reason==='unsubstantiated_research_entity'?'DISCOVERY_RESEARCH_UNGROUNDED':['no_accepted_candidates','no_grounded_candidates','search_evidence_missing','no_research_leads','research_evidence_missing'].includes(reason)?'DISCOVERY_NO_ACCEPTED_CANDIDATES':reason==='skipped_by_budget'?'DISCOVERY_BUDGET_LIMIT':reason==='discovery_in_progress'?'DISCOVERY_IN_PROGRESS':'DISCOVERY_UNAVAILABLE';
-  return Object.assign(new Error(accountFailureMessage('codex',{code})),{status:503,code});
+const EVIDENCE_SHORTFALL=['no_grounded_candidates','search_evidence_missing','no_research_leads','research_evidence_missing','research_evidence_unmatched'];
+const CODE=/^[a-z_]{1,80}$/,UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+const unavailable=(reason,result)=>{
+  const code=reason==='unsubstantiated_research_entity'?'DISCOVERY_RESEARCH_UNGROUNDED':EVIDENCE_SHORTFALL.includes(reason)?'DISCOVERY_EVIDENCE_INSUFFICIENT':reason==='no_accepted_candidates'?'DISCOVERY_NO_ACCEPTED_CANDIDATES':reason==='review_held'?'DISCOVERY_REVIEW_HELD':reason==='skipped_by_budget'?'DISCOVERY_BUDGET_LIMIT':reason==='discovery_in_progress'?'DISCOVERY_IN_PROGRESS':'DISCOVERY_UNAVAILABLE';
+  const error=Object.assign(new Error(accountFailureMessage('codex',{code})),{status:503,code});
+  if(result)error.discovery={requestId:result.requestId,reasonCodes:[...(result.reasonCodes||[]),...result.candidates.flatMap(c=>c.reasonCodes||[])],
+    jevErrors:result.candidates.map(c=>c.jevError).filter(Boolean)};
+  return error;
+};
+// Operator log suffix: fixed codes and the server request id only, never candidate or upstream text.
+export function discoveryDiagnostics(error){
+  const d=error?.discovery;if(!d)return '';
+  const codes=list=>[...new Set(list.filter(v=>typeof v==='string'&&CODE.test(v)))].join(',');
+  const reasons=codes(d.reasonCodes),jev=codes(d.jevErrors);
+  return (typeof d.requestId==='string'&&UUID.test(d.requestId)?' request='+d.requestId:'')+(reasons?' reasons='+reasons:'')+(jev?' jev='+jev:'');
+}
+// Candidate-level failures that say nothing about the user's interest: retry/operator, not "be more specific".
+const REVIEW_FAILURES=new Set(['jev_unavailable','verification_failed','invalid_jev_response','skipped_by_budget','generation_failed',
+  'invalid_native_review','invalid_native_review_citation','missing_native_review_citation']);
+const heldReason=result=>{
+  const codes=result.candidates.flatMap(c=>Array.isArray(c.reasonCodes)?c.reasonCodes:[]);
+  if(codes.some(code=>REVIEW_FAILURES.has(code)))return 'review_unavailable';
+  return result.candidates.some(c=>c.decision==='held')?'review_held':'no_accepted_candidates';
 };
 export async function discoverRecommendations(brief,env,{generate,signal,provider,history,subject,requestId,assertConnection,now=new Date(),fetch}={}) {
   if(!subject||!requestId||!assertConnection)throw unavailable('identity_required');
@@ -21,7 +41,8 @@ export async function discoverRecommendations(brief,env,{generate,signal,provide
       {idempotencyKey:requestId,signal,assertConnection,generate:async prompt=>(await generate(prompt,{signal,draftOnly:true,model:model==='provider-default'?undefined:model})).value});
   } catch(e){if(accountFailureCode(e)!=='UNKNOWN')throw e;throw unavailable(e.code||'unavailable');}
   const accepted=result.candidates.filter(c=>c.decision==='accepted');
-  if(result.state!=='complete'||!accepted.length)throw unavailable(result.reasonCodes?.[0]||'no_accepted_candidates');
+  if(result.state!=='complete')throw unavailable(result.reasonCodes?.[0]||'no_accepted_candidates',result);
+  if(!accepted.length)throw unavailable(heldReason(result),result);
   const sources=[...new Map(result.evidence.map(e=>[e.url,{title:e.title,url:e.url}])).values()];
   const suggestions=accepted.map(c=>({topic:c.title,direction:c.direction,reason:c.whyItMatters,
     ...(brief.intent==='keywords'?{keyword:c.keyword}:{}),

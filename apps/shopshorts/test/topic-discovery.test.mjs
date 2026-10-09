@@ -7,6 +7,7 @@ import {join} from 'node:path';
 import {tmpdir} from 'node:os';
 import {fileURLToPath} from 'node:url';
 import {recommendBrief} from '../lib/studio-recommendations.js';
+import {discoveryDiagnostics} from '../lib/topic-discovery.js';
 const brief={category:'건축학',format:'short',duration:60,focus:'topic',topic:'국내 건축물',direction:'그림 중심'};
 const env={DISCOVERY_ENABLED:'1',DISCOVERY_WORKFLOW:'research-v2',DISCOVERY_URL:'https://discovery.example',DISCOVERY_API_KEY:'k'.repeat(40)};
 const c={id:'candidate-1',title:'돌아가는 다리의 비밀',entity:'회전교',location:'한국',question:'다리는 왜 돌아갈까?',expectedAnswer:'들어올릴 것이다',answer:'선박 통과를 위한 회전',whyItMatters:'통행을 함께 유지',direction:'회전 전후를 보여준다',keyword:'회전교',openingVisual:'다리가 돌아간다',evidenceIds:['source-1'],decision:'accepted'};
@@ -32,7 +33,7 @@ test('enabled service failures never run the legacy recommendation fallback',asy
 
 test('verification diagnostics survive the account worker boundary without exposing upstream text',async()=>{
  const {accountFailureCode,accountFailureMessage}=await import('../lib/llm-account-errors.js');
- for(const [reason,code] of [['no_grounded_candidates','DISCOVERY_NO_ACCEPTED_CANDIDATES'],['search_evidence_missing','DISCOVERY_NO_ACCEPTED_CANDIDATES'],['skipped_by_budget','DISCOVERY_BUDGET_LIMIT'],['discovery_in_progress','DISCOVERY_IN_PROGRESS'],['private_upstream_detail','DISCOVERY_UNAVAILABLE']]){
+ for(const [reason,code] of [['no_grounded_candidates','DISCOVERY_EVIDENCE_INSUFFICIENT'],['search_evidence_missing','DISCOVERY_EVIDENCE_INSUFFICIENT'],['research_evidence_unmatched','DISCOVERY_EVIDENCE_INSUFFICIENT'],['no_accepted_candidates','DISCOVERY_NO_ACCEPTED_CANDIDATES'],['skipped_by_budget','DISCOVERY_BUDGET_LIMIT'],['discovery_in_progress','DISCOVERY_IN_PROGRESS'],['private_upstream_detail','DISCOVERY_UNAVAILABLE']]){
   await assert.rejects(recommendBrief(brief,env,{subject:'a'.repeat(64),requestId:'studio-job-003',provider:'codex',assertConnection:async()=>{},fetch:async()=>Response.json({error:reason},{status:503})}),e=>{
    assert.equal(accountFailureCode(e),code);
    for(const provider of ['codex','claude']){assert.equal(accountFailureMessage(provider,e),e.message);assert.doesNotMatch(e.message,/private_upstream_detail|계정을 다시 연결/);}
@@ -56,7 +57,7 @@ test('maximum planning text survives transport without duplicate JSON escaping',
    assert.equal(preferences.productionStyle,'animation');assert.equal(preferences.workflow,'explainer-v1');
    assert.equal(preferences.topic,undefined);assert.equal(preferences.direction,undefined);
    return Response.json({error:'search_evidence_missing'},{status:503});
-  }}),e=>e.code==='DISCOVERY_NO_ACCEPTED_CANDIDATES');
+  }}),e=>e.code==='DISCOVERY_EVIDENCE_INSUFFICIENT');
   assert.equal(observed,true);
  }
 });
@@ -111,7 +112,7 @@ for(const provider of ['codex','claude'])for(const revoke of [false,true])test(`
    assert.equal(generations,2);assert.equal(claims,2);assert.equal(completions,2);assert.ok(stages.includes('review'));
   }else{
    const result=await recommendBrief(brief,configured,options);
-   assert.equal(result.verification.rubricVersion,'discovery-v2.6');assert.equal(result.verification.requiresHumanReview,true);assert.equal(result.verification.factChecked,false);
+   assert.equal(result.verification.rubricVersion,'discovery-v2.7');assert.equal(result.verification.requiresHumanReview,true);assert.equal(result.verification.factChecked,false);
    assert.equal(result.suggestions.length,1);assert.equal(result.suggestions[0].topic,c.title);
    assert.deepEqual([...new Set(stages)],['research','draft','review']);assert.equal(generations,3);assert.equal(checks,10);
    assert.deepEqual(await recommendBrief(brief,configured,options),result);assert.equal(generations,3);assert.equal(claims,3);assert.equal(completions,3);
@@ -126,7 +127,7 @@ for (const provider of ['codex','claude']) test(`ungrounded research explains th
  await assert.rejects(recommendBrief(brief,{...env,DISCOVERY_REVIEW_MODE:'native-llm-v1'},{
   subject:'a'.repeat(64),requestId:'research-hold-001',provider,history:[],assertConnection:async()=>{},
   generate:async()=>{generation++;throw Error('must not generate');},
-  fetch:async()=>{network++;return Response.json({requestId:'held-request',state:'held',rubricVersion:'discovery-v2.6',candidates:[],evidence:[],action:null,
+  fetch:async()=>{network++;return Response.json({requestId:'held-request',state:'held',rubricVersion:'discovery-v2.7',candidates:[],evidence:[],action:null,
    reasonCodes:['unsubstantiated_research_entity'],usage:{generationClaims:1,jevCalls:0,searchCalls:1}});},
  }),error=>{
   assert.equal(accountFailureCode(error),'DISCOVERY_RESEARCH_UNGROUNDED');
@@ -136,4 +137,38 @@ for (const provider of ['codex','claude']) test(`ungrounded research explains th
   return true;
  });
  assert.equal(network,1);assert.equal(generation,0);
+});
+
+test('completed requests without accepted candidates explain which stage held them',async()=>{
+ const {accountFailureCode,accountFailureMessage}=await import('../lib/llm-account-errors.js');
+ const held=(id,reasonCodes,decision='held')=>({...c,id,decision,reasonCodes});
+ for(const [candidates,code] of [
+  [[held('a',['jev_unavailable']),held('b',['support_location_uncertain'])],'DISCOVERY_UNAVAILABLE'],
+  [[held('a',['invalid_native_review'])],'DISCOVERY_UNAVAILABLE'],
+  [[held('a',['support_location_uncertain','native_support_location_uncertain']),held('b',['support_answer_rejected'],'rejected')],'DISCOVERY_REVIEW_HELD'],
+  [[held('a',['support_answer_rejected'],'rejected')],'DISCOVERY_NO_ACCEPTED_CANDIDATES'],
+  [[],'DISCOVERY_NO_ACCEPTED_CANDIDATES'],
+ ]){
+  await assert.rejects(recommendBrief(brief,env,{subject:'a'.repeat(64),requestId:'studio-held-001',provider:'codex',assertConnection:async()=>{},
+   fetch:async()=>Response.json({requestId:'held',state:'complete',rubricVersion:'discovery-v2.7',candidates,evidence:[],reasonCodes:[],action:null})}),e=>{
+   assert.equal(accountFailureCode(e),code);assert.equal(accountFailureMessage('codex',e),e.message);
+   return true;
+  });
+ }
+ assert.match(accountFailureMessage('codex',{code:'DISCOVERY_REVIEW_HELD'}),/근거로 확인되지 않은/);
+});
+
+test('held results carry only fixed diagnostic codes for operator logs',async()=>{
+ const candidates=[{...c,id:'a',decision:'held',reasonCodes:['jev_unavailable'],jevError:'rate_limited'},
+  {...c,id:'b',decision:'held',reasonCodes:['support_location_uncertain','Private Upstream text'],jevError:'secret detail'}];
+ await assert.rejects(recommendBrief(brief,env,{subject:'a'.repeat(64),requestId:'studio-diag-001',provider:'codex',assertConnection:async()=>{},
+  fetch:async()=>Response.json({requestId:'0b6f0e8e-1c1d-4c3e-9a8e-2f7d6c5b4a39',state:'complete',rubricVersion:'discovery-v2.7',candidates,evidence:[],reasonCodes:[],action:null})}),e=>{
+  assert.equal(discoveryDiagnostics(e),' request=0b6f0e8e-1c1d-4c3e-9a8e-2f7d6c5b4a39 reasons=jev_unavailable,support_location_uncertain jev=rate_limited');
+  return true;
+ });
+ await assert.rejects(recommendBrief(brief,env,{subject:'a'.repeat(64),requestId:'studio-diag-002',provider:'codex',assertConnection:async()=>{},
+  fetch:async()=>Response.json({requestId:'not a uuid',state:'held',candidates:[],evidence:[],reasonCodes:['research_evidence_unmatched'],action:null})}),e=>{
+  assert.equal(discoveryDiagnostics(e),' reasons=research_evidence_unmatched');return true;
+ });
+ assert.equal(discoveryDiagnostics(Error('x')),'');
 });

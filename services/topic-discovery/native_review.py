@@ -9,9 +9,18 @@ import math
 import re
 import unicodedata
 
+# Shared JEV adoption thresholds (service scoring and native-review eligibility).
+# While MIN_PROBABILITY >= .6 the margin test is implied (margin >= 2*p-1 >= .6);
+# it stays explicit so lowering MIN_PROBABILITY cannot silently drop it.
+MIN_CONFIDENCE, MIN_PROBABILITY, MIN_MARGIN = .8, .8, .2
 MODE = 'native-llm-v1'
-VERSION = 'discovery-v2.6'
-VERSIONS = {'discovery-v2.4', 'discovery-v2.5', VERSION}
+VERSION = 'discovery-v2.7'
+VERSIONS = {'discovery-v2.4', 'discovery-v2.5', 'discovery-v2.6', VERSION}
+# v2.6+ may adopt a low-confidence JEV uncertainty after a fully resolved review.
+LOW_CONFIDENCE_PROMOTION = {'discovery-v2.6', VERSION}
+# v2.7: a cited pass needs a quote with content beyond the entity name (support_entity excepted).
+# Length alone is not used: a short city name can be valid location support.
+MIN_QUOTE_FACT_CHARS = 2
 FIELDS = ('title','question','entity','location','answer','whyItMatters','openingVisual','direction','expectedAnswer')
 REQUIRED = {'support_'+field for field in FIELDS} | {'relevance','value','duplicate'}
 OPTIONAL_FACTS = {'title','question','whyItMatters','openingVisual','direction','expectedAnswer'}
@@ -21,7 +30,7 @@ def low_confidence(check):
     if not isinstance(check,dict): return False
     values=[check.get('confidence'),check.get('margin'),check.get('probabilities',{}).get(check.get('choice'))]
     if any(isinstance(v,bool) or not isinstance(v,(int,float)) or not math.isfinite(v) for v in values): return False
-    return values[0]<.8 or values[1]<.2 or values[2]<.8
+    return values[0]<MIN_CONFIDENCE or values[1]<MIN_MARGIN or values[2]<MIN_PROBABILITY
 
 def eligible(candidate):
     if candidate.get('decision')!='held': return False
@@ -43,14 +52,21 @@ An unsupported commercial guarantee of revenue/profit is reject with unsupported
 relevance checks the requested audience and category. value checks a concrete useful curiosity/experiment; business pain/demand/differentiation needs evidence and unsupported profitability promises are reject. duplicate compares entity + core answer/mechanism against prior AND the other items in this batch; rewording alone is not new. For mutually duplicate items keep at most the first, mark later ones reject. No prior means duplicate pass. Editorial pass may cite context; business value pass requires evidence. Be conservative where evidence is incomplete. Each rationale must explain this particular text. Self-reported confidence is not requested and does not establish truth.
 Return exactly {"reviews":[{"candidateId":"...","checks":{"<every required check>":{"choice":"pass|reject|uncertain|not_applicable","issue":"...","rationale":"...","citations":[{"evidenceId":"...","quote":"..."}]}}}]}. Return one review per item, no other keys. Pass uses issue none. Reject uses contradiction, unsupported_guarantee, irrelevant, duplicate or no_value. Uncertain uses missing_evidence, conflicting_sources or ambiguous_reference.
 """
+    if data.get('rubricVersion')==VERSION:
+        instructions=instructions.replace('with exact, short quotes from that candidate\'s evidence title or excerpt.',
+          'with exact, short quotes from that candidate\'s evidence title or excerpt. Each quote must state the supporting fact itself, not only the entity name.',1)
+        if data['input'].get('category')!='건축학':
+            instructions+="Outside architecture, location may instead state that no location is established: classify such text as not_applicable/nonfactual with empty citations. A stated place, region or address still needs support.\n"
     context={'request':{k:data['input'][k] for k in ('profile','category','brief')},'prior':prior,'items':items}
     prompt=instructions+json.dumps(context,ensure_ascii=False,sort_keys=True,separators=(',',':'))
     if len(prompt)>350000: raise ValueError('review_prompt_too_large')
     return prompt
 
+def _norm(value): return re.sub(r'[\W_]+','',unicodedata.normalize('NFKC',value).casefold())
+
 def _text(value, limit): return isinstance(value,str) and 0<len(value.strip())<=limit
 
-def validate_checks(row,candidate,evidence,profile):
+def validate_checks(row,candidate,evidence,profile,rubric=None,category=None):
     if not isinstance(row,dict) or set(row)!={'candidateId','checks'} or row['candidateId']!=candidate['id'] or not isinstance(row['checks'],dict) or set(row['checks'])!=REQUIRED:
         raise ValueError('invalid_native_review')
     by_id={e['id']:e for e in evidence if e['id'] in candidate['evidenceIds']}
@@ -61,7 +77,8 @@ def validate_checks(row,candidate,evidence,profile):
         allowed={'pass':{'none'},'not_applicable':{'nonfactual'},'reject':{'contradiction','unsupported_guarantee','irrelevant','duplicate','no_value'},'uncertain':{'missing_evidence','conflicting_sources','ambiguous_reference'}}
         if choice not in allowed or issue not in allowed[choice]: raise ValueError('invalid_native_review')
         field=name.removeprefix('support_')
-        if choice=='not_applicable' and (not name.startswith('support_') or field not in OPTIONAL_FACTS or profile=='business' and field=='expectedAnswer'): raise ValueError('invalid_native_review')
+        optional=OPTIONAL_FACTS|({'location'} if rubric==VERSION and category!='건축학' else set())
+        if choice=='not_applicable' and (not name.startswith('support_') or field not in optional or profile=='business' and field=='expectedAnswer'): raise ValueError('invalid_native_review')
         cites=check['citations']
         if not isinstance(cites,list) or len(cites)>10: raise ValueError('invalid_native_review')
         seen=set()
@@ -73,6 +90,11 @@ def validate_checks(row,candidate,evidence,profile):
             if pair in seen: raise ValueError('invalid_native_review_citation')
             seen.add(pair)
         if choice=='pass' and (name.startswith('support_') or profile=='business' and name=='value') and not cites: raise ValueError('missing_native_review_citation')
+        # v2.7: a cited pass needs at least one quote with content beyond the entity name.
+        # Name-only quotes may accompany it; for support_entity the name itself is the fact.
+        if (rubric==VERSION and choice=='pass' and cites and name!='support_entity' and
+                not any(len(_norm(c['quote']).replace(_norm(candidate['entity']),''))>=MIN_QUOTE_FACT_CHARS for c in cites)):
+            raise ValueError('invalid_native_review_citation')
         if issue=='contradiction' and not cites: raise ValueError('missing_native_review_citation')
         if issue=='conflicting_sources' and len({c['evidenceId'] for c in cites})<2: raise ValueError('missing_native_review_citation')
     return copy.deepcopy(row['checks'])
@@ -94,7 +116,7 @@ def apply_reviews(data, output):
     rows={r['candidateId']:r for r in rows}
     for c in pending:
         try:
-            checks=validate_checks(rows[c['id']],c,data['evidence'],data['input']['profile'])
+            checks=validate_checks(rows[c['id']],c,data['evidence'],data['input']['profile'],data.get('rubricVersion'),data['input'].get('category'))
         except (ValueError,TypeError,KeyError) as exc:
             failed(c,str(exc) if isinstance(exc,ValueError) else 'invalid_native_review');continue
         c['jevDecision']=c['decision'];c['jevReasonCodes']=list(c['reasonCodes'])
@@ -104,16 +126,20 @@ def apply_reviews(data, output):
         def promotable_reason(reason):
             name=reason[:-10];original=c['checks'][name];review=checks[name]
             if original['choice'] in ('pass','not_applicable'): return True
-            if data.get('rubricVersion') == VERSION and low_confidence(original):
+            if data.get('rubricVersion') in LOW_CONFIDENCE_PROMOTION and low_confidence(original):
                 # Low-confidence uncertainty is the reason to request grounded review.
                 # Only a fully resolved, validated native review can adopt the candidate.
                 # Editorial value is subjective; factual rejections keep their guard.
-                if original['choice']=='uncertain': return True
-                if name=='value' and original['choice']=='reject': return True
+                # v2.7: relabeling a JEV-uncertain field as nonfactual is not support,
+                # and business value (profit claims) is not editorial.
+                pinned=data['rubricVersion']!=VERSION
+                if original['choice']=='uncertain' and (pinned or review['choice']=='pass'): return True
+                if name=='value' and original['choice']=='reject': return pinned or data['input']['profile']=='content'
             # A wrong fictional viewer prediction is not an endorsed fact. Only a
             # low-confidence role mistake can be resolved; confident rejects stay final.
+            role_choices=('reject','uncertain') if data.get('rubricVersion')==VERSION else ('reject',)
             return (data['input']['profile']=='content' and name=='support_expectedAnswer'
-                    and original['choice']=='reject' and low_confidence(original)
+                    and original['choice'] in role_choices and low_confidence(original)
                     and review['choice']=='not_applicable' and review['issue']=='nonfactual'
                     and not review['citations'])
         promotable=all(promotable_reason(r) for r in c['reasonCodes'])

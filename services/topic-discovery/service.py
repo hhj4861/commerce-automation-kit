@@ -14,13 +14,22 @@ from pathlib import Path
 from urllib.parse import urlencode, urlsplit
 from urllib.request import Request, build_opener, HTTPRedirectHandler
 
-from native_review import MODE as REVIEW_MODE, VERSION as HYBRID_VERSION, VERSIONS as HYBRID_VERSIONS, eligible as review_eligible, build_prompt as native_review_prompt, apply_reviews
+from native_review import MIN_CONFIDENCE, MIN_PROBABILITY, MIN_MARGIN, MODE as REVIEW_MODE, VERSION as HYBRID_VERSION, VERSIONS as HYBRID_VERSIONS, eligible as review_eligible, build_prompt as native_review_prompt, apply_reviews
 
 VERSION = "discovery-v1.2"
-RESEARCH_VERSION = "discovery-v2.2"
+# v2.8 = v2.2 questions + the category-aware location policy below. Stored v2.2
+# requests keep their pinned questions and draft wording.
+RESEARCH_VERSION = "discovery-v2.8"
+PINNED_SCOPED_VERSION = "discovery-v2.2"
 # Failed the quality gate: only explicit, internal evaluation may select v2.3.
 EXPERIMENTAL_RESEARCH_VERSION = "discovery-v2.3"
-SCOPED_REVIEW_VERSIONS = {RESEARCH_VERSION, EXPERIMENTAL_RESEARCH_VERSION} | HYBRID_VERSIONS
+SCOPED_REVIEW_VERSIONS = {RESEARCH_VERSION, PINNED_SCOPED_VERSION, EXPERIMENTAL_RESEARCH_VERSION} | HYBRID_VERSIONS
+# Location is a required fact only where the product shows it (architecture case
+# studies). Elsewhere it may state that no location is established; a stated place
+# still needs support.
+LOCATION_POLICY_VERSIONS = {RESEARCH_VERSION, HYBRID_VERSION}
+def location_optional(request, rubric):
+    return rubric in LOCATION_POLICY_VERSIONS and request.get("category") != "건축학"
 FIELD_SUPPORT_VERSIONS = {"discovery-v2.1"} | SCOPED_REVIEW_VERSIONS
 LEGACY_VERSIONS = {"discovery-v1.1", "discovery-v2"}
 SUPPORT_FIELDS = ("title", "question", "entity", "location", "answer",
@@ -29,8 +38,8 @@ def research_workflow(value):
     return value.get("workflow") == "research-v2"
 LIMIT = 3
 class Failure(Exception):
-    def __init__(self, code, status=400):
-        self.code, self.status = code, status
+    def __init__(self, code, status=400, detail=None):
+        self.code, self.status, self.detail = code, status, detail
         super().__init__(code)
 
 def canonical(value):
@@ -158,7 +167,7 @@ class Store:
             if db.execute("SELECT COUNT(*) FROM requests WHERE platform=? AND created>=?", (platform, now - 86400)).fetchone()[0] >= per_day:
                 raise Failure("skipped_by_budget", 429)
             rid = str(uuid.uuid4())
-            data = {"requestId": rid, "rubricVersion": research_version if research_workflow(value) else VERSION, "state": "searching", "input": value,
+            data = {"requestId": rid, "rubricVersion": research_version if research_workflow(value) else VERSION, "jevModel": JEV_MODEL, "state": "searching", "input": value,
                     "requiresHumanReview": True, "factChecked": False, "createdAt": now, "expiresAt": now + 600,
                     "candidates": [], "evidence": [], "reasonCodes": [],
                     "usage": {"searchCalls": 0, "generationClaims": 0, "jevCalls": 0, "costUsd": None}, "action": None}
@@ -240,13 +249,21 @@ class NaverSearch:
         clean = lambda s: html.unescape(re.sub("<[^>]*>", "", str(s)))[:3000]
         return [{"url": r.get("link"), "title": clean(r.get("title", "")), "excerpt": clean(r.get("description", ""))} for r in items[:10] if isinstance(r, dict) and public_url(r.get("link"))]
 
+# Pinned per request at creation, like the rubric: a gateway default change must not
+# re-score an in-flight request with a model the thresholds were never checked against.
+JEV_MODEL = "jev-1.13.0"
+JEV_ERROR_CODES = {"timeout", "cancelled", "rate_limited", "authentication_failed", "overloaded", "redirect_rejected",
+                   "upstream_error", "network_error", "invalid_response", "response_too_large", "request_too_large", "invalid_config", "invalid_input"}
+
 class Jev:
     def __init__(self, env):
         self.env = {k: v for k, v in env.items() if k in ("PATH", "JEV_BASE_URL", "JEV_API_KEY", "JEV_ALLOW_LOCALHOST")}
     def __call__(self, payload):
         run = subprocess.run(["node", str(Path(__file__).with_name("jev-bridge.mjs"))], input=canonical(payload), text=True, capture_output=True, timeout=12, env=self.env)
         if run.returncode != 0 or len(run.stdout) > 1048576:
-            raise Failure("jev_unavailable", 503)
+            # The bridge reports only a fixed SDK code; never upstream text.
+            detail = run.stderr.strip().removeprefix("jev_unavailable:")
+            raise Failure("jev_unavailable", 503, detail if detail in JEV_ERROR_CODES else None)
         return json.loads(run.stdout)
 
 def search_query(value):
@@ -326,7 +343,7 @@ def questions(profile, has_prior=True, field_support=False):
     return result
 
 
-def scoped_review(state):
+def scoped_review(state, rubric=None):
     """One batched call; each question owns its data, shared state is evidence only.
 
     Never remove clauses, accept model-provided claim lists, or infer nonfactual
@@ -354,15 +371,19 @@ def scoped_review(state):
         "expectedAnswer": ("An explicitly hypothetical viewer expectation, not the actual answer."
                            if request["profile"] == "content" else "An existing customer alternative; its existence and properties are factual claims."),
     }
+    optional_location = location_optional(request, rubric)
+    if optional_location:
+        roles["location"] = "The subject's location, or a statement that no location is established. A stated place must be supported at its stated precision."
     for field in SUPPORT_FIELDS:
-        allow_nonfactual = field not in ("entity", "location", "answer")
+        allow_nonfactual = field not in ("entity", "location", "answer") or (field == "location" and optional_location)
         criteria = {
             "pass": "The text has factual content and every material assertion/presupposition is supported by matching evidence. A question's unanswered part is not itself an assertion.",
             "reject": "Matching evidence directly contradicts at least one material assertion/presupposition in this text. Absence of evidence alone is not contradiction.",
             "uncertain": "A material assertion lacks support, sources conflict, the referent is ambiguous, or the factual status is unclear. No direct contradiction is established.",
         }
         if allow_nonfactual:
-            criteria["not_applicable"] = "The ENTIRE text contains no real-world assertion or factual presupposition: only an open question, explicitly hypothetical expectation, subjective takeaway or proposed production action. No embedded fact is exempted."
+            criteria["not_applicable"] = ("The ENTIRE text only states that the subject's location is not established and names no place, region or address." if field == "location" else
+                "The ENTIRE text contains no real-world assertion or factual presupposition: only an open question, explicitly hypothetical expectation, subjective takeaway or proposed production action. No embedded fact is exempted.")
         q["support_" + field] = {
             "type": "choice",
             "instructions": {
@@ -386,13 +407,13 @@ def scoped_review(state):
     return {"state": {"evidence": state["evidence"]}, "questions": q}
 
 
-def role_review(state):
+def role_review(state, rubric=None):
     """v2.5: distinguish fictional prediction from fact and identity from properties.
 
     Keep the full original field, evidence, question count and scoring thresholds.
     v2.4 requests retain their original scoped_review questions on resume.
     """
-    payload = scoped_review(state)
+    payload = scoped_review(state, rubric)
     entity = payload['questions']['support_entity']
     entity['instructions']['task'] = (
         'Does the supplied evidence identify the subject named in the complete text? '
@@ -516,7 +537,7 @@ def score_review(response, q, rubric):
             raise Failure("invalid_jev_response", 502)
         margin = probs[choice] - max(p for key, p in probs.items() if key != choice)
         checks[name] = {"choice": choice, "confidence": confidence, "probabilities": probs, "margin": margin, "model": response.get("model"), "rubricVersion": rubric}
-        if confidence < .8 or probs[choice] < .8 or margin < .2 or choice == "uncertain":
+        if confidence < MIN_CONFIDENCE or probs[choice] < MIN_PROBABILITY or margin < MIN_MARGIN or choice == "uncertain":
             reasons.append(name + "_uncertain")
         elif choice == "reject":
             reasons.append(name + "_rejected")
@@ -595,7 +616,11 @@ def grounded_prompt(value, evidence, history, leads, rubric_version=None):
       "A lead's searchQuery is only a retrieval hypothesis, never evidence for an alias, a claim, or the authority of a returned website. "
       "Do not force one candidate for every lead. Use the smallest useful set of factual claims, in the user's language. "
       "A detail is not required just because a source mentions it: omit nonessential dates, street addresses, first/best claims and technical mechanisms unless directly supported by a primary-source excerpt. "
-      "For location use only the evidenced city/region; if unspecified, explicitly say the precise location is not established. "
+      + (("For location use only the evidenced city/region. Location is a required supported fact: if that lead's evidence does not state the entity's city or region, omit that lead instead of writing that the location is unknown. "
+          if value.get("category") == "건축학" else
+          "For location use only the evidenced city/region; if that lead's evidence states none, write that the location is not established and never guess a place. ")
+         if rubric_version in LOCATION_POLICY_VERSIONS else
+         "For location use only the evidenced city/region; if unspecified, explicitly say the precise location is not established. ") +
       "Every factual claim in the title, hook, explanation and production direction will be checked, not only the central answer. "
       "Keep demonstrated facts distinct from a proposed visual and hypothetical viewer expectation; do not imply the proposed visual was observed. "
       "Eligible leads (data): " + canonical(leads))
@@ -693,7 +718,7 @@ class Discovery:
             v2 = research_workflow(data["input"])
             if v2 and data["action"]["stage"] == "research":
                 leads = parse_leads(completion.get("output"),data["evidence"])
-                eligible, failures = [], []
+                eligible, failures, diagnostics = [], [], []
                 for lead in leads:
                     current = self.store.attempt(scope,rid,"reviewing","searchCalls")
                     if current["state"] != "reviewing":
@@ -703,17 +728,27 @@ class Discovery:
                         additional = self.evidence(research_query(lead, data["input"]), lead["id"]+"-source-")
                         if not additional:
                             raise Failure("research_evidence_missing",422)
+                        # Counts only: separates "search returned nothing about this entity" from a draft failure.
+                        # Foreign-language sources may be relevant without the entity string, so this never filters.
+                        diagnostics.append({"leadId":lead["id"],"results":len(additional),
+                                            "entityMatches":sum(normalize(lead["entity"]) in normalize(e["title"]+" "+e["excerpt"]) for e in additional)})
                         data["evidence"].extend(additional)
                         eligible.append({**lead,"draftEvidenceIds":lead["evidenceIds"],"evidenceIds":lead["evidenceIds"]+[e["id"] for e in additional]})
                     except Exception as exc:
                         failures.append({"leadId":lead["id"],"reason":exc.code if isinstance(exc,Failure) else "research_search_failed"})
-                data.update(researchLeads=eligible,researchFailures=failures)
+                data.update(researchLeads=eligible,researchFailures=failures,researchDiagnostics=diagnostics)
                 if not eligible:
                     raise Failure("research_evidence_missing",422)
                 data["action"] = {"id":str(uuid.uuid4()),"stage":"draft","runtime":data["input"]["runtime"],"prompt":grounded_prompt(data["input"],data["evidence"],prior,eligible,data["rubricVersion"])}
                 data["state"] = "awaiting_generation"
                 return self.store.save(scope,rid,data,expected="reviewing")
-            candidates = grounded_candidates(completion.get("output"),data["evidence"],data["researchLeads"]) if v2 else parse_candidates(completion.get("output"), data["evidence"])
+            try:
+                candidates = grounded_candidates(completion.get("output"),data["evidence"],data["researchLeads"]) if v2 else parse_candidates(completion.get("output"), data["evidence"])
+            except Failure as exc:
+                found = data.get("researchDiagnostics")
+                if exc.code == "no_grounded_candidates" and found and not any(d["entityMatches"] for d in found):
+                    raise Failure("research_evidence_unmatched", 422)
+                raise
             for candidate in candidates:
                 if candidate.get("decision") == "held":
                     data["candidates"].append(candidate)
@@ -722,7 +757,7 @@ class Discovery:
                 if current["state"] != "reviewing":
                     return current
                 reasons, decision, checks = [], "held", {}
-                aliases = {}
+                aliases, jev_error = {}, None
                 used = [e for e in data["evidence"] if e["id"] in candidate["evidenceIds"]]
                 if any(normalize(candidate["title"]) == normalize(p["title"]) for p in prior):
                     reasons, decision = ["exact_duplicate"], "rejected"
@@ -753,12 +788,17 @@ class Discovery:
                         state = {"request": {k:v for k,v in data["input"].items() if k != "history"}, "candidate": candidate, "evidence": reviewed, "prior": prior}
                         if aliases:
                             state["evidenceAliases"] = aliases
-                        payload = (role_review(state) if rubric in HYBRID_VERSIONS - {"discovery-v2.4"} else
+                        payload = (role_review(state, rubric) if rubric in HYBRID_VERSIONS - {"discovery-v2.4"} else
                                    split_review(state) if rubric == EXPERIMENTAL_RESEARCH_VERSION else
-                                   scoped_review(state) if rubric in SCOPED_REVIEW_VERSIONS else
+                                   scoped_review(state, rubric) if rubric in SCOPED_REVIEW_VERSIONS else
                                    {"state": state, "questions": q})
                         q = payload["questions"]
+                        if data.get("jevModel"):
+                            payload = {**payload, "jevModel": data["jevModel"]}
                         response = self.jev(payload)
+                        # The SDK always returns the answering model; older requests have no pin.
+                        if data.get("jevModel") and response.get("model") is not None and response["model"] != data["jevModel"]:
+                            raise Failure("jev_model_mismatch", 502)
                         scored, reasons = score_review(response, q, rubric)
                         checks.update(scored)
                         if not prior:
@@ -766,7 +806,10 @@ class Discovery:
                         decision = decision_from_reasons(reasons, rubric)
                     except Exception as exc:
                         reasons, decision = [exc.code if isinstance(exc, Failure) else "verification_failed"], "held"
+                        jev_error = getattr(exc, "detail", None)
                 data["candidates"].append({**candidate, "draftEvidenceIds": candidate["evidenceIds"], "evidenceIds": [e["id"] for e in used], "decision": decision, "reasonCodes": reasons or ["rubric_passed"], "checks": checks})
+                if jev_error:
+                    data["candidates"][-1]["jevError"] = jev_error
                 if aliases:
                     data["candidates"][-1]["evidenceAliases"] = aliases
                 # Only accepted candidates establish duplicate history. A failed draft
