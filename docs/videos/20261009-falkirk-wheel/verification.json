@@ -1,0 +1,56 @@
+{
+  "file": "/Users/admin/Downloads/vedio/falkirk-wheel-webtoon-short.mp4",
+  "duration": 46.958333,
+  "width": 1080,
+  "height": 1920,
+  "frames": "1127",
+  "bytes": 14285555,
+  "sha256": "220dfb34322910d280a0912f2fb484801c91bc8d7c45dd7d852d628d8f2b7dad",
+  "speed": 1.1,
+  "voiceId": "RU7aSi6lT4uQBXMLgDxK",
+  "finalHold": 2.723764172335601,
+  "decode": "pass",
+  "captionCoverage": "all narration",
+  "visualReview": {
+    "status": "pass",
+    "method": "representative frames of final captioned edit, displacement sequence and ending sequence",
+    "checked": [
+      "same orange boat through explanation",
+      "opposing horizontal tanks during lift",
+      "boat enters while water markers flow out",
+      "boat exits to upper aqueduct",
+      "captions readable and within frame",
+      "conclusion remains after speech"
+    ],
+    "limitations": [
+      "Illustrative geometry, not a dimensioned engineering replica or CFD.",
+      "No claim that every frame was manually reviewed."
+    ]
+  },
+  "reviewDigest": "ca42b04d77137004fba8acfd018acb58da384bd23846a5f9abf2e8c0cb9c1774",
+  "audioChecks": {
+    "sourceSilenceThresholdDb": -40,
+    "minimumSilenceSeconds": 0.65,
+    "interiorLongSilences": 0,
+    "endingSilenceSeconds": 2.883878,
+    "maxVolumeDb": -1.5,
+    "independentASR": "Narrative sequence and ending present; base model misspells proper nouns. Not pronunciation certification."
+  },
+  "opening": {
+    "generatedSeconds": 6,
+    "usedSeconds": 3.3333333333333335,
+    "submissionId": "33dcdba3-b6cf-468f-895a-8dc0cbf12bbc",
+    "quotedCredits": 54,
+    "newSubmissions": 1
+  },
+  "balanceReuse": {
+    "source": "clips/problem.mp4",
+    "sourceEngine": "CYCLES",
+    "samples": 48,
+    "width": 1080,
+    "height": 1920,
+    "frames": 199,
+    "purpose": "revisit same balanced half turn following close-up",
+    "narrationSpeedUnchanged": true
+  }
+}
