@@ -24,6 +24,11 @@ class EdgeConfigTest(unittest.TestCase):
         self.assertEqual(set(upstreams), {"{$LLM_UPSTREAM}"})
         self.assertEqual(STAGING.count("header_up Host {upstream_hostport}"), len(upstreams))
 
+    def test_admin_routes_are_a_closed_staging_only_list(self):
+        self.assertEqual(matcher_paths(STAGING, "admin"),
+                         ["/llm/key/generate", "/llm/key/info", "/llm/key/delete", "/llm/health/liveliness"])
+        self.assertNotIn("@admin", VM)
+
     def test_listens_on_the_cloud_run_port(self):
         self.assertIn(":{$PORT:8080} {", STAGING)
 
