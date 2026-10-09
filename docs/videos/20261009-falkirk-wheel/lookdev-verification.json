@@ -1,0 +1,68 @@
+{
+  "status": "technical checks passed; visual/user review separate",
+  "sourceHash": "0ada6267a5df26e58a361dc1c60f2e0dd25f518fb5adbf81344f8d1454d21ddd",
+  "renderer": {
+    "engine": "CYCLES",
+    "samples": 64
+  },
+  "files": [
+    {
+      "shot": "site",
+      "file": "/Users/admin/Downloads/vedio/falkirk-lookdev-v3/falkirk-site-v3.png",
+      "sha256": "561c481d39a353430585e07b78ab63e22502945a68923acc9bd71a990e6a8cdc",
+      "dimensions": [
+        1080,
+        1920
+      ]
+    },
+    {
+      "shot": "entry",
+      "file": "/Users/admin/Downloads/vedio/falkirk-lookdev-v3/falkirk-entry-v3.png",
+      "sha256": "ce636ab7c0f91f26bad2ccc2da4591b18934761dd2327d022bd8b95052beb8db",
+      "dimensions": [
+        1080,
+        1920
+      ]
+    },
+    {
+      "shot": "water",
+      "file": "/Users/admin/Downloads/vedio/falkirk-lookdev-v3/falkirk-water-v3.png",
+      "sha256": "4a12804bd28539f94745287dba3c0adfa1315acb753a2beb023e6c3d81953ea4",
+      "dimensions": [
+        1080,
+        1920
+      ]
+    }
+  ],
+  "board": "/Users/admin/Downloads/vedio/falkirk-lookdev-v3/falkirk-lookdev-v3.jpg",
+  "sceneContinuity": {
+    "sameScene": true,
+    "sameBoat": [
+      0.0,
+      -8.300000190734863,
+      2.049999952316284
+    ],
+    "waterLevel": 2.0
+  },
+  "paidCalls": 0,
+  "limitations": [
+    "Illustrative proportions; not a surveyed or engineering model",
+    "Ripple/wake geometry is illustrative, not CFD",
+    "Keyframes only; motion continuity not yet rendered or approved"
+  ],
+  "visualReview": {
+    "scope": "three final frames and comparison board inspected",
+    "observed": [
+      "Entire wheel silhouette fits establishing frame",
+      "Same boat and same water level retained across cameras",
+      "Close-up no longer blocked by foreground safety rail",
+      "Terrain, leaf canopies and aqueduct supply continuous place context"
+    ],
+    "notApproved": [
+      "User aesthetic acceptance pending",
+      "Static frames do not validate displacement flow or motion continuity",
+      "Terrain and structural geometry remain simplified",
+      "Not a photorealistic or engineering reconstruction"
+    ]
+  }
+}
