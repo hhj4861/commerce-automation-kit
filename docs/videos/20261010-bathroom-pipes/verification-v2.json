@@ -1,0 +1,194 @@
+{
+  "file": "/Users/admin/Downloads/vedio/bathroom-pipes-architecture-short-v2.mp4",
+  "sha256": "3e86471b40ee35901e0c5534b463cbc777c9a6c2dbbcb3ca3eab66653573da84",
+  "duration": 56.041667,
+  "frames": 1345,
+  "bytes": 16292306,
+  "audio": {
+    "codec": "AAC-LC",
+    "sampleRate": 48000,
+    "channels": 2,
+    "language": "kor",
+    "default": true,
+    "sourceCorrelation": 0.999504423851901,
+    "perSceneRms": [
+      {
+        "scene": "hook",
+        "rms": 0.13598975539207458
+      },
+      {
+        "scene": "reveal",
+        "rms": 0.14382287859916687
+      },
+      {
+        "scene": "gravity",
+        "rms": 0.14907270669937134
+      },
+      {
+        "scene": "space",
+        "rms": 0.12622076272964478
+      },
+      {
+        "scene": "cost",
+        "rms": 0.14979363977909088
+      },
+      {
+        "scene": "alternative",
+        "rms": 0.10299738496541977
+      },
+      {
+        "scene": "tradeoff",
+        "rms": 0.14288802444934845
+      },
+      {
+        "scene": "ending",
+        "rms": 0.1427430659532547
+      }
+    ],
+    "peakDb": -1.2013275623321533
+  },
+  "decode": "pass",
+  "visualReview": {
+    "status": "sampled frames inspected",
+    "frames": [
+      "title.jpg",
+      "stable-graph-check.png",
+      "ending.jpg"
+    ],
+    "findings": [
+      "Large left-aligned white/mint title",
+      "No outlined caption glyphs; rounded charcoal panel",
+      "Labels and captions stay clear of primary pipe route",
+      "All 23 caption midpoint pixel checks passed after filter-reset fix"
+    ]
+  },
+  "note": "Original MP4 already contained non-silent AAC mono. Stereo is a compatibility export, not a confirmed root-cause fix for the user playback environment.",
+  "captionTiming": [
+    {
+      "caption": 0,
+      "frame": 32,
+      "whiteGlyphMatch": 1.0
+    },
+    {
+      "caption": 1,
+      "frame": 110,
+      "whiteGlyphMatch": 1.0
+    },
+    {
+      "caption": 2,
+      "frame": 176,
+      "whiteGlyphMatch": 1.0
+    },
+    {
+      "caption": 3,
+      "frame": 225,
+      "whiteGlyphMatch": 1.0
+    },
+    {
+      "caption": 4,
+      "frame": 292,
+      "whiteGlyphMatch": 1.0
+    },
+    {
+      "caption": 5,
+      "frame": 368,
+      "whiteGlyphMatch": 1.0
+    },
+    {
+      "caption": 6,
+      "frame": 420,
+      "whiteGlyphMatch": 1.0
+    },
+    {
+      "caption": 7,
+      "frame": 477,
+      "whiteGlyphMatch": 1.0
+    },
+    {
+      "caption": 8,
+      "frame": 519,
+      "whiteGlyphMatch": 1.0
+    },
+    {
+      "caption": 9,
+      "frame": 564,
+      "whiteGlyphMatch": 1.0
+    },
+    {
+      "caption": 10,
+      "frame": 613,
+      "whiteGlyphMatch": 1.0
+    },
+    {
+      "caption": 11,
+      "frame": 645,
+      "whiteGlyphMatch": 1.0
+    },
+    {
+      "caption": 12,
+      "frame": 692,
+      "whiteGlyphMatch": 1.0
+    },
+    {
+      "caption": 13,
+      "frame": 751,
+      "whiteGlyphMatch": 1.0
+    },
+    {
+      "caption": 14,
+      "frame": 803,
+      "whiteGlyphMatch": 1.0
+    },
+    {
+      "caption": 15,
+      "frame": 866,
+      "whiteGlyphMatch": 1.0
+    },
+    {
+      "caption": 16,
+      "frame": 945,
+      "whiteGlyphMatch": 1.0
+    },
+    {
+      "caption": 17,
+      "frame": 996,
+      "whiteGlyphMatch": 1.0
+    },
+    {
+      "caption": 18,
+      "frame": 1050,
+      "whiteGlyphMatch": 1.0
+    },
+    {
+      "caption": 19,
+      "frame": 1091,
+      "whiteGlyphMatch": 1.0
+    },
+    {
+      "caption": 20,
+      "frame": 1129,
+      "whiteGlyphMatch": 1.0
+    },
+    {
+      "caption": 21,
+      "frame": 1203,
+      "whiteGlyphMatch": 1.0
+    },
+    {
+      "caption": 22,
+      "frame": 1290,
+      "whiteGlyphMatch": 1.0
+    }
+  ],
+  "sourceNarrationCoverage": "unchanged complete reviewed timeline",
+  "originalAudioDiagnosis": {
+    "file": "original final MP4",
+    "seconds": 10,
+    "transcript": " 우리집 천장인데 왜 위집 무리 지나갈까요? 층합의관을 쓰는 아파트에서는 위집평이에서 나온 관이 바닥을 뚫고 내려옵니다. 바로 우리집 천장 위로의..",
+    "source": "decoded final audio, no initial prompt",
+    "interpretation": "Audible speech data exists in original final file. Some ASR words are wrong; this is presence evidence, not pronunciation approval."
+  },
+  "userPlayback": "Unresolved: playback environment not yet supplied; no claim that stereo fixes the reported environment.",
+  "sourceHash": "94cbf96d4746fdf6f8331efd6f2f77f31c1fbe4c5126839c3457699d13e9c73f",
+  "newPaidGenerations": 0
+}
