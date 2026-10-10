@@ -98,7 +98,8 @@ test('real automatic pipeline caches measured speech, renders camera motion, hol
  const video=probe.streams.find(s=>s.codec_type==='video');assert.equal(video.width,1920);assert.equal(video.height,1080);assert.equal(Number(video.nb_frames),frameCount(p.edit));assert.equal(result.render.duration,frameCount(p.edit)/30);
  const raw=join(dir,'frames.rgb');await command('ffmpeg',['-y','-v','error','-i',final,'-vf','fps=5,scale=96:54','-pix_fmt','rgb24','-f','rawvideo',raw],{});
  const pixels=await readFile(raw),size=96*54*3;
- const difference=(a,b)=>{let sum=0;for(let i=0;i<size;i++)sum+=Math.abs(pixels[a*size+i]-pixels[b*size+i]);return sum/size;};
+ const difference=(a,b)=>{let sum=0;const region=96*32*3;for(let i=0;i<region;i++)sum+=Math.abs(pixels[a*size+i]-pixels[b*size+i]);return sum/region; // Compare media above the timed subtitle, which deliberately disappears.
+ };
  assert.ok(difference(0,8)>1,'image camera visibly moves');
  const last=Math.floor(pixels.length/size)-1;assert.ok(difference(last-1,last)<2,'short video holds its last frame instead of looping');
  const audio=join(dir,'speech.raw');await command('ffmpeg',['-y','-v','error','-i',final,'-vn','-ac','1','-ar','44100','-f','f32le',audio],{});

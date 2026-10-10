@@ -1,9 +1,11 @@
+import {defaultCaption} from './video-typography.js';
 import {openingCaption} from './shorts-policy.js';
 import {recommendedVoice} from './voice-recommendation.js';
 // Non-destructive 30fps timeline, shared by browser and renderer.
 export const FPS = 30;
 import {musicClips} from './music-timeline.js';
 export const FONTS = [
+ {id:'pretendard',name:'Pretendard · 세련된 기본',family:'Studio Pretendard',file:'Pretendard-SemiBold.otf'},
  {id:'gothic',name:'나눔고딕',family:'Studio Gothic',file:'NanumGothic-Regular.ttf'},
  {id:'myeongjo',name:'나눔명조',family:'Studio Myeongjo',file:'NanumMyeongjo-Regular.ttf'},
  {id:'pen',name:'나눔손글씨',family:'Studio Pen',file:'NanumPenScript-Regular.ttf'},
@@ -67,18 +69,18 @@ export function removeAudioAsset(edit,assetId) {
  e.hiddenAudioAssets=[...new Set([...(e.hiddenAudioAssets||[]),assetId])];
  return e;
 }
-export function scriptCaption(edit,clipId,text,id) {
+export function scriptCaption(edit,clipId,text,id,aspect='9:16') {
  if(!text?.trim()||text.length>500)throw Error('대본 자막은 1~500자로 나누어 입력하세요.');
  const e=structuredClone(edit),clip=e.clips.find(c=>c.id===clipId);
  if(!clip)throw Error('영상 클립을 선택하세요.');
- const matches=e.captions.filter(c=>c.clipId===clipId&&(c.source==='script'||c.text===text));
- const caption={...(matches[0]||{id,clipId,font:'gothic',size:56,color:'#ffffff',position:'bottom',background:true}),source:'script',text,startFrame:0,endFrame:clip.outFrame-clip.inFrame};
+ const matches=e.captions.filter(c=>c.clipId===clipId&&c.presentation!=='modern-header-v1'&&(c.source==='script'||c.text===text));
+ const caption={...(matches[0]||{id,clipId,...defaultCaption(aspect)}),source:'script',text,startFrame:0,endFrame:clip.outFrame-clip.inFrame};
  e.captions=e.captions.filter(c=>!matches.some(m=>m.id===c.id));e.captions.push(caption);
  return {edit:e,captionId:caption.id};
 }
 export function deduplicateCaptions(edit) {
  const e=structuredClone(edit),seen=new Set();
- e.captions=e.captions.filter(c=>{const key=JSON.stringify([c.clipId,c.text,c.startFrame,c.endFrame,c.font,c.size,c.color,c.position,c.background,c.x,c.y,c.outlineWidth??2,c.outlineColor??'#000000',c.backgroundColor??'#000000',c.backgroundOpacity??.65]);if(seen.has(key))return false;seen.add(key);return true;});
+ e.captions=e.captions.filter(c=>{const key=JSON.stringify([c.clipId,c.text,c.startFrame,c.endFrame,c.font,c.size,c.color,c.position,c.background,c.x,c.y,c.outlineWidth??2,c.outlineColor??'#000000',c.backgroundColor??'#000000',c.backgroundOpacity??.65,c.presentation]);if(seen.has(key))return false;seen.add(key);return true;});
  return e;
 }
 export function trimClip(edit,id,start,end){const e=structuredClone(edit),c=e.clips.find(c=>c.id===id);if(!c||!Number.isInteger(start)||!Number.isInteger(end)||start<0||end<=start||end>900)throw Error('시작·끝은 0~900 사이 프레임이며 끝이 시작보다 커야 합니다.');const shift=start-c.inFrame,length=end-start;c.inFrame=start;c.outFrame=end;e.captions=e.captions.flatMap(t=>{if(t.clipId!==id)return[t];const a=Math.max(0,t.startFrame-shift),b=Math.min(length,t.endFrame-shift);return b>a?[{...t,startFrame:a,endFrame:b}]:[];});return e;}

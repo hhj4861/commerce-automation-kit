@@ -1,3 +1,4 @@
+import {modernProject,defaultCaption,captionPhrases} from '../public/video-typography.js';
 import {explainer} from './explainer-production.js';
 import {FPS, normalizeEdit} from '../public/editor-model.js';
 import {narrationAsset} from '../public/narration-audio.js';
@@ -12,26 +13,7 @@ export function cinematicGuide(brief) {
 클라이맥스는 앞서 나온 사물이나 구도를 다시 보여주되 의미가 바뀌게 설계하세요. 분위기용 야경·숲으로 대본의 구체적인 의미를 대체하지 마세요. 화면 글자·로고·자막·검은 레터박스는 생성하지 마세요. 별도 자막을 얹을 하단 여백을 남기세요.`;
 }
 
-// Phrase boundaries first, then word wrapping. No syllables are discarded.
-export function captionPhrases(text, lineLimit) {
-  const words = text.trim().split(/\s+/u).flatMap(word => {
-    const chars = Array.from(word), parts = [];
-    for(let i=0;i<chars.length;i+=lineLimit)parts.push(chars.slice(i,i+lineLimit).join(''));
-    return parts;
-  });
-  const phrases = []; let lines = [''];
-  const flush = () => {if(lines.some(Boolean))phrases.push(lines.filter(Boolean).join('\n'));lines=[''];};
-  for(const word of words) {
-    let last = lines.length-1;
-    if(Array.from(lines[last] + (lines[last]?' ':'') + word).length > lineLimit) {
-      if(lines.length===2)flush();else lines.push('');
-      last=lines.length-1;
-    }
-    lines[last]+=(lines[last]?' ':'')+word;
-    if(/[.!?。！？]$/u.test(word))flush();
-  }
-  flush(); return phrases;
-}
+export {captionPhrases} from '../public/video-typography.js';
 
 export function cinematicEdit(project) {
   const edit = normalizeEdit(project);
@@ -43,7 +25,8 @@ export function cinematicEdit(project) {
     clip.outFrame=explainer(project.brief)&&audio?Math.ceil((audio.duration+.3)*FPS):Math.max(clip.outFrame, Math.ceil(((audio?.duration||0)+.2)*FPS));
     if(['webtoon','hybrid'].includes(project.brief.productionStyle)&&scene===project.scenes[0])clip.outFrame=Math.max(180,clip.outFrame);
     if(clip.outFrame>900)throw Error(`장면 ${scene.id}의 음성이 너무 길어요. 대본을 나누거나 줄여 주세요.`);
-    const phrases=captionPhrases(scene.narration,project.brief.aspect==='9:16'?18:32);
+    edit.captions=edit.captions.flatMap(c=>c.clipId!==clip.id?[c]:c.startFrame<clip.outFrame-clip.inFrame?[{...c,endFrame:Math.min(c.endFrame,clip.outFrame-clip.inFrame)}]:[]);
+    const phrases=captionPhrases(scene.narration,project.brief.aspect==='9:16'?(modernProject(project)?14:18):(modernProject(project)?28:32));
     const weights=phrases.map(t=>Array.from(t.replace(/\s/gu,'')).length);
     const sum=weights.reduce((a,b)=>a+b,0), frames=Math.min(clip.outFrame,Math.ceil((audio?.duration||scene.duration)*FPS));
     let used=0;
@@ -51,7 +34,7 @@ export function cinematicEdit(project) {
       const startFrame=Math.round(used/sum*frames);used+=weights[i];
       const endFrame=Math.round(used/sum*frames);
       if(endFrame-startFrame<12)throw Error(`장면 ${scene.id}의 자막이 너무 빨라요. 대본을 줄이거나 장면을 나누어 주세요.`);
-      edit.captions.push({id:`${clip.id}-caption-${i}`,clipId:clip.id,source:'script',text,startFrame,endFrame,font:'gothic',size:project.brief.aspect==='9:16'?52:44,color:'#ffffff',position:'bottom',background:false,outlineWidth:2,outlineColor:'#000000',...(explainer(project.brief)?{x:50,y:project.brief.captionPosition==='middle'?50:['webtoon','hybrid'].includes(project.brief.productionStyle)?82:88,position:project.brief.captionPosition,font:'gothic',size:project.brief.aspect==='9:16'?48:44,background:!['webtoon','hybrid'].includes(project.brief.productionStyle),backgroundColor:project.brief.productionStyle==='animation'?'#fcf8e9':'#161616',backgroundOpacity:.96,color:project.brief.productionStyle==='animation'?'#34372f':'#ffffff',outlineWidth:['webtoon','hybrid'].includes(project.brief.productionStyle)?3:0}:{})});
+      edit.captions.push({id:`${clip.id}-caption-${i}`,clipId:clip.id,source:'script',text,startFrame,endFrame,font:'gothic',size:project.brief.aspect==='9:16'?52:44,color:'#ffffff',position:'bottom',background:false,outlineWidth:2,outlineColor:'#000000',...(explainer(project.brief)?{x:50,y:project.brief.captionPosition==='middle'?50:['webtoon','hybrid'].includes(project.brief.productionStyle)?82:88,position:project.brief.captionPosition,font:'gothic',size:project.brief.aspect==='9:16'?48:44,background:!['webtoon','hybrid'].includes(project.brief.productionStyle),backgroundColor:project.brief.productionStyle==='animation'?'#fcf8e9':'#161616',backgroundOpacity:.96,color:project.brief.productionStyle==='animation'?'#34372f':'#ffffff',outlineWidth:['webtoon','hybrid'].includes(project.brief.productionStyle)?3:0}:{}),...(modernProject(project)?{...defaultCaption(project.brief.aspect),...(project.brief.captionPosition==='middle'?{y:50,position:'middle'}:{})}:{})});
     });
   }
   return edit;

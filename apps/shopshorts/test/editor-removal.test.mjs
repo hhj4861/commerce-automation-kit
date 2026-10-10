@@ -13,7 +13,7 @@ function fixture(){
  const p=createProject({category:'심리학',topic:'쉼',format:'short',duration:16});
  p.scenes=[{id:'scene-1',duration:2,kind:'image',narration:'잠시 쉬어요.',prompt:'A quiet room'}];
  p.assets={'scene-1':{kind:'image'},song:{kind:'audio'},speech:{kind:'audio',purpose:'narration'}};
- p.edit=normalizeEdit(p);p.edit.voice='n2fbxG88jqAoaVPUy3IG';p.edit.music='song';
+ p.edit=normalizeEdit(p);p.edit.captions=[];p.edit.voice='n2fbxG88jqAoaVPUy3IG';p.edit.music='song';
  p.edit=scriptCaption(p.edit,'clip-1','잠시 쉬어요.','text-1').edit;return p;
 }
 test('selected caption, audio and voice removal preserves the last video and original edit',()=>{
