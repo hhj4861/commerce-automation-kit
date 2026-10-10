@@ -1,0 +1,115 @@
+{
+  "file": "/Users/admin/Downloads/vedio/moses-bridge-immersive-short.mp4",
+  "duration": 42.583333,
+  "width": 1080,
+  "height": 1920,
+  "frames": "1022",
+  "bytes": 18905819,
+  "sha256": "8b560b913b137efb190d96004409f3ac5bdf2058cb1b6c7d3062ab5e73a495bc",
+  "speed": 1.1,
+  "voiceId": "RU7aSi6lT4uQBXMLgDxK",
+  "finalHold": 2.7103401360544215,
+  "decode": "pass",
+  "captionCoverage": "all narration",
+  "visualReview": {
+    "status": "pass",
+    "reviewer": "Codex lead; representative rendered frames, not independent reviewer",
+    "evidence": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261010-moses-bridge/qa/contact.jpg",
+    "timesSeconds": [
+      1,
+      4,
+      6.8625,
+      14.1354167,
+      23.16875,
+      30.8770833,
+      38.4208333,
+      41.3833333
+    ],
+    "findings": [
+      "Readable captions at 1080p, structural captions above foundation and pump",
+      "Membrane separates and returns in actual liner clip; rods highlighted using projected geometry",
+      "Rain and discharge tracers visible in actual drain clip",
+      "Ending POV has no foreground character or stair/terrain intersection",
+      "Last sentence remains on screen through final hold; no abrupt speech truncation"
+    ],
+    "limitations": [
+      "Simplified original geometry, not a survey or engineering model",
+      "Representative image review does not constitute user aesthetic approval"
+    ]
+  },
+  "meanDb": -17.9,
+  "peakDb": -1.2,
+  "avDelta": 0.00034000000000133923,
+  "render": {
+    "shots": [
+      {
+        "shot": "place",
+        "frames": 174,
+        "seconds": 1132.9416760419845,
+        "sha256": "67ff95fbc93096dd2e301ac4fbc9939c99ff61e4ccd6cdd099b8024a9e8e0de6"
+      },
+      {
+        "shot": "liner",
+        "frames": 175,
+        "seconds": 1103.9268370410136,
+        "sha256": "c570a9c951c872811b850f407ec91fd3f6094aacb98f5c422ba5e7e7b8483412"
+      },
+      {
+        "shot": "anchor",
+        "frames": 251,
+        "seconds": 1505.4167172079906,
+        "sha256": "ed9265e2dbe298640c2a6a2c185d6606b2db771f5a68b0cfd46e7fd6f4716c76"
+      },
+      {
+        "shot": "drain",
+        "frames": 131,
+        "seconds": 779.3486678340123,
+        "sha256": "76befa23fe1e9ee7a7c462884dba7304840ae4b373367d24641e5bf198ae652e"
+      },
+      {
+        "shot": "ending",
+        "frames": 222,
+        "seconds": 1228.7869115829817,
+        "sha256": "7c9bf8a7f0ac87b67dc913fc10dd2013b14f88aef12a0bc2f1f77249e1fa7bcb"
+      }
+    ],
+    "sourceHash": "006f791749f071fce8f37d3b48e71e10c55371afd35f73fdcbfa2d71570d6012",
+    "samples": 64,
+    "resolution": [
+      1080,
+      1920
+    ],
+    "percentage": 100,
+    "limitations": [
+      "original interpretive geometry, not measured survey",
+      "force markers and water are explanatory, not CFD"
+    ]
+  },
+  "reviewDigest": "3884af01f2e98d65534d5a102cb991d6ba5260c1d98a21aedc70cdbaba74bf34",
+  "completedAt": "2026-10-10T02:06:31.658899+00:00",
+  "sourceFiles": {
+    "render.py": "abec5ffd92acdb8a35137f6aa2f991e0b5bdfb91f1de54198430e82f39a52c21",
+    "scene.py": "006f791749f071fce8f37d3b48e71e10c55371afd35f73fdcbfa2d71570d6012",
+    "story.json": "ab0bb1ddf62be319dca18e059c89931671fbed7868dadde4aaf8a3cc5282516a",
+    "produce.mjs": "aab6a7d50a8feeedd26971f608b172be45ee78debd9cc8f682cbcbbd9b29953a",
+    "project-anchors.py": "c733332429069921a5fc7cc3a150a7b2ad095e3f75eab3877c312f14b0426c33",
+    "review.json": "0e952fb5b1c8eae4dc5f4744f253dd1ab556079dc269afdc643b94a84f760d7c"
+  },
+  "higgsfield": {
+    "jobId": "7d584e03-f359-420c-99f8-3d6b7224df8e",
+    "state": "downloaded",
+    "quotedCredits": 54,
+    "submissions": 1,
+    "sourceSeconds": 6,
+    "usedSeconds": 2.875,
+    "actualDebitIndependentlyVerified": false
+  },
+  "renderSeconds": 5750.420809707983,
+  "processes": {
+    "bodyRenderExitCode": 0,
+    "renderMonitorExitCode": 0,
+    "assemblyExitCode": 0,
+    "verificationExitCode": 0,
+    "contactSheetExitCode": 0
+  }
+}

@@ -1,0 +1,92 @@
+{
+  "id": "moses-bridge-short",
+  "title": "물보다 낮은 길인데, 왜 잠기지 않을까?",
+  "brief": {
+    "category": "건축학",
+    "topic": "모세 다리의 방수·부력 고정·배수",
+    "format": "short",
+    "duration": 67,
+    "direction": "한 대상의 마른 통로가 유지되는 이유. 옛 요새 풍경 보존→방수 상자→부력에 맞서는 고정→비 배수→걷는 결과. 약50~70초, TTS 실측에 맞춰 확장하며 절단 금지. 첫발화 즉시 질문, 마지막2.7초 여유.",
+    "voiceId": "RU7aSi6lT4uQBXMLgDxK",
+    "narrationSpeed": 1.1,
+    "productionStyle": "immersive-3d"
+  },
+  "voiceId": "RU7aSi6lT4uQBXMLgDxK",
+  "model": "eleven_multilingual_v2",
+  "speed": 1.1,
+  "maxHiggsfieldCredits": 54,
+  "scenes": [
+    {
+      "id": "hook",
+      "duration": 6,
+      "narration": "물보다 낮은 길인데, 왜 잠기지 않을까요?",
+      "prompt": "수면 높이 근접. 물 사이에 파인 마른 목재 통로, 방문자의 눈높이 시점으로 안으로 전진한다. 첫 화면 질문 “물 아래 길인데 왜 안 잠길까?” Higgsfield 6초.",
+      "kind": "video"
+    },
+    {
+      "id": "place",
+      "duration": 11,
+      "narration": "네덜란드의 모세 다리입니다. 옛 요새의 풍경을 가리지 않으려고, 다리를 높이는 대신 물속으로 길을 낮췄죠.",
+      "prompt": "같은 목재 통로를 둘러싼 해자·흙 성벽·숲 전경으로 상승. 두 계단과 수면 아래 통로의 관계를 함께 보여준다. 성이나 석조 탑을 창작하지 않는다.",
+      "kind": "video"
+    },
+    {
+      "id": "liner",
+      "duration": 13,
+      "narration": "비밀은 물을 막는 긴 상자입니다. 나무 벽 바깥을 방수막으로 감싸, 양옆의 물과 안쪽의 마른 길을 나눕니다.",
+      "prompt": "같은 통로의 짧은 구간을 설명 단면으로 전환. 목재 벽 바깥 방수막을 잠시 벌려 보여주고 원위치. 물은 벽 바깥에 유지되고 마른 바닥은 같은 높이. 부품별 색과 연결이 보인다.",
+      "kind": "video"
+    },
+    {
+      "id": "anchor",
+      "duration": 17,
+      "narration": "그런데 속이 빈 상자는 물에서 떠오르려 하겠죠. 그래서 이 통로는 물밑 콘크리트 판에 고정돼 있습니다. 물이 밀어 올리는 힘을 기초가 붙잡는 겁니다.",
+      "prompt": "같은 단면에서 물밑 콘크리트 기초와 연결부를 드러낸다. 위쪽 부력 표시가 움직인 뒤 고정 연결부를 주황색으로 강조. 실제 다리를 떠오르게 하지 않는다. 연결 위치·치수는 설명용 단순화.",
+      "kind": "video"
+    },
+    {
+      "id": "drain",
+      "duration": 10,
+      "narration": "위가 열려 있으니 빗물은 들어옵니다. 바닥 아래로 모인 물은 펌프로 빼내야 하죠.",
+      "prompt": "짧은 단면에서 위에서 비가 내리고 바닥 아래 배수 홈으로 모인다. 펌프가 켜진 후 작은 물 흐름이 배수관으로 이동. 폭우에도 무조건 안전한 모습이나 자동 센서 작동은 만들지 않는다.",
+      "kind": "video"
+    },
+    {
+      "id": "ending",
+      "duration": 10,
+      "narration": "물을 없앤 게 아닙니다. 물을 막고, 뜨지 않게 붙잡고, 들어온 물은 빼내는 길. 그래서 물 사이를 걸을 수 있는 거죠.",
+      "prompt": "실제 위치의 통로로 복귀. 같은 보행자 눈높이 시점으로 반대편 계단으로 향한다. 물과 마른 통로를 함께 보여주며 마지막 말 뒤 2.7초 유지. 다음편 예고 없이 결론 완결.",
+      "kind": "video"
+    }
+  ],
+  "research": {
+    "sources": [
+      {
+        "id": "designer",
+        "url": "https://www.ro-ad.org/projecten/moses-bridge/",
+        "title": "RO&AD project"
+      },
+      {
+        "id": "engineer",
+        "url": "https://bruggenstichting.nl/112-bruggen/bruggen-2013/bruggen-maart-2013/201-een-loopgraafbrug-in-west-brabant",
+        "title": "ir. F.J. Remery, March 2013, first-hand visit 21 June 2012; designer-supplied construction drawings"
+      },
+      {
+        "id": "local",
+        "url": "https://bergenopzoom.nu/en/mozesbrug-fort-de-roovere/",
+        "title": "Fort visitor information"
+      }
+    ],
+    "claims": [
+      {
+        "claim": "Sunken crossing preserves earth-fort landscape. Dry interior between wooden sheetpile walls, exterior EPDM membrane, anchored to reinforced concrete bottom slab against buoyancy. Rain/overtopping water collected below deck and pumped out. Manual activation described in 2013, not assumed current automatic installation. No floodproof guarantee, exact operating water level, current access state or material species claim.",
+        "sourceIds": [
+          "engineer",
+          "designer",
+          "local"
+        ]
+      }
+    ]
+  },
+  "openingPrompt": "Vertical 9:16 immersive architectural documentary illustration, cinematic realistic spatial depth. Moses Bridge at Fort de Roovere Netherlands. Match supplied original rendered geometry: a narrow dry wooden trench walkway with wooden walls separating water on both sides, open sky above, green earth embankments and woodland, no stone castle. Camera gently advances at waterline height along the empty walkway, first person walking perspective. Water remains outside both walls, level constant, interior dry. Gentle realistic small ripples and moving tree leaves, natural warm side sunlight, rich timber grain, detailed shadows and reflections. Keep rigid walls, no people visible, no flooded walkway, no water magically parting, no transformations, no text, no audio."
+}

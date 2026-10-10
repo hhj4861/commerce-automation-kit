@@ -1,0 +1,130 @@
+{
+  "version": "explanation-depth-v1",
+  "digest": "3884af01f2e98d65534d5a102cb991d6ba5260c1d98a21aedc70cdbaba74bf34",
+  "checks": {
+    "focus": {
+      "pass": true,
+      "reason": "물 아래의 길이 마르게 유지되는 이유에 집중한다. 방수·떠오름 방지·빗물 배수는 동일 질문의 필수 조건이고 새로운 사례 나열이 아니다.",
+      "evidence": [
+        {
+          "sceneId": "hook",
+          "field": "narration",
+          "quote": "물보다 낮은 길인데, 왜 잠기지 않을까요?"
+        },
+        {
+          "sceneId": "ending",
+          "field": "narration",
+          "quote": "물을 없앤 게 아닙니다. 물을 막고, 뜨지 않게 붙잡고, 들어온 물은 빼내는 길. 그래서 물 사이를 걸을 수 있는 거죠."
+        }
+      ]
+    },
+    "why": {
+      "pass": true,
+      "reason": "요새 풍경을 가리지 않고 건너야 해 낮춘다는 목적이 있고, 그 결과 물 유입과 부력에 대응해야 한다는 필요가 이어진다.",
+      "evidence": [
+        {
+          "sceneId": "place",
+          "field": "narration",
+          "quote": "네덜란드의 모세 다리입니다. 옛 요새의 풍경을 가리지 않으려고, 다리를 높이는 대신 물속으로 길을 낮췄죠."
+        },
+        {
+          "sceneId": "anchor",
+          "field": "narration",
+          "quote": "그런데 속이 빈 상자는 물에서 떠오르려 하겠죠. 그래서 이 통로는 물밑 콘크리트 판에 고정돼 있습니다. 물이 밀어 올리는 힘을 기초가 붙잡는 겁니다."
+        }
+      ]
+    },
+    "mechanism": {
+      "pass": true,
+      "reason": "벽 바깥 방수막이 물과 마른 길을 분리→빈 상자의 부력→콘크리트 고정이 저항→위로 들어온 물은 바닥 아래 수집·배수 순서가 설명된다. 자동 펌프나 절대 방수로 확장하지 않는다.",
+      "evidence": [
+        {
+          "sceneId": "liner",
+          "field": "narration",
+          "quote": "비밀은 물을 막는 긴 상자입니다. 나무 벽 바깥을 방수막으로 감싸, 양옆의 물과 안쪽의 마른 길을 나눕니다."
+        },
+        {
+          "sceneId": "anchor",
+          "field": "narration",
+          "quote": "그런데 속이 빈 상자는 물에서 떠오르려 하겠죠. 그래서 이 통로는 물밑 콘크리트 판에 고정돼 있습니다. 물이 밀어 올리는 힘을 기초가 붙잡는 겁니다."
+        },
+        {
+          "sceneId": "drain",
+          "field": "narration",
+          "quote": "위가 열려 있으니 빗물은 들어옵니다. 바닥 아래로 모인 물은 펌프로 빼내야 하죠."
+        }
+      ]
+    },
+    "example": {
+      "pass": true,
+      "reason": "같은 모세 다리의 물 밖·통로 안·아래 기초를 끝까지 따라간다. 빈 상자 비유를 실제 통로와 고정 기초로 곧바로 되돌린다.",
+      "evidence": [
+        {
+          "sceneId": "anchor",
+          "field": "narration",
+          "quote": "그런데 속이 빈 상자는 물에서 떠오르려 하겠죠. 그래서 이 통로는 물밑 콘크리트 판에 고정돼 있습니다. 물이 밀어 올리는 힘을 기초가 붙잡는 겁니다."
+        },
+        {
+          "sceneId": "drain",
+          "field": "narration",
+          "quote": "위가 열려 있으니 빗물은 들어옵니다. 바닥 아래로 모인 물은 펌프로 빼내야 하죠."
+        }
+      ]
+    },
+    "payoff": {
+      "pass": true,
+      "reason": "처음의 잠기지 않는 길 질문에 세 가지 역할로 답하고 보행 결과로 끝낸다. 비가 들어올 수 있고 배수가 필요하다는 한계도 명시한다.",
+      "evidence": [
+        {
+          "sceneId": "drain",
+          "field": "narration",
+          "quote": "위가 열려 있으니 빗물은 들어옵니다. 바닥 아래로 모인 물은 펌프로 빼내야 하죠."
+        },
+        {
+          "sceneId": "ending",
+          "field": "narration",
+          "quote": "물을 없앤 게 아닙니다. 물을 막고, 뜨지 않게 붙잡고, 들어온 물은 빼내는 길. 그래서 물 사이를 걸을 수 있는 거죠."
+        }
+      ]
+    },
+    "pacing": {
+      "pass": true,
+      "reason": "첫 문장 질문으로 시작하고 배경은 짧다. 각 대사는 다음 구조로 연결된다. 최종 분량은 TTS 실측 뒤 결정하고 결말을 절단하지 않는다. 숫자/기업 나열이나 인위적 다음편 예고가 없다.",
+      "evidence": [
+        {
+          "sceneId": "hook",
+          "field": "narration",
+          "quote": "물보다 낮은 길인데, 왜 잠기지 않을까요?"
+        },
+        {
+          "sceneId": "ending",
+          "field": "narration",
+          "quote": "물을 없앤 게 아닙니다. 물을 막고, 뜨지 않게 붙잡고, 들어온 물은 빼내는 길. 그래서 물 사이를 걸을 수 있는 거죠."
+        }
+      ]
+    },
+    "visuals": {
+      "pass": true,
+      "reason": "같은 대상의 수면 시점·전경에서 방수막·기초·배수 단면으로 이어진다. 보행은 일인칭으로 표현하고 물을 얇은 면으로 바꿔 연결부를 가리지 않는다. 실제 렌더 품질은 별도 검증한다.",
+      "evidence": [
+        {
+          "sceneId": "liner",
+          "field": "prompt",
+          "quote": "같은 통로의 짧은 구간을 설명 단면으로 전환. 목재 벽 바깥 방수막을 잠시 벌려 보여주고 원위치. 물은 벽 바깥에 유지되고 마른 바닥은 같은 높이. 부품별 색과 연결이 보인다."
+        },
+        {
+          "sceneId": "anchor",
+          "field": "prompt",
+          "quote": "같은 단면에서 물밑 콘크리트 기초와 연결부를 드러낸다. 위쪽 부력 표시가 움직인 뒤 고정 연결부를 주황색으로 강조. 실제 다리를 떠오르게 하지 않는다. 연결 위치·치수는 설명용 단순화."
+        },
+        {
+          "sceneId": "drain",
+          "field": "prompt",
+          "quote": "짧은 단면에서 위에서 비가 내리고 바닥 아래 배수 홈으로 모인다. 펌프가 켜진 후 작은 물 흐름이 배수관으로 이동. 폭우에도 무조건 안전한 모습이나 자동 센서 작동은 만들지 않는다."
+        }
+      ]
+    }
+  },
+  "passed": true,
+  "reviewer": "Codex lead editorial pass after revised visual plan"
+}
