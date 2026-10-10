@@ -59,7 +59,7 @@ test('worker completes media and queues render atomically; browser cannot comple
  const body={revision:p.revision,taskId:p.task.id,result:{assets:Object.fromEntries(scenes.map(s=>[s.id,{key:`studio/${p.id}/${s.id}.png`,kind:'image'}]))}};
  assert.equal((await f.request(`/${p.id}/complete`,body)).status,403);
  p=(await f.request(`/${p.id}/complete`,body,{localWorker:true})).project;
- assert.equal(p.task.action,'render');assert.equal(p.task.state,'queued');assert.equal(p.edit.clips.length,2);assert.equal(p.edit.captions.length,2);assert.notEqual(p.edit.voice,'none');assert.equal(p.upload,null);
+ assert.equal(p.task.action,'render');assert.equal(p.task.state,'queued');assert.equal(p.edit.clips.length,2);assert.ok(p.edit.captions.filter(c=>c.source==='script').length>=2);for(const clip of p.edit.clips)assert.equal(p.edit.captions.filter(c=>c.clipId===clip.id&&c.source==='script').map(c=>c.text).join('').replace(/\s/gu,''),p.scenes.find(s=>s.id===clip.sceneId).narration.replace(/\s/gu,''));assert.equal(p.edit.captions[0].presentation,'modern-header-v1');assert.notEqual(p.edit.voice,'none');assert.equal(p.upload,null);
  assert.equal((await f.request(`/${p.id}/complete`,body,{localWorker:true})).status,409);
  p=(await f.request(`/${p.id}/claim`,{revision:p.revision},{localWorker:true})).project;
  p=(await f.request(`/${p.id}/complete`,{revision:p.revision,taskId:p.task.id,result:{render:{key:`studio/${p.id}/final.mp4`}}},{localWorker:true})).project;

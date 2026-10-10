@@ -1,3 +1,4 @@
+import {modernProject,defaultCaption,captionPhrases} from '../public/video-typography.js';
 import {createProject, changeProject, validateEdit, fail} from './studio.js';
 import {llmOwner} from './llm-account-api.js';
 import {recommendationInput, parseRecommendations} from './studio-recommendations.js';
@@ -51,12 +52,12 @@ export function continueAutomatic(project) {
     for (const clip of edit.clips) {
       const text = next.scenes.find(scene => scene.id === clip.sceneId).narration;
       const chunkSize = Math.max(80, Math.ceil(text.length / Math.floor(300 / next.scenes.length)));
-      const chunks = text.match(new RegExp(`[\\s\\S]{1,${chunkSize}}`, 'gu')) || [];
-      let offset = 0;
+      const chunks = modernProject(next)?captionPhrases(text,next.brief.aspect==='9:16'?14:28):text.match(new RegExp(`[\\s\\S]{1,${chunkSize}}`, 'gu')) || [];
+      let offset = 0;const total=chunks.reduce((sum,c)=>sum+c.length,0);
       chunks.forEach((chunk, i) => {
-        const startFrame = Math.round(offset / text.length * clip.outFrame); offset += chunk.length;
+        const startFrame = Math.round(offset / total * clip.outFrame); offset += chunk.length;
         edit.captions.push({id:`${clip.id}-caption-${i}`, clipId:clip.id, source:'script', text:chunk, startFrame,
-          endFrame:Math.round(offset / text.length * clip.outFrame), font:'gothic', size:56, color:'#ffffff', position:'bottom', background:true});
+          endFrame:Math.round(offset / total * clip.outFrame), font:'gothic', size:56, color:'#ffffff', position:'bottom', background:true,...(modernProject(next)?defaultCaption(next.brief.aspect):{})});
       });
     }
     next.edit = validateEdit(edit, next);

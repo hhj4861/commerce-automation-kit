@@ -65,7 +65,7 @@ test('real automatic render measures 1.15x speech, fits animation/captions, resu
  const audio=narrationAsset(job,job.scenes[0],brief.voiceId);assert.equal(audio.narrationSpeed,1.15);assert.ok(audio.duration<1.4&&audio.duration>1.2);
  assert.equal(narrationReady({...job,brief:{...brief,narrationSpeed:1}},normalizeEdit(job)),false);
  const resumed=await executeStudioTask({...job,task:{...job.task,state:'running'}},{},io,async()=>{}, {runCli:()=>assert.fail('no regeneration')});assert.deepEqual(resumed.assets,job.assets);
- job=continueAutomatic(job);assert.equal(job.task.action,'render');assert.equal(job.edit.captions[0].position,'middle');assert.equal(job.edit.voice,brief.voiceId);
+ job=continueAutomatic(job);assert.equal(job.task.action,'render');assert.equal(job.edit.captions.find(c=>c.source==='script').y,50);assert.equal(job.edit.voice,brief.voiceId);
  const duration=job.edit.clips[0].outFrame/30;assert.ok(duration>=audio.duration+.3&&duration<audio.duration+.335);assert.ok(duration<8);
  const final=await executeStudioTask(job,{},io,async()=>{});const file=join(dir,'final.mp4');await writeFile(file,assets.get(final.render.key));
  const probe=JSON.parse(await command('ffprobe',['-v','error','-show_streams','-show_format','-of','json',file],{}));assert.equal(probe.streams[0].width,1080);assert.equal(probe.streams[0].height,1920);assert.ok(probe.streams.some(s=>s.codec_type==='audio'));assert.ok(Math.abs(Number(probe.format.duration)-duration)<.05);

@@ -1,3 +1,4 @@
+import {TYPOGRAPHY} from '../public/video-typography.js';
 import {architectureDefaults} from '../public/architecture-quality.js';
 import {hybridScene,hybridPlan} from '../public/hybrid-plan.js';
 import {webtoon,webtoonPlan,webtoonScenes} from './webtoon-plan.js';
@@ -30,8 +31,9 @@ export function validateBrief(input) {
   const duration = Number(input.duration);
   if (!Number.isInteger(duration) || duration < 16 || duration > (input.format === 'short' ? 180 : 600)) fail('영상 길이는 숏폼 16~180초, 롱폼 16~600초입니다.');
   productionStyle(input.productionStyle);
+  if(input.typography!==undefined&&input.typography!==TYPOGRAPHY)fail('지원하지 않는 영상 자막 포맷입니다.');
   if(input.visualQuality!==undefined&&input.visualQuality!==VISUAL_QUALITY)fail('지원하지 않는 영상 품질 구성입니다.');
-  return { ...(input.architectureQuality?{architectureQuality:input.architectureQuality}:{}), ...(input.visualQuality?{visualQuality:input.visualQuality}:{}), ...productionOptions(input), category: input.category, topic: input.topic.trim(), format: input.format, duration, direction: String(input.direction || '').slice(0, 2000), aspect: input.format === 'short' ? '9:16' : '16:9', ...(input.productionStyle?{productionStyle:input.productionStyle}:{}) };
+  return { ...(input.typography?{typography:input.typography}:{}), ...(input.architectureQuality?{architectureQuality:input.architectureQuality}:{}), ...(input.visualQuality?{visualQuality:input.visualQuality}:{}), ...productionOptions(input), category: input.category, topic: input.topic.trim(), format: input.format, duration, direction: String(input.direction || '').slice(0, 2000), aspect: input.format === 'short' ? '9:16' : '16:9', ...(input.productionStyle?{productionStyle:input.productionStyle}:{}) };
 }
 // Strip untrusted raw template requests; the validated direction compiler may derive an allow-listed summary.
 export function validateScenes(scenes, {animationStyle = false, stripMotion = false} = {}) {
@@ -102,7 +104,7 @@ export function validateTimeline(input, job) {
   return {version:2,fps:FPS,clips,captions,voice:input.voice,music:input.music||null,musicVolume:input.musicVolume,...(musicClips!==undefined?{musicClips}:{}),...(hiddenAudioAssets!==undefined?{hiddenAudioAssets}:{})};
 }
 export function createProject(input) {
-  const brief=validateBrief(architectureDefaults({...input,visualQuality:VISUAL_QUALITY}));
+  const brief=validateBrief(architectureDefaults({...input,captionPosition:input.captionPosition??'bottom',visualQuality:VISUAL_QUALITY,typography:TYPOGRAPHY}));
   return { id: crypto.randomUUID(), revision: 0, title: input.topic?.slice(0, 100), brief, ...(webtoon(brief)?{voicePreference:brief.voiceId}:{}), scenes: [], assets: {}, edit: null, approved: false, render: null, upload: null, task: null, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
 }
 export function changeProject(original, action, body) {

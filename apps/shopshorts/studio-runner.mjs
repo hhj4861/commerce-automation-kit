@@ -1,3 +1,4 @@
+import {renderCaptionArtwork,artworkFilter} from './studio-typography.mjs';
 import {webtoon} from './lib/webtoon-plan.js';
 import {prepareWebtoon,checkWebtoonReview} from './studio-webtoon.mjs';
 import {explainer} from './lib/explainer-production.js';
@@ -61,7 +62,7 @@ async function lintProject(job, work, env, publication = false) {
     if (result.ok !== true) throw new Error('대본 검증에 실패했습니다. 과장·효능·가짜 경험 표현을 수정하세요.');
   }
 }
-export function sceneFfmpegArgs(source, target, scene, edit, aspect, narration, actualDuration, sponsored, clip = null, captions = [], cinema = false, animation = false) {
+export function sceneFfmpegArgs(source, target, scene, edit, aspect, narration, actualDuration, sponsored, clip = null, captions = [], cinema = false, animation = false, artwork = []) {
   const duration = clip ? (clip.outFrame-clip.inFrame)/FPS : edit.durations[scene.id];
   const [w, h] = aspect === '9:16' ? [1080, 1920] : [1920, 1080];
   const args = ['-y', '-hide_banner', '-loglevel', 'error', ...(scene.kind === 'image' ? ['-loop', '1'] : cinema || animation ? [] : ['-stream_loop', '-1']), '-i', source];
@@ -78,6 +79,7 @@ export function sceneFfmpegArgs(source, target, scene, edit, aspect, narration, 
   if (clip) vf += `,trim=start_frame=${clip.inFrame}:end_frame=${clip.outFrame},setpts=PTS-STARTPTS`;
   if (captions.length) vf += ',' + captions.join(',');
   if (sponsored) vf += ",drawtext=text='(광고)':fontsize=36:fontcolor=white:box=1:boxcolor=black@0.7:x=40:y=60";
+  vf=artworkFilter(vf,artwork);
   args.push('-map', '0:v:0', '-map', '1:a:0', '-vf', vf, '-af', clip ? `atrim=start=${clip.inFrame/FPS}:end=${clip.outFrame/FPS},asetpts=PTS-STARTPTS,apad` : 'apad', '-t', String(duration), '-c:v', 'libx264', '-preset', cinema?'medium':'veryfast', ...(cinema?['-crf','18']:[]), ...(clip ? ['-bf','0'] : []), '-pix_fmt', 'yuv420p', '-c:a', clip ? 'pcm_s16le' : 'aac', '-ar', '44100', '-ac', '2', '-movflags', '+faststart', target);
   return args;
 }
@@ -113,15 +115,16 @@ async function renderProject(job, work, env, io) {
       const narration = await narrationFile(job, scene, work, env, io, { runCli: cli, command });
       vo = narration.file; voDuration = narration.duration;
     }
-    const captionFilters=[];
+    const captionFilters=[],artwork=[];
     for(const [index,caption] of timeline.captions.filter(c=>c.clipId===clip.id).entries()) {
+      if(caption.presentation){artwork.push(await renderCaptionArtwork(caption,job.brief.aspect,join(work,`${clip.id}-caption-${index}.png`)));continue;}
       const textPath=join(work,`${clip.id}-caption-${index}.txt`);
       await writeFile(textPath,caption.text);
       captionFilters.push(captionFilter(caption,textPath));
     }
     // PCM intermediates avoid AAC padding changing frame boundaries during concatenation.
     const target = join(work, `${"segment-"+segments.length}.${job.edit.version===2?'mov':'mp4'}`);
-    await command('ffmpeg', sceneFfmpegArgs(source, target, scene, job.edit, job.brief.aspect, vo, voDuration, job.brief.category === '상품광고', job.edit.version===2?clip:null,captionFilters,cinematic(job.brief),animated(job.brief)||webtoon(job.brief)), env);
+    await command('ffmpeg', sceneFfmpegArgs(source, target, scene, job.edit, job.brief.aspect, vo, voDuration, job.brief.category === '상품광고', job.edit.version===2?clip:null,captionFilters,cinematic(job.brief),animated(job.brief)||webtoon(job.brief),artwork), env);
     segments.push(target);
   }
   await gap(frameCount(timeline)-cursor);

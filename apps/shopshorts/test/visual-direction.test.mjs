@@ -58,9 +58,10 @@ test('automatic summary renders real landscape frames without any paid media cal
 
 test('shorts hook starts on frame zero and user deletion is preserved; metadata stays relevant',()=>{
  const f=fixture(),p={...createProject(f.brief),...scenarioResult(f,f.brief)};const edit=normalizeEdit(p);
- assert.equal(SHORTS_DEFAULT_SECONDS,45);assert.equal(edit.captions[0].startFrame,0);assert.equal(edit.captions[0].endFrame,90);assert.equal(edit.captions[0].position,'top');
+ assert.equal(SHORTS_DEFAULT_SECONDS,45);assert.equal(edit.captions[0].startFrame,0);assert.equal(edit.captions[0].endFrame,105);assert.equal(edit.captions[0].position,'top');
  assert.deepEqual(normalizeEdit({...p,edit:{...edit,captions:[]}}).captions,[]);
- assert.deepEqual(normalizeEdit({...p,brief:{...p.brief,format:'long'}}).captions,[]);
+ assert.equal(normalizeEdit({...p,brief:{...p.brief,format:'long'}}).captions[0].presentation,'modern-header-v1');
+ const legacy={...p,brief:{...p.brief}};delete legacy.brief.typography;assert.equal(normalizeEdit(legacy).captions[0].endFrame,90);
  assert.match(suggestedDescription(p),/#건축/);assert.doesNotMatch(suggestedDescription(p),/automobile/);
  assert.throws(()=>scenarioResult({...f,scenes:f.scenes.map((s,i)=>i?s:{...s,visualDirection:direction(1)})},f.brief),/첫 3초/);
 });
