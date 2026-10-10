@@ -1,0 +1,286 @@
+{
+  "moses": {
+    "file": "/Users/admin/Downloads/vedio/moses-bridge-immersive-short-v2.mp4",
+    "sha256": "f1a1f6798bf82cfd5c6cd7d7a6b4c80006b682840fff873e6a5fa03693c1b8ca",
+    "sourceFinal": "/Users/admin/Downloads/vedio/moses-bridge-immersive-short.mp4",
+    "sourceFinalHash": "8b560b913b137efb190d96004409f3ac5bdf2058cb1b6c7d3062ab5e73a495bc",
+    "frames": 1022,
+    "duration": 42.583333,
+    "decode": "pass",
+    "audioPackets": "identical to user-specified original",
+    "audioHash": "d173aeef49e4990a84705314c82800f023f9f75bd1b9bd6a1bfdb2c2343dcb43",
+    "audioLevels": [
+      {
+        "scene": "hook",
+        "rms": 0.1416352093219757
+      },
+      {
+        "scene": "place",
+        "rms": 0.14255449175834656
+      },
+      {
+        "scene": "liner",
+        "rms": 0.13429510593414307
+      },
+      {
+        "scene": "anchor",
+        "rms": 0.1265268474817276
+      },
+      {
+        "scene": "drain",
+        "rms": 0.13396967947483063
+      },
+      {
+        "scene": "ending",
+        "rms": 0.12996502220630646
+      }
+    ],
+    "captionTiming": [
+      {
+        "caption": 0,
+        "frame": 30,
+        "glyphMatch": 1.0
+      },
+      {
+        "caption": 1,
+        "frame": 90,
+        "glyphMatch": 1.0
+      },
+      {
+        "caption": 2,
+        "frame": 145,
+        "glyphMatch": 1.0
+      },
+      {
+        "caption": 3,
+        "frame": 208,
+        "glyphMatch": 1.0
+      },
+      {
+        "caption": 4,
+        "frame": 269,
+        "glyphMatch": 1.0
+      },
+      {
+        "caption": 5,
+        "frame": 330,
+        "glyphMatch": 1.0
+      },
+      {
+        "caption": 6,
+        "frame": 389,
+        "glyphMatch": 1.0
+      },
+      {
+        "caption": 7,
+        "frame": 459,
+        "glyphMatch": 1.0
+      },
+      {
+        "caption": 8,
+        "frame": 535,
+        "glyphMatch": 1.0
+      },
+      {
+        "caption": 9,
+        "frame": 578,
+        "glyphMatch": 1.0
+      },
+      {
+        "caption": 10,
+        "frame": 625,
+        "glyphMatch": 1.0
+      },
+      {
+        "caption": 11,
+        "frame": 696,
+        "glyphMatch": 1.0
+      },
+      {
+        "caption": 12,
+        "frame": 759,
+        "glyphMatch": 1.0
+      },
+      {
+        "caption": 13,
+        "frame": 816,
+        "glyphMatch": 1.0
+      },
+      {
+        "caption": 14,
+        "frame": 862,
+        "glyphMatch": 1.0
+      },
+      {
+        "caption": 15,
+        "frame": 903,
+        "glyphMatch": 1.0
+      },
+      {
+        "caption": 16,
+        "frame": 963,
+        "glyphMatch": 1.0
+      }
+    ],
+    "endingHold": 2.7103401360544215,
+    "paidCalls": 0,
+    "bodyRerender": false,
+    "visualReview": {
+      "status": "representative final frames inspected",
+      "evidence": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261010-architecture-typography/moses/contact.jpg",
+      "findings": [
+        "White/mint left-aligned title and rounded caption panels visible",
+        "Original scene annotations retained",
+        "Final caption held through ending"
+      ],
+      "limits": "No claim of continuous human audio playback or user aesthetic approval"
+    },
+    "preservedAnnotations": "projected anchors",
+    "sourceHash": "f207b95b84830d7e6f6904b8334c7e635d74df47393b181f04d822d26236ac03"
+  },
+  "falkirk": {
+    "file": "/Users/admin/Downloads/vedio/falkirk-wheel-immersive-full-v4.mp4",
+    "sha256": "12913fad83ce9ea306914af998b3aa1e6a7929e70186633400860e51f152b089",
+    "sourceFinal": "/Users/admin/Downloads/vedio/falkirk-wheel-immersive-full-v3.mp4",
+    "sourceFinalHash": "58eff741ba7c2fae6e45123199090b9ad6b6a02458ef59b7ba112e140df2834f",
+    "frames": 1127,
+    "duration": 46.958333,
+    "decode": "pass",
+    "audioPackets": "identical to user-specified original",
+    "audioHash": "085065141328486b67770d7e552f8f029e0b1afa1f2ca324f7135a20eef87e6a",
+    "audioLevels": [
+      {
+        "scene": "hook",
+        "rms": 0.14234811067581177
+      },
+      {
+        "scene": "problem",
+        "rms": 0.1485818475484848
+      },
+      {
+        "scene": "displace",
+        "rms": 0.13449446856975555
+      },
+      {
+        "scene": "balance",
+        "rms": 0.1208774596452713
+      },
+      {
+        "scene": "ending",
+        "rms": 0.15058396756649017
+      }
+    ],
+    "captionTiming": [
+      {
+        "caption": 0,
+        "frame": 37,
+        "glyphMatch": 1.0
+      },
+      {
+        "caption": 1,
+        "frame": 125,
+        "glyphMatch": 1.0
+      },
+      {
+        "caption": 2,
+        "frame": 185,
+        "glyphMatch": 1.0
+      },
+      {
+        "caption": 3,
+        "frame": 235,
+        "glyphMatch": 1.0
+      },
+      {
+        "caption": 4,
+        "frame": 288,
+        "glyphMatch": 1.0
+      },
+      {
+        "caption": 5,
+        "frame": 351,
+        "glyphMatch": 1.0
+      },
+      {
+        "caption": 6,
+        "frame": 402,
+        "glyphMatch": 1.0
+      },
+      {
+        "caption": 7,
+        "frame": 445,
+        "glyphMatch": 1.0
+      },
+      {
+        "caption": 8,
+        "frame": 515,
+        "glyphMatch": 1.0
+      },
+      {
+        "caption": 9,
+        "frame": 586,
+        "glyphMatch": 1.0
+      },
+      {
+        "caption": 10,
+        "frame": 645,
+        "glyphMatch": 1.0
+      },
+      {
+        "caption": 11,
+        "frame": 705,
+        "glyphMatch": 1.0
+      },
+      {
+        "caption": 12,
+        "frame": 743,
+        "glyphMatch": 1.0
+      },
+      {
+        "caption": 13,
+        "frame": 794,
+        "glyphMatch": 1.0
+      },
+      {
+        "caption": 14,
+        "frame": 854,
+        "glyphMatch": 1.0
+      },
+      {
+        "caption": 15,
+        "frame": 892,
+        "glyphMatch": 1.0
+      },
+      {
+        "caption": 16,
+        "frame": 943,
+        "glyphMatch": 1.0
+      },
+      {
+        "caption": 17,
+        "frame": 986,
+        "glyphMatch": 1.0
+      },
+      {
+        "caption": 18,
+        "frame": 1057,
+        "glyphMatch": 1.0
+      }
+    ],
+    "endingHold": 2.723764172335601,
+    "paidCalls": 0,
+    "bodyRerender": false,
+    "visualReview": {
+      "status": "representative final frames inspected",
+      "evidence": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261010-architecture-typography/falkirk/contact.jpg",
+      "findings": [
+        "White/mint left-aligned title and rounded caption panels visible",
+        "Original scene annotations retained",
+        "Final caption held through ending"
+      ],
+      "limits": "No claim of continuous human audio playback or user aesthetic approval"
+    },
+    "preservedAnnotations": "10-ton hypothetical example",
+    "sourceHash": "f207b95b84830d7e6f6904b8334c7e635d74df47393b181f04d822d26236ac03"
+  }
+}
