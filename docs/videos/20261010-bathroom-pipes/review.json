@@ -1,0 +1,85 @@
+{
+  "version": "explanation-depth-v1",
+  "digest": "6e6bc7e9ed7cca4da5fa75f45c79c5763f4e0509ec1921419430a9884a60d350",
+  "checks": {
+    "focus": {
+      "pass": true,
+      "reason": "시청자가 가진 천장의 소유와 배관의 사용자가 다른 이유라는 하나의 질문을 유지한다.",
+      "evidence": [
+        {
+          "sceneId": "hook",
+          "field": "narration",
+          "quote": "우리 집 천장인데"
+        }
+      ]
+    },
+    "why": {
+      "pass": true,
+      "reason": "단순히 관이 크다는 주장을 피하고 필요한 공간과 경사 및 부속을 함께 설명한다.",
+      "evidence": [
+        {
+          "sceneId": "space",
+          "field": "narration",
+          "quote": "관의 굵기와 경사, 연결 부품"
+        }
+      ]
+    },
+    "mechanism": {
+      "pass": true,
+      "reason": "같은 변기에서 공용 수직관까지 이동하는 물을 경사와 연결하여 보여준다.",
+      "evidence": [
+        {
+          "sceneId": "gravity",
+          "field": "narration",
+          "quote": "가로로 뻗은 관에도"
+        }
+      ]
+    },
+    "example": {
+      "pass": true,
+      "reason": "같은 화장실에서 벽 쪽 배관이라는 구체적 대안을 보여주고 일반적인 바닥 방식과 구분한다.",
+      "evidence": [
+        {
+          "sceneId": "alternative",
+          "field": "narration",
+          "quote": "여기선 변기 뒤 서비스 벽으로"
+        }
+      ]
+    },
+    "payoff": {
+      "pass": true,
+      "reason": "공간 배치가 소음 수용자와 점검 위치를 결정한다는 완결된 답이다.",
+      "evidence": [
+        {
+          "sceneId": "ending",
+          "field": "narration",
+          "quote": "누가 소리를 듣고 어디서 수리할지"
+        }
+      ]
+    },
+    "pacing": {
+      "pass": true,
+      "reason": "원리에서 생활 영향, 대안과 한계를 거쳐 종료한다. 실제 음성 길이에 맞추며 결말 2.7초 여유를 둔다.",
+      "evidence": [
+        {
+          "sceneId": "tradeoff",
+          "field": "narration",
+          "quote": "소음도 무조건 사라지는 건 아니고요."
+        }
+      ]
+    },
+    "visuals": {
+      "pass": true,
+      "reason": "방 전체·바닥 관통·경사진 관·수직관을 같은 대상에서 보여준다. 흐름과 위치를 글자 나열로 대체하지 않는다.",
+      "evidence": [
+        {
+          "sceneId": "gravity",
+          "field": "prompt",
+          "quote": "Gravity flow is continuously downhill."
+        }
+      ]
+    }
+  },
+  "passed": true,
+  "reviewer": "Codex lead separate editorial pass, no independent model claim"
+}

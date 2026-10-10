@@ -1,0 +1,125 @@
+{
+  "file": "/Users/admin/Downloads/vedio/bathroom-pipes-architecture-short.mp4",
+  "duration": 56.041667,
+  "width": 1080,
+  "height": 1920,
+  "frames": "1345",
+  "bytes": 15433645,
+  "sha256": "84c8ded587d03935059faceab3af478451e5a78fd92a466bdcb400020fb8b826",
+  "speed": 1.1,
+  "voiceId": "RU7aSi6lT4uQBXMLgDxK",
+  "finalHold": 2.7219501133786848,
+  "decode": "pass",
+  "captionCoverage": "all narration",
+  "visualReview": {
+    "status": "sampled frames and motion checks completed; reference parity not achieved",
+    "evidence": [
+      "qa/contact.jpg",
+      "qa/caption-preview.jpg",
+      "qa/motion-contact.jpg",
+      "qa/opening-contact.jpg"
+    ],
+    "findings": [
+      "Upper/lower rooms and under-slab pipe route are visible.",
+      "White captions have dark outlines and do not obscure the main pipe route.",
+      "Flow beads move and the service-wall panel opens in tested motion clips.",
+      "Last sentence is complete with 2.72 seconds of ending hold."
+    ],
+    "limitations": [
+      "Selected frames and two short motion tests, not human full-video audiovisual playback.",
+      "QuickTime file-open UI did not complete during automation; no successful native playback claimed.",
+      "Flow beads and noise rings are schematic, not physical water/acoustic simulations.",
+      "Independent ASR covered narration but misrecognized some words including 변기; human pronunciation listening is not claimed."
+    ]
+  },
+  "meanDb": -17.7,
+  "peakDb": -1.4,
+  "avDelta": 0.0006689999999949237,
+  "render": {
+    "sourceHash": "3631f7feca60a5d76a9888ff354b1ef5a5b35ae32ea4848de1e223d424e8a453",
+    "samples": 64,
+    "percentage": 100,
+    "resolution": [
+      1080,
+      1920
+    ],
+    "shots": [
+      {
+        "shot": "reveal",
+        "frames": 182,
+        "sha256": "35f6664502f3882f6f3ed47c06b98abb3a15eefb7fb19de03c28e9a158589102"
+      },
+      {
+        "shot": "gravity",
+        "frames": 188,
+        "sha256": "72340a87aedf1a86ccbe77c0ec04bdb115f3e60cd0b9d381d2ae5485e97538fa"
+      },
+      {
+        "shot": "space",
+        "frames": 188,
+        "sha256": "ad600e927b57215b5943b8c5a9a72d9248360e6c254df4117873965b8ad23eb6"
+      },
+      {
+        "shot": "cost",
+        "frames": 158,
+        "sha256": "a84f5e2f8b5b964cc0311006e12255ecf2976f50bcaddafd4bbb1fa21b91f22e"
+      },
+      {
+        "shot": "alternative",
+        "frames": 234,
+        "sha256": "809d9b3bfb6889d03edae5a4e00865e2c4a0703b902dceb0cceb30854bfbc431"
+      },
+      {
+        "shot": "tradeoff",
+        "frames": 143,
+        "sha256": "8032941c8b2252bb5fe68c4442671c0fa71cdbb5be9b12ea891685fc4e148c04"
+      },
+      {
+        "shot": "ending",
+        "frames": 182,
+        "sha256": "5f696e1b4107eecaffc2c23bf5783613229ab8202ed0158b65c510c23951c826"
+      }
+    ]
+  },
+  "reviewDigest": "6e6bc7e9ed7cca4da5fa75f45c79c5763f4e0509ec1921419430a9884a60d350",
+  "comparison": {
+    "reference": "https://www.youtube.com/shorts/2XaDa6qlHr4",
+    "referenceSeconds": 179.041,
+    "scope": "Selected frames and playback, not complete reference audio/transcript review. No reference assets reused.",
+    "strengths": [
+      "Consistent rooms and pipe route",
+      "Warm material palette",
+      "Complete cause, alternative and tradeoff in an original 56-second script"
+    ],
+    "gaps": [
+      "More schematic flow visualization than reference water/obstruction closeups",
+      "Less variation in scene scale and transitions"
+    ],
+    "nextPriority": "Animate concrete physical phenomena and causal closeups before increasing samples or decorative detail.",
+    "creatorTools": "unknown"
+  },
+  "renderExit": {
+    "exitCode": 0,
+    "seconds": 10349.71659398079
+  },
+  "assemblyExit": {
+    "exitCode": 0,
+    "at": 1791612491.3159108
+  },
+  "paidGeneration": {
+    "provider": "Higgsfield",
+    "jobs": 1,
+    "jobId": "096f9fa3-758d-430f-99b8-671eff287a12",
+    "introSeconds": 6,
+    "quotedCredits": 54,
+    "state": "downloaded",
+    "note": "Quote/accepted job receipt; post-charge ledger not checked."
+  },
+  "sourceHashes": {
+    "story.json": "ba8e89763796980e26739cc5e863d315139be82441bf97f99199963c71b23afb",
+    "review.json": "ab898048e8cc754c5a70bc7b5189688336ffae53d82c886c7c0cf028c83a8712",
+    "produce.mjs": "aab6a7d50a8feeedd26971f608b172be45ee78debd9cc8f682cbcbbd9b29953a",
+    "scene.py": "3631f7feca60a5d76a9888ff354b1ef5a5b35ae32ea4848de1e223d424e8a453",
+    "render.py": "620704ced838223284c686e4cc4fd5a0d2417139442afd1b1eaa22828806c77f"
+  }
+}

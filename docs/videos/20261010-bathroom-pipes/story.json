@@ -1,0 +1,106 @@
+{
+  "id": "bathroom-pipes-20261010",
+  "title": "윗집 화장실 배관이 왜 우리 집 천장에 있을까?",
+  "brief": {
+    "category": "건축학",
+    "topic": "아파트 층하배관과 층상배관의 공간·소음·점검 차이",
+    "format": "short",
+    "duration": 65,
+    "direction": "실제 공간을 따라가는 몰입형 3D 설명. 하나의 화장실과 같은 배관 경로를 추적한다.",
+    "voiceId": "RU7aSi6lT4uQBXMLgDxK",
+    "narrationSpeed": 1.1,
+    "productionStyle": "immersive-3d"
+  },
+  "voiceId": "RU7aSi6lT4uQBXMLgDxK",
+  "model": "eleven_multilingual_v2",
+  "speed": 1.1,
+  "maxHiggsfieldCredits": 54,
+  "scenes": [
+    {
+      "id": "hook",
+      "duration": 8,
+      "narration": "우리 집 천장인데, 왜 윗집 물이 지나갈까요?",
+      "prompt": "Warm modern bathroom at human eye level. Camera tilts toward an access panel; no impossible fixture morphing.",
+      "kind": "video"
+    },
+    {
+      "id": "reveal",
+      "duration": 8,
+      "narration": "층하배관을 쓰는 아파트에선, 윗집 변기에서 나온 관이 바닥을 뚫고 내려옵니다. 바로 우리 집 천장 위로요.",
+      "prompt": "Reveal two stacked bathrooms. Trace the upstairs toilet outlet vertically through its floor into the lower ceiling void; keep both rooms visible.",
+      "kind": "video"
+    },
+    {
+      "id": "gravity",
+      "duration": 8,
+      "narration": "변기 물은 옆의 공용 배관까지 흘러가야 합니다. 그래서 가로로 뻗은 관에도, 물이 내려갈 작은 경사가 필요하죠.",
+      "prompt": "Follow a moving cyan water indicator inside the sloped horizontal pipe into the shared vertical stack. Gravity flow is continuously downhill.",
+      "kind": "video"
+    },
+    {
+      "id": "space",
+      "duration": 8,
+      "narration": "관의 굵기와 경사, 연결 부품을 넣을 공간이 필요한 겁니다. 층하배관은 그 공간을 아래층 천장 위에서 확보한 방식이에요.",
+      "prompt": "Macro pipe with elbow, socket and hangers under the structural slab. Ceiling finish pulls down to reveal the service void; pipe stays connected.",
+      "kind": "video"
+    },
+    {
+      "id": "cost",
+      "duration": 8,
+      "narration": "문제는 소리와 수리입니다. 물 흐르는 소리가 아래층에 전달되고, 관을 고치려면 아래층 천장을 열어야 할 수도 있죠.",
+      "prompt": "Return to lower bathroom. Show restrained vibration rings around the ceiling pipe; access hatch opens to the joint. No leak is fabricated.",
+      "kind": "video"
+    },
+    {
+      "id": "alternative",
+      "duration": 8,
+      "narration": "다른 방법도 있습니다. 층상배관은 관을 같은 층 바닥이나 벽 쪽에 둡니다. 여기선 변기 뒤 서비스 벽으로 관을 보내, 같은 집에서 점검하게 했습니다.",
+      "prompt": "Same upstairs room changes to a wall-hung toilet with service wall and rear outlet on the SAME side of the slab. Cyan flow enters the common stack; removable service panel opens.",
+      "kind": "video"
+    },
+    {
+      "id": "tradeoff",
+      "duration": 8,
+      "narration": "대신 그 벽과 배관이 차지할 공간을 설계 때 마련해야 합니다. 소음도 무조건 사라지는 건 아니고요.",
+      "prompt": "Camera moves across the service wall depth and usable room. Wall is transparent in cutaway, showing pipe zone without implying zero sound.",
+      "kind": "video"
+    },
+    {
+      "id": "ending",
+      "duration": 8,
+      "narration": "결국 배관의 위치 하나가, 누가 소리를 듣고 어디서 수리할지까지 바꾸는 겁니다.",
+      "prompt": "Return to stacked room overview; highlight lower ceiling route then same-floor service route. End on complete, calm contextual bathroom image, no cliffhanger.",
+      "kind": "video"
+    }
+  ],
+  "research": {
+    "sources": [
+      {
+        "id": "kict2017",
+        "url": "https://journal.khousing.or.kr/articles/xml/7z70/",
+        "title": "양현정·김수암, 장수명 주택의 화장실 층상배관 시스템 기술 분석 및 가변 용이성 모색 연구 (2017)"
+      }
+    ],
+    "claims": [
+      {
+        "claim": "층하배관은 상부 세대 오배수관을 하부 세대 천장 내부로 배치하고 공용 수직관에 연결한다.",
+        "sourceIds": [
+          "kict2017"
+        ]
+      },
+      {
+        "claim": "배수 경사, 관·부속 공간, 점검 접근을 고려해야 하며 하부층 소음과 보수 접근 문제가 발생할 수 있다.",
+        "sourceIds": [
+          "kict2017"
+        ]
+      },
+      {
+        "claim": "층상배관은 바닥 또는 벽 부위에서 같은 층 배관을 구성하며 배관 공간과 설계 검토가 필요하다.",
+        "sourceIds": [
+          "kict2017"
+        ]
+      }
+    ]
+  },
+  "openingPrompt": "One continuous six second photoreal architectural camera shot, vertical 9:16. Start from the provided original detailed warm beige bathroom. Slowly push in and tilt upward toward the ceiling inspection hatch above the toilet, revealing the surprising hidden service space. Preserve exact room geometry, porcelain fixtures and lighting. The hatch slides slightly aside, grey wastewater pipe visible above it. No flowing sewage, no people, no text, no labels, no logo, no room morphing, no pipe deformation. Premium realistic interior cinematography, tactile ceramic, oak cabinetry, soft daylight, cinematic contact shadows."
+}
