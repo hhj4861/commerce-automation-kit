@@ -1,0 +1,174 @@
+{
+  "version": "explanation-depth-v1",
+  "digest": "bc69226ae2ce1bc46c1296ecff181b33f9aafe2991c22fc4d86393ccaf7976ed",
+  "checks": {
+    "focus": {
+      "pass": true,
+      "reason": "중심 질문은 ‘경찰이라는 문밖 남자를 믿고 문을 열어도 되는가’다. 신분 제시 요구→독립적인 확인→사칭 판별이 이 질문에 답한다. 열쇠 반전도 같은 방문자와 같은 문의 안전 문제를 이어가므로 별도 주제로 이탈하지 않는다.",
+      "evidence": [
+        {
+          "sceneId": "identity",
+          "field": "narration",
+          "quote": "서윤: 신분증부터 보여 주세요."
+        },
+        {
+          "sceneId": "missing",
+          "field": "narration",
+          "quote": "상담원: 문 열지 마세요. 김도현 경위는 오늘 오후 숨진 채 발견됐습니다."
+        }
+      ]
+    },
+    "why": {
+      "pass": true,
+      "reason": "서윤은 신원을 모르는 방문자의 개문 요구 때문에 확인을 시도한다. 남자가 재촉하자 옷을 입겠다는 핑계로 시간을 버는 행동도 확인 중이라는 사실을 숨기려는 동기로 납득된다. 범인이 왜 열쇠를 갖게 됐는지는 미공개지만, 현재 장면의 기만과 방어 행동을 이해하는 데 필수인 선행 설명은 아니다.",
+      "evidence": [
+        {
+          "sceneId": "knock",
+          "field": "narration",
+          "quote": "문밖 남자: 경찰입니다. 문 좀 열어 주세요."
+        },
+        {
+          "sceneId": "verify",
+          "field": "narration",
+          "quote": "서윤: 지금 집 앞에 형사라는 분이 왔는데요. 김도현, 번호는 이일팔칠. 확인 좀 해 주세요."
+        },
+        {
+          "sceneId": "pressure",
+          "field": "narration",
+          "quote": "문밖 남자: 안에서 뭐 하세요? / 서윤: 잠깐만요. 옷 좀 입을게요."
+        }
+      ]
+    },
+    "mechanism": {
+      "pass": true,
+      "reason": "방문자가 내민 신분증의 정보를 서윤이 직접 건 전화로 확인하고, 그 신원의 인물이 사망했다는 답을 받아 사칭을 알아내는 인과가 이어진다. 이후 작동하는 열쇠가 잠금을 해제하지만 체인과 의자가 개문을 막는 과정도 화면에 명시돼 있다. 확인 전화의 응답은 가상 사건의 설정으로 평가하며 실제 경찰 업무 절차가 검증됐다는 뜻은 아니다.",
+      "evidence": [
+        {
+          "sceneId": "verify",
+          "field": "narration",
+          "quote": "서윤: 지금 집 앞에 형사라는 분이 왔는데요. 김도현, 번호는 이일팔칠. 확인 좀 해 주세요."
+        },
+        {
+          "sceneId": "missing",
+          "field": "narration",
+          "quote": "상담원: 문 열지 마세요. 김도현 경위는 오늘 오후 숨진 채 발견됐습니다. / 서윤: 그럼, 이 신분증은…"
+        },
+        {
+          "sceneId": "verify",
+          "field": "prompt",
+          "quote": "The woman independently calls rather than answering an unknown caller."
+        },
+        {
+          "sceneId": "turn",
+          "field": "prompt",
+          "quote": "The deadbolt retracts; then the handle depresses and the inward door moves only1cm until its clearly engaged chain pulls taut and the chair bracing the handle creaks but holds."
+        }
+      ]
+    },
+    "example": {
+      "pass": true,
+      "reason": "추상적인 방범 교훈 대신 서윤의 집에 찾아온 한 방문자와 그가 제출한 신분증을 끝까지 따라간다. 김도현이라는 이름과 2187이라는 번호가 확인 요청에 실제로 사용되고, 같은 신분증의 의미가 신원 증명에서 사칭의 단서로 바뀌는 구체적 사건이 있다.",
+      "evidence": [
+        {
+          "sceneId": "identity",
+          "field": "narration",
+          "quote": "문밖 남자: 강력팀 김도현입니다. 아랫집 사건 때문에 왔어요."
+        },
+        {
+          "sceneId": "verify",
+          "field": "narration",
+          "quote": "서윤: 지금 집 앞에 형사라는 분이 왔는데요. 김도현, 번호는 이일팔칠. 확인 좀 해 주세요."
+        },
+        {
+          "sceneId": "missing",
+          "field": "narration",
+          "quote": "김도현 경위는 오늘 오후 숨진 채 발견됐습니다. / 서윤: 그럼, 이 신분증은…"
+        }
+      ]
+    },
+    "payoff": {
+      "pass": true,
+      "reason": "방문자의 신원을 믿고 문을 열어서는 안 된다는 첫 질문의 답을 본편 안에서 준다. 이어 잠갔다는 안도감이 실제로 돌아가는 열쇠 때문에 뒤집히고, 문이 체인과 의자에 막히는 현재 결과까지 보여준다. 구조 완료와 열쇠 입수 경위는 미해결이지만, 사칭 판별이라는 중심 답을 다음 편으로 미루지는 않는다. 잠금만으로 안전이 보장되지 않는다는 의미도 이 가상 사건 안에서 드러난다.",
+      "evidence": [
+        {
+          "sceneId": "missing",
+          "field": "narration",
+          "quote": "상담원: 문 열지 마세요. 김도현 경위는 오늘 오후 숨진 채 발견됐습니다."
+        },
+        {
+          "sceneId": "key",
+          "field": "narration",
+          "quote": "서윤: 문은 잠갔어요."
+        },
+        {
+          "sceneId": "turn",
+          "field": "prompt",
+          "quote": "The deadbolt retracts; then the handle depresses and the inward door moves only1cm until its clearly engaged chain pulls taut and the chair bracing the handle creaks but holds."
+        }
+      ]
+    },
+    "pacing": {
+      "pass": true,
+      "reason": "첫 장면에서 개문 요구와 손잡이 움직임으로 갈등을 시작하며 긴 소개가 없다. 78초 동안 신원 요구→확인→재촉→사망 통보→방어→열쇠 반전으로 상황이 변한다. 대사가 적은 후반도 의자 설치와 열쇠 선택·회전·문의 저항이라는 사건이 배정돼 있어 단순한 시간 채우기로 보이지 않는다. 마지막 무대사 장면이 반전의 결과를 마무리한다. 실제 발화 시간과 긴장감의 지속 여부는 TTS·편집 검증이 별도로 필요하다.",
+      "evidence": [
+        {
+          "sceneId": "knock",
+          "field": "narration",
+          "quote": "문밖 남자: 경찰입니다. 문 좀 열어 주세요."
+        },
+        {
+          "sceneId": "pressure",
+          "field": "narration",
+          "quote": "문밖 남자: 안에서 뭐 하세요? / 서윤: 잠깐만요. 옷 좀 입을게요."
+        },
+        {
+          "sceneId": "brace",
+          "field": "narration",
+          "quote": "상담원: 출동 중입니다. 문에서 떨어져 계세요."
+        },
+        {
+          "sceneId": "turn",
+          "field": "prompt",
+          "quote": "End on the taut chain with1.5s controlled hold."
+        }
+      ]
+    },
+    "visuals": {
+      "pass": true,
+      "reason": "첫 화면은 문과 움직이는 손잡이에 ‘문을 열어도 될까?’를 붙여 무음으로도 대상과 질문을 제시한다. 신분증이 문 아래로 들어오고 확인에 쓰이는 과정, 처음 보인 1103호와 열쇠 표식의 대응, 외부 열쇠 회전과 내부 잠금 해제·체인 저항의 연결이 구체적으로 지정돼 있다. 정지 그림 확대나 용어 자막에 설명을 맡기지 않는다. 이는 화면 계획의 합격이며 실제 렌더의 가독성·소품 연속성·물리적 동작까지 확인한 판정은 아니다.",
+      "evidence": [
+        {
+          "sceneId": "knock",
+          "field": "prompt",
+          "quote": "Exterior of apartment door1103 for first2s: engraved1103 fills readable upper frame, three hard knocks and the handle physically depresses."
+        },
+        {
+          "sceneId": "knock",
+          "field": "prompt",
+          "quote": "Modern mint/white header 문을 열어도 될까? for first3.5s."
+        },
+        {
+          "sceneId": "identity",
+          "field": "prompt",
+          "quote": "A gloved hand pushes an ID card underneath the door. The card visibly slides and stops against a shoe."
+        },
+        {
+          "sceneId": "key",
+          "field": "prompt",
+          "quote": "A gloved hand selects a brass key with visible tag1103; match to engraved1103 above the apartment door explicitly established in shot1."
+        },
+        {
+          "sceneId": "turn",
+          "field": "prompt",
+          "quote": "Cut from the EXTERIOR key turn in the previous shot to the INTERIOR thumb-turn on that same mechanical lock rotating in sync."
+        },
+        {
+          "sceneId": "turn",
+          "field": "prompt",
+          "quote": "The deadbolt retracts; then the handle depresses and the inward door moves only1cm until its clearly engaged chain pulls taut and the chair bracing the handle creaks but holds."
+        }
+      ]
+    }
+  },
+  "passed": true
+}

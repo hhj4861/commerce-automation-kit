@@ -1,0 +1,13 @@
+{
+  "checkedAt": "2026-10-11T06:26:18.277147+00:00",
+  "provider": "Higgsfield official CLI through existing Cloudflare credential broker",
+  "balanceCredits": 10.65,
+  "model": "seedance_2_0",
+  "durationSeconds": 6,
+  "resolution": "1080p",
+  "mode": "std",
+  "costCredits": 54,
+  "generateAudio": false,
+  "generationRequests": 0,
+  "state": "insufficient credits for approved opening; user decision pending"
+}

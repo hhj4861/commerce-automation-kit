@@ -1,0 +1,95 @@
+{
+  "title": "문밖의 형사 — 1화, 열지 마세요",
+  "brief": {
+    "category": "범죄 스릴러",
+    "format": "short",
+    "duration": 78,
+    "aspect": "9:16",
+    "topic": "독립적으로 경찰 신원을 확인해 가짜 형사를 알아내지만, 범인이 집 열쇠를 갖고 있다.",
+    "productionStyle": "hybrid",
+    "style": "공간·대상 동작 중심 시네마틱3D; modern-v1 자막·헤더; 세로 전체 화면. 드라마 대화1.0배속, 음악은 대사 아래."
+  },
+  "fiction": true,
+  "voices": {
+    "서윤": "UqW1DivwFt1NwUMSGnTn",
+    "문밖 남자": "CxErO97xpQgQXYmapDKX",
+    "상담원": "JguuvPsf0F2TNXefsblh"
+  },
+  "scenes": [
+    {
+      "id": "knock",
+      "duration": 6,
+      "narration": "문밖 남자: 경찰입니다. 문 좀 열어 주세요.",
+      "spoken": true,
+      "prompt": "Exterior of apartment door1103 for first2s: engraved1103 fills readable upper frame, three hard knocks and the handle physically depresses. Cut inside same door to female POV by second3; chain is visibly engaged. Warm practical lamp versus cold seam under door. Modern mint/white header 문을 열어도 될까? for first3.5s. Physical motion, not a still card."
+    },
+    {
+      "id": "identity",
+      "duration": 12,
+      "narration": "서윤: 신분증부터 보여 주세요. / 문밖 남자: 강력팀 김도현입니다. 아랫집 사건 때문에 왔어요.",
+      "spoken": true,
+      "prompt": "Move from door at human eye height down to the floor. A gloved hand pushes an ID card underneath the door. The card visibly slides and stops against a shoe. Identity prop is fictional, no real police insignia."
+    },
+    {
+      "id": "verify",
+      "duration": 10,
+      "narration": "서윤: 지금 집 앞에 형사라는 분이 왔는데요. 김도현, 번호는 이일팔칠. 확인 좀 해 주세요.",
+      "spoken": true,
+      "prompt": "Same foyer, smartphone placed beside the ID and dialing112. The woman independently calls rather than answering an unknown caller. Camera moves close enough to compare handwritten fictional ID number2187 with phone, holding long enough to read."
+    },
+    {
+      "id": "pressure",
+      "duration": 9,
+      "narration": "문밖 남자: 안에서 뭐 하세요? / 서윤: 잠깐만요. 옷 좀 입을게요.",
+      "spoken": true,
+      "prompt": "Handle moves again, harder. POV retreats, phone face down to hide its light; narrow strip of shoe shadow blocks light under door. Do not show lip-synced faces; voices are physically offscreen."
+    },
+    {
+      "id": "missing",
+      "duration": 14,
+      "narration": "상담원: 문 열지 마세요. 김도현 경위는 오늘 오후 숨진 채 발견됐습니다. / 서윤: 그럼, 이 신분증은…",
+      "spoken": true,
+      "prompt": "Continuous rack focus from ID to chain latch as phone warning is heard. Phone rests on the same entry console and ID remains foreground. POV reaches toward chain, then stops; the camera backs away rather than decorative zoom. The caller is the emergency service she independently dialed, not an incoming unknown call. The confirmed death makes the visitor claiming that identity an impostor; this is a fictional crime plot, not public procedural advice."
+    },
+    {
+      "id": "brace",
+      "duration": 10,
+      "narration": "상담원: 출동 중입니다. 문에서 떨어져 계세요.",
+      "spoken": true,
+      "prompt": "In one connected apartment space, a dining chair slides into place under the inward-opening door handle. Chair legs scrape real tiled floor and settle under load. Phone camera records the ID and sends an evidence photo, delivery checkmark visible. Reconcile prop positions between cuts."
+    },
+    {
+      "id": "key",
+      "duration": 10,
+      "narration": "서윤: 문은 잠갔어요.",
+      "spoken": true,
+      "prompt": "Cut outside for the second time: chest-down silhouette in a dark everyday coat. A gloved hand selects a brass key with visible tag1103; match to engraved1103 above the apartment door explicitly established in shot1. Actual key-ring rotation, fingers selecting one key and inserting it fully into the exterior key cylinder and beginning a clockwise turn. Do not claim how he obtained it; that is an unanswered later-episode question."
+    },
+    {
+      "id": "turn",
+      "duration": 7,
+      "narration": "열쇠가 돌아가는 소리. 문은 아직 열리지 않는다.",
+      "spoken": false,
+      "prompt": "Cut from the EXTERIOR key turn in the previous shot to the INTERIOR thumb-turn on that same mechanical lock rotating in sync. No key is shown on the interior side; no see-through door. The deadbolt retracts; then the handle depresses and the inward door moves only1cm until its clearly engaged chain pulls taut and the chair bracing the handle creaks but holds. Woman POV retreats within the same foyer. End on the taut chain with1.5s controlled hold. The man is not the officer independently confirmed dead. The new threat is possession of a working key, origin unknown. No cut sentence. No instructional cutaway of lock internals."
+    }
+  ],
+  "research": {
+    "sources": [],
+    "facts": [],
+    "limitations": [
+      "가상 인물·가상 사건·가상 신분증. 실제 경찰 업무 절차 안내가 아니다."
+    ]
+  },
+  "production": {
+    "openingPolicy": "Higgsfield6s unless user explicitly authorizes Blender-only exception",
+    "balanceObserved": 10.65,
+    "openingCostObserved": 54,
+    "higgsfieldGenerationRequests": 0,
+    "status": "script draft; opening decision pending"
+  },
+  "seriesArc": [
+    "신원 확인: 사망한 경찰의 이름을 댄 사칭범이라는 답. 그가 집 열쇠까지 가진 새 위협.",
+    "접근 경로: 열쇠와 사망한 경찰의 연결을 추적",
+    "증거 회수: 주인공이 확보한 신분증 영상으로 공범을 드러냄"
+  ]
+}
