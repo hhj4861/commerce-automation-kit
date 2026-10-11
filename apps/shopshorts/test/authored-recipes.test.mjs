@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createAuthoredProject} from '../lib/authored-project.js';
-import {RECIPE_ID,authoredSpec} from '../public/authored-recipes.js';
+import {RECIPE_ID,authoredSpec,authoredCaptionLayout} from '../public/authored-recipes.js';
 import {hybridPlan} from '../public/hybrid-plan.js';
 import {validateScenes,validateEdit} from '../lib/studio.js';
 import {studioApi} from '../lib/studio-api.js';
@@ -47,7 +47,7 @@ test('measured timeline carries the six-second opening across speech and preserv
  const p=withAudio(),edit=validateEdit(cinematicEdit(p),p),spans=clipSpans(edit);
  assert.ok(spans[0].end/FPS<3.5);const carry=openingCarry(p,edit,edit.clips[1]);assert.equal(carry.offset,spans[1].start/FPS);assert.equal(carry.offset+carry.duration,6);
  assert.ok(frameCount(edit)/FPS<45);
- for(const clip of edit.clips){const scene=p.scenes.find(s=>s.id===clip.sceneId);const captions=edit.captions.filter(c=>c.clipId===clip.id&&c.source==='script'&&c.id!=='authored-concept-label');assert.equal(captions.map(c=>c.text).join('').replace(/\s/gu,''),scene.narration.replace(/\s/gu,''));for(const c of captions){assert.ok(c.startFrame>=0&&c.endFrame<=clip.outFrame);assert.ok(captionArtwork(c).height<=192);}}
+ for(const clip of edit.clips){const scene=p.scenes.find(s=>s.id===clip.sceneId);const captions=edit.captions.filter(c=>c.clipId===clip.id&&c.source==='script'&&c.id!=='authored-concept-label');assert.equal(captions.map(c=>c.text).join('').replace(/\s/gu,''),scene.narration.replace(/\s/gu,''));for(const c of captions){assert.ok(c.startFrame>=0&&c.endFrame<=clip.outFrame);assert.ok(captionArtwork(c).height<=192);assert.ok(c.text.trim().split(/\s/u).length>=3,'No isolated sentence endings');}}
  const last=edit.clips.at(-1);assert.ok(last.outFrame/FPS-p.assets['narration-ending'].duration>=1.5);assert.ok(edit.captions.find(c=>c.id==='authored-concept-label'));
  const header=edit.captions.find(c=>c.presentation==='modern-header-v1');assert.ok(header&&header.startFrame===0);
 });
@@ -67,4 +67,8 @@ test('CLI rejects a traversal project before reading/importing assets; create do
  const dir=await mkdtemp(join(tmpdir(),'authored-cli-'));t.after(()=>rm(dir,{recursive:true,force:true}));const file=join(dir,'project.json'),p=make();p.id='../../outside';await writeFile(file,JSON.stringify(p));
  await assert.rejects(exec(process.execPath,['apps/shopshorts/studio-recipe-cli.mjs','--project',file,'--action','import','--assets',dir,'--voice-dir',dir,'--opening','/does-not-exist']),/안전한 프로젝트 ID/);
  await assert.rejects(exec(process.execPath,['apps/shopshorts/studio-recipe-cli.mjs','--project',file,'--action','create']),/덮어쓰지/);assert.equal(JSON.parse(await readFile(file,'utf8')).id,p.id);
+});
+
+test('registered captions wrap between words, including the closing sentence',()=>{
+ for(const scene of make().scenes){const text=scene.narration.split('.').filter(Boolean).at(-1).trim()+'.',layout=authoredCaptionLayout(text);assert.equal(layout.text.replace(/\n/g,' '),text);assert.ok(layout.size>=48);assert.ok(layout.text.split('\n').every(line=>!line.startsWith('는 ')));}
 });

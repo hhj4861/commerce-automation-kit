@@ -1,3 +1,4 @@
+import {typographyLines} from './video-typography.js';
 // Reviewed data and fixed renderer IDs only; never accept executable source or paths.
 export const RECIPE_ID='sapporo-hovering-v1';
 export const RECIPE_TITLE='8,300톤짜리 축구장을 공기로 움직인다고?';
@@ -119,4 +120,26 @@ export function authoredSpec(value,scene){
  const expected=RECIPE_SCENES.find(s=>s.id===value?.shot&&s.id!=='hook');
  if(!value||value.id!==RECIPE_ID||!expected||Object.keys(value).some(k=>!['id','shot'].includes(k))||scene.narration!==expected.narration||scene.prompt!==expected.prompt||scene.id!==expected.id)throw Object.assign(Error('검증된 건축 장면과 대본이 일치하지 않습니다. 새 내용에는 새 장면 설계가 필요합니다.'),{status:400});
  return {id:RECIPE_ID,shot:value.shot};
+}
+
+// Registered narration uses complete semantic phrases, not a hard character cut.
+export function authoredCaptionPhrases(scene){
+ const parts=scene.id==='air'?[
+  '받침대 밑 공간에 공기를 계속 불어 넣어 압력을 만듭니다.',
+  '이 압력이 넓은 바닥 전체를 위로 밀어,',
+  '하중의 약 구십 퍼센트를 받쳐 줍니다.'
+ ]:scene.narration.match(/[^.!?]+[.!?]+/gu)?.map(s=>s.trim());
+ if(!parts?.length||parts.join('').replace(/\s/gu,'')!==scene.narration.replace(/\s/gu,''))throw Error('등록 자막과 대본이 일치하지 않습니다.');
+ return parts;
+}
+
+export function authoredCaptionLayout(text){
+ const words=text.trim().split(/\s+/u);
+ for(let size=62;size>=48;size--){
+  if(typographyLines(text,size,880).length===1)return {text,size};
+  const choices=words.slice(1).map((_,i)=>[words.slice(0,i+1).join(' '),words.slice(i+1).join(' ')]).filter(pair=>pair.every(line=>typographyLines(line,size,880).length===1));
+  choices.sort((a,b)=>Math.abs(a[0].length-a[1].length)-Math.abs(b[0].length-b[1].length));
+  if(choices.length)return {text:choices[0].join('\n'),size};
+ }
+ throw Error('자막을 의미 단위로 더 나누어 주세요.');
 }
