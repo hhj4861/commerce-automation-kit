@@ -81,3 +81,22 @@
 - 이번 로컬 plan과 초기화 캐시는 검증 후 삭제했다. 기존 관측 worktree의 제공자 파일은 보존했다.
 
 남은 작업은 관측 종료·Scheduler pause 확인, 별도 빈 discovery DB와 7개 시크릿 값 준비, 스테이징 배포/마이그레이션, 한도가 정해진 실제 앱 E2E다. 현 단계는 빈 컨테이너만 실제 적용됐으며 새 스테이징 서비스나 운영 이관이 완료된 것이 아니다.
+
+## 앱 검증 실행 경로와 HTTPS 사전 점검 — 2026-10-11 후속
+
+17:32 KST 확인 시 g2 기록은 48줄이며 최신 관측은 4분 이내였다. 오류 이벤트와 종료 이벤트는 없고 관측은 진행 중이다. 여기서 전체 24시간 오류 0을 확정하지 않는다.
+
+### 기존 스크립트를 그대로 사용하면 안 되는 이유
+
+- Hanmadi 배포 ref의 `scripts/conversation-smoke.mjs`는 자체 모의 공급자를 띄우고 모델·음성·응답을 합성한다. 이 스크립트 통과를 실제 스테이징 성공으로 집계하지 않는다. 실호출은 별도 깨끗한 앱 checkout을 명시적 스테이징 프록시 URL/시험 키로 실행하고 `/api/auth`, `/api/conversation`, `/api/conversation/transcribe`, `/api/conversation/speech` 및 실제 화면을 확인한다. 기존 파일은 수정하지 않았다.
+- Festa `origin/feature/agent-test` `61d6bc49381e0e6cc208b339ce94dde5f2bf26c6`의 `scripts/verify-jev-browser.mjs`는 upstream을 **운영 edge URL로 고정**한다. 또한 Next 하위 프로세스 환경을 새로 구성하므로 상위의 `NODE_EXTRA_CA_CERTS`를 자동 전달하지 않는다. 이 스크립트를 스테이징 시험으로 실행하지 않는다. 격리 앱을 직접 실행해 `LITELLM_BASE_URL`, `JEV_BASE_URL`, 두 시험 키, `NODE_EXTRA_CA_CERTS`를 명시하고 브라우저에서 합성 인터뷰를 진행한다. 또는 별도 Festa 저장소에서 스크립트 변경을 검증·머지한 뒤 사용한다.
+- 블로그 `9e36acffcd189143ab5673534036f844ac5f8392`의 `src/shared_discovery.py`는 `DISCOVERY_ALLOW_LOCALHOST=1`을 지원한다. 따라서 loopback HTTP 경로를 해당 시험 프로세스에만 허용할 수 있다. 직접 `shared_discovery.discover()`만 호출하고 게시 오케스트레이션은 실행하지 않는다. 기존 Codex 연결 확인·생성 콜백, `DISCOVERY_REQUEST_ID`, `BLOG_CODEX_HOME` 등은 그대로 필요하다. 이 조회는 실행 성공이나 로그인 확인이 아니다.
+
+### 실행한 로컬 TLS 시험
+
+main `1925eb5`의 공통 LiteLLM 클라이언트와 `app_proxy.make_server`를 그대로 로드했다. 임시 자체서명 인증서를 OS 비동기화 임시 폴더에 만들고 실제 loopback TLS 서버에 Node 기본 fetch로 연결했다. 프록시의 외부 전송은 캡처 후 오류로 종료하는 시험 transport로 대체했다.
+
+1. CA를 지정하지 않은 클라이언트: `network_error`로 거부되고 upstream 시도 0개.
+2. 시험 Node 프로세스에만 `NODE_EXTRA_CA_CERTS` 지정: HTTPS 검증 통과, 요청 1개 캡처. `festa-travel`, `/llm/v1/chat/completions`, 서비스 Authorization과 Google용 X-Serverless-Authorization이 모두 보존됨. 캡처 transport가 의도적으로 중단하므로 최종 응답은 `upstream_error`이며 모델 성공 응답을 만들지 않았다.
+
+외부 요청 0개, 실제 토큰/키 사용 0개, 숨은 재시도 0개. 시험 종료 후 로컬 인증서·개인키를 삭제했다. 이는 **TLS/요청 전달 검증**이며 Festa 앱 자체, Cloud Run, 실제 JEV/LLM, 화면 표시 성공 검증이 아니다. 운영 및 관측 중인 스테이징은 변경하지 않았다.
