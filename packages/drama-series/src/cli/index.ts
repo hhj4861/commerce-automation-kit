@@ -38,6 +38,8 @@ import { transcriptGate, transcriptReadiness } from '../core/transcript.js';
 import { isLineCleared, lineHash } from '../core/line-hash.js';
 import { parseWhisperJson, transcribe } from '../adapters/transcribe/whisper.js';
 import { assembleEpisode, type AssembleEpisodeInput } from '../adapters/assemble.js';
+import { prepareReleaseSource, checkContinuationSource } from '../adapters/release-source.js';
+import { contentSha } from '../core/release-source.js';
 import { parseTrimSpec } from '../core/assemble-args.js';
 import { joinSimilarity } from '../adapters/ffmpeg.js';
 import { JOIN_MIN_SSIM, chainsFrom, judgeJoin } from '../core/join.js';
@@ -116,6 +118,23 @@ function kindOf(v: string): EpisodeJudgeKind {
 function main(argv: string[]): number {
   const [cmd, ...rest] = argv;
   switch (cmd) {
+    case 'release-source': {
+      const o = opts(rest, { series:'string', episode:'string', cut:'string', clip:'string', out:'string' });
+      const source = prepareReleaseSource(parseSeries(readJson(req(o,'series'))), parseEpisode(readJson(req(o,'episode'))), req(o,'cut'), abs(req(o,'clip')), abs(req(o,'out')));
+      out({ ok:true, authorized:false, source, directory:abs(req(o,'out')), note:'미출시 증거 사본 — 별도 사람 승인 기록과 전체 출시 관문 필요' });
+      return 0;
+    }
+    case 'continuation-check': {
+      const o = opts(rest, { series:'string', episode:'string', 'prev-episode':'string', source:'string', approval:'string', binding:'string', out:'string' });
+      const result = checkContinuationSource(loadCtx(o), abs(req(o,'source')), readJson(req(o,'approval')));
+      if (optStr(o,'binding') && contentSha(readJson(req(o,'binding'))) !== contentSha(result.binding)) {
+        out({ ok:false, authorized:false, problem:'저장된 연결 증거가 현재 문맥·파일·승인과 다름' });
+        return 1;
+      }
+      if (optStr(o,'out')) writeFileSync(abs(req(o,'out')),JSON.stringify(result.binding,null,2)+'\n',{flag:'wx',mode:0o600});
+      out(result);
+      return 0;
+    }
     case 'genres':
       out({ ok: true, genres: listGenres() });
       return 0;
