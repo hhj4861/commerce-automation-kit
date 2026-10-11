@@ -45,3 +45,24 @@
 [스테이징 보완 PR #176](https://github.com/hhj4861/commerce-automation-kit/pull/176)에 별도 플랫폼 모델 설정, PostgreSQL discovery 저장소·스테이징 서비스, 앱 시험용 IAM 프록시, 선택적 보온 구성을 준비했다. 운영이나 현재 스테이징에 적용된 것은 아니다.
 
 공용 accounts v1은 마스터 플랜 D4에 따라 이전하지 않고 Phase 7의 API 키 전용 재설계 대상으로 유지한다. 앞선 보고에서 Shopshorts·블로그에 discovery와 공용 accounts가 모두 필요하다고 묶은 설명은 정정한다. discovery 자체의 저장·라우팅 보완과 실제 선택 런타임의 연결 확인이 필요하다.
+
+## PR 머지와 배포 이미지 준비 — 2026-10-11
+
+사용자의 “응 머지하고 이어서 해줘” 승인으로 PR #176을 머지했다. 최신 PR 커밋 `004a282`의 CI 9개가 전부 성공한 것을 확인한 뒤 해당 head를 고정해 머지했고, main merge commit은 `1925eb553d99950af93d44f6710e7f173aee1dfe`다.
+
+같은 main 커밋에서 이미지 3개를 빌드해 레지스트리 업로드까지 확인했다. 아래 digest는 `us-central1-docker.pkg.dev/replay-live-508202/shared-ai/<image>@<digest>`로 사용한다.
+
+| 이미지 | digest | GitHub Actions |
+|---|---|---|
+| litellm-platform-staging | `sha256:bcc7ae9f8c05262b381bd4929be4eaa52e9d8f4d2ce76f08e17ea67faa01da6a` | [38117504847](https://github.com/hhj4861/commerce-automation-kit/actions/runs/38117504847) |
+| edge-platforms | `sha256:cfa543e4a2a493f98ea4059ea75bc4e4fea14c97a2be19007fb32b58e4dd44bc` | [38117506594](https://github.com/hhj4861/commerce-automation-kit/actions/runs/38117506594) |
+| discovery-staging | `sha256:6c94a624ab05293c6142ef42c4ab00ccae70359587db6e51c1b627cb30dc7d24` | [38117508122](https://github.com/hhj4861/commerce-automation-kit/actions/runs/38117508122) |
+
+### 현재 배포 보류 이유와 재개 조건
+
+- g1 원본 `ag1-1791607659.jsonl`은 10월 11일 13:49 KST에 종료됐다. g2 선행조건 검사에서 관찰 기간 86,422.635초, poll error 0, unknown gap 0, 미회수 키 0을 확인했다.
+- g2 원본 `g2-1791688316.jsonl`은 Scheduler 성공 확인 후 10월 11일 13:56:09 KST부터 24시간 관측을 진행 중이다. 정상 종료 예정은 **10월 12일 13:56경 KST**다. 시각 도달만으로 완료를 선언하지 않고 종료 로그·공백/오류·Scheduler pause를 확인해야 한다.
+- 이번에는 비용 관측에 영향을 주지 않는 Git 머지, 이미지 빌드, Secret Manager 메타데이터 조회만 했다. Cloud Run 리비전·트래픽·DB·Scheduler를 변경하지 않았고 앱/공급자 호출은 하지 않았다. 새 이미지가 실제 서비스에 배포된 상태가 아니다.
+- 메타데이터 확인: discovery 스테이징 시크릿 5개는 컨테이너가 없고, `festa-chat-api-key`/`replay-chat-api-key`는 버전이 없다. 값은 읽지 않았다.
+- 다음은 g2 종료 확인 → 별도 빈 discovery 스테이징 DB·시크릿 준비 → Terraform plan 확인·스테이징 적용/마이그레이션 → 제한된 실제 앱 검증 순서다. 절차는 main의 `docs/plans/20261011-staging-platform-parity.md`를 따른다. 새 유료 앱 호출의 건수·상한은 실행 전에 확정한다.
+- 이 시점에도 운영 VM과 기존 앱 연결은 유지한다. 앱 E2E와 운영 이관은 미완료다.
