@@ -1,3 +1,4 @@
+import {authoredSpec} from './authored-recipes.js';
 // Shared by browser, CLI and worker. Plans are data, never model-provided code.
 import {architectureQuality,architectureParts,validateArchitectureScene} from './architecture-quality.js';
 export const HYBRID_VERSION = 'hybrid-v1';
@@ -7,6 +8,7 @@ const invalid = message => {throw Object.assign(Error(message),{status:400,code:
 export function hybridScene(value, scene) {
   if (value === undefined) return undefined;
   if (!value || !['auto','webtoon','motion','3d'].includes(value.renderer)) invalid('혼합 장면의 제작 방식을 확인해 주세요.');
+  if(value.authored!==undefined){if(value.renderer!=='3d')invalid('등록 장면은 3D로 렌더합니다.');return {renderer:'3d',authored:authoredSpec(value.authored,scene)};}
   const focus=value.focus??scene.webtoon?.layers?.[0]?.id;
   if (!scene.webtoon?.layers?.some(l=>l.id===focus)) invalid('확대할 대상이 장면에 없습니다.');
   const depth=value.depth??8;
@@ -19,7 +21,8 @@ export function sceneRoute(scene,index,brief) {
   const spec=hybridScene(scene.hybrid,scene);
   const renderer=spec?.renderer&&spec.renderer!=='auto'?spec.renderer:(architectureQuality(brief)&&brief.productionStyle==='webtoon'&&scene.visualDirection?.treatment!=='cutaway'?'webtoon':({scene:'webtoon',cutaway:'3d',comparison:'motion',process:'motion',summary:'motion'}[scene.visualDirection?.treatment]));
   if(!renderer)invalid('자동 혼합에는 장면별 상황·단면·비교·흐름 구성이 필요합니다.');
-  if(renderer==='3d'&&architectureQuality(brief))validateArchitectureScene(scene);
+  if(spec?.authored&&(!architectureQuality(brief)||brief.aspect!=='9:16'))invalid('등록 장면은 건축학 세로 영상에서 사용하세요.');
+  if(renderer==='3d'&&architectureQuality(brief)&&!spec?.authored)validateArchitectureScene(scene);
   if(renderer==='3d'&&!architectureQuality(brief)&&!scene.webtoon?.layers?.some(l=>l.shape==='rect'))invalid('3D 구조도에는 두께를 보여줄 사각형 부품이 필요합니다. 다른 형태는 모션을 선택해 주세요.');
   return {renderer,reason:({webtoon:'사례와 상황을 원화와 움직임으로 연결합니다.',motion:'같은 대상의 변화와 흐름을 확대해 보여줍니다.','3d':'부품의 두께와 공간 관계를 구조도로 보여줍니다.'})[renderer]};
 }
