@@ -30,7 +30,7 @@ class LiteLLMStagingTest(unittest.TestCase):
         self.assertRegex(self.SERVICE, r'invoker_iam_disabled\s*=\s*true')
 
     def test_one_request_billed_instance_that_scales_to_zero(self):
-        for pattern in (r'min_instance_count\s*=\s*0', r'max_instance_count\s*=\s*1', r'max_instance_request_concurrency\s*=\s*20',
+        for pattern in (r'min_instance_count\s*=\s*var.staging_min_instances', r'max_instance_count\s*=\s*1', r'max_instance_request_concurrency\s*=\s*20',
                         r'cpu_idle\s*=\s*true', r'startup_cpu_boost\s*=\s*true', r'timeout\s*=\s*"300s"'):
             self.assertRegex(self.SERVICE, pattern)
 
@@ -39,7 +39,7 @@ class LiteLLMStagingTest(unittest.TestCase):
                                                    "DISABLE_SCHEMA_UPDATE": "true", "GRACEFUL_SHUTDOWN_TIMEOUT": "3"})
 
     def test_secrets_resolve_at_pinned_versions(self):
-        self.assertRegex(self.SERVICE, r'version\s*=\s*var\.secret_versions\[env\.value\]')
+        self.assertRegex(self.SERVICE, r'version\s*=\s*local\.platform_secret_versions\[env\.value\]')
         self.assertNotRegex(TF, r'(?i)"latest"')
 
     def test_startup_probe_and_pipeline_owned_image(self):

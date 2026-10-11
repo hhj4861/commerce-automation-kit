@@ -28,14 +28,17 @@ variable "warm_ping_via_edge" {
 }
 locals {
   # Env name -> Secret Manager secret, resolved at pinned numeric versions.
-  litellm_stg_secrets = {
+  litellm_stg_secrets = merge({
     LITELLM_MASTER_KEY   = "litellm-stg-master-key"
     LITELLM_SALT_KEY     = "litellm-stg-salt-key"
     DATABASE_URL         = "litellm-stg-database-url"
     HANMADI_CHAT_API_KEY = "hanmadi-chat-api-key"
     ELEVENLABS_API_KEY   = "elevenlabs-api-key"
     TYPESAFE_API_KEY     = "typesafe-api-key"
-  }
+    }, var.platform_staging == null ? {} : {
+    FESTA_CHAT_API_KEY  = "festa-chat-api-key"
+    REPLAY_CHAT_API_KEY = "replay-chat-api-key"
+  })
   # Framing probe reply: how the second hop received a request. Never echoes credentials.
   probe_reply = "{\"method\":\"{http.request.method}\",\"path\":\"{http.request.uri}\",\"host\":\"{http.request.hostport}\",\"content_length\":\"{http.request.header.Content-Length}\"}"
 }
@@ -61,7 +64,7 @@ resource "google_cloud_run_v2_service" "litellm_stg" {
     timeout                          = "300s"
     max_instance_request_concurrency = 20
     scaling {
-      min_instance_count = 0
+      min_instance_count = var.staging_min_instances
       max_instance_count = 1
     }
     containers {
@@ -97,7 +100,7 @@ resource "google_cloud_run_v2_service" "litellm_stg" {
           value_source {
             secret_key_ref {
               secret  = google_secret_manager_secret.managed[env.value].secret_id
-              version = var.secret_versions[env.value]
+              version = local.platform_secret_versions[env.value]
             }
           }
         }
@@ -149,7 +152,7 @@ resource "google_cloud_run_v2_job" "litellm_stg_migrate" {
             value_source {
               secret_key_ref {
                 secret  = google_secret_manager_secret.managed[env.value].secret_id
-                version = var.secret_versions[env.value]
+                version = local.platform_secret_versions[env.value]
               }
             }
           }
@@ -237,6 +240,13 @@ resource "google_cloud_run_v2_service" "edge_stg" {
       env {
         name  = "LLM_UPSTREAM"
         value = google_cloud_run_v2_service.litellm_stg.uri
+      }
+      dynamic "env" {
+        for_each = try(var.platform_staging.serve, false) ? [1] : []
+        content {
+          name  = "DISCOVERY_UPSTREAM"
+          value = google_cloud_run_v2_service.discovery_stg[0].uri
+        }
       }
     }
   }

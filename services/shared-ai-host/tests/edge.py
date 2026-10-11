@@ -70,7 +70,9 @@ try:
         processes.append(subprocess.Popen(["docker", "run", "--rm", "--network=host", *args, "-v", f"{config}:/etc/caddy/Caddyfile:ro", IMAGE], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL))
     staging = ROOT / "edge" / "Caddyfile.staging"
     processes.append(subprocess.Popen(["docker", "run", "--rm", "--network=host", "-e", "PORT=8082", "-e", "LLM_UPSTREAM=http://127.0.0.1:4100", "-v", f"{staging}:/etc/caddy/Caddyfile:ro", IMAGE], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL))
-    for port in (8080, 8081, 8082):
+    platforms = ROOT / "edge" / "Caddyfile.platforms"
+    processes.append(subprocess.Popen(["docker", "run", "--rm", "--network=host", "-e", "PORT=8083", "-e", "LLM_UPSTREAM=http://127.0.0.1:4100", "-e", "DISCOVERY_UPSTREAM=http://127.0.0.1:4195", "-v", f"{platforms}:/etc/caddy/Caddyfile:ro", IMAGE], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL))
+    for port in (8080, 8081, 8082, 8083):
         for _ in range(60):
             if any(p.poll() is not None for p in processes):
                 raise RuntimeError("Caddy exited before verification")
@@ -147,6 +149,16 @@ try:
         assert request(8082, path, KEY)[0] == 404, path
     assert request(8082, "/llm/typesafe/v1/systemone", KEY, "GET")[0] == 404
     assert request(8082, "/health") == (200, b"edge alive")
+    for method, path in (("POST", "/discovery/v1/discover"), ("POST", "/discovery/v1/discover/" + rid + "/claim"), ("POST", "/discovery/v1/discover/" + rid + "/complete"), ("GET", "/discovery/v1/discover/" + rid)):
+        assert request(8083, path, method=method)[0] == 401
+        code, body = request(8083, path, KEY, method)
+        assert code == 200 and json.loads(body) == {"port": 4195, "path": path.removeprefix("/discovery")}
+    for path in ("/accounts/connections", "/discovery/health", "/discovery/key/generate", "/discovery/v1/discover/not-a-uuid/claim"):
+        assert request(8083, path, KEY)[0] == 404
+    assert request(8083, "/discovery/v1/discover", KEY, "GET")[0] == 404
+    assert request(8083, "/discovery/v1/discover/" + rid, KEY, "POST")[0] == 404
+    assert request(8083, "/llm/v1/chat/completions", KEY)[0] == 200
+    print("PASS: platform edge discovery routing and denial")
     print("PASS: real Caddy, inference routing, prefix removal, auth preservation, unauthenticated rejection, admin/unknown path denial, staging edge")
 finally:
     for process in processes:
