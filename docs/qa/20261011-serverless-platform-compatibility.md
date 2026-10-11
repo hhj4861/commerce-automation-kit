@@ -66,3 +66,18 @@
 - 메타데이터 확인: discovery 스테이징 시크릿 5개는 컨테이너가 없고, `festa-chat-api-key`/`replay-chat-api-key`는 버전이 없다. 값은 읽지 않았다.
 - 다음은 g2 종료 확인 → 별도 빈 discovery 스테이징 DB·시크릿 준비 → Terraform plan 확인·스테이징 적용/마이그레이션 → 제한된 실제 앱 검증 순서다. 절차는 main의 `docs/plans/20261011-staging-platform-parity.md`를 따른다. 새 유료 앱 호출의 건수·상한은 실행 전에 확정한다.
 - 이 시점에도 운영 VM과 기존 앱 연결은 유지한다. 앱 E2E와 운영 이관은 미완료다.
+
+## 관측 중 가능한 사전 준비 — 2026-10-11 후속
+
+사용자의 추가 “계속해줘” 요청으로, g2 관측 조건에 영향을 주지 않는 빈 Secret Manager 컨테이너 준비만 별도로 진행했다. DB 생성·접속, 시크릿 값 복사, 런타임 자격 발급, 앱 호출, 리비전 변경은 수행하지 않았다.
+
+- 적용 코드: 승인·머지된 main `1925eb553d99950af93d44f6710e7f173aee1dfe`.
+- 기존 GCS backend `replay-live-508202-tfstate/shared-ai-host`, 개인 계정의 단기 토큰을 메모리로 사용했다. 로컬 state나 토큰 파일은 만들지 않았다.
+- `prepare_platform_staging=true`, target `google_secret_manager_secret.discovery_stg`의 저장 계획을 생성하고 실제 변경 주소와 create 동작을 검사했다. 계획 SHA-256: `8de261bb2cbdc07872ebee546c16851508fd47260d4eba3ef2e9b0cdd4f1f441`.
+- 같은 저장 계획 적용 결과: **5 added, 0 changed, 0 destroyed**. 대상은 `discovery-stg-database-url`, `discovery-stg-platform-keys`, `discovery-stg-naver-id`, `discovery-stg-naver-secret`, `discovery-stg-jev-key`다.
+- 적용 후 공식 제어면 조회로 다섯 컨테이너 모두 존재하며 값 버전은 각각 0개임을 확인했다. IAM·Cloud Run·Scheduler·운영 VM의 변경은 계획에 없었다.
+- 현재 g2는 계속 관측 중이며 종료 이벤트가 없다. 이번 target apply는 전체 스택 drift 없음이나 앱 검증 완료를 뜻하지 않는다.
+- **후속 전체 plan에서도 `prepare_platform_staging=true`를 유지한다.** `platform_staging` 객체를 설정하기 전에 기본 false로 되돌리면 이번 빈 컨테이너의 삭제가 계획되므로 적용하지 않는다. 서비스 배포 전에는 원래 절차대로 전체 plan과 기존 PoC 변수를 다시 확인한다.
+- 이번 로컬 plan과 초기화 캐시는 검증 후 삭제했다. 기존 관측 worktree의 제공자 파일은 보존했다.
+
+남은 작업은 관측 종료·Scheduler pause 확인, 별도 빈 discovery DB와 7개 시크릿 값 준비, 스테이징 배포/마이그레이션, 한도가 정해진 실제 앱 E2E다. 현 단계는 빈 컨테이너만 실제 적용됐으며 새 스테이징 서비스나 운영 이관이 완료된 것이 아니다.
