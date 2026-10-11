@@ -9,5 +9,13 @@
   "costCredits": 54,
   "generateAudio": false,
   "generationRequests": 0,
-  "state": "insufficient credits for approved opening; user decision pending"
+  "state": "resolved by explicit user approval: all-Blender for episode1 only",
+  "initialState": "insufficient credits for approved opening; user decision pending",
+  "approvedOverride": {
+    "date": "2026-10-11",
+    "userReply": "응 그렇게 해보자",
+    "scope": "this episode including opening",
+    "effectiveRenderer": "Blender",
+    "higgsfieldGenerationRequests": 0
+  }
 }

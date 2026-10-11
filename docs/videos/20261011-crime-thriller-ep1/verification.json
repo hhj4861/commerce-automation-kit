@@ -1,0 +1,278 @@
+{
+  "file": "/Users/admin/Downloads/vedio/crime-thriller-ep1.mp4",
+  "sha256": "29adc7b4f0c1f147c714d129309d7019e9cb1b57a2f88a8845aca190410f3312",
+  "duration": 78.0,
+  "frames": 1872,
+  "dimensions": [
+    1080,
+    1920
+  ],
+  "fullDecode": "pass",
+  "audioCorrelation": 0.9997845542306991,
+  "dialogues": [
+    {
+      "id": "knock-0",
+      "speaker": "문밖 남자",
+      "rms": 0.16769450902938843,
+      "duration": 2.325
+    },
+    {
+      "id": "identity-0",
+      "speaker": "서윤",
+      "rms": 0.16937167942523956,
+      "duration": 3.2
+    },
+    {
+      "id": "identity-1",
+      "speaker": "문밖 남자",
+      "rms": 0.1684110164642334,
+      "duration": 3.315
+    },
+    {
+      "id": "verify-0",
+      "speaker": "서윤",
+      "rms": 0.1694212555885315,
+      "duration": 8.16
+    },
+    {
+      "id": "pressure-0",
+      "speaker": "문밖 남자",
+      "rms": 0.16906271874904633,
+      "duration": 1.09
+    },
+    {
+      "id": "pressure-1",
+      "speaker": "서윤",
+      "rms": 0.1692807376384735,
+      "duration": 2.24
+    },
+    {
+      "id": "missing-0",
+      "speaker": "상담원",
+      "rms": 0.16961143910884857,
+      "duration": 4.55
+    },
+    {
+      "id": "missing-1",
+      "speaker": "서윤",
+      "rms": 0.1693948656320572,
+      "duration": 2.365
+    },
+    {
+      "id": "brace-0",
+      "speaker": "상담원",
+      "rms": 0.16983291506767273,
+      "duration": 2.86
+    },
+    {
+      "id": "key-0",
+      "speaker": "서윤",
+      "rms": 0.16936379671096802,
+      "duration": 1.74
+    }
+  ],
+  "captions": [
+    {
+      "caption": 0,
+      "glyphMatch": 1.0
+    },
+    {
+      "caption": 1,
+      "glyphMatch": 1.0
+    },
+    {
+      "caption": 2,
+      "glyphMatch": 1.0
+    },
+    {
+      "caption": 3,
+      "glyphMatch": 1.0
+    },
+    {
+      "caption": 4,
+      "glyphMatch": 1.0
+    },
+    {
+      "caption": 5,
+      "glyphMatch": 1.0
+    },
+    {
+      "caption": 6,
+      "glyphMatch": 1.0
+    },
+    {
+      "caption": 7,
+      "glyphMatch": 1.0
+    },
+    {
+      "caption": 8,
+      "glyphMatch": 1.0
+    },
+    {
+      "caption": 9,
+      "glyphMatch": 1.0
+    },
+    {
+      "caption": 10,
+      "glyphMatch": 1.0
+    },
+    {
+      "caption": 11,
+      "glyphMatch": 1.0
+    },
+    {
+      "caption": 12,
+      "glyphMatch": 1.0
+    },
+    {
+      "caption": 13,
+      "glyphMatch": 1.0
+    },
+    {
+      "caption": 14,
+      "glyphMatch": 1.0
+    },
+    {
+      "caption": 15,
+      "glyphMatch": 1.0
+    },
+    {
+      "caption": 16,
+      "glyphMatch": 1.0
+    }
+  ],
+  "higgsfieldCredits": 0,
+  "voiceRate": 1.0,
+  "renderManifest": {
+    "knock": {
+      "sourceHash": "0e1ce2138035a501efce12f4165920a26754da1c151c269151bd602121093623",
+      "frames": 144,
+      "duration": 6.0,
+      "samples": 16,
+      "percentage": 100,
+      "device": "METAL GPU",
+      "engine": "BLENDER_EEVEE_NEXT",
+      "sha256": "21ee929fa86d20bdedd9d48867787ea01394a12c789a423f0e59561ff73a62bb",
+      "elapsed": 122.01
+    },
+    "identity": {
+      "sourceHash": "0e1ce2138035a501efce12f4165920a26754da1c151c269151bd602121093623",
+      "frames": 288,
+      "duration": 12.0,
+      "samples": 16,
+      "percentage": 100,
+      "device": "METAL GPU",
+      "engine": "BLENDER_EEVEE_NEXT",
+      "sha256": "0b564f20301340bc58f3a8769ee1647f5bcd3c99e4f24aa5d40065457f7036a1",
+      "elapsed": 244.53
+    },
+    "verify": {
+      "sourceHash": "0e1ce2138035a501efce12f4165920a26754da1c151c269151bd602121093623",
+      "frames": 240,
+      "duration": 10.0,
+      "samples": 16,
+      "percentage": 100,
+      "device": "METAL GPU",
+      "engine": "BLENDER_EEVEE_NEXT",
+      "sha256": "3d75534d95200473c3e7014e1c5cfefea69c167c70bf0a570c5e78576317a1dc",
+      "elapsed": 193.76
+    },
+    "pressure": {
+      "sourceHash": "0e1ce2138035a501efce12f4165920a26754da1c151c269151bd602121093623",
+      "frames": 216,
+      "duration": 9.0,
+      "samples": 16,
+      "percentage": 100,
+      "device": "METAL GPU",
+      "engine": "BLENDER_EEVEE_NEXT",
+      "sha256": "5389f6df6769d95f9893b34f9a6b44b8cff3eb74ac9d7820f235fe7b9fc16998",
+      "elapsed": 174.33
+    },
+    "missing": {
+      "sourceHash": "0e1ce2138035a501efce12f4165920a26754da1c151c269151bd602121093623",
+      "frames": 336,
+      "duration": 14.0,
+      "samples": 16,
+      "percentage": 100,
+      "device": "METAL GPU",
+      "engine": "BLENDER_EEVEE_NEXT",
+      "sha256": "3a560e4ac63e8f42dc652df63c512c602f7ff483f10944b27a70e441e5517ab2",
+      "elapsed": 267.59
+    },
+    "brace": {
+      "sourceHash": "0e1ce2138035a501efce12f4165920a26754da1c151c269151bd602121093623",
+      "frames": 240,
+      "duration": 10.0,
+      "samples": 16,
+      "percentage": 100,
+      "device": "METAL GPU",
+      "engine": "BLENDER_EEVEE_NEXT",
+      "sha256": "de562692ae6576d32baa989f7efebbb9cf31cf828f02867bd708a7b5b9c523a2",
+      "elapsed": 196.01
+    },
+    "key": {
+      "sourceHash": "0e1ce2138035a501efce12f4165920a26754da1c151c269151bd602121093623",
+      "frames": 240,
+      "duration": 10.0,
+      "samples": 16,
+      "percentage": 100,
+      "device": "METAL GPU",
+      "engine": "BLENDER_EEVEE_NEXT",
+      "sha256": "50c0a0f69b36a2971e3377462b39a6b59410f0197a3f06067ca8b92106ed99c4",
+      "elapsed": 191.35
+    },
+    "turn": {
+      "sourceHash": "0e1ce2138035a501efce12f4165920a26754da1c151c269151bd602121093623",
+      "frames": 168,
+      "duration": 7.0,
+      "samples": 16,
+      "percentage": 100,
+      "device": "METAL GPU",
+      "engine": "BLENDER_EEVEE_NEXT",
+      "sha256": "493b1e64628d9c08aef36fe93537d5fabc9609847b622f7865a1300e31814469",
+      "elapsed": 131.01
+    }
+  },
+  "visualReview": {
+    "status": "pass",
+    "checked": [
+      "opening with modern header and caption",
+      "all8 scenes in final contact sheet",
+      "77.4second ending title and taut chain",
+      "no unexpected black screen interval"
+    ],
+    "limitations": [
+      "First-person/object-led 3D performance; no facial lip-sync."
+    ],
+    "evidence": [
+      "qa/first-shot-typography.jpg",
+      "qa/final-contact.jpg",
+      "qa/final-ending.jpg"
+    ]
+  },
+  "note": "Original fictional all-Blender first-person thriller, explicitly approved opening exception. Not lip-sync animation.",
+  "sourceMixMeasurement": {
+    "integratedLufs": -15.9,
+    "truePeakDbfs": -1.8
+  },
+  "speechCorrection": {
+    "voiceId": "JguuvPsf0F2TNXefsblh",
+    "line": "missing-0",
+    "model": "eleven_multilingual_v2",
+    "blindTranscription": " 문 열지 마세요. 김도현 경위는 오늘 오후 숨진 채 발견됐습니다."
+  },
+  "sourceSha256": {
+    "scene.py": "0e1ce2138035a501efce12f4165920a26754da1c151c269151bd602121093623",
+    "produce.mjs": "11886915021c713356a4fe342d8d04f995f19314b1e0ddc66fc092a90b6b1b92",
+    "finish.py": "0ba9a83ae44d9037014c98d39c406c84680ed84d60d76b16d9d5dd187432944c",
+    "story.json": "2dd6f6f8e85f5e2a5b65b284cd69a31bbb3b8cc2efef3ec863883281002c1461",
+    "review.json": "2259dab037556803efa148cd46afe21119b85314bcf188519cbaa9773a7301dc"
+  },
+  "blackScreenDetection": {
+    "minimumDuration": 0.3,
+    "pixelThreshold": 0.02,
+    "frameRatio": 0.98,
+    "events": []
+  },
+  "fileBytes": 41927198
+}
