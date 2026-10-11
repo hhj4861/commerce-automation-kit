@@ -93,3 +93,8 @@ which avoids tool-forcing incompatibility with newer models. Configure models su
 structured output; unsupported schemas/models fail instead of falling back. The server
 and client validate JSON-object output; consumers still validate domain constraints. No provider key is ever sent to arbitrary model-supplied
 hosts and redirects are refused.
+
+Verification on 2026-10-11, code 39da7de (PR #183):
+- [Accounts CI](https://github.com/hhj4861/commerce-automation-kit/actions/runs/38139636462): 31 tests, zero skips, PostgreSQL 16 + actual HTTP/client restart roundtrip; 33 JS tests; built non-root image imports passed.
+- [Host CI](https://github.com/hhj4861/commerce-automation-kit/actions/runs/38139636338): 87 tests, Terraform validation, real Caddy accounts routes and denied subscription/unknown paths passed.
+- These results are for the synthetic-provider CI environment. New accounts Cloud Run deployment, actual provider credentials, consumer UI rollout and cold latency are still outstanding.
