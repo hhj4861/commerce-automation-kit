@@ -1,0 +1,589 @@
+{
+  "baseline": "eae6be572e33e0c0932a5deeb3e44685c2127aa6",
+  "inputs": {
+    "series.json": "baaa22c3605dd2add51614ac71e95163227c0fa67cb9b592d79f884250bb8bfa",
+    "ep01-9min.json": "e9c7f267ad029cd1780925cdc82b39798034e35870472e2f439ec851aa076b0c",
+    "gates-9min/continuity.json": "ea9609a0d77776de0dd4701a33ba72f4535ee5368f421cfcc5584418d317b8c7",
+    "gates-9min/dialogue-judge.json": "343c8bf0c02a8aa904efa3c5e45cd43628bdb4bfe4db293b9bce23af4c6064b5",
+    "gates-9min/dialogue-lint.json": "7d8043bc243b4fc33e3fa6bab3f15491dfe75312ba90d0329c1c30dbf510b917",
+    "gates-9min/props.json": "9153025336c942da5cbe2a9e99fd4f45aeb0f81c32317c2e4457dbcf258fd7c9",
+    "gates-9min/scenario.json": "d9960fd923dbd06e23738a58514019403de00dd8f1a6cdced6093ab64f7baf99",
+    "gates-9min/schema.json": "d9db05de6e086779f045f7e821c7a40efff73c8f04fe4ae198df4893b0ee7ac9",
+    "gates-9min/topic-day-zero-warehouse.json": "3d4c8ee6caea853d32e12ec1efed39daeb47b07127bd5bc05fbf4666c2004575",
+    "gates-9min/topic-returner-and-traitor.json": "00dff3664134aaf3c717bf03526d578fac8cd2e44a249e9d3cefdfc14a70e71b",
+    "gates-9min/topic-returner-traitor-tyrant.json": "d3eec6156dd0680debb3aea9402c260ed9c87ed2fe7d425d0db408e01e6345d7",
+    "gates-9min/topic-seventy-two-hours.json": "14ae8a9a2527cfb637e894f6b0e521ccfc44507d1f876086f1e9834af8b5ef78",
+    "gates-9min/topic-traitor-foreman.json": "423f14839e24791c1cff51fe0bd8443c6c240c97b5183f7fbdc5174d2c16d2f5",
+    "gates-9min/topic-tyrant-of-storage.json": "9380af2b4fa778b57d5fe972173c864ea99e8808d5ff3c203eaf9df323ca1339",
+    "gates-9min/topic-vip-room-shelter.json": "d0e9c2105eab2d667ffa99099315e8750d2aad5152b1db7c69170f0514fe816c",
+    "gates-9min/transcript-c1.json": "93c72f2947b2a563170d8aaf54193785f1d5e56672887ba3d6fdaf6980b1dc55",
+    "gates-9min/transcript-c2.json": "ea73f50969eb69c31d6f6a266b44c9ff2171be1fcab666342fd9071a239a68a8",
+    "gates-9min/transcript-c3.json": "a8cd9d355509849506a66ad64ec72f4f09a169b763a836b732d91dc81d11b967",
+    "gates-9min/transcript-c4.json": "8155a581d3eed1b7666f9bd4f3b92a3842ecb2476740d71e63f406e3fc931846",
+    "gates-9min/transcript-c5.json": "38ea315348c3cf02679b97d5cc17f00d06326f2adfd28787704331b9f9d94bed",
+    "gates-9min/transcript-c6.json": "78abaaf00494b054758182cd5f330adc155fec8f150311a4128dc956f37c1f93",
+    "gates-9min/transcript-c7.json": "3e3f3a717432ab241da35a2f52e81a99ea04d8e23d52fb711d84de413b5826ce"
+  },
+  "validate": {
+    "exitCode": 0,
+    "stdout": {
+      "ok": true,
+      "reports": [
+        {
+          "gate": "schema",
+          "stage": "episode",
+          "ok": true,
+          "fingerprint": "8b639547da965bfa",
+          "findings": []
+        },
+        {
+          "gate": "dialogue-lint",
+          "stage": "episode",
+          "ok": true,
+          "fingerprint": "8b639547da965bfa",
+          "findings": [
+            {
+              "severity": "review",
+              "message": "컷당 대사 3줄(권장 2줄 이하)",
+              "cutId": "c2"
+            },
+            {
+              "severity": "review",
+              "message": "컷당 대사 3줄(권장 2줄 이하)",
+              "cutId": "c3"
+            },
+            {
+              "severity": "review",
+              "message": "컷당 대사 3줄(권장 2줄 이하)",
+              "cutId": "c5"
+            }
+          ]
+        },
+        {
+          "gate": "continuity",
+          "stage": "episode",
+          "ok": true,
+          "fingerprint": "8b639547da965bfa",
+          "findings": []
+        }
+      ]
+    }
+  },
+  "plan": {
+    "exitCode": 1,
+    "stdout": {
+      "ok": false,
+      "reports": [
+        {
+          "gate": "required-gates",
+          "stage": "plan",
+          "ok": false,
+          "fingerprint": "8b639547da965bfa",
+          "findings": [
+            {
+              "severity": "block",
+              "message": "관문 기록이 현재 대본과 다름(대본 수정 후 재실행 필요): props"
+            },
+            {
+              "severity": "block",
+              "message": "관문 기록이 현재 대본과 다름(대본 수정 후 재실행 필요): scenario"
+            }
+          ]
+        },
+        {
+          "gate": "verified-lines",
+          "stage": "plan",
+          "ok": true,
+          "fingerprint": "8b639547da965bfa",
+          "findings": []
+        },
+        {
+          "gate": "backend",
+          "stage": "plan",
+          "ok": true,
+          "fingerprint": "8b639547da965bfa",
+          "findings": []
+        },
+        {
+          "gate": "budget",
+          "stage": "plan",
+          "ok": true,
+          "fingerprint": "8b639547da965bfa",
+          "findings": []
+        }
+      ],
+      "plan": null
+    },
+    "output": {
+      "ok": false,
+      "reports": [
+        {
+          "gate": "required-gates",
+          "stage": "plan",
+          "ok": false,
+          "fingerprint": "8b639547da965bfa",
+          "findings": [
+            {
+              "severity": "block",
+              "message": "관문 기록이 현재 대본과 다름(대본 수정 후 재실행 필요): props"
+            },
+            {
+              "severity": "block",
+              "message": "관문 기록이 현재 대본과 다름(대본 수정 후 재실행 필요): scenario"
+            }
+          ]
+        },
+        {
+          "gate": "verified-lines",
+          "stage": "plan",
+          "ok": true,
+          "fingerprint": "8b639547da965bfa",
+          "findings": []
+        },
+        {
+          "gate": "backend",
+          "stage": "plan",
+          "ok": true,
+          "fingerprint": "8b639547da965bfa",
+          "findings": []
+        },
+        {
+          "gate": "budget",
+          "stage": "plan",
+          "ok": true,
+          "fingerprint": "8b639547da965bfa",
+          "findings": []
+        }
+      ]
+    }
+  },
+  "lowBudget": {
+    "exitCode": 1,
+    "stdout": {
+      "ok": false,
+      "reports": [
+        {
+          "gate": "required-gates",
+          "stage": "plan",
+          "ok": false,
+          "fingerprint": "8b639547da965bfa",
+          "findings": [
+            {
+              "severity": "block",
+              "message": "관문 기록이 현재 대본과 다름(대본 수정 후 재실행 필요): props"
+            },
+            {
+              "severity": "block",
+              "message": "관문 기록이 현재 대본과 다름(대본 수정 후 재실행 필요): scenario"
+            }
+          ]
+        },
+        {
+          "gate": "verified-lines",
+          "stage": "plan",
+          "ok": true,
+          "fingerprint": "8b639547da965bfa",
+          "findings": []
+        },
+        {
+          "gate": "backend",
+          "stage": "plan",
+          "ok": true,
+          "fingerprint": "8b639547da965bfa",
+          "findings": []
+        },
+        {
+          "gate": "budget",
+          "stage": "plan",
+          "ok": false,
+          "fingerprint": "8b639547da965bfa",
+          "findings": [
+            {
+              "severity": "block",
+              "message": "견적 1524크레딧이 승인 한도 1크레딧 초과"
+            }
+          ]
+        }
+      ],
+      "plan": null
+    },
+    "output": {
+      "ok": false,
+      "reports": [
+        {
+          "gate": "required-gates",
+          "stage": "plan",
+          "ok": false,
+          "fingerprint": "8b639547da965bfa",
+          "findings": [
+            {
+              "severity": "block",
+              "message": "관문 기록이 현재 대본과 다름(대본 수정 후 재실행 필요): props"
+            },
+            {
+              "severity": "block",
+              "message": "관문 기록이 현재 대본과 다름(대본 수정 후 재실행 필요): scenario"
+            }
+          ]
+        },
+        {
+          "gate": "verified-lines",
+          "stage": "plan",
+          "ok": true,
+          "fingerprint": "8b639547da965bfa",
+          "findings": []
+        },
+        {
+          "gate": "backend",
+          "stage": "plan",
+          "ok": true,
+          "fingerprint": "8b639547da965bfa",
+          "findings": []
+        },
+        {
+          "gate": "budget",
+          "stage": "plan",
+          "ok": false,
+          "fingerprint": "8b639547da965bfa",
+          "findings": [
+            {
+              "severity": "block",
+              "message": "견적 1524크레딧이 승인 한도 1크레딧 초과"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "reports": {
+    "continuity.json": {
+      "gate": "continuity",
+      "stage": "episode",
+      "ok": true,
+      "fingerprint": "8b639547da965bfa",
+      "findings": []
+    },
+    "dialogue-judge.json": {
+      "gate": "dialogue-judge",
+      "stage": "episode",
+      "ok": true,
+      "fingerprint": "60ad19fa1b1c7637",
+      "findings": [
+        {
+          "severity": "review",
+          "message": "JEV 미확정: context, voice, natural, reaction — 문구 수정 후 재판정 또는 사람 승인",
+          "cutId": "c39",
+          "lineIndex": 1,
+          "evidence": "그 무전기, 반장님 거죠?"
+        },
+        {
+          "severity": "review",
+          "message": "JEV 미확정: context, natural, reaction — 문구 수정 후 재판정 또는 사람 승인",
+          "cutId": "c40",
+          "lineIndex": 0,
+          "evidence": "반장님…? 지금 뭐 하신 거예요?"
+        },
+        {
+          "severity": "review",
+          "message": "JEV 미확정: context, voice, natural, reaction — 문구 수정 후 재판정 또는 사람 승인",
+          "cutId": "c40",
+          "lineIndex": 1,
+          "evidence": "박 반장, 당신 미쳤어?"
+        },
+        {
+          "severity": "review",
+          "message": "JEV 미확정: context, voice, natural, reaction — 문구 수정 후 재판정 또는 사람 승인",
+          "cutId": "c41",
+          "lineIndex": 0,
+          "evidence": "박 반장, 문 열렸어? 우리 앞에 와 있어."
+        },
+        {
+          "severity": "review",
+          "message": "JEV 미확정: context, voice, natural, reaction — 문구 수정 후 재판정 또는 사람 승인",
+          "cutId": "c42",
+          "lineIndex": 0,
+          "evidence": "밖에 사람이 있어요."
+        },
+        {
+          "severity": "review",
+          "message": "JEV 미확정: context, voice, reaction — 문구 수정 후 재판정 또는 사람 승인",
+          "cutId": "c42",
+          "lineIndex": 1,
+          "evidence": "좀비 말고… 사람?"
+        },
+        {
+          "severity": "review",
+          "message": "JEV 미확정: context, voice, natural — 문구 수정 후 재판정 또는 사람 승인",
+          "cutId": "c43",
+          "lineIndex": 0,
+          "evidence": "문은 안 열어. 돌아가."
+        },
+        {
+          "severity": "review",
+          "message": "JEV 미확정: voice, natural — 문구 수정 후 재판정 또는 사람 승인",
+          "cutId": "c44",
+          "lineIndex": 0,
+          "evidence": "그럼 우리가 열지."
+        },
+        {
+          "severity": "review",
+          "message": "JEV 미확정: context, voice, natural, reaction — 문구 수정 후 재판정 또는 사람 승인",
+          "cutId": "c45",
+          "lineIndex": 0,
+          "evidence": "늦었어. 저 사람들은 못 막아."
+        },
+        {
+          "severity": "review",
+          "message": "JEV 미확정: voice, natural — 문구 수정 후 재판정 또는 사람 승인",
+          "cutId": "c45",
+          "lineIndex": 1,
+          "evidence": "아니요. 이번엔 안 늦었어요."
+        }
+      ]
+    },
+    "dialogue-lint.json": {
+      "gate": "dialogue-lint",
+      "stage": "episode",
+      "ok": true,
+      "fingerprint": "8b639547da965bfa",
+      "findings": [
+        {
+          "severity": "review",
+          "message": "컷당 대사 3줄(권장 2줄 이하)",
+          "cutId": "c2"
+        },
+        {
+          "severity": "review",
+          "message": "컷당 대사 3줄(권장 2줄 이하)",
+          "cutId": "c3"
+        },
+        {
+          "severity": "review",
+          "message": "컷당 대사 3줄(권장 2줄 이하)",
+          "cutId": "c5"
+        }
+      ]
+    },
+    "props.json": {
+      "gate": "props",
+      "stage": "episode",
+      "ok": true,
+      "fingerprint": "44538686858bcabc",
+      "findings": [
+        {
+          "severity": "review",
+          "message": "single-location 미확정(pass 0.80/0.90)",
+          "cutId": "c4"
+        },
+        {
+          "severity": "review",
+          "message": "props 미확정(pass 0.46/0.73)",
+          "cutId": "c9"
+        },
+        {
+          "severity": "review",
+          "message": "single-location 미확정(pass 0.76/0.88)",
+          "cutId": "c33"
+        }
+      ]
+    },
+    "scenario.json": {
+      "gate": "scenario",
+      "stage": "episode",
+      "ok": true,
+      "fingerprint": "44538686858bcabc",
+      "findings": [
+        {
+          "severity": "review",
+          "message": "hook 미확정(pass 0.75/0.87)"
+        },
+        {
+          "severity": "review",
+          "message": "payoff 미확정(fail 0.50/0.75)"
+        },
+        {
+          "severity": "review",
+          "message": "carry__revenge 미확정(pass 0.45/0.72)"
+        },
+        {
+          "severity": "info",
+          "message": "fun__surprise 3/5 (확신도 0.41, 참고용)"
+        },
+        {
+          "severity": "info",
+          "message": "fun__tension-curve 5/5 (확신도 0.98, 참고용)"
+        },
+        {
+          "severity": "info",
+          "message": "fun__protagonist-appeal 5/5 (확신도 0.94, 참고용)"
+        },
+        {
+          "severity": "info",
+          "message": "fun__freshness 3/5 (확신도 0.30, 참고용)"
+        },
+        {
+          "severity": "info",
+          "message": "fun__emotional-peak 5/5 (확신도 0.76, 참고용)"
+        }
+      ]
+    },
+    "schema.json": {
+      "gate": "schema",
+      "stage": "episode",
+      "ok": true,
+      "fingerprint": "8b639547da965bfa",
+      "findings": []
+    },
+    "topic-day-zero-warehouse.json": {
+      "gate": "topic-day-zero-warehouse",
+      "stage": "topic",
+      "ok": true,
+      "fingerprint": "842e34c2141ccca8",
+      "findings": [
+        {
+          "severity": "info",
+          "message": "노린 요소가 확정되지 않음: 숨겨진 정체·비밀"
+        },
+        {
+          "severity": "info",
+          "message": "노린 요소가 확정되지 않음: 배신"
+        },
+        {
+          "severity": "info",
+          "message": "노린 요소가 확정되지 않음: 복수"
+        }
+      ]
+    },
+    "topic-returner-and-traitor.json": {
+      "gate": "topic-returner-and-traitor",
+      "stage": "topic",
+      "ok": true,
+      "fingerprint": "db8c7f9b1f722806",
+      "findings": []
+    },
+    "topic-returner-traitor-tyrant.json": {
+      "gate": "topic-returner-traitor-tyrant",
+      "stage": "topic",
+      "ok": true,
+      "fingerprint": "856a6422fa7ddd43",
+      "findings": [
+        {
+          "severity": "info",
+          "message": "노린 요소가 확정되지 않음: 숨겨진 정체·비밀"
+        }
+      ]
+    },
+    "topic-seventy-two-hours.json": {
+      "gate": "topic-seventy-two-hours",
+      "stage": "topic",
+      "ok": false,
+      "fingerprint": "12195bd25f53db4a",
+      "findings": [
+        {
+          "severity": "block",
+          "message": "조회 유발 요소 확정 1개 — 최소 2개 필요",
+          "evidence": "strong-conflict"
+        },
+        {
+          "severity": "info",
+          "message": "노린 요소가 확정되지 않음: 숨겨진 정체·비밀"
+        }
+      ]
+    },
+    "topic-traitor-foreman.json": {
+      "gate": "topic-traitor-foreman",
+      "stage": "topic",
+      "ok": true,
+      "fingerprint": "7062e0c1ea5876cc",
+      "findings": [
+        {
+          "severity": "review",
+          "message": "장르 약속 미확정(pass 0.06/0.53)"
+        }
+      ]
+    },
+    "topic-tyrant-of-storage.json": {
+      "gate": "topic-tyrant-of-storage",
+      "stage": "topic",
+      "ok": true,
+      "fingerprint": "c2e35b10d84f7f80",
+      "findings": [
+        {
+          "severity": "info",
+          "message": "노린 요소가 확정되지 않음: 복수"
+        }
+      ]
+    },
+    "topic-vip-room-shelter.json": {
+      "gate": "topic-vip-room-shelter",
+      "stage": "topic",
+      "ok": true,
+      "fingerprint": "30d2a00f3e8cbce7",
+      "findings": [
+        {
+          "severity": "info",
+          "message": "노린 요소가 확정되지 않음: 강한 갈등"
+        },
+        {
+          "severity": "review",
+          "message": "장르 약속 미확정(fail 0.14/0.57)"
+        }
+      ]
+    },
+    "transcript-c1.json": {
+      "gate": "transcript-c1",
+      "stage": "clip",
+      "ok": true,
+      "fingerprint": "44538686858bcabc",
+      "findings": []
+    },
+    "transcript-c2.json": {
+      "gate": "transcript-c2",
+      "stage": "clip",
+      "ok": true,
+      "fingerprint": "44538686858bcabc",
+      "findings": []
+    },
+    "transcript-c3.json": {
+      "gate": "transcript-c3",
+      "stage": "clip",
+      "ok": true,
+      "fingerprint": "44538686858bcabc",
+      "findings": []
+    },
+    "transcript-c4.json": {
+      "gate": "transcript-c4",
+      "stage": "clip",
+      "ok": true,
+      "fingerprint": "44538686858bcabc",
+      "findings": []
+    },
+    "transcript-c5.json": {
+      "gate": "transcript-c5",
+      "stage": "clip",
+      "ok": true,
+      "fingerprint": "44538686858bcabc",
+      "findings": []
+    },
+    "transcript-c6.json": {
+      "gate": "transcript-c6",
+      "stage": "clip",
+      "ok": true,
+      "fingerprint": "04b55b8a2ad10acb",
+      "findings": [
+        {
+          "severity": "info",
+          "message": "대사 없는 컷 — 받아쓰기 대조 생략",
+          "cutId": "c6"
+        }
+      ]
+    },
+    "transcript-c7.json": {
+      "gate": "transcript-c7",
+      "stage": "clip",
+      "ok": true,
+      "fingerprint": "44538686858bcabc",
+      "findings": []
+    }
+  }
+}

@@ -11,7 +11,8 @@ type Pick = (id: string) => ['pass' | 'fail', number, number];
 const allPass: Pick = () => ['pass', 0.95, 0.97];
 
 function cli(args: string[]): { code: number | null; json: any } {
-  const r = spawnSync('npx', ['tsx', 'src/cli/index.ts', ...args], { cwd: PKG, encoding: 'utf8' });
+  const r = spawnSync(process.execPath, ['--import', 'tsx', 'src/cli/index.ts', ...args], { cwd: PKG, encoding: 'utf8' });
+  if (r.error || r.signal || !r.stdout.trim()) throw new Error(`CLI did not return JSON: ${r.error ?? r.signal ?? r.stderr}`);
   return { code: r.status, json: JSON.parse(r.stdout) };
 }
 function workspace() {
