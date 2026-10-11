@@ -5,7 +5,7 @@
 - 범위: 실제 1화 validate/plan stdout·보고서·종료코드 고정, 합성 미디어 조립, apps/drama-runner 초안 DTO/로컬 SQLite.
 - 제외: 실제 유료/제공자 호출, 기존 승인 전환, shot-v1/F10, 원본 상태 변경, 배포·새 PR 머지.
 - 완료 기준: 호환 golden 일치, 합성 조립 및 기존 drama 시험, 새 소비자 시험·깨끗한 설치, 독립 Codex 리뷰, 커밋/push/PR.
-- 현황: 구현·통합 검증·독립 리뷰 PASS. 작업 브랜치 커밋/push 및 PR 게시 단계.
+- 현황: 구현·통합 검증·독립 리뷰 PASS. 구현 a8d1e65를 작업 브랜치에 커밋/push하고 [PR #177](https://github.com/hhj4861/commerce-automation-kit/pull/177)을 게시했다. 기준 브랜치에는 아직 미반영.
 - 다음: PR을 검토해 머지 여부 결정. SQLite는 동기화되지 않는 로컬에, 미디어·시험 로그는 지정 iCloud 작업 루트에 둔다.
 
 ## 구현 중 관측
