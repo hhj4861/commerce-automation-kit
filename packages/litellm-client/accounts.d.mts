@@ -1,6 +1,6 @@
 import type { TextInput, JSONInput } from './index.js';
 export type AccountConnection = {
-  id: string; provider: 'codex' | 'claude';
+  id: string; provider: 'codex' | 'claude' | 'openai';
   state: 'authorizing' | 'connected' | 'expired' | 'quota_exceeded' | 'error' | 'disconnected';
   models: string[]; challenge?: { url: string; code: string; expiresAt: number; kind?: 'code-entry'; submitted?: boolean };
 };
@@ -11,7 +11,7 @@ export function createAccountClient(options: {
   baseUrl: string; apiKey: string; subject: string; allowLocalhost?: boolean; fetch?: typeof fetch; timeoutMs?: number;
 }): {
   list(): Promise<AccountConnection[]>;
-  connect(provider: 'codex' | 'claude', input?: { apiKey?: string; ttlSeconds?: number; authMethod?: 'claude-code' | 'api-key' }): Promise<AccountConnection>;
+  connect(provider: 'codex' | 'claude' | 'openai', input?: { apiKey?: string; ttlSeconds?: number; authMethod?: 'claude-code' | 'api-key' }): Promise<AccountConnection>;
   authorize(id: string, code: string): Promise<void>;
   disconnect(id: string): Promise<void>;
   client(selection: string): {

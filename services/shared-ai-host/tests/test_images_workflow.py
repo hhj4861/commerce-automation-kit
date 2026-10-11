@@ -18,7 +18,7 @@ class ImagesWorkflowTest(unittest.TestCase):
 
     def test_images_are_a_closed_list_pushed_by_commit(self):
         options = re.search(r"options: \[([^\]]+)\]", WF).group(1).split(", ")
-        self.assertEqual(options, ["litellm-staging", "litellm-production", "edge-staging", "litellm-platform-staging", "edge-platforms", "discovery-staging"])
+        self.assertEqual(options, ["litellm-staging", "litellm-production", "edge-staging", "litellm-platform-staging", "edge-platforms", "discovery-staging", "accounts-staging", "edge-accounts"])
         self.assertIn("REGISTRY: us-central1-docker.pkg.dev/replay-live-508202/shared-ai", WF)
         self.assertIn('ref="$REGISTRY/$IMAGE:$SHA"', WF)
 
