@@ -56,6 +56,7 @@ export type EpisodeJudgeKind = Exclude<JudgeKind, 'topic'>;
 export const JUDGE_GATE_ID: Record<EpisodeJudgeKind, string> = { dialogue: 'dialogue-judge', scenario: 'scenario', props: 'props' };
 
 export interface JudgeRequestMeta {
+  reviewContextDigest?: string | undefined;
   kind: JudgeKind;
   /** 요청을 만들 때의 지문(회차: 대본 지문, 주제: 주제 묶음 지문). 적용 시 다르면 거부한다 */
   fingerprint: string;

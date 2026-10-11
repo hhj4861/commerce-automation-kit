@@ -1,10 +1,11 @@
 import type { DramaCut, DramaEpisode, DramaFinding, DramaGateReport } from '@cak/contracts';
-import { fingerprintOf } from './fingerprint.js';
+import { canonical, fingerprintOf } from './fingerprint.js';
 import { lineFindings } from './gates/dialogue-lint.js';
 import type { GateContext } from './gates/types.js';
 import { JUDGE_GATE_ID, JudgeError, type ChoiceQuestion, type EpisodeJudgeKind, type ExpectedQuestion, type JudgeQuestion, type JudgeVerdict } from './judge-types.js';
 import { toReport } from './report.js';
-import { isLineCleared, lineHash } from './line-hash.js';
+import { assertContinuation, previousCutOf, continuationSummary, contextBinding, isContextLineCleared } from './continuation.js';
+import { lineHash } from './line-hash.js';
 
 type Check = readonly [task: string, pass: string, fail: string];
 
@@ -58,7 +59,7 @@ function speakerProfile(ctx: GateContext, id: string): string {
 
 function previousCut(ctx: GateContext, cut: DramaCut): string {
   const i = ctx.episode.cuts.findIndex((c) => c.id === cut.id);
-  const prev = i > 0 ? ctx.episode.cuts[i - 1] : undefined;
+  const prev = previousCutOf(ctx, i);
   if (!prev) return '(첫 컷)';
   const lines = prev.lines.map((l) => `${nameOf(ctx, l.speaker)}: "${l.text}"`).join(' ');
   return `${prev.action}${lines ? ` 대사 — ${lines}` : ''}`;
@@ -79,16 +80,25 @@ export function episodeDigest(ctx: GateContext): string {
 }
 
 export function judgeState(ctx: GateContext): Record<string, unknown> {
-  return { series: ctx.series.title, logline: ctx.series.logline, genre: ctx.genre.name, genrePromise: ctx.genre.promise };
+  const previousEpisode = continuationSummary(ctx);
+  return { ...(previousEpisode ? { previousEpisode } : {}), series: ctx.series.title, logline: ctx.series.logline, genre: ctx.genre.name, genrePromise: ctx.genre.promise };
 }
 
 const choiceQ = (id: string, [task, pass, fail]: Check, candidate: Record<string, unknown>): ChoiceQuestion => ({ type: 'choice', id, task, pass, fail, candidate });
 
+/** Linked IDs bind raw answers to the same scene context as the saved request. */
 export function buildQuestions(kind: EpisodeJudgeKind, ctx: GateContext): JudgeQuestion[] {
+  const digest = contextBinding(ctx).reviewContextDigest;
+  const questions = buildUnboundQuestions(kind, ctx);
+  return digest ? questions.map(q => ({ ...q, id: `${q.id}__ctx_${digest.slice('sha256:'.length)}` })) : questions;
+}
+
+function buildUnboundQuestions(kind: EpisodeJudgeKind, ctx: GateContext): JudgeQuestion[] {
+  assertContinuation(ctx);
   if (kind === 'dialogue') {
     return ctx.episode.cuts.flatMap((cut) =>
       cut.lines.flatMap((line, i) =>
-        isLineCleared(cut, line)
+        isContextLineCleared(ctx, cut, line)
           ? []
           : LINE_CHECK_KEYS.map((k) => choiceQ(`${cut.id}__${i}__${k}`, LINE_CHECKS[k], {
               speaker: nameOf(ctx, line.speaker), speakerProfile: speakerProfile(ctx, line.speaker), previousCut: previousCut(ctx, cut), sceneSoFar: sceneSoFar(ctx, cut, i), line: line.text,
@@ -124,15 +134,24 @@ export interface ApplyResult {
   episode: DramaEpisode;
 }
 
-export function applyVerdicts(kind: EpisodeJudgeKind, ctx: GateContext, expected: ExpectedQuestion[], verdicts: JudgeVerdict[], judgeRef: string, now: string): ApplyResult {
+export function applyVerdicts(kind: EpisodeJudgeKind, ctx: GateContext, expected: ExpectedQuestion[], verdicts: JudgeVerdict[], judgeRef: string, now: string, requestBinding: { reviewContextDigest?: string | undefined } = {}): ApplyResult {
+  const binding = contextBinding(ctx);
+  const digest = binding.reviewContextDigest;
+  if (digest) {
+    if (requestBinding.reviewContextDigest !== digest) throw new JudgeError('요청 검토 문맥이 현재 문맥과 다름 — 재판정 필요');
+    const current = buildQuestions(kind, ctx).map(q => ({ id: q.id, type: q.type }));
+    if (canonical(expected) !== canonical(current)) throw new JudgeError('요청 질문 목록이 현재 검토 문맥과 다름 — 재판정 필요');
+  }
+  const suffix = digest ? `__ctx_${digest.slice('sha256:'.length)}` : '';
   const byId = new Map(verdicts.map((v) => [v.id, v]));
   const ordered: JudgeVerdict[] = expected.map(({ id }) => {
     const v = byId.get(id);
     if (!v) throw new JudgeError(`판정 결과 누락: ${id}`);
-    return v;
+    return suffix ? { ...v, id: v.id.slice(0, -suffix.length) } : v;
   });
   const findings: DramaFinding[] = [];
   const episode = structuredClone(ctx.episode);
+  assertContinuation(ctx);
   if (kind === 'dialogue') {
     const groups = new Map<string, JudgeVerdict[]>();
     for (const v of ordered) {
@@ -155,7 +174,7 @@ export function applyVerdicts(kind: EpisodeJudgeKind, ctx: GateContext, expected
       if (failed.length) findings.push({ severity: 'block', message: `JEV 확정 fail: ${failed.join(', ')}`, cutId, lineIndex: i, evidence: line.text });
       else if (pending.length) findings.push({ severity: 'review', message: `JEV 미확정: ${pending.join(', ')} — 문구 수정 후 재판정 또는 사람 승인`, cutId, lineIndex: i, evidence: line.text });
       else if (lint.length) findings.push(...lint);
-      else if (!isLineCleared(cut, line)) line.verification = { status: 'verified', judgeRef, at: now, lineHash: lineHash(cut, line) };
+      else if (!isContextLineCleared(ctx, cut, line)) line.verification = { status: 'verified', judgeRef, at: now, lineHash: lineHash(cut, line), ...contextBinding(ctx) };
     }
   } else {
     for (const v of ordered) {
@@ -172,5 +191,5 @@ export function applyVerdicts(kind: EpisodeJudgeKind, ctx: GateContext, expected
       else if (!v.decided) findings.push({ severity: safety ? 'block' : 'review', message: `${label} 미확정(${v.choice} ${v.confidence.toFixed(2)}/${v.probability.toFixed(2)})${safety ? ' — 수위 표현을 고쳐 재판정' : ''}`, cutId });
     }
   }
-  return { report: toReport(JUDGE_GATE_ID[kind], 'episode', findings, fingerprintOf(ctx.series, ctx.episode)), episode };
+  return { report: { ...toReport(JUDGE_GATE_ID[kind], 'episode', findings, fingerprintOf(ctx.series, ctx.episode)), ...contextBinding(ctx) }, episode };
 }

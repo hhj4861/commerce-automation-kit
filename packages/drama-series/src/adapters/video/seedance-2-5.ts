@@ -28,6 +28,7 @@ function sayLine(ctx: GateContext, line: DramaLine, refs: Map<string, string>): 
  * `@ImageN` 번호는 그 요청의 medias 순서다(시험분 1·2컷에서 확인, 공식 문서 미확인).
  */
 export function toSeedanceClip(ctx: GateContext, cut: DramaCut, opts: VideoOptions): Omit<DramaClipSpec, 'estCredits'> {
+  if (ctx.episode.continuesFromEpisode) throw new PlanError('회차 연결 생성 차단: 승인된 앞 회차 출시/프레임 결합 경로 미구현', cut.id);
   if (!Number.isInteger(cut.durationSec) || cut.durationSec < SEEDANCE_2_5.minSec || cut.durationSec > SEEDANCE_2_5.maxSec)
     throw new PlanError(`길이 ${cut.durationSec}초는 Seedance 2.5 범위(${SEEDANCE_2_5.minSec}~${SEEDANCE_2_5.maxSec}초 정수) 밖`, cut.id);
   if (opts.draft && opts.resolution !== '480p') throw new PlanError('draft 는 480p 에서만 가능', cut.id);
