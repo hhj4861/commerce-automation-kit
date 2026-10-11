@@ -226,3 +226,45 @@ export interface DramaContinuationBinding {
   approvalDigest: string;
   bindingDigest: string;
 }
+
+/** Sample-only evidence. No full-clip verdict or execution permission. */
+export interface DramaVisualEvidence {
+  clip: { sha256: string; bytes: number };
+  frameCount: number;
+  frames: { id: string; ordinal: number; file: string; sha256: string; bytes: number; pixelSha256: string }[];
+}
+export interface DramaVisualRequest {
+  schemaVersion: 1;
+  kind: 'drama-sampled-visual-request';
+  authorized: false;
+  policy: 'ordinal-first-middle-last-v1';
+  requestId: string;
+  jobId: string;
+  target: { seriesId: string; episodeNo: number; cutId: string };
+  contextDigest: string;
+  evidence: DramaVisualEvidence;
+  questions: { id: string; category: 'action' | 'cast' | 'background'; text: string; frameIds: string[] }[];
+  requestDigest: string;
+}
+export interface DramaVisualResponse {
+  schemaVersion: 1;
+  requestId: string;
+  requestDigest: string;
+  reviewer: string;
+  reviewedAt: string;
+  answers: { questionId: string; verdict: 'pass' | 'fail' | 'unknown'; reason: string; frameIds: string[] }[];
+}
+export interface DramaVisualReport {
+  schemaVersion: 1;
+  kind: 'drama-sampled-visual-report';
+  authorized: false;
+  scope: 'sampled-visual-description';
+  requestId: string;
+  requestDigest: string;
+  responseDigest: string;
+  verdict: 'pass' | 'fail' | 'unknown';
+  reviewer: string;
+  reviewedAt: string;
+  answers: DramaVisualResponse['answers'];
+  blockers: string[];
+}

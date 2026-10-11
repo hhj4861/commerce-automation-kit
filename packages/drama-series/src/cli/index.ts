@@ -39,7 +39,9 @@ import { isLineCleared, lineHash } from '../core/line-hash.js';
 import { parseWhisperJson, transcribe } from '../adapters/transcribe/whisper.js';
 import { assembleEpisode, type AssembleEpisodeInput } from '../adapters/assemble.js';
 import { prepareReleaseSource, checkContinuationSource } from '../adapters/release-source.js';
+import { readStrictJsonFile } from '../adapters/media-evidence.js';
 import { contentSha } from '../core/release-source.js';
+import { prepareVisualVerdict, applyVisualVerdict } from '../adapters/visual-verdict.js';
 import { parseTrimSpec } from '../core/assemble-args.js';
 import { joinSimilarity } from '../adapters/ffmpeg.js';
 import { JOIN_MIN_SSIM, chainsFrom, judgeJoin } from '../core/join.js';
@@ -63,6 +65,7 @@ function writeJson(p: string, v: unknown): void {
   mkdirSync(dirname(abs(p)), { recursive: true });
   writeFileSync(abs(p), JSON.stringify(v, null, 2) + '\n');
 }
+const readStrictJson = (p:string):unknown => readStrictJsonFile(abs(p));
 const out = (v: unknown) => console.log(JSON.stringify(v, null, 2));
 const metaPath = (p: string) => `${p.replace(/\.json$/, '')}.meta.json`;
 
@@ -81,11 +84,11 @@ function req(o: Opts, k: string): string {
 }
 const optStr = (o: Opts, k: string): string | undefined => (typeof o[k] === 'string' && o[k] !== '' ? (o[k] as string) : undefined);
 
-function loadCtx(o: Opts): GateContext {
-  const series = parseSeries(readJson(req(o, 'series')));
-  const episode = parseEpisode(readJson(req(o, 'episode')));
+function loadCtx(o: Opts, read: (p:string)=>unknown = readJson): GateContext {
+  const series = parseSeries(read(req(o, 'series')));
+  const episode = parseEpisode(read(req(o, 'episode')));
   const prev = optStr(o, 'prev-episode');
-  const ctx: GateContext = { series, episode, genre: loadGenre(series.genreId), ...(prev ? { prev: { episode: parseEpisode(readJson(prev)) } } : {}) };
+  const ctx: GateContext = { series, episode, genre: loadGenre(series.genreId), ...(prev ? { prev: { episode: parseEpisode(read(prev)) } } : {}) };
   assertContinuation(ctx);
   return ctx;
 }
@@ -118,6 +121,17 @@ function kindOf(v: string): EpisodeJudgeKind {
 function main(argv: string[]): number {
   const [cmd, ...rest] = argv;
   switch (cmd) {
+    case 'visual-verdict-build': {
+      const o=opts(rest,{series:'string',episode:'string','prev-episode':'string',cut:'string',job:'string',clip:'string',out:'string'});
+      const request=prepareVisualVerdict(loadCtx(o,readStrictJson),req(o,'cut'),req(o,'job'),abs(req(o,'clip')),abs(req(o,'out')));
+      out({ok:true,authorized:false,request,directory:abs(req(o,'out'))}); return 0;
+    }
+    case 'visual-verdict-apply': {
+      const o=opts(rest,{series:'string',episode:'string','prev-episode':'string',cut:'string',job:'string',source:'string',response:'string',out:'string'});
+      const report=applyVisualVerdict(loadCtx(o,readStrictJson),req(o,'cut'),req(o,'job'),abs(req(o,'source')),readStrictJson(req(o,'response')));
+      if(optStr(o,'out'))writeFileSync(abs(req(o,'out')),JSON.stringify(report,null,2)+'\n',{flag:'wx',mode:0o600});
+      out({ok:report.verdict==='pass',authorized:false,report}); return report.verdict==='pass'?0:1;
+    }
     case 'release-source': {
       const o = opts(rest, { series:'string', episode:'string', cut:'string', clip:'string', out:'string' });
       const source = prepareReleaseSource(parseSeries(readJson(req(o,'series'))), parseEpisode(readJson(req(o,'episode'))), req(o,'cut'), abs(req(o,'clip')), abs(req(o,'out')));

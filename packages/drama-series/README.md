@@ -64,3 +64,26 @@ node --import tsx src/cli/index.ts continuation-check \
 성공의 `ok:true`는 **증거 일치**만 뜻한다. `authorized:false`와 미구현 출시 관문 사유를 항상 함께 반환한다. 사용자 발화 진위·작성자 신원 인증, 모든 컷의 의미 판정, 음성 검사, 실행 상태, 최종 출시 승인이나 생성 권한을 증명하지 않는다. 임의로 파일을 수정할 수 있는 같은 OS 사용자에 대한 인증 방어도 제공하지 않는다. 연결 `plan/assemble` 차단은 유지된다.
 
 출력 경로가 있으면 덮어쓰지 않는다. 실패 시 해당 실행의 부분 폴더가 남을 수 있으며 `source.json`이 없거나 검증되지 않으면 재사용할 수 없다. 사용자 원본·다른 실행의 결과를 지우지 않는다. 프레임 추출은 ffmpeg 실행당30초 제한이며 초과 시 실패로 표시한다. 실제 외부 판정·생성 API를 호출하지 않는다.
+
+### 샘플 프레임 시각 판정 (출시 판정 아님)
+
+모든 컷에 사용할 수 있는 `visual-verdict-build`는 클립 사본과 첫·중간·마지막 PNG 및 `request.json`을 새 디렉터리에 저장한다. 중간은 전체 디코딩 ordinal `(frameCount-1)/2`를 내림하며 중복 ordinal은 제거한다(1프레임은 1장, 2프레임은 2장). 프레임 시각 간격을 균등하게 표집하는 방식은 아니다. 가변 프레임·회전은 실제 디코딩 순서와 회전 후 픽셀을 기준으로 한다.
+
+```sh
+node --import tsx src/cli/index.ts visual-verdict-build \
+  --series series.json --episode ep01.json --cut c1 --job actual-job-id \
+  --clip /authorized-input/c1.mp4 --out /work/c1-visual-review
+
+node --import tsx src/cli/index.ts visual-verdict-apply \
+  --series series.json --episode ep01.json --cut c1 --job actual-job-id \
+  --source /work/c1-visual-review --response visual-response.json \
+  --out /work/c1-visual-report.json
+```
+
+연결 회차는 두 명령 모두 `--prev-episode`를 추가한다. 시각 판정자가 요청의 PNG들을 직접 보고 응답한다. 외부 모델 호출은 자동 실행하지 않는다. 응답 형식은 `schemaVersion:1`, 요청의 `requestId`·`requestDigest`, 선언한 `reviewer`, ISO8601 `reviewedAt`, `answers[]`이며, 각 답은 `questionId`, `verdict: pass|fail|unknown`, `reason`, `frameIds[]`를 갖는다. 요청의 질문을 모두 정확히 한 번씩 답해야 한다. pass/fail은 해당 질문에 허용된 프레임을 최소 하나 인용한다. unknown은 근거 프레임이 없어도 되지만 사유는 필요하며 통과로 취급하지 않는다. 결과는 fail이 우선하고, fail 없이 unknown이 있으면 unknown이다. CLI는 pass만 exit0, fail/unknown/검증 오류는 exit1이다.
+
+질문은 현재 대본의 행동, 출연진별 외형·의상 설명, 마지막 프레임의 배경·소품 상태에서 자동 생성한다. 적용 시 현재 대본·앞 회차 문맥·장르·job ID와 실제 클립/PNG를 다시 검사하고 질문 전체를 재생성한다. 질문 편집·누락, 오래된 응답, 다른 질문의 프레임 인용, 실제 ordinal과 다른 PNG를 거부한다. 출력 보고서가 이미 있으면 덮어쓰지 않는다. 직접 사용하는 어댑터 `applyVisualVerdict`도 같은 검증을 수행한다. core의 순수 함수만으로 실제 파일 검증을 대신하지 않는다.
+
+**한계:** 이는 `sampled-visual-description` 범위의 보고서다. 샘플 사이 동작·의상 변화, 전체 비트, 참조 이미지와 인물 신원·세트 일치, 앞 컷과의 시각 연결, 대사는 검증하지 않는다. 선언한 job ID가 제공자에서 발급된 것인지, reviewer 신원이 진짜인지 인증하지 않는다. 이 때문에 결과 pass에도 `authorized:false`와 미충족 항목이 남는다. 기존 전체 출시·실행 관문이나 사람 승인 기록으로 변환하지 않으며, 연결 plan/assemble 차단은 유지한다. 같은 OS 사용자의 악의적인 동시 파일 변조를 방어하는 인증 경계가 아니다.
+
+새 두 명령의 대본·시리즈·이전 회차·요청·응답 JSON은 1MiB 이하 UTF-8 일반 파일만 받는다. 중복 키(이스케이프로 같은 키를 쓴 경우 포함), 비유한 숫자, 과도한 중첩을 거부한다. FIFO·심볼릭 링크·장치 입력은 읽기 전에 거부한다. 기존 legacy 명령의 JSON 파싱 규칙은 바꾸지 않는다.
