@@ -32,7 +32,7 @@ export function buildPlan(input: PlanInput): PlanResult {
   const fp = fingerprintOf(ctx.series, ctx.episode);
 
   const required: DramaFinding[] = [];
-  for (const gate of REQUIRED_GATES) {
+  for (const gate of [...REQUIRED_GATES, ...(ctx.episode.shotPolicy ? ['shot'] : [])]) {
     const r = input.reports.filter((x) => x.gate === gate).at(-1);
     if (!r) required.push({ severity: 'block', message: `관문 기록 없음: ${gate}` });
     else if (r.fingerprint !== fp) required.push({ severity: 'block', message: `관문 기록이 현재 대본과 다름(대본 수정 후 재실행 필요): ${gate}` });
@@ -55,9 +55,10 @@ export function buildPlan(input: PlanInput): PlanResult {
     });
 
   const backend: DramaFinding[] = ctx.episode.continuesFromEpisode ? [{ severity: 'block', message: '회차 연결 생성 차단: 승인된 앞 회차 출시/프레임 결합 경로 미구현' }] : [];
+  if (ctx.episode.shotPolicy !== undefined) backend.push({ severity: 'block', message: 'shot-v1 생성 차단: 키프레임·실행·출시 승인 결합 경로 미구현' });
   const clips: DramaClipSpec[] = [];
   ctx.episode.cuts.forEach((cut, i) => {
-    if (ctx.episode.continuesFromEpisode) return; // No generation specs before release/frame binding exists.
+    if (ctx.episode.continuesFromEpisode || ctx.episode.shotPolicy !== undefined) return; // No generation specs before release/frame binding exists.
     const prev = previousCutOf(ctx, i);
     // 같은 장소에서 전환(섬광·암전) 없이 이어지면 앞 컷 마지막 프레임에서 시작한다
     const chained = i > 0 && prev && chainsFrom(prev, cut);

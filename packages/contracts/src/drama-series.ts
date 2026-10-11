@@ -29,7 +29,34 @@ export interface DramaLine {
   verification: DramaLineVerification;
 }
 
+/** shot-v1: 잠정 제작 품질 정책이며 제공자 제한이 아니다. */
+export interface DramaShotPolicy { version: 'shot-v1'; strict: true }
+export interface DramaSetup {
+  id: string;
+  name: string;
+  cameraEn: string;
+  refAssetId?: string | undefined;
+  visiblePropIds: string[];
+}
+export type DramaScreenSide = 'left' | 'center' | 'right';
+export interface DramaBlocking {
+  characterId: string;
+  side: DramaScreenSide;
+  depth?: 'front' | 'mid' | 'back' | undefined;
+}
+export type DramaCameraMove = 'static' | 'push-in' | 'pull-out' | 'pan' | 'follow';
+export interface DramaBeat {
+  en: string;
+  /** 생략하면 남은 시간을 발화량 + 행동 여유에 비례해 배분한다. */
+  sec?: number | undefined;
+  /** 이 비트에서 말하는 0-based 대사 인덱스. */
+  lines?: number[] | undefined;
+  /** 비트가 끝날 때의 소품 상태 변화. */
+  changes?: Record<string, string> | undefined;
+}
+
 export interface DramaCharacterLook {
+  outfitRefAssetId?: string | undefined;
   id: string;
   /** 영어 외형 묘사(프롬프트에 들어감) */
   description: string;
@@ -47,6 +74,7 @@ export interface DramaCharacter {
 }
 
 export interface DramaLocation {
+  setups?: DramaSetup[] | undefined;
   id: string;
   name: string;
   /** 장소 고정 문구(영어). 이 장소의 모든 컷 프롬프트에 그대로 붙는다 */
@@ -59,11 +87,19 @@ export interface DramaLocation {
 export type DramaTransition = 'cut' | 'flash' | 'fade-black';
 
 export interface DramaCutCast {
+  carriesPropIds?: string[] | undefined;
   characterId: string;
   lookId: string;
 }
 
 export interface DramaCut {
+  setupId?: string | undefined;
+  blocking?: DramaBlocking[] | undefined;
+  blockingChange?: 'move' | 'reverse' | undefined;
+  cameraMove?: DramaCameraMove | undefined;
+  beats?: DramaBeat[] | undefined;
+  usedPropIds?: string[] | undefined;
+  continuesFromPrev?: boolean | undefined;
   id: string;
   locationId: string;
   durationSec: number;
@@ -119,6 +155,8 @@ export interface DramaSeries {
 }
 
 export interface DramaEpisode {
+  shotPolicy?: DramaShotPolicy | undefined;
+  authoredBy?: 'claude' | 'codex' | undefined;
   continuesFromEpisode?: { no: number; cutId: string } | undefined;
   startsFresh?: true | undefined;
   seriesId: string;

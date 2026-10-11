@@ -28,6 +28,7 @@ export interface AssembleEpisodeInput {
 }
 
 export function assembleEpisode(input: AssembleEpisodeInput): { out: string; durationSec: number; cues: number } {
+  if (input.episode.shotPolicy !== undefined) throw new FfmpegError('shot-v1 조립 차단: 실행·출시 승인 결합 경로 미구현');
   if (input.episode.continuesFromEpisode) throw new FfmpegError('회차 연결 조립 차단: 승인된 앞 회차 출시/프레임 결합 경로 미구현');
   const files = input.episode.cuts.map((c) => {
     const f = input.clipFiles[c.id];

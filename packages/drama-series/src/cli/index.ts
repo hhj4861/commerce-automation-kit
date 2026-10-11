@@ -45,6 +45,7 @@ import { prepareVisualVerdict, applyVisualVerdict } from '../adapters/visual-ver
 import { parseTrimSpec } from '../core/assemble-args.js';
 import { joinSimilarity } from '../adapters/ffmpeg.js';
 import { JOIN_MIN_SSIM, chainsFrom, judgeJoin } from '../core/join.js';
+import { chainsFromV1 } from '../core/shot-policy.js';
 
 import { assertContinuation, previousCutOf, contextBinding, isContextLineCleared } from '../core/continuation.js';
 
@@ -290,8 +291,13 @@ function main(argv: string[]): number {
       type Join = { prev: string; cut: string; ssim: number | null; finding: DramaFinding | null };
       const joins = ctx.episode.cuts.flatMap((cut, i): Join[] => {
         const prev = previousCutOf(ctx, i);
-        if (!prev || !chainsFrom(prev, cut)) return [];
         const cross = i === 0 && !!ctx.episode.continuesFromEpisode;
+        const connected = ctx.episode.shotPolicy
+          ? chainsFromV1(prev, cut, cross && ctx.prev?.episode.shotPolicy === undefined)
+          : chainsFrom(prev, cut);
+        if (ctx.episode.shotPolicy && cut.continuesFromPrev && !connected)
+          return [{ prev: prev?.id ?? '', cut: cut.id, ssim: null, finding: { severity: 'block', cutId: cut.id, message: 'shot-v1 연결 선언 불일치: 앞 컷·장소/구도·전환·blocking 확인 필요' } }];
+        if (!prev || !connected) return [];
         const prevDir = optStr(o, 'prev-clips');
         if (cross && !prevDir) return [{ prev: prev.id, cut: cut.id, ssim: null, finding: { severity: 'block', cutId: cut.id, message: '앞 회차 클립에는 --prev-clips 필수' } }];
         const a = join(cross ? abs(prevDir!) : dir, `${prev.id}.mp4`);
@@ -308,6 +314,10 @@ function main(argv: string[]): number {
     case 'assemble': {
       const o = opts(rest, { series: 'string', episode: 'string', 'prev-episode': 'string', gates: 'string', clips: 'string', out: 'string', font: 'string', work: 'string', 'no-ai-label': 'boolean', cuts: 'string', aspect: 'string', title: 'string', kicker: 'string', style: 'string', 'cold-open': 'string', 'cold-open-caption': 'string', trim: 'string' });
       const ctx = loadCtx(o);
+      if (ctx.episode.shotPolicy !== undefined) {
+        out({ ok: false, problem: 'shot-v1 조립 차단: 실행·출시 승인 결합 경로 미구현' });
+        return 1;
+      }
       if (ctx.episode.continuesFromEpisode) {
         out({ ok: false, problem: '회차 연결 조립 차단: 승인된 앞 회차 출시/프레임 결합 경로 미구현' });
         return 1;
