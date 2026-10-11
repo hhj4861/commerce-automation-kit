@@ -7,7 +7,7 @@
 - 완료 조건: 관련 로컬·CI 검증, 본인 변경 commit/push, 검토 가능한 PR. 클라우드 적용과 앱 실호출 통과는 별도 증거로 기록한다.
 - 범위 밖: 운영 DB 이관·삭제, accounts v2 신규 기능, 앱 timeout 상향, 자동 유료 재시도.
 
-진행: 구현 중. 비용 관측 완료 후에만 스테이징 리비전 변경을 적용한다. 보온 min=1 옵션은 지연을 비교하기 위한 실험이며 비용 최적화 판정이 아니다.
+진행: 코드 구현·로컬 검증 완료, PR #176 CI 확인 중. 비용 관측 완료 후에만 스테이징 리비전 변경을 적용한다. 보온 min=1 옵션은 지연을 비교하기 위한 실험이며 비용 최적화 판정이 아니다.
 
 ## 변경과 검증 경계
 
@@ -54,5 +54,6 @@ python3 services/shared-ai-host/poc/app_proxy.py \
 
 - 로컬 SQLite/서비스 테스트 85개 실행: 성공, PostgreSQL 전용 6개는 DB 미설치로 skip. 이를 PostgreSQL 통과로 보고하지 않는다.
 - 호스트/프록시 테스트 83개, LiteLLM 설정 9개, metadata 인증 4개 통과. Terraform fmt/validate 통과.
-- 실제 PostgreSQL 16에서 동일 전체 계약 + 경쟁 테스트, 실제 Caddy 플랫폼 라우팅, Docker 런타임 import는 CI 결과 확인 중이다.
+- 실제 PostgreSQL 16에서 동일 전체 계약 + 경쟁 테스트 **85개 모두 통과**(skip 없음). 관련 JS 133개 및 Docker build/import/CA 검사 통과: [contract run 38112651329](https://github.com/hhj4861/commerce-automation-kit/actions/runs/38112651329).
+- 실제 Caddy 플랫폼 discovery 라우팅·잘못된 경로/인증 차단, Terraform validate 및 호스트 테스트 83개 통과: [configuration run 38112651193](https://github.com/hhj4861/commerce-automation-kit/actions/runs/38112651193). 검증 대상 코드는 `2dc569d`; 이후 문서 변경은 코드 검증을 대체하지 않는다.
 - 클라우드 apply/이미지 배포·새 시크릿 값 등록·유료 앱 호출·운영 이관: 실행하지 않음.
