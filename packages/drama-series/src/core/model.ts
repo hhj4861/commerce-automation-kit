@@ -20,7 +20,16 @@ const line = z.object({
   verification: verification.default({ status: 'unverified' }),
 });
 
-const look = z.object({ id: ID, description: z.string().min(3), refAssetId: z.string().min(1).optional() });
+const propIds = z.array(z.string().trim().min(1));
+const setup = z.object({ id: ID, name: z.string().trim().min(1), cameraEn: z.string().trim().min(1),
+  refAssetId: z.string().trim().min(1).optional(), visiblePropIds: propIds }).strict();
+const beat = z.object({ en: z.string().trim().min(1), sec: z.number().finite().positive().optional(),
+  lines: z.array(z.number().int().nonnegative()).optional(),
+  changes: z.record(z.string().trim().min(1), z.string().trim().min(1)).optional() }).strict();
+const blocking = z.object({ characterId: ID, side: z.enum(['left', 'center', 'right']),
+  depth: z.enum(['front', 'mid', 'back']).optional() }).strict();
+const look = z.object({ id: ID, description: z.string().min(3), refAssetId: z.string().min(1).optional(),
+  outfitRefAssetId: z.string().trim().min(1).optional() });
 
 const character = z.object({
   id: ID,
@@ -35,6 +44,7 @@ const character = z.object({
 });
 
 const location = z.object({
+  setups: z.array(setup).optional(),
   id: ID,
   name: z.string().min(1),
   anchorText: z.string().min(20),
@@ -43,10 +53,17 @@ const location = z.object({
 });
 
 const cut = z.object({
+  setupId: ID.optional(),
+  blocking: z.array(blocking).optional(),
+  blockingChange: z.enum(['move', 'reverse']).optional(),
+  cameraMove: z.enum(['static', 'push-in', 'pull-out', 'pan', 'follow']).optional(),
+  beats: z.array(beat).optional(),
+  usedPropIds: propIds.optional(),
+  continuesFromPrev: z.boolean().optional(),
   id: ID,
   locationId: ID,
   durationSec: z.number().int().min(1).max(60),
-  cast: z.array(z.object({ characterId: ID, lookId: ID })),
+  cast: z.array(z.object({ characterId: ID, lookId: ID, carriesPropIds: propIds.optional() })),
   action: z.string().min(3),
   visualEn: z.string().min(10),
   sfx: z.string().optional(),
@@ -82,6 +99,8 @@ export const seriesSchema = z.object({
 });
 
 export const episodeSchema = z.object({
+  shotPolicy: z.object({ version: z.literal('shot-v1'), strict: z.literal(true) }).strict().optional(),
+  authoredBy: z.enum(['claude', 'codex']).optional(),
   continuesFromEpisode: z.object({ no: z.number().int().positive(), cutId: ID }).strict().optional(),
   startsFresh: z.literal(true).optional(),
   seriesId: ID,

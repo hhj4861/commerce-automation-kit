@@ -43,7 +43,7 @@ export const dialogueLintGate: DeterministicGate = {
       const max = Math.floor(cut.durationSec * MAX_SYLLABLES_PER_SEC);
       if (syl > max)
         f.push({ severity: 'block', message: `대사 ${syl}음절이 ${cut.durationSec}초 컷 한도 ${max}음절을 넘음`, cutId: cut.id });
-      if (cut.lines.length > MAX_LINES_PER_CUT)
+      if (!episode.shotPolicy && cut.lines.length > MAX_LINES_PER_CUT)
         f.push({ severity: 'review', message: `컷당 대사 ${cut.lines.length}줄(권장 ${MAX_LINES_PER_CUT}줄 이하)`, cutId: cut.id });
     }
     return f;

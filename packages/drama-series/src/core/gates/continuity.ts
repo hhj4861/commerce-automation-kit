@@ -20,7 +20,7 @@ export const continuityGate: DeterministicGate = {
       const loc = locs.get(cut.locationId);
       if (!loc) return;
       for (const prop of Object.keys(cut.propState ?? {}))
-        if (!loc.props.includes(prop))
+        if (!loc.props.includes(prop) && !(episode.shotPolicy && cut.cast.some(c => c.carriesPropIds?.includes(prop))))
           f.push({ severity: 'block', message: `장소에 없는 소품: ${prop} (${loc.name} 소품 목록에 추가하거나 제거)`, cutId: cut.id });
       const prev = previousCutOf(ctx, i);
       if (prev && prev.locationId === cut.locationId) {

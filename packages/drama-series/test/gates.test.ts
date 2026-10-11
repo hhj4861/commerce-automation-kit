@@ -18,7 +18,7 @@ const report = (c: GateContext, gate: string) => runEpisodeGates(c).find((r) => 
 describe('deterministic gates', () => {
   it('fixture passes schema, dialogue-lint and continuity', () => {
     const reports = runEpisodeGates(ctx());
-    expect(reports.map((r) => r.gate)).toEqual(['schema', 'dialogue-lint', 'continuity']);
+    expect(reports.map((r) => r.gate)).toEqual(['schema', 'dialogue-lint', 'continuity', 'shot']);
     expect(reports.every((r) => r.ok)).toBe(true);
   });
   it('schema blocks a mismatched seriesId and an unknown visual token', () => {
