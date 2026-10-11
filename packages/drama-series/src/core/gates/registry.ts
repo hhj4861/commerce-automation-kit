@@ -1,3 +1,4 @@
+import { contextBinding, continuationFindings } from '../continuation.js';
 import type { DramaGateReport } from '@cak/contracts';
 import { fingerprintOf } from '../fingerprint.js';
 import { toReport } from '../report.js';
@@ -11,5 +12,6 @@ export const EPISODE_GATES: DeterministicGate[] = [schemaGate, dialogueLintGate,
 
 export function runEpisodeGates(ctx: GateContext): DramaGateReport[] {
   const fp = fingerprintOf(ctx.series, ctx.episode);
-  return EPISODE_GATES.map((g) => toReport(g.id, g.stage, g.run(ctx), fp));
+  const binding = continuationFindings(ctx).length ? {} : contextBinding(ctx);
+  return EPISODE_GATES.map((g) => ({ ...toReport(g.id, g.stage, g.run(ctx), fp), ...binding }));
 }

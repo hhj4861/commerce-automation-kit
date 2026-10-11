@@ -17,6 +17,8 @@ export interface DramaLineVerification {
   note?: string | undefined;
   /** 판정·승인 당시의 대사 지문(컷·화자·문구·종류·장면). 대사가 바뀌면 검증이 무효가 된다 */
   lineHash?: string | undefined;
+  /** 회차 연결 opt-in 판정 문맥. 기존 lineHash 의미는 유지한다. */
+  reviewContextDigest?: string | undefined;
 }
 
 export interface DramaLine {
@@ -117,6 +119,8 @@ export interface DramaSeries {
 }
 
 export interface DramaEpisode {
+  continuesFromEpisode?: { no: number; cutId: string } | undefined;
+  startsFresh?: true | undefined;
   seriesId: string;
   no: number;
   title: string;
@@ -135,6 +139,8 @@ export interface DramaFinding {
 }
 
 export interface DramaGateReport {
+  /** 회차 연결 opt-in 시 필수인 검토 문맥 지문. */
+  reviewContextDigest?: string | undefined;
   gate: string;
   stage: DramaGateStage;
   /** block 이 하나도 없으면 true */

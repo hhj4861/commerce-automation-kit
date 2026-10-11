@@ -5,6 +5,7 @@ export interface GateContext {
   series: DramaSeries;
   episode: DramaEpisode;
   genre: GenrePack;
+  prev?: { episode: DramaEpisode } | undefined;
 }
 
 export interface DeterministicGate {

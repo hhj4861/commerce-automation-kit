@@ -1,10 +1,14 @@
+import { continuationFindings, previousCutOf } from '../continuation.js';
 import type { DramaFinding } from '@cak/contracts';
 import type { DeterministicGate } from './types.js';
 
 export const continuityGate: DeterministicGate = {
   id: 'continuity',
   stage: 'episode',
-  run({ series, episode }) {
+  run(ctx) {
+    const { series, episode } = ctx;
+    const issues = continuationFindings(ctx);
+    if (issues.length) return issues;
     const f: DramaFinding[] = [];
     const locs = new Map(series.locations.map((l) => [l.id, l]));
     for (const id of new Set(episode.cuts.map((c) => c.locationId))) {
@@ -18,7 +22,7 @@ export const continuityGate: DeterministicGate = {
       for (const prop of Object.keys(cut.propState ?? {}))
         if (!loc.props.includes(prop))
           f.push({ severity: 'block', message: `장소에 없는 소품: ${prop} (${loc.name} 소품 목록에 추가하거나 제거)`, cutId: cut.id });
-      const prev = episode.cuts[i - 1];
+      const prev = previousCutOf(ctx, i);
       if (prev && prev.locationId === cut.locationId) {
         const next = cut.propState ?? {};
         for (const k of Object.keys(prev.propState ?? {}))

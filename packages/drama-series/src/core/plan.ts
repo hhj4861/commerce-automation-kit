@@ -5,7 +5,7 @@ import { fingerprintOf, topicFingerprint } from './fingerprint.js';
 import type { GateContext } from './gates/types.js';
 import { toReport } from './report.js';
 import { topicGateId } from './topic-gates.js';
-import { isLineCleared } from './line-hash.js';
+import { assertContinuation, previousCutOf, contextBinding, isContextLineCleared } from './continuation.js';
 import { chainsFrom } from './join.js';
 
 /** 생성 명세 전에 같은 대본 지문으로 통과해야 하는 관문(주제 관문은 주제 지문으로 따로 확인). */
@@ -27,6 +27,8 @@ export interface PlanResult {
 
 export function buildPlan(input: PlanInput): PlanResult {
   const { ctx } = input;
+  assertContinuation(ctx);
+  const binding = contextBinding(ctx);
   const fp = fingerprintOf(ctx.series, ctx.episode);
 
   const required: DramaFinding[] = [];
@@ -34,6 +36,7 @@ export function buildPlan(input: PlanInput): PlanResult {
     const r = input.reports.filter((x) => x.gate === gate).at(-1);
     if (!r) required.push({ severity: 'block', message: `관문 기록 없음: ${gate}` });
     else if (r.fingerprint !== fp) required.push({ severity: 'block', message: `관문 기록이 현재 대본과 다름(대본 수정 후 재실행 필요): ${gate}` });
+    else if (binding.reviewContextDigest && r.reviewContextDigest !== binding.reviewContextDigest) required.push({ severity: 'block', message: `앞 회차/검토 문맥이 달라 재판정 필요: ${gate}` });
     else if (!r.ok) required.push({ severity: 'block', message: `관문 미통과: ${gate}` });
   }
   const topicGate = topicGateId(ctx.series.topic.id);
@@ -45,18 +48,19 @@ export function buildPlan(input: PlanInput): PlanResult {
   const lines: DramaFinding[] = [];
   for (const cut of ctx.episode.cuts)
     cut.lines.forEach((l, i) => {
-      if (isLineCleared(cut, l)) return;
+      if (isContextLineCleared(ctx, cut, l)) return;
       const s = l.verification.status;
       const message = s === 'verified' || s === 'human-approved' ? `검증 이후 대사·장면이 바뀜(재판정 필요, ${s})` : `검증되지 않은 대사(${s})`;
       lines.push({ severity: 'block', message, cutId: cut.id, lineIndex: i, evidence: l.text });
     });
 
-  const backend: DramaFinding[] = [];
+  const backend: DramaFinding[] = ctx.episode.continuesFromEpisode ? [{ severity: 'block', message: '회차 연결 생성 차단: 승인된 앞 회차 출시/프레임 결합 경로 미구현' }] : [];
   const clips: DramaClipSpec[] = [];
   ctx.episode.cuts.forEach((cut, i) => {
-    const prev = ctx.episode.cuts[i - 1];
+    if (ctx.episode.continuesFromEpisode) return; // No generation specs before release/frame binding exists.
+    const prev = previousCutOf(ctx, i);
     // 같은 장소에서 전환(섬광·암전) 없이 이어지면 앞 컷 마지막 프레임에서 시작한다
-    const chained = prev && chainsFrom(prev, cut);
+    const chained = i > 0 && prev && chainsFrom(prev, cut);
     try {
       const spec = toSeedanceClip(ctx, cut, input.video);
       clips.push({ ...spec, estCredits: creditsFor(spec.model, input.video.resolution, input.video.draft, spec.durationSec), ...(chained ? { startFromCut: prev.id } : {}) });

@@ -42,6 +42,8 @@ import { parseTrimSpec } from '../core/assemble-args.js';
 import { joinSimilarity } from '../adapters/ffmpeg.js';
 import { JOIN_MIN_SSIM, chainsFrom, judgeJoin } from '../core/join.js';
 
+import { assertContinuation, previousCutOf, contextBinding, isContextLineCleared } from '../core/continuation.js';
+
 class UsageError extends Error {}
 
 /** "c7@3.5+2" → c7 클립의 3.5초부터 2초 */
@@ -80,7 +82,10 @@ const optStr = (o: Opts, k: string): string | undefined => (typeof o[k] === 'str
 function loadCtx(o: Opts): GateContext {
   const series = parseSeries(readJson(req(o, 'series')));
   const episode = parseEpisode(readJson(req(o, 'episode')));
-  return { series, episode, genre: loadGenre(series.genreId) };
+  const prev = optStr(o, 'prev-episode');
+  const ctx: GateContext = { series, episode, genre: loadGenre(series.genreId), ...(prev ? { prev: { episode: parseEpisode(readJson(prev)) } } : {}) };
+  assertContinuation(ctx);
+  return ctx;
 }
 function saveReport(dir: string, r: DramaGateReport): void {
   writeJson(join(dir, `${r.gate}.json`), r);
@@ -92,9 +97,9 @@ function loadReports(dir: string): DramaGateReport[] {
     .filter((f) => f.endsWith('.json'))
     .map((f) => JSON.parse(readFileSync(join(d, f), 'utf8')) as DramaGateReport);
 }
-function writeRequest(target: string, kind: JudgeRequestMeta['kind'], fingerprint: string, state: Record<string, unknown>, questions: JudgeQuestion[]): void {
+function writeRequest(target: string, kind: JudgeRequestMeta['kind'], fingerprint: string, state: Record<string, unknown>, questions: JudgeQuestion[], binding: { reviewContextDigest?: string } = {}): void {
   writeJson(target, buildJevRequest(state, questions));
-  const meta: JudgeRequestMeta = { kind, fingerprint, questions: questions.map((q) => ({ id: q.id, type: q.type })), createdAt: new Date().toISOString() };
+  const meta: JudgeRequestMeta = { ...binding, kind, fingerprint, questions: questions.map((q) => ({ id: q.id, type: q.type })), createdAt: new Date().toISOString() };
   writeJson(metaPath(target), meta);
 }
 function readMeta(request: string, kind: JudgeRequestMeta['kind']): JudgeRequestMeta {
@@ -146,7 +151,7 @@ function main(argv: string[]): number {
     }
 
     case 'validate': {
-      const o = opts(rest, { series: 'string', episode: 'string', gates: 'string' });
+      const o = opts(rest, { series: 'string', episode: 'string', 'prev-episode': 'string', gates: 'string' });
       const gates = req(o, 'gates');
       const reports = runEpisodeGates(loadCtx(o));
       for (const r of reports) saveReport(gates, r);
@@ -156,7 +161,7 @@ function main(argv: string[]): number {
     }
 
     case 'judge-build': {
-      const o = opts(rest, { kind: 'string', series: 'string', episode: 'string', out: 'string' });
+      const o = opts(rest, { kind: 'string', series: 'string', episode: 'string', 'prev-episode': 'string', out: 'string' });
       const kind = kindOf(req(o, 'kind'));
       const target = req(o, 'out');
       const ctx = loadCtx(o);
@@ -165,23 +170,24 @@ function main(argv: string[]): number {
         out({ ok: true, kind, questions: 0, note: '판정할 질문 없음(모든 대사가 이미 검증·승인됨)' });
         return 0;
       }
-      writeRequest(target, kind, fingerprintOf(ctx.series, ctx.episode), judgeState(ctx), questions);
+      writeRequest(target, kind, fingerprintOf(ctx.series, ctx.episode), judgeState(ctx), questions, contextBinding(ctx));
       out({ ok: true, kind, questions: questions.length, out: abs(target), meta: abs(metaPath(target)) });
       return 0;
     }
 
     case 'judge-apply': {
-      const o = opts(rest, { kind: 'string', series: 'string', episode: 'string', request: 'string', response: 'string', gates: 'string', 'episode-out': 'string' });
+      const o = opts(rest, { kind: 'string', series: 'string', episode: 'string', 'prev-episode': 'string', request: 'string', response: 'string', gates: 'string', 'episode-out': 'string' });
       const kind = kindOf(req(o, 'kind'));
       const gates = req(o, 'gates');
       const ctx = loadCtx(o);
       const meta = readMeta(req(o, 'request'), kind);
-      if (meta.fingerprint !== fingerprintOf(ctx.series, ctx.episode)) {
-        out({ ok: false, problem: '판정 요청 이후 대본이 바뀜 — judge-build 부터 다시 실행' });
+      const binding = contextBinding(ctx);
+      if (meta.fingerprint !== fingerprintOf(ctx.series, ctx.episode) || (binding.reviewContextDigest && meta.reviewContextDigest !== binding.reviewContextDigest)) {
+        out({ ok: false, problem: '판정 요청 이후 대본/검토 문맥이 바뀜 — judge-build 부터 다시 실행' });
         return 1;
       }
       const verdicts = parseJevResponse(readJson(req(o, 'response')), meta.questions);
-      const { report, episode } = applyVerdicts(kind, ctx, meta.questions, verdicts, basename(req(o, 'response')), new Date().toISOString());
+      const { report, episode } = applyVerdicts(kind, ctx, meta.questions, verdicts, basename(req(o, 'response')), new Date().toISOString(), meta);
       saveReport(gates, report);
       if (kind === 'dialogue') writeJson(optStr(o, 'episode-out') ?? req(o, 'episode'), episode);
       const verifiedLines = episode.cuts.flatMap((c) => c.lines).filter((l) => l.verification.status === 'verified').length;
@@ -190,25 +196,27 @@ function main(argv: string[]): number {
     }
 
     case 'approve-line': {
-      const o = opts(rest, { episode: 'string', cut: 'string', line: 'string', by: 'string', note: 'string' });
+      const o = opts(rest, { episode: 'string', series: 'string', 'prev-episode': 'string', cut: 'string', line: 'string', by: 'string', note: 'string' });
       const path = req(o, 'episode');
       const episode = parseEpisode(readJson(path));
+      const linked = episode.continuesFromEpisode || episode.startsFresh || optStr(o, 'prev-episode');
+      const ctx = linked ? loadCtx(o) : undefined;
       const i = Number(req(o, 'line'));
       const cut = episode.cuts.find((c) => c.id === req(o, 'cut'));
       const line = Number.isInteger(i) ? cut?.lines[i] : undefined;
       if (!cut || !line) throw new UsageError('해당 컷·대사 없음');
-      if (isLineCleared(cut, line)) {
+      if (ctx ? isContextLineCleared(ctx, cut, line) : isLineCleared(cut, line)) {
         out({ ok: false, problem: `이미 ${line.verification.status} 상태인 대사는 승인할 수 없음` });
         return 1;
       }
-      line.verification = { status: 'human-approved', approvedBy: req(o, 'by'), at: new Date().toISOString(), note: req(o, 'note'), lineHash: lineHash(cut, line) };
+      line.verification = { status: 'human-approved', approvedBy: req(o, 'by'), at: new Date().toISOString(), note: req(o, 'note'), lineHash: lineHash(cut, line), ...(ctx ? contextBinding(ctx) : {}) };
       writeJson(path, episode);
       out({ ok: true, cut: cut.id, line: i, text: line.text });
       return 0;
     }
 
     case 'plan': {
-      const o = opts(rest, { series: 'string', episode: 'string', gates: 'string', budget: 'string', resolution: 'string', draft: 'boolean', aspect: 'string', out: 'string' });
+      const o = opts(rest, { series: 'string', episode: 'string', 'prev-episode': 'string', gates: 'string', budget: 'string', resolution: 'string', draft: 'boolean', aspect: 'string', out: 'string' });
       const target = req(o, 'out');
       const budget = Number(req(o, 'budget'));
       if (!Number.isFinite(budget) || budget <= 0) throw new UsageError('--budget 은 양수 크레딧');
@@ -225,7 +233,7 @@ function main(argv: string[]): number {
     }
 
     case 'verify-clip': {
-      const o = opts(rest, { series: 'string', episode: 'string', cut: 'string', gates: 'string', transcript: 'string', media: 'string', work: 'string' });
+      const o = opts(rest, { series: 'string', episode: 'string', 'prev-episode': 'string', cut: 'string', gates: 'string', transcript: 'string', media: 'string', work: 'string' });
       const gates = req(o, 'gates');
       const cutId = req(o, 'cut');
       const ctx = loadCtx(o);
@@ -242,15 +250,18 @@ function main(argv: string[]): number {
     }
 
     case 'join-check': {
-      const o = opts(rest, { series: 'string', episode: 'string', clips: 'string', min: 'string' });
+      const o = opts(rest, { series: 'string', episode: 'string', 'prev-episode': 'string', clips: 'string', 'prev-clips': 'string', min: 'string' });
       const ctx = loadCtx(o);
       const dir = abs(req(o, 'clips'));
       const min = optStr(o, 'min') ? Number(optStr(o, 'min')) : JOIN_MIN_SSIM;
       type Join = { prev: string; cut: string; ssim: number | null; finding: DramaFinding | null };
       const joins = ctx.episode.cuts.flatMap((cut, i): Join[] => {
-        const prev = ctx.episode.cuts[i - 1];
+        const prev = previousCutOf(ctx, i);
         if (!prev || !chainsFrom(prev, cut)) return [];
-        const a = join(dir, `${prev.id}.mp4`);
+        const cross = i === 0 && !!ctx.episode.continuesFromEpisode;
+        const prevDir = optStr(o, 'prev-clips');
+        if (cross && !prevDir) return [{ prev: prev.id, cut: cut.id, ssim: null, finding: { severity: 'block', cutId: cut.id, message: '앞 회차 클립에는 --prev-clips 필수' } }];
+        const a = join(cross ? abs(prevDir!) : dir, `${prev.id}.mp4`);
         const b = join(dir, `${cut.id}.mp4`);
         if (!existsSync(a) || !existsSync(b)) return [{ prev: prev.id, cut: cut.id, ssim: null, finding: { severity: 'block' as const, cutId: cut.id, message: '클립 파일 없음' } }];
         const ssim = joinSimilarity(a, b);
@@ -262,8 +273,12 @@ function main(argv: string[]): number {
     }
 
     case 'assemble': {
-      const o = opts(rest, { series: 'string', episode: 'string', gates: 'string', clips: 'string', out: 'string', font: 'string', work: 'string', 'no-ai-label': 'boolean', cuts: 'string', aspect: 'string', title: 'string', kicker: 'string', style: 'string', 'cold-open': 'string', 'cold-open-caption': 'string', trim: 'string' });
+      const o = opts(rest, { series: 'string', episode: 'string', 'prev-episode': 'string', gates: 'string', clips: 'string', out: 'string', font: 'string', work: 'string', 'no-ai-label': 'boolean', cuts: 'string', aspect: 'string', title: 'string', kicker: 'string', style: 'string', 'cold-open': 'string', 'cold-open-caption': 'string', trim: 'string' });
       const ctx = loadCtx(o);
+      if (ctx.episode.continuesFromEpisode) {
+        out({ ok: false, problem: '회차 연결 조립 차단: 승인된 앞 회차 출시/프레임 결합 경로 미구현' });
+        return 1;
+      }
       const cutIds = optStr(o, 'cuts')?.split(',').map((x) => x.trim()).filter(Boolean);
       const unknown = cutIds?.filter((id) => !ctx.episode.cuts.some((c) => c.id === id)) ?? [];
       if (unknown.length) throw new UsageError(`대본에 없는 컷: ${unknown.join(', ')}`);

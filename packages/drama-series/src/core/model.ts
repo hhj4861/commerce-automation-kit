@@ -10,6 +10,7 @@ const verification = z.object({
   at: z.string().optional(),
   note: z.string().optional(),
   lineHash: z.string().optional(),
+  reviewContextDigest: z.string().regex(/^sha256:[0-9a-f]{64}$/).optional(),
 });
 
 const line = z.object({
@@ -81,6 +82,8 @@ export const seriesSchema = z.object({
 });
 
 export const episodeSchema = z.object({
+  continuesFromEpisode: z.object({ no: z.number().int().positive(), cutId: ID }).strict().optional(),
+  startsFresh: z.literal(true).optional(),
   seriesId: ID,
   no: z.number().int().min(1),
   title: z.string().min(1),
