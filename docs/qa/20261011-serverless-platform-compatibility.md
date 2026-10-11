@@ -2,7 +2,9 @@
 
 ## 판정
 
-**플랫폼 전체 이관 검증은 미완료이며, 현재 스테이징으로 운영 연결을 전환하면 안 된다.** Phase 2의 공통 API 스모크 통과는 앱 화면 → 앱 API → 스테이징 → 화면의 성공을 뜻하지 않는다. 이번 검증은 고정 소스·배포 이미지 대조와 실제 클라이언트의 오프라인 요청 캡처까지다. 실앱 화면 E2E는 실행하지 않았다.
+**운영 VM 연결을 유지한 채 스테이징 보완본을 배포하고 실제 기능을 검증했다. 전체 기능 동등성은 아직 미달이다.** Hanmadi·Festa·Replay JSON, 스트리밍, Responses, JEV, 영상 입력, TTS→STT와 discovery의 검색·JEV·저장·재시도·격리는 통과했다. accounts는 서버리스에 없고, 기존 콜드 기동 지연의 해결 및 실앱 화면 E2E는 미검증이다. API 통과를 플랫폼 전체 성공으로 바꾸어 보고하지 않는다.
+
+사용자 선택에 따라 g2 비용 관측은 중단했다. 기능 시험에는 LiteLLM min=1을 임시 사용했으며 종료 시 min=0 복구를 완료했다. 모델용 임시 키 2개는 폐기 후 401을 확인했다. 스테이징 discovery의 JEV 설정은 폐기된 시험 키를 참조하므로, 새 실호출 전 제한 키 재주입이 필요하다. 아래는 시점별 누적 기록이며 최종 배포·시험 결과는 마지막 절을 기준으로 한다.
 
 목표 사용자 흐름은 Hanmadi 대화/음성, Festa 인터뷰, Shopshorts·블로그의 주제 추천이 각각 앱 서버를 거쳐 스테이징에 도달하고 결과를 사용자에게 반환하는 것이다. Replay는 현재 VM 이용 여부부터 추가 확인이 필요하다.
 
@@ -100,3 +102,94 @@ main `1925eb5`의 공통 LiteLLM 클라이언트와 `app_proxy.make_server`를 �
 2. 시험 Node 프로세스에만 `NODE_EXTRA_CA_CERTS` 지정: HTTPS 검증 통과, 요청 1개 캡처. `festa-travel`, `/llm/v1/chat/completions`, 서비스 Authorization과 Google용 X-Serverless-Authorization이 모두 보존됨. 캡처 transport가 의도적으로 중단하므로 최종 응답은 `upstream_error`이며 모델 성공 응답을 만들지 않았다.
 
 외부 요청 0개, 실제 토큰/키 사용 0개, 숨은 재시도 0개. 시험 종료 후 로컬 인증서·개인키를 삭제했다. 이는 **TLS/요청 전달 검증**이며 Festa 앱 자체, Cloud Run, 실제 JEV/LLM, 화면 표시 성공 검증이 아니다. 운영 및 관측 중인 스테이징은 변경하지 않았다.
+
+
+## VM 기능 전체 대조와 기능 검증 우선 전환 — 2026-10-11
+
+- 최신 사용자 범위: **운영 VM과 기존 플랫폼 연결을 유지하며, VM 제공 기능이 서버리스에도 있는지 검증한다.** 운영 트래픽 전환·VM 종료는 하지 않는다.
+- 담당/기준: 현재 세션, 보완 코드 main `1925eb5`. 완료 기준은 항목별 실제 기능 증거이며, 배포·단위 테스트·API 200을 앱 전체 성공으로 대체하지 않는다.
+- IAP SSH 읽기 전용으로 실제 VM을 확인했다. LiteLLM(`87f34979b9f8`), discovery(`7e9d866`), accounts(`claude-2.1.284`), Caddy, Postgres 16이 실행 중이다. Dify 실행 컨테이너는 없다.
+- VM Caddy 원문에는 `/llm` 기본 6개 경로, native Gemini, JEV, discovery start/get/claim/complete, accounts connections/chat 경로가 있다. 무인증 로컬 조회 결과 health=200, models/accounts/discovery=401이다. 이는 라우팅·인증 응답 증거이며 정상 사용자 업무 성공이 아니다.
+- VM의 실제 마운트 설정에서 모델 alias 5개와 공급자 모델명을 추출했다. 준비된 `platform-staging.json`과 동일하다. 현재 배포된 기본 staging 설정에는 Festa·Replay alias가 없다. 비밀값은 출력하지 않았다.
+- Cloud Run 제어면에서 기존 `shared-ai`, `litellm-stg`, `shared-ai-stg`, probe만 확인됐다. discovery/accounts 서비스는 없다. 스테이징 edge는 여전히 `00003-qrp`, 이전 `edge-staging` digest `66463bf4…`다.
+
+| 기능 | 현재 확인 결과 | 서버리스 동등성 판정 |
+|---|---|---|
+| Hanmadi chat JSON/스트리밍 | 기존 실공급자 200, stream DONE/33 events 확인 | API 기능 스모크 통과, 앱 표시 미검증 |
+| STT/TTS | 기존 실공급자 200, 무음 1초/텍스트 3글자 | API 기능 스모크 통과, 의미 있는 전사·재생 미검증 |
+| Gemini native / JEV | 기존 실공급자 각 200 | endpoint 통과, 실제 영상 입력 및 플랫폼별 결과 처리 미검증 |
+| Festa / Replay 모델 계약 | 준비 이미지에는 VM과 같은 alias·공급자 모델, 현재 배포에는 없음 | 미배포, 실호출 미검증 |
+| discovery 검색·생성 콜백·JEV·영구 상태 | VM 실행 중, 서버리스는 코드·이미지만 준비 | 서비스 미배포, 전체 흐름 미검증 |
+| accounts 연결·인증·chat | VM 실행·401 인증 응답, 서버리스 서비스/라우트 없음 | 기능 미제공. 기존 D4 제외 결정을 전체 동등성 통과로 처리하지 않음 |
+| 키 발급·폐기·사용 기록·예산 초기화 | 기존 키 폐기 후 401, 사용 기록 20/20, 예산 초기화 2회 통과 | 시험한 부분 통과, 전체 관리 기능·종료 조건 미검증 |
+| 기존 앱 제한시간 | 콜드 표본 20/20이 30초 초과 | 현 min=0 구성 미달, timeout 상향으로 숨기지 않음 |
+
+기존 실호출 증거를 새 호출로 재집계하지 않는다. `features-1791589216.jsonl` SHA-256 `f009c5b5a362876fd9fa7e6adc51e7214e491b6afdfcec3b94e57e499ac998c9`: 기능 6건 200, 폐기 401. `bc-1791589343.jsonl`: spend-result passed=true. `cfe-1791593141.jsonl`: budget-result 2회 true, 종료 시험은 condition_met=false라 미검증(유실 관측 0만으로 통과 아님), keys_unconfirmed=0.
+
+### 비용 시험 중단
+
+사용자가 **“기능 검증 우선: 비용 시험 중단 후 스테이징 배포”**를 선택했다. 기존 24시간 완료 대기 순서보다 이 최신 지시를 우선한다.
+
+- 시작 시각과 실행 파일을 확인한 g2 PID 46726에 SIGINT를 전달했다. 관측 원본을 수정하지 않았다.
+- 원본에는 `g2-scheduler-paused` confirmed=true와 `g2-stopped` scheduler_pause_confirmed=true/provider_calls=0이 기록됐다. 별도 제어면 조회도 PAUSED이며 관측·caffeinate PID가 종료됐다.
+- 24시간 창을 채우지 못한 **사용자 요청 중단**이다. 비용 시험 성공/실패 지표로 임의 변경하지 않는다. SIGINT traceback 8줄이 원본 JSONL 끝에 있으므로 집계 시 비JSON 종료 기록을 구분하고 원본을 보존한다.
+- 다음: 빈 discovery DB·전용 시험 설정 → 검토된 스테이징 보완본 배포/마이그레이션 → 기능별 실호출·실앱 검증. 운영 VM/플랫폼 설정은 유지한다.
+
+## 기능 보완본 스테이징 배포와 실제 검증 — 2026-10-11 후속
+
+### 적용 범위
+
+- 승인 범위: 비용 관측 중단 후 스테이징 기능 검증 우선. 운영 VM·공개 edge·플랫폼 URL·DNS는 변경하지 않았다.
+- Neon `shared-ai-stg` 프로젝트에 별도 `discovery_stg` DB와 `discovery_stg_owner`를 생성했다. 기존 운영 데이터와 연결 계정은 복사하지 않았다.
+- 스테이징 전용 platform key 3개를 만들고, discovery DB/검색/JEV 및 Festa·Replay 설정 7개를 Secret Manager의 숫자 버전 1로 고정했다. 공급자 값은 VM에서 읽어 비밀 저장소로 전달한 뒤 메모리에서 일치 확인했으며 파일·대화에 원문을 기록하지 않았다.
+- 준비 plan `77df2ed737a6db2aa61a791376e8b7aa8e68c682df5d0b69e18af18ad9cb1a0b`: **10 추가, 2 수정, 삭제 0**. discovery SA·권한·migration Job 및 스테이징 LiteLLM 설정만 변경했다.
+- Job `discovery-stg-migrate-k8p7f` 성공. 별도 SQL 조회로 `discovery.requests`, `discovery.active`, `discovery.action_results` 3개 테이블을 확인했다.
+- 서비스 plan `e0470ffa29ce72b48543cf49fd484c55f365958a1eae2dad3691a52ba5a6f17d`: **1 추가, 1 수정, 삭제 0**. discovery 서비스와 스테이징 edge upstream만 변경했다.
+- 배포 이미지는 위 PR #176의 digest 3개 그대로다. 실제 기능 시험 리비전은 LiteLLM `litellm-stg-00005-crm`, edge `shared-ai-stg-00005-wn8`, discovery `discovery-stg-00001-sql`이었다. 각 Ready 및 traffic 100%를 확인했다.
+- 운영 edge는 `shared-ai-00001-f8t`로 유지됐다. Scheduler는 기존 내부 LiteLLM 경로를 보존(`warm_ping_via_edge=false`)하고 PAUSED 상태를 유지한다.
+
+### 실제 공급자 API 시험
+
+모든 요청은 IAM 비공개 스테이징 edge를 거쳤다. LiteLLM 최소 인스턴스 **1인 기능 시험 조건**이며, 30초 요청 제한을 사용했다. 응답 모킹은 없었다.
+
+| 항목 | 결과 | 실제 관찰 |
+|---|---|---|
+| Hanmadi JSON | 통과 | 200, 2,457ms, `{"ok":true}` 파싱 일치 |
+| Festa JSON | 통과 | `festa-travel` 200, 1,140ms, JSON 일치 |
+| Replay JSON | 통과 | `replay-video-planner` 200, 1,022ms, JSON 일치 |
+| 스트리밍 | 통과 | 200, SSE 8개, 첫 event 813ms / 마지막 1,200ms, DONE 수신 |
+| JEV 직접 호출 | 통과 | 200, 643ms, `jev-1.13.0` answers/usage 반환 |
+| Gemini native 실제 영상 입력 | 통과 | 직접 만든 1초 빨간색 MP4 2,273바이트 입력, 200/1,017ms, `Red` 응답. 타인 영상·실사용자 영상 미사용 |
+| TTS→STT | 통과 | 한국어 문장 TTS 200/48,527바이트 → 같은 음원 STT 200. `안녕하세요. 오늘은 하늘이 맑습니다.` 원문과 정규화 일치. 청음 품질 평가는 아님 |
+| Responses | 통과 | 200/1,185ms, completed/`OK` |
+| IAM·서비스 키 | 차단 확인 | Google ID 토큰 누락 401, 잘못된 서비스 키 401, 비허용 관리 경로 404 |
+| accounts | **미제공** | 스테이징 `/accounts/connections` 404. VM에는 실행 서비스와 인증 라우트가 존재 |
+| embeddings | **기능 성공 미검증** | VM/시험 이미지 모두 embedding 모델 설정 없음. 허용되지 않은 모델 요청 403만 확인했으며 embedding 생성 성공으로 집계하지 않음 |
+
+### discovery 실제 서비스와 공용 클라이언트
+
+main `1925eb5`의 `services/topic-discovery/client.mjs`를 수정 없이 실행하고 Google ID 토큰만 시험 fetch에 추가했다. 플랫폼은 스테이징 전용 `shopshorts`, `wp-auto-blog` 키, 사용자는 합성 식별자다. **generate/assertConnection은 명시적인 시험 콜백**이다. 실제 Codex 로그인·생성, 앱 서버, 브라우저 UI를 실행했다고 주장하지 않는다.
+
+1. 실제 네이버 검색 → awaiting_generation → claim → 합성 후보 제출 → 서비스 계정의 metadata ID 토큰으로 실제 JEV 호출 → PostgreSQL 저장 → GET을 확인했다. 요청 `08aa7f2e-d0c2-400b-ac55-1ef92d5d07d8`, searchCalls=2/generationClaims=1/jevCalls=1이다.
+2. 요청 상태는 complete이나 후보는 held다. 이유는 `support_uncertain`, `value_uncertain`; JEV relevance confidence 0.92, support 0.46, value 0.61이다. 오류로 JEV가 생략된 것은 아니며, 후보 채택·추천 품질 성공도 아니다. 실제 검색 결과에는 무관하거나 비공식인 자료가 섞여 있었다.
+3. GET 결과가 완료 응답과 동일했다. 시작 재요청·완료 재요청 모두 같은 결과와 usage를 반환했고 추가 생성 0, 추가 검색/JEV 0이었다.
+4. 다른 사용자 및 `wp-auto-blog` 키로 같은 요청 조회 시 각각 404로 격리됐다.
+5. 같은 이미지를 새 리비전 `discovery-stg-parity-20261011`으로 배포하고 traffic 100% 전환 후 기존 결과 전체가 동일하게 조회됐다. 로컬 파일·프로세스 메모리만으로 보존된 결과가 아니다.
+6. `wp-auto-blog` 전용 키의 별도 요청은 실제 검색 뒤 합성 생성 오류를 보냈다. `generation_failed`로 held 저장됐고 재요청해도 generationClaims=1/jevCalls=0을 유지했다. 자동 재생성·숨은 유료 재호출은 없었다.
+
+### 비용·정리와 증거
+
+- 직접 시험 키: 1시간, $0.10, 10RPM. discovery 전용 JEV 키: 4시간, $0.05, 10RPM. 둘 다 폐기 후 models=401을 확인했다.
+- 초기 key/info 비용은 쓰기 지연 전 $0.003533002였으므로 최종 비용으로 사용하지 않는다. 별도 **스테이징 SpendLogs 집계**는 직접 호출 success 9건 **$0.003717558**, discovery JEV success 1건 **$0.00013503**, 합계 **$0.003852588**이었다. 직접 시험의 허용되지 않은 embedding 요청은 failure 1건/$0로 별도 남았다. 인프라 비용과 모델 공급자 원장 대조까지 완료한 값은 아니다.
+- 보온 원복 plan `3aa70806be47a18715dc479ba328f9bf03232c94c8b65d31057b2a34fcb9f4a2`은 LiteLLM min=1→0과 discovery 시험 revision 이름의 Terraform 정규화만 포함했다. **0 추가, 2 수정, 삭제 0으로 적용 완료.** 최종 LiteLLM `00006-h2c`, discovery `00003-gdp`, edge `00005-wn8`은 Ready 및 min=0이다. Scheduler PAUSED, 운영 VM RUNNING, 운영 edge `00001-f8t` 유지도 별도 조회로 확인했다.
+- 원본 폴더: `/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261009-serverless-p2/`.
+- 이번 원본: `platform-features-20261011.jsonl`, `platform-discovery-start-20261011.json`, `platform-discovery-complete-20261011.jsonl`, `platform-discovery-persistence-20261011.jsonl`, `platform-cleanup-20261011.jsonl`.
+- `platform-final-state-20261011.json`에 최종 제어면 상태·원본 SHA-256·비용 관찰값을 저장했다. 직접 기능 원본 SHA-256 `19a9c14f7fa6bee01f06bd375c456dbd6347017e658e0371d2615eef6dcb7d26`, discovery 완료 원본 `7f1f76cbdd27b334e34d5dad7a944e0b278e029fd0279ab84edf47587b9cfaad`. 비밀값 패턴 검사는 일치 0건이다. 적용한 본인 plan 3개와 본인 초기화 캐시만 삭제하고 기존 관측 worktree는 보존했다.
+
+### 전체 동등성에 남은 항목
+
+- **accounts:** 기존 D4는 v1을 이전하지 않고 API 키 전용 v2로 재설계하는 결정이다. 현재 v2가 없으므로 “VM 전체 기능 제공” 기준은 충족하지 못한다. 기존 구독 로그인 경로를 그대로 복사하여 임시 통과시키지 않는다.
+- **실플랫폼 흐름:** Hanmadi 음성 화면, Festa 인터뷰, Shopshorts/블로그의 실제 생성 어댑터와 최종 결과는 별도 검증이 필요하다. 이번의 합성 콜백·서버 API 성공은 이 항목의 대체 증거가 아니다.
+- **min=0 응답시간:** 이전 콜드 표본 20개 모두 30초 초과였다. 이번은 min=1 기능 시험이므로 콜드 문제 해결·비용 최적화가 입증되지 않았다. 새 이미지의 콜드 성능 개선도 확인하지 않았다.
+- 운영 데이터 이관·백업 복원·종료 중 기록 유실 시험은 이번 범위의 성공 항목이 아니다. 기존 종료 시험은 조건 미충족이며, Dify는 VM에서 실행 중이 아니므로 정상 제공 중인 기능으로 집계하지 않았다.
+- 다음 순서는 accounts v2의 제공 범위를 확정하고 구현한 뒤, 격리한 실제 플랫폼 흐름과 min=0 제한시간을 확인하는 것이다. **운영 VM 유지 및 운영 전환 보류는 계속한다.**
