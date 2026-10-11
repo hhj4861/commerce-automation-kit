@@ -1,0 +1,75 @@
+{
+  "file": "/Users/admin/Downloads/vedio/shinwol-rain-tunnel-short.mp4",
+  "sha256": "9281a12383c64208e17471b8bd3d65e1e49de81701a52e09d9171e1b7765712a",
+  "bytes": 31221404,
+  "duration": 60.166666666666664,
+  "frames": 1444,
+  "width": 1080,
+  "height": 1920,
+  "fps": 24,
+  "audio": "aac",
+  "selectedVoice": "RU7aSi6lT4uQBXMLgDxK",
+  "voiceSpeed": 1.1,
+  "audioCorrelation": 0.999450602487792,
+  "dialogueChecks": [
+    {
+      "id": "opening",
+      "rms": 0.14622549712657928,
+      "seconds": 5.1
+    },
+    {
+      "id": "street",
+      "rms": 0.13753843307495117,
+      "seconds": 7.21
+    },
+    {
+      "id": "reveal",
+      "rms": 0.1455237865447998,
+      "seconds": 6.67
+    },
+    {
+      "id": "shaft",
+      "rms": 0.14007848501205444,
+      "seconds": 7.335
+    },
+    {
+      "id": "buffer",
+      "rms": 0.12588348984718323,
+      "seconds": 7.15175
+    },
+    {
+      "id": "pump",
+      "rms": 0.14000064134597778,
+      "seconds": 10.165
+    },
+    {
+      "id": "limit",
+      "rms": 0.14743953943252563,
+      "seconds": 6.269395833333333
+    },
+    {
+      "id": "payoff",
+      "rms": 0.12566249072551727,
+      "seconds": 6.77
+    }
+  ],
+  "captionCount": 19,
+  "decodePassed": true,
+  "blackEvents": [],
+  "higgsfieldCredits": 0,
+  "visualQA": "See contact sheet and final-frame reviews; not a physical fluid simulation",
+  "sourceSha256": {
+    "scene.py": "1e5a6dc2e2723ecad17b36256476456d52019828bcf205800d832f058469be1a",
+    "finish.py": "02015d2c300cc378a6baea0b114be830c5658e8954eecb6809dd508c4ef84f3c",
+    "produce.mjs": "76f8efddf674bdbb6a09aece20acb5a673983f75834b46fb69bb8d5fe6fd160a",
+    "story.json": "3c8bebcfd2e6bc6cefeb7f1956ab225c9bac82033fccfff919f16624d53e97eb"
+  },
+  "review": {
+    "reviewer": "Codex production session (self-review)",
+    "evidence": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261011-shinwol-rain-tunnel/qa/final-contact.jpg",
+    "result": "Final first, intermediate and ending frames visually inspected; cutaway is visible, header/captions legible, storage/pump/outfall progression shown. Simplified explanatory 3D, not photoreal or an as-built hydraulic simulation.",
+    "audioLimit": "Full and targeted local Whisper transcripts checked. ASR disagreed on several words; alignment coverage is not proof of perfect pronunciation. Captions retain the reviewed original text.",
+    "openingOverride": "User approved full Blender 3D for this episode only. No Higgsfield generation."
+  },
+  "storageNote": "One tool hook reported disk full during rendering. Free space subsequently recovered; no files were deleted. All eight completed clips and final output passed decode checks."
+}
