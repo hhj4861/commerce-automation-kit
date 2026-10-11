@@ -190,3 +190,39 @@ export interface DramaPlan {
   rateMeasuredAt: string;
   createdAt: string;
 }
+
+/** Unreleased, immutable input evidence; never a release/execute permission. */
+export interface DramaReleaseSource {
+  schemaVersion: 1;
+  kind: 'drama-release-source';
+  authorized: false;
+  seriesId: string;
+  episodeNo: number;
+  cutId: string;
+  contentDigest: string;
+  clip: { sha256: string; bytes: number };
+  frame: { sha256: string; bytes: number; pixelSha256: string; frameCount: number; extraction: 'video-0-rgb24-last-v1' };
+  subjectDigest: string;
+}
+
+/** A supplied human decision record, not authenticated proof of user identity. */
+export interface DramaSourceApproval {
+  schemaVersion: 1;
+  decision: 'approve-continuation-source';
+  subjectDigest: string;
+  approvedBy: string;
+  userQuote: string;
+  recordedBy: string;
+  at: string;
+}
+
+export interface DramaContinuationBinding {
+  schemaVersion: 1;
+  kind: 'drama-continuation-binding';
+  authorized: false;
+  reviewContextDigest: string;
+  source: { episodeNo: number; cutId: string; subjectDigest: string; clipSha256: string; frameSha256: string };
+  target: { seriesId: string; episodeNo: number; cutId: string };
+  approvalDigest: string;
+  bindingDigest: string;
+}
