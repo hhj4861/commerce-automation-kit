@@ -1,0 +1,134 @@
+{
+  "version": "explanation-depth-v1",
+  "digest": "3d9e3c8a5cb8d4207e9249d512d75219cdccf63a234e260d9256214af8d7e150",
+  "checks": {
+    "focus": {
+      "pass": true,
+      "reason": "중심 질문은 ‘8,300톤짜리 잔디판을 어떻게 움직이는가’이다. 이동이 필요한 이유, 바퀴에 걸리는 하중 문제, 공기의 하중 분담, 바퀴의 이동 역할을 순서대로 설명한다. 햇빛과 지붕 설명도 같은 질문의 선행 설명이며 별도 주제로 벗어나지 않는다.",
+      "evidence": [
+        {
+          "sceneId": "hook",
+          "field": "narration",
+          "quote": "팔천삼백 톤짜리 축구장이, 공기를 타고 움직입니다."
+        },
+        {
+          "sceneId": "wheels",
+          "field": "narration",
+          "quote": "무게가 사라진 게 아니라, 공기와 바퀴가 나눠 받는 거죠. 바퀴는 남은 하중을 받으면서 잔디판을 천천히 옮깁니다."
+        }
+      ]
+    },
+    "why": {
+      "pass": true,
+      "reason": "지붕이 있는 경기장과 햇빛이 필요한 천연잔디의 조건 때문에 잔디판을 밖에서 키우고 경기 때 옮긴다는 동기가 연결된다. 잔디뿐 아니라 흙과 받침대도 함께 이동하므로 바퀴가 큰 하중을 받는다는 문제까지 제시해 공기 지지의 필요성을 설명한다.",
+      "evidence": [
+        {
+          "sceneId": "sunlight",
+          "field": "narration",
+          "quote": "일본 삿포로 돔은 지붕이 덮여 있죠. 그래서 진짜 잔디는 햇빛을 받도록 밖에서 키웁니다."
+        },
+        {
+          "sceneId": "load",
+          "field": "narration",
+          "quote": "경기할 때는 잔디와 흙, 받침대까지 통째로 옮깁니다. 하지만 이 무게를 바퀴만으로 받치면 부담이 크겠죠."
+        }
+      ]
+    },
+    "mechanism": {
+      "pass": true,
+      "reason": "받침대 아래로 공기를 넣음 → 공기가 넓은 바닥을 밀어 하중 약 90%를 지지함 → 바퀴가 나머지 하중을 받으며 이동시킴이라는 인과가 실제 내레이션에 있다. 공기는 지지하고 바퀴는 이동시킨다는 역할을 구분하며, 질량 감소나 공기만으로 추진한다는 오해도 막는다. 90% 하중 분담은 제공 근거와 일치한다.",
+      "evidence": [
+        {
+          "sceneId": "air",
+          "field": "narration",
+          "quote": "그래서 받침대 아래에 공기를 불어 넣습니다. 넓은 바닥을 미는 공기가, 전체 하중의 약 구십 퍼센트를 받쳐 주는 겁니다."
+        },
+        {
+          "sceneId": "wheels",
+          "field": "narration",
+          "quote": "무게가 사라진 게 아니라, 공기와 바퀴가 나눠 받는 거죠. 바퀴는 남은 하중을 받으면서 잔디판을 천천히 옮깁니다."
+        }
+      ]
+    },
+    "example": {
+      "pass": true,
+      "reason": "삿포로 돔의 동일한 잔디판을 야외 생육 상태부터 흙·받침대의 동반 이동, 하부 공기 지지, 바퀴 이동까지 따라간다. 시설 이름이나 비유만 제시하지 않고 실제 대상의 어느 부분에 무엇이 작용하는지 대입하므로 구체적 사례가 메커니즘 설명을 수행한다.",
+      "evidence": [
+        {
+          "sceneId": "sunlight",
+          "field": "narration",
+          "quote": "일본 삿포로 돔은 지붕이 덮여 있죠. 그래서 진짜 잔디는 햇빛을 받도록 밖에서 키웁니다."
+        },
+        {
+          "sceneId": "load",
+          "field": "narration",
+          "quote": "경기할 때는 잔디와 흙, 받침대까지 통째로 옮깁니다."
+        },
+        {
+          "sceneId": "wheels",
+          "field": "narration",
+          "quote": "바퀴는 남은 하중을 받으면서 잔디판을 천천히 옮깁니다."
+        }
+      ]
+    },
+    "payoff": {
+      "pass": true,
+      "reason": "첫 장면의 ‘공기를 타는 축구장’을 공기와 바퀴가 하중을 나누는 이동 장치로 다시 이해하게 한다. 결말은 잔디의 햇빛 확보와 지붕 있는 경기장 이용을 연결해 실용적 의미를 회수한다. 무게가 사라지지 않고 바퀴가 필요하며 천천히 이동한다는 범위도 설명한다. 비용 절감이나 경기 품질 향상 같은 미제공 효과를 보장하지 않는다.",
+      "evidence": [
+        {
+          "sceneId": "wheels",
+          "field": "narration",
+          "quote": "무게가 사라진 게 아니라, 공기와 바퀴가 나눠 받는 거죠. 바퀴는 남은 하중을 받으면서 잔디판을 천천히 옮깁니다."
+        },
+        {
+          "sceneId": "ending",
+          "field": "narration",
+          "quote": "지붕을 여는 대신, 잔디를 움직인 거죠. 햇빛이 필요한 잔디와, 날씨를 피하는 경기장을 함께 살린 선택입니다."
+        }
+      ]
+    },
+    "pacing": {
+      "pass": true,
+      "reason": "첫 화면에서 무거운 잔디판과 공기로 띄운다는 질문을 제시하고, 내레이션도 인사 없이 의외의 움직임으로 시작한다. 필요성→하중 문제→공기 지지→바퀴 이동→의미 회수로 진행해 중간 인과 점프나 결말 절단이 없다. 다만 장면 시간 합계는 49초로 목표 52초와 달라 최종 타임라인 확인이 필요하다. 이 판정은 설명 흐름에 대한 것이며, 설정 속도 1.1에서 각 대사가 배정 시간에 들어가는지는 실제 TTS 측정으로 별도 검증해야 한다.",
+      "evidence": [
+        {
+          "sceneId": "hook",
+          "field": "narration",
+          "quote": "팔천삼백 톤짜리 축구장이, 공기를 타고 움직입니다."
+        },
+        {
+          "sceneId": "air",
+          "field": "narration",
+          "quote": "그래서 받침대 아래에 공기를 불어 넣습니다."
+        },
+        {
+          "sceneId": "ending",
+          "field": "narration",
+          "quote": "지붕을 여는 대신, 잔디를 움직인 거죠. 햇빛이 필요한 잔디와, 날씨를 피하는 경기장을 함께 살린 선택입니다."
+        }
+      ]
+    },
+    "visuals": {
+      "pass": true,
+      "reason": "첫 화면에 잔디판과 짧은 질문이 함께 있어 무음으로도 대상과 의외성이 전달되도록 계획했다. 고정 포장면에 대한 잔디판 이동, 같은 받침대의 하부 단면과 상승, 바퀴 회전과 판 전체의 병진 이동이 대사의 작동 과정을 보여준다. 단면은 개념도로 표시하고 실제 상승량을 명시해 과장된 비행 표현도 제한한다. 합격은 화면 계획 기준이며 실제 렌더의 연속성과 자막 가독성은 검증되지 않았다.",
+      "evidence": [
+        {
+          "sceneId": "hook",
+          "field": "prompt",
+          "quote": "The grass stage itself visibly translates relative to fixed paving and stationary roof. First frame modern title overlay: 8,300톤을 / 공기로 띄운다? visible3.8s."
+        },
+        {
+          "sceneId": "air",
+          "field": "prompt",
+          "quote": "Conceptual half-section of same grass tray: blower sends air into bounded underfloor chamber, distributed rising arrows push tray up a few centimeters; not balloons. Detail schematic, actual rise7.5cm. Burn in a small legible Korean label: 원리 개념도 · 실제 상승7.5cm."
+        },
+        {
+          "sceneId": "wheels",
+          "field": "prompt",
+          "quote": "Detailed powered wheel and bogie with hub, drive unit, steel chassis; wheel rotates while entire platform translates along concrete. Air remains supporting, no mass vanishes."
+        }
+      ]
+    }
+  },
+  "passed": true
+}

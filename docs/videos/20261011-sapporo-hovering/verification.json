@@ -1,0 +1,242 @@
+{
+  "file": "/Users/admin/Downloads/vedio/sapporo-hovering-architecture-short.mp4",
+  "sha256": "75085336409964d12cd32557c5ab386f63d9d308cfbc822b77235eb6362ba75f",
+  "duration": 40.041667,
+  "frames": 961,
+  "bytes": 20759890,
+  "audio": {
+    "codec": "AAC-LC",
+    "sampleRate": 48000,
+    "channels": 2,
+    "language": "kor",
+    "default": true,
+    "sourceCorrelation": 0.9994581323558414,
+    "perSceneRms": [
+      {
+        "scene": "hook",
+        "rms": 0.13386228680610657
+      },
+      {
+        "scene": "sunlight",
+        "rms": 0.13013173639774323
+      },
+      {
+        "scene": "load",
+        "rms": 0.13233260810375214
+      },
+      {
+        "scene": "air",
+        "rms": 0.13806450366973877
+      },
+      {
+        "scene": "wheels",
+        "rms": 0.11479540914297104
+      },
+      {
+        "scene": "ending",
+        "rms": 0.12946951389312744
+      }
+    ],
+    "peakDb": -1.2069624662399292
+  },
+  "decode": "pass",
+  "visualReview": {
+    "result": "pass",
+    "method": "Actual final MP4 sampled frames visually inspected; not a claim of watching every frame or device playback.",
+    "timestampsSeconds": [
+      1,
+      6.5,
+      9.5,
+      10.5,
+      13.8,
+      17,
+      18,
+      21,
+      24.3,
+      25,
+      28,
+      31.5,
+      32.3,
+      36,
+      39
+    ],
+    "evidence": "/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/20261011-sapporo-hovering/qa/final-contact.jpg",
+    "checks": [
+      "Opening header readable; no cropped text.",
+      "Turf/soil/tray, pressure arrows and wheel closeup align with narrated mechanism.",
+      "Wheel captions occupy upper free area, leaving hub visible.",
+      "Final complete sentence remains visible at39s before fade."
+    ],
+    "limitations": [
+      "Schematic equipment geometry; not a manufacturing drawing.",
+      "Generated opening and explanatory 3D have visibly different rendering styles."
+    ]
+  },
+  "note": "New original Higgsfield/Blender film. Kyle1.1x; stereo AAC.",
+  "captionTiming": [
+    {
+      "caption": 0,
+      "frame": 38,
+      "whiteGlyphMatch": 1.0
+    },
+    {
+      "caption": 1,
+      "frame": 107,
+      "whiteGlyphMatch": 1.0
+    },
+    {
+      "caption": 2,
+      "frame": 187,
+      "whiteGlyphMatch": 1.0
+    },
+    {
+      "caption": 3,
+      "frame": 291,
+      "whiteGlyphMatch": 1.0
+    },
+    {
+      "caption": 4,
+      "frame": 377,
+      "whiteGlyphMatch": 1.0
+    },
+    {
+      "caption": 5,
+      "frame": 450,
+      "whiteGlyphMatch": 1.0
+    },
+    {
+      "caption": 6,
+      "frame": 498,
+      "whiteGlyphMatch": 1.0
+    },
+    {
+      "caption": 7,
+      "frame": 551,
+      "whiteGlyphMatch": 1.0
+    },
+    {
+      "caption": 8,
+      "frame": 630,
+      "whiteGlyphMatch": 1.0
+    },
+    {
+      "caption": 9,
+      "frame": 715,
+      "whiteGlyphMatch": 1.0
+    },
+    {
+      "caption": 10,
+      "frame": 797,
+      "whiteGlyphMatch": 1.0
+    },
+    {
+      "caption": 11,
+      "frame": 891,
+      "whiteGlyphMatch": 1.0
+    }
+  ],
+  "sourceNarrationCoverage": "all reviewed narration preserved",
+  "endingHold": 1.531689342403629,
+  "voiceId": "RU7aSi6lT4uQBXMLgDxK",
+  "speed": 1.1,
+  "reviewDigest": "3d9e3c8a5cb8d4207e9249d512d75219cdccf63a234e260d9256214af8d7e150",
+  "render": {
+    "sourceHash": "3ddd1aeb79f4fb83b5f345a94970570cc9e84e42e257f0ab5632188c3dd587e0",
+    "percentage": 100,
+    "samples": 48,
+    "engine": "Cycles Metal GPU",
+    "shots": [
+      {
+        "shot": "sunlight",
+        "frames": 165,
+        "sha256": "8862a073358f201c7e6fb7b39b81f492220b9d0af2eb3ddd07e00b2abf076a2d"
+      },
+      {
+        "shot": "load",
+        "frames": 176,
+        "sha256": "9f63f747faa2b552ac1452b5dde20c0440082fbe3ac565798ad496b7efb84c26"
+      },
+      {
+        "shot": "air",
+        "frames": 169,
+        "sha256": "5fe6e336c82393641494bcc518353f97e9b373c5b0b48ad7149d816a9e2e998d"
+      },
+      {
+        "shot": "wheels",
+        "frames": 174,
+        "sha256": "2aaafdf58b1ff1b18b920c412d669ba9f3f429b76816b3a62011e92bac4fd2ca"
+      },
+      {
+        "shot": "ending",
+        "frames": 197,
+        "sha256": "a7d27abf607e871ece858f5181dade0fca5ffda4153df9c269a3525c4b2e1796"
+      }
+    ]
+  },
+  "airContactCorrection": {
+    "sourceHash": "bd81493f8512c8bc65be6d454875b90a9b6b31a1a9ae29879371b95b1d8c595e",
+    "percentage": 100,
+    "samples": 48,
+    "engine": "Cycles Metal GPU",
+    "shots": [
+      {
+        "shot": "air",
+        "frames": 169,
+        "sha256": "22b9ce2b29c22b6b71b18d91350a4ce74fdd0b030c6f9eb1335530f1a7330c41"
+      }
+    ]
+  },
+  "contactCheck": {
+    "result": "pass",
+    "sourceHash": "bd81493f8512c8bc65be6d454875b90a9b6b31a1a9ae29879371b95b1d8c595e",
+    "baseSourceHash": "3ddd1aeb79f4fb83b5f345a94970570cc9e84e42e257f0ab5632188c3dd587e0",
+    "requirement": "All four macro wheels remain grounded while tray rises; schematic clearance is not a manufacturing dimension.",
+    "checks": [
+      {
+        "phase": 0,
+        "wheelGroundGapsMeters": [
+          0.004999994754633637,
+          0.004999994754633637,
+          0.004999994754633637,
+          0.004999994754633637
+        ],
+        "trayHeightMeters": 1.1299999952316284
+      },
+      {
+        "phase": 0.25,
+        "wheelGroundGapsMeters": [
+          0.004999994754633637,
+          0.004999994754633637,
+          0.004999994754633637,
+          0.004999994754633637
+        ],
+        "trayHeightMeters": 1.1575000286102295
+      },
+      {
+        "phase": 0.5,
+        "wheelGroundGapsMeters": [
+          0.004999994754633637,
+          0.004999994754633637,
+          0.004999994754633637,
+          0.004999994754633637
+        ],
+        "trayHeightMeters": 1.184999942779541
+      },
+      {
+        "phase": 1,
+        "wheelGroundGapsMeters": [
+          0.004999994754633637,
+          0.004999994754633637,
+          0.004999994754633637,
+          0.004999994754633637
+        ],
+        "trayHeightMeters": 1.184999942779541
+      }
+    ]
+  },
+  "higgsfield": {
+    "state": "downloaded",
+    "credits": 54,
+    "id": "fc60bf96-c695-497d-bd3e-264629385458"
+  }
+}
