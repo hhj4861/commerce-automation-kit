@@ -76,7 +76,7 @@ class EdgeStagingTest(unittest.TestCase):
 
     def test_reaches_internal_services_through_the_vpc(self):
         self.assertRegex(self.EDGE, r'egress\s*=\s*"ALL_TRAFFIC"')
-        self.assertIn("google_cloud_run_v2_service.litellm_stg.uri", self.EDGE)
+        self.assertIn("google_cloud_run_v2_service.litellm_stg[0].uri", self.EDGE)
 
     def test_egress_uses_its_own_subnet_with_private_google_access(self):
         self.assertIn("google_compute_subnetwork.staging.name", self.EDGE)
@@ -118,6 +118,34 @@ class PinningTest(unittest.TestCase):
     def test_scheduler_api_and_neon_key_container(self):
         self.assertIn('"cloudscheduler.googleapis.com"', block(MAIN, 'resource "google_project_service" "api"'))
         self.assertIn('"neon-stg-api-key"', block(MAIN, "locals {"))
+
+
+class ServerlessStagingSwitchTest(unittest.TestCase):
+    """The 2026-10-12 gate decision kept the VM: the stack is off by default, the code is the way back."""
+
+    def test_switch_defaults_off(self):
+        self.assertRegex(block(TF, 'variable "serverless_staging"'), r'default\s*=\s*false')
+
+    def test_every_staging_resource_follows_the_switch(self):
+        gated = []
+        for kind, name in re.findall(r'^resource "([a-z0-9_]+)" "([a-z0-9_]+)"', TF, re.M):
+            body = block(TF, f'resource "{kind}" "{name}"')
+            if (kind, name) == ("google_compute_subnetwork", "staging"):
+                # Free to keep; deleting it right after the services races Direct VPC address release.
+                self.assertNotIn("serverless_staging", body)
+                continue
+            self.assertRegex(body, r'(count\s*=\s*var\.serverless_staging \? 1 : 0|for_each\s*=\s*var\.serverless_staging \?)', name)
+            gated.append(name)
+        self.assertEqual(len(gated), 10)
+
+    def test_staging_secret_containers_follow_the_switch(self):
+        # Every container in local.secrets is staging-only, including the provider key copies.
+        managed = block(MAIN, 'resource "google_secret_manager_secret" "managed"')
+        self.assertRegex(managed, r'for_each\s*=\s*var\.serverless_staging \? local\.secrets : toset\(\[\]\)')
+
+    def test_outputs_are_null_when_off(self):
+        for name in ("staging_edge_url", "staging_litellm_url", "staging_probe_url"):
+            self.assertRegex(TF, rf'output "{name}" {{ value = one\(google_cloud_run_v2_service\.[a-z_]+\[\*\]\.uri\) }}')
 
 
 if __name__ == "__main__":

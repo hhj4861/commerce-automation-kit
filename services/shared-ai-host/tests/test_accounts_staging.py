@@ -1,5 +1,6 @@
 import unittest
 from pathlib import Path
+from test_staging import block
 ROOT=Path(__file__).resolve().parents[1]
 TF=(ROOT/'accounts-staging.tf').read_text()
 
@@ -33,3 +34,8 @@ class AccountsStagingTest(unittest.TestCase):
         self.assertIn('ACCOUNTS_UPSTREAM',(ROOT/'edge/Caddyfile.accounts').read_text())
         for variant in ['staging','platforms']:
             self.assertNotIn('ACCOUNTS_UPSTREAM',(ROOT/'edge'/('Caddyfile.'+variant)).read_text())
+
+    def test_needs_the_serverless_staging_stack(self):
+        sa=block(TF,'resource "google_service_account" "accounts_stg"')
+        self.assertRegex(sa,r'precondition\s*\{\s*condition\s*=\s*var\.serverless_staging')
+        self.assertIn('google_service_account.scheduler_stg[0].email',TF)

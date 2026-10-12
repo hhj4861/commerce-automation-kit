@@ -23,7 +23,11 @@ Terraform 1.5.7 / Google provider 7.46.1의 fmt·validate·시작 스크립트 �
 
 ## 구성
 
-- Iowa VM: 2026-10-09부터 `e2-small`(공유 2 vCPU/2 GiB, Dify 중지 뒤 상주 약 1.1GB), 80 GiB balanced 영구 디스크. 서버리스 전환(`docs/20261009-shared-ai-serverless-migration-plan.md`) 기간의 축소 구성이며, 이전 구성 `e2-standard-2`(2 vCPU/8 GiB)·`e2-standard-4`(4 vCPU/16 GiB)도 허용값으로 남긴다.
+- Iowa VM: 2026-10-09부터 `e2-small`(공유 2 vCPU/2 GiB, Dify 중지 뒤 상주 약 1.1GB), 80 GiB balanced 영구 디스크. 서버리스 전환(`docs/20261009-shared-ai-serverless-migration-plan.md`)이 2026-10-12 Phase 2 게이트에서 보류되어 이 축소 구성이 기본 운영 구성이다. 이전 구성 `e2-standard-2`(2 vCPU/8 GiB)·`e2-standard-4`(4 vCPU/16 GiB)도 허용값으로 남긴다.
+- 서버리스 스테이징(`staging.tf`·`platform-staging.tf`·`accounts-staging.tf`)은 같은 결정에 따라 꺼 둔다.
+  - `serverless_staging`(기본 `false`)가 Phase 2 스택과 스테이징 시크릿 컨테이너(공급자 키 사본 포함)를 함께 켜고 끈다. 플랫폼·accounts 스테이징은 이 값이 `true`일 때만 켤 수 있다.
+  - 다시 켜면 시크릿 값을 새로 넣어야 한다. 컨테이너를 지울 때 버전도 함께 지워졌기 때문이다.
+  - 스테이징 서브넷은 비용이 없어 남겨 둔다.
 - Dify/LiteLLM은 기존 Compose와 별도 DB를 유지한다. 개인 Codex 워커는 계정별로 추가한다.
 - Cloud Run은 TLS 프록시만 담당하며 관리형 `run.app` 주소를 제공한다. 별도 도메인을 구매하지 않는다.
 - Direct VPC로 VM의 8080 포트에 연결한다. 프록시 전용 서브넷(`10.79.0.0/26`)만 해당 포트에 접근한다. Cloud Run 네트워크 태그는 egress 규칙용이므로 VM ingress의 source tag로 사용하지 않는다.

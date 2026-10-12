@@ -47,6 +47,12 @@ resource "google_service_account" "accounts_stg" {
   count        = var.accounts_staging == null ? 0 : 1
   account_id   = "shared-ai-accounts-stg"
   display_name = "Isolated API-key accounts staging"
+  lifecycle {
+    precondition {
+      condition     = var.serverless_staging
+      error_message = "accounts_staging runs behind the Phase 2 stack: set serverless_staging = true."
+    }
+  }
 }
 resource "google_secret_manager_secret_iam_member" "accounts_stg" {
   for_each  = var.accounts_staging == null ? toset([]) : toset(values(local.accounts_stg_secrets))
@@ -150,7 +156,7 @@ resource "google_cloud_run_v2_job_iam_member" "accounts_stg_expiry" {
   location = local.region
   name     = google_cloud_run_v2_job.accounts_stg["expire"].name
   role     = "roles/run.invoker"
-  member   = "serviceAccount:${google_service_account.scheduler_stg.email}"
+  member   = "serviceAccount:${google_service_account.scheduler_stg[0].email}"
 }
 resource "google_cloud_scheduler_job" "accounts_stg_expiry" {
   count     = try(var.accounts_staging.serve, false) ? 1 : 0
@@ -161,7 +167,7 @@ resource "google_cloud_scheduler_job" "accounts_stg_expiry" {
   http_target {
     http_method = "POST"
     uri         = "https://run.googleapis.com/v2/projects/${var.project_id}/locations/${local.region}/jobs/${google_cloud_run_v2_job.accounts_stg["expire"].name}:run"
-    oauth_token { service_account_email = google_service_account.scheduler_stg.email }
+    oauth_token { service_account_email = google_service_account.scheduler_stg[0].email }
   }
   depends_on = [google_cloud_run_v2_job_iam_member.accounts_stg_expiry]
 }

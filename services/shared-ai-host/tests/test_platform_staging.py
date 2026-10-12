@@ -38,3 +38,8 @@ class PlatformPolicyTest(unittest.TestCase):
         self.assertIn('REPLAY_CHAT_API_KEY',STAGING)
         self.assertIn('local.platform_secret_versions[env.value]',TF)
         self.assertNotIn('"latest"',TF)
+
+    def test_needs_the_serverless_staging_stack(self):
+        sa=block(TF,'resource "google_service_account" "discovery_stg"')
+        self.assertRegex(sa,r'precondition\s*\{\s*condition\s*=\s*var\.serverless_staging')
+        self.assertIn('google_cloud_run_v2_service.edge_stg[0].name',TF)
