@@ -2,6 +2,11 @@
  * drama-series CLI — 판단 없는 검사·명세·조립. 외부 호출(JEV·힉스필드)은 하지 않는다.
  *
  *   genres
+ *   keyframe-build   --series --episode --cut --aspect 16:9 --out request.json
+ *   keyframe-source  --series --episode --cut --asset <id> --file image.png --out <new-directory>
+ *   keyframe-approve --series --episode --cut --asset <id> --source <directory> --approval human.json --out <new-directory>
+ *   keyframe-check   --series --episode --cut --asset <id> --source <approved-directory>
+ *                    (all four accept --prev-episode; never authorize generation/assembly)
  *   topic-build  --topics topics.json --out req.json                                (req.meta.json 함께 생성)
  *   topic-apply  --topics topics.json --request req.json --response res.json --gates dir
  *   validate     --series s.json --episode e.json --gates dir
@@ -42,6 +47,7 @@ import { prepareReleaseSource, checkContinuationSource } from '../adapters/relea
 import { readStrictJsonFile } from '../adapters/media-evidence.js';
 import { contentSha } from '../core/release-source.js';
 import { prepareVisualVerdict, applyVisualVerdict } from '../adapters/visual-verdict.js';
+import { writeKeyframeRequest, prepareKeyframeEvidence, approveKeyframeEvidence, checkKeyframeApproval } from '../adapters/keyframe-evidence.js';
 import { parseTrimSpec } from '../core/assemble-args.js';
 import { joinSimilarity } from '../adapters/ffmpeg.js';
 import { JOIN_MIN_SSIM, chainsFrom, judgeJoin } from '../core/join.js';
@@ -122,6 +128,25 @@ function kindOf(v: string): EpisodeJudgeKind {
 function main(argv: string[]): number {
   const [cmd, ...rest] = argv;
   switch (cmd) {
+    case 'keyframe-build': {
+      const o=opts(rest,{series:'string',episode:'string','prev-episode':'string',cut:'string',aspect:'string',out:'string'});
+      const request=writeKeyframeRequest(loadCtx(o,readStrictJson),req(o,'cut'),optStr(o,'aspect')??'16:9',abs(req(o,'out')));
+      out({ok:true,authorized:false,request});return 0;
+    }
+    case 'keyframe-source': {
+      const o=opts(rest,{series:'string',episode:'string','prev-episode':'string',cut:'string',asset:'string',file:'string',out:'string'});
+      const evidence=prepareKeyframeEvidence(loadCtx(o,readStrictJson),req(o,'cut'),req(o,'asset'),abs(req(o,'file')),abs(req(o,'out')));
+      out({ok:true,authorized:false,evidence});return 0;
+    }
+    case 'keyframe-approve': {
+      const o=opts(rest,{series:'string',episode:'string','prev-episode':'string',cut:'string',asset:'string',source:'string',approval:'string',out:'string'});
+      const binding=approveKeyframeEvidence(loadCtx(o,readStrictJson),req(o,'cut'),req(o,'asset'),abs(req(o,'source')),readStrictJson(req(o,'approval')),abs(req(o,'out')));
+      out({ok:true,authorized:false,binding});return 0;
+    }
+    case 'keyframe-check': {
+      const o=opts(rest,{series:'string',episode:'string','prev-episode':'string',cut:'string',asset:'string',source:'string'});
+      out(checkKeyframeApproval(loadCtx(o,readStrictJson),req(o,'cut'),req(o,'asset'),abs(req(o,'source'))));return 0;
+    }
     case 'visual-verdict-build': {
       const o=opts(rest,{series:'string',episode:'string','prev-episode':'string',cut:'string',job:'string',clip:'string',out:'string'});
       const request=prepareVisualVerdict(loadCtx(o,readStrictJson),req(o,'cut'),req(o,'job'),abs(req(o,'clip')),abs(req(o,'out')));

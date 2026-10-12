@@ -306,3 +306,50 @@ export interface DramaVisualReport {
   answers: DramaVisualResponse['answers'];
   blockers: string[];
 }
+
+/** Keyframe preparation/approval evidence only; does not authorize video generation or release. */
+export interface DramaKeyframeRequest {
+  schemaVersion: 1;
+  kind: 'drama-keyframe-request';
+  policy: 'kf-v1';
+  authorized: false;
+  target: { seriesId: string; episodeNo: number; cutId: string };
+  aspectRatio: '16:9';
+  references: { role: 'set' | 'face' | 'outfit'; assetId: string; characterId?: string | undefined }[];
+  prompt: string;
+  checklist: { id: string; text: string }[];
+  keyframeDigest: string;
+}
+export interface DramaKeyframeEvidence {
+  schemaVersion: 1;
+  kind: 'drama-keyframe-evidence';
+  authorized: false;
+  target: DramaKeyframeRequest['target'];
+  aspectRatio: '16:9';
+  keyframeDigest: string;
+  assetId: string;
+  image: { sha256: string; bytes: number; width: number; height: number; pixelSha256: string };
+  subjectDigest: string;
+}
+export interface DramaKeyframeApproval {
+  schemaVersion: 1;
+  decision: 'approve-keyframe';
+  subjectDigest: string;
+  approvedBy: string;
+  userQuote: string;
+  recordedBy: string;
+  at: string;
+  checks: { composition: true; cast: true; wardrobe: true; props: true; safety: true };
+}
+export interface DramaKeyframeBinding {
+  schemaVersion: 1;
+  kind: 'drama-keyframe-binding';
+  authorized: false;
+  target: DramaKeyframeRequest['target'];
+  keyframeDigest: string;
+  assetId: string;
+  fileSha256: string;
+  subjectDigest: string;
+  approvalDigest: string;
+  bindingDigest: string;
+}
