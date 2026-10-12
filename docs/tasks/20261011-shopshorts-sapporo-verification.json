@@ -1,0 +1,185 @@
+{
+  "file": "/Users/admin/Downloads/vedio/sapporo-shopshorts-pipeline.mp4",
+  "sha256": "b9d598f267a5169b5e625e68caa08a7440b5862f6babcd289be57ce7b0fa993e",
+  "size": 12449811,
+  "duration": 42.233333333333334,
+  "frames": 1267,
+  "dimensions": [
+    1080,
+    1920
+  ],
+  "fullDecode": "passed",
+  "audio": [
+    {
+      "scene": "hook",
+      "correlation": 0.9994891830002507,
+      "rmsDb": -27.94743416005786,
+      "speechSec": 3.1358125,
+      "clipSec": 3.466666666666667
+    },
+    {
+      "scene": "sunlight",
+      "correlation": 0.9928140279788635,
+      "rmsDb": -28.807938251095422,
+      "speechSec": 6.6686875,
+      "clipSec": 7.0
+    },
+    {
+      "scene": "load",
+      "correlation": 0.9915161945070678,
+      "rmsDb": -28.36088911677176,
+      "speechSec": 7.140375,
+      "clipSec": 7.466666666666667
+    },
+    {
+      "scene": "air",
+      "correlation": 0.9904906632870097,
+      "rmsDb": -27.46593765918221,
+      "speechSec": 8.409625,
+      "clipSec": 8.733333333333333
+    },
+    {
+      "scene": "wheels",
+      "correlation": 0.9912905459855,
+      "rmsDb": -29.246956934622116,
+      "speechSec": 7.060625,
+      "clipSec": 7.366666666666666
+    },
+    {
+      "scene": "ending",
+      "correlation": 0.9882411503148494,
+      "rmsDb": -29.27206061555644,
+      "speechSec": 6.676625,
+      "clipSec": 8.2
+    }
+  ],
+  "captions": [
+    {
+      "id": "opening-question",
+      "glyphMatch": 1.0,
+      "time": 1.7333333333333334,
+      "fontSize": 88
+    },
+    {
+      "id": "clip-1-caption-0",
+      "glyphMatch": 1.0,
+      "time": 1.5833333333333333,
+      "fontSize": 62
+    },
+    {
+      "id": "clip-2-caption-0",
+      "glyphMatch": 1.0,
+      "time": 4.816666666666666,
+      "fontSize": 62
+    },
+    {
+      "id": "clip-2-caption-1",
+      "glyphMatch": 1.0,
+      "time": 8.166666666666666,
+      "fontSize": 62
+    },
+    {
+      "id": "clip-3-caption-0",
+      "glyphMatch": 1.0,
+      "time": 12.3,
+      "fontSize": 62
+    },
+    {
+      "id": "clip-3-caption-1",
+      "glyphMatch": 1.0,
+      "time": 15.883333333333333,
+      "fontSize": 62
+    },
+    {
+      "id": "clip-4-caption-0",
+      "glyphMatch": 1.0,
+      "time": 19.733333333333334,
+      "fontSize": 62
+    },
+    {
+      "id": "clip-4-caption-1",
+      "glyphMatch": 1.0,
+      "time": 22.75,
+      "fontSize": 62
+    },
+    {
+      "id": "clip-4-caption-2",
+      "glyphMatch": 1.0,
+      "time": 25.166666666666668,
+      "fontSize": 62
+    },
+    {
+      "id": "authored-concept-label",
+      "glyphMatch": 1.0,
+      "time": 22.3,
+      "fontSize": 30
+    },
+    {
+      "id": "clip-5-caption-0",
+      "glyphMatch": 1.0,
+      "time": 28.433333333333334,
+      "fontSize": 62
+    },
+    {
+      "id": "clip-5-caption-1",
+      "glyphMatch": 1.0,
+      "time": 31.966666666666665,
+      "fontSize": 62
+    },
+    {
+      "id": "clip-6-caption-0",
+      "glyphMatch": 1.0,
+      "time": 35.25,
+      "fontSize": 62
+    },
+    {
+      "id": "clip-6-caption-1",
+      "glyphMatch": 1.0,
+      "time": 39.18333333333333,
+      "fontSize": 51
+    }
+  ],
+  "providers": [
+    {
+      "scene": "sunlight",
+      "provider": "authored-blender",
+      "frames": 168,
+      "device": "GPU",
+      "sourceHash": "8a6fe23f85e2380bb932c47d77c151a3b15d97ca5ab387668d9232832059f90d"
+    },
+    {
+      "scene": "load",
+      "provider": "authored-blender",
+      "frames": 179,
+      "device": "GPU",
+      "sourceHash": "8a6fe23f85e2380bb932c47d77c151a3b15d97ca5ab387668d9232832059f90d"
+    },
+    {
+      "scene": "air",
+      "provider": "authored-blender",
+      "frames": 210,
+      "device": "GPU",
+      "sourceHash": "8a6fe23f85e2380bb932c47d77c151a3b15d97ca5ab387668d9232832059f90d"
+    },
+    {
+      "scene": "wheels",
+      "provider": "authored-blender",
+      "frames": 177,
+      "device": "GPU",
+      "sourceHash": "8a6fe23f85e2380bb932c47d77c151a3b15d97ca5ab387668d9232832059f90d"
+    },
+    {
+      "scene": "ending",
+      "provider": "authored-blender",
+      "frames": 168,
+      "device": "GPU",
+      "sourceHash": "8a6fe23f85e2380bb932c47d77c151a3b15d97ca5ab387668d9232832059f90d"
+    }
+  ],
+  "endingHold": 1.5233749999999997,
+  "additionalHiggsfieldCredits": 0,
+  "audioPcmSha256": "7f846d47c844a590cd56dbfc1c3d4de1043ae7f64a9a7765bd44d7ad08ff81cf",
+  "audioMatchesVerifiedMix": true,
+  "codeRevision": "8daca8a plus word-boundary subtitle correction",
+  "finalRenderKey": "studio/5f0c9b2c-b3f7-4c47-a00b-47a4246698dc/379b11da-066a-452f-8009-8657d1faed7a-final.mp4"
+}

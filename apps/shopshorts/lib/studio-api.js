@@ -1,3 +1,4 @@
+import {createAuthoredProject} from './authored-project.js';
 import {METADATA_MAX_BYTES} from './youtube-metadata.js';
 import { startScenario, syncScenario, scenarioRuntime } from './studio-scenario-account.js';
 import { CATEGORIES, VOICES, PLATFORMS, createProject, changeProject, busy, fail, validateScenes } from './studio.js';
@@ -13,6 +14,7 @@ export async function studioApi(request, env, store, { localWorker = false, reco
     if (parts[0] === 'config' && request.method === 'GET') return json({ categories: CATEGORIES, voices: VOICES, platforms: PLATFORMS, execution: store.execution, capabilities: await store.capabilities(), scenarioRuntime: await scenarioRuntime(request, env, scenarioAccounts), recommendations: !!recommendationGenerate || recommendationAccounts, recommendationProvider: recommendationGenerate ? 'codex' : null, recommendationProviders: recommendationAccounts ? ['codex', 'claude'] : recommendationGenerate ? ['codex'] : [] });
     if (parts.length===1 && parts[0]==='recommendations' && request.method==='POST') return json(await recommendBrief(await request.json(),env,{generate:recommendationGenerate,signal:request.signal}));
     if (parts.length===1 && parts[0]==='automatic' && request.method==='POST') return json(await startAutomatic(request, env, store, await request.json(), scenarioAccounts), 201);
+    if(parts.length===1&&parts[0]==='recipes'&&request.method==='POST'){const input=await request.json();const project=createAuthoredProject(input?.id);await store.create(project);return json({project},201);}
     if (parts.length===1 && parts[0]==='metadata-project' && request.method==='POST') {
       const project = {...createProject({category:'직접 입력', topic:'첨부 영상 게시 문구', format:'short', duration:45}), purpose:'metadata'};
       await store.create(project); return json({project}, 201);

@@ -1,3 +1,4 @@
+import {openingCarry} from './studio-authored-timeline.mjs';
 import {renderCaptionArtwork,artworkFilter} from './studio-typography.mjs';
 import {generateVideoMetadata} from './studio-metadata.mjs';
 import {webtoon} from './lib/webtoon-plan.js';
@@ -109,8 +110,16 @@ async function renderProject(job, work, env, io) {
   for (const {clip,start,end} of clipSpans(timeline).sort((a,b)=>a.start-b.start)) {
     await gap(start-cursor);cursor=end;
     const id=clip.sceneId;
-    const scene = job.scenes.find(s => s.id === id), source = join(work, `${id}.source`);
+    const scene = job.scenes.find(s => s.id === id);
+    let source = join(work, `${id}.source`);
     await writeFile(source, await io.readAsset(job.assets[id].key));
+    const carry=openingCarry(job,timeline,clip);
+    if(carry?.key){
+      const opening=join(work,'authored-opening.source'),combined=join(work,`${clip.id}-opening-carry.mp4`);
+      await writeFile(opening,await io.readAsset(carry.key));
+      await command('ffmpeg',['-y','-v','error','-i',source,'-ss',String(carry.offset),'-i',opening,'-filter_complex',`[0:v]fps=30,setsar=1[body];[1:v]scale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2,fps=30,setsar=1,setpts=PTS-STARTPTS[intro];[body][intro]overlay=enable='lt(t,${carry.duration})':eof_action=pass[out]`,'-map','[out]','-an','-t',String((clip.outFrame-clip.inFrame)/FPS),'-c:v','libx264','-crf','16','-preset','fast','-pix_fmt','yuv420p',combined],env);
+      source=combined;
+    }
     let vo = null, voDuration = 0;
     if (job.edit.voice !== 'none') {
       const narration = await narrationFile(job, scene, work, env, io, { runCli: cli, command });

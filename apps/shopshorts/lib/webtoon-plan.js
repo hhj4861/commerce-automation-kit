@@ -1,3 +1,4 @@
+import {authoredSpec} from '../public/authored-recipes.js';
 import {isHybrid} from '../public/hybrid-plan.js';
 // Data-only choreography. Never execute model-provided code, SVG, URLs or filters.
 export const webtoon=brief=>['webtoon','hybrid'].includes(brief?.productionStyle);
@@ -21,8 +22,8 @@ export function webtoonPlan(v){
  return {artPrompt:v.artPrompt.trim(),answer:v.answer.trim(),layers};
 }
 export function webtoonScenes(scenes){
- if(scenes.length<2||scenes.some(s=>s.kind!=='video'||!s.webtoon)||scenes[0].duration!==6)bad();
- scenes.forEach(s=>webtoonPlan(s.webtoon));
+ if(scenes.length<2||scenes.some(s=>s.kind!=='video'||(!s.webtoon&&!s.hybrid?.authored))||scenes[0].duration!==6)bad();
+ scenes.forEach(s=>s.hybrid?.authored?authoredSpec(s.hybrid.authored,s):webtoonPlan(s.webtoon));
 }
 export function webtoonGuide(brief){
  if(!webtoon(brief))return '';

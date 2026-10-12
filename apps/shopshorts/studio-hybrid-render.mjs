@@ -1,3 +1,4 @@
+import {renderAuthoredScene} from './studio-authored-render.mjs';
 import {architectureQuality} from './public/architecture-quality.js';
 import {renderArchitectureScene} from './studio-architecture-blender.mjs';
 import {copyFile,mkdir,readFile,writeFile,rm} from 'node:fs/promises';
@@ -11,7 +12,7 @@ import {hybridScene} from './public/hybrid-plan.js';
 const exec=promisify(execFile),here=dirname(fileURLToPath(import.meta.url)),require=createRequire(import.meta.url);
 export function validateHybridRender(scene){
  if(!/^[a-z0-9-]{1,60}$/.test(scene.id)||!Number.isFinite(scene.duration)||scene.duration<1||scene.duration>30)throw Error('혼합 장면 ID와 길이를 확인하세요.');
- const webtoon=webtoonPlan(scene.webtoon),hybrid=hybridScene(scene.hybrid,{...scene,webtoon});
+ const webtoon=scene.hybrid?.authored?undefined:webtoonPlan(scene.webtoon),hybrid=hybridScene(scene.hybrid,{...scene,webtoon});
  return {...scene,webtoon,...(hybrid?{hybrid}:{})};
 }
 // Only this reviewed renderer and GSAP execute. LLM/user input is escaped JSON, never JS/HTML.
@@ -36,6 +37,7 @@ export async function checkHybridRuntime(env={}){
  return true;
 }
 export async function renderHybridScene(job,scene,work,env={},renderer='motion'){
+ if(scene.hybrid?.authored)return renderAuthoredScene(job,validateHybridRender(scene),work,env);
  if(renderer==='3d'&&architectureQuality(job.brief))return renderArchitectureScene(job,validateHybridRender(scene),work,env);
  const html=await hybridComposition(scene,job.brief.aspect,renderer);
  const cli=env.SHOPSHORTS_MOTION_CLI||join(dirname(require.resolve('hyperframes/package.json')),'bin/hyperframes.mjs');
