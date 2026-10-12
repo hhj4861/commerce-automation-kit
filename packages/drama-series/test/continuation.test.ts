@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync, readdirSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { parseEpisode, parseSeries } from '../src/core/model.js';
 import { loadGenre } from '../src/core/genre.js';
 import type { GateContext } from '../src/core/gates/types.js';
@@ -139,7 +140,7 @@ describe('opt-in episode continuation', () => {
   });
   it('centralizes direct predecessor indexing', () => {
     const root=new URL('../src/',import.meta.url);
-    const scan=(dir:URL):string[]=>readdirSync(dir,{withFileTypes:true}).flatMap(e=>e.isDirectory()?scan(new URL(e.name+'/',dir)):[new URL(e.name,dir).pathname]);
+    const scan=(dir:URL):string[]=>readdirSync(dir,{withFileTypes:true}).flatMap(e=>e.isDirectory()?scan(new URL(e.name+'/',dir)):[fileURLToPath(new URL(e.name,dir))]);
     for (const path of scan(root).filter(p=>p.endsWith('.ts')&&!p.endsWith('/continuation.ts'))) expect(readFileSync(path,'utf8')).not.toMatch(/cuts\s*\[[^\]]*-\s*1\s*\]/);
   });
 });
