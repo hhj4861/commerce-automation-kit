@@ -18,9 +18,12 @@ const bundle = z.object({schemaVersion:z.literal(1),revision:z.string().min(1),i
 const subjectValidator = createValidator('common/SubjectRef.schema.json');
 const SCHEMA = 'commerce.drama-plan-preview';
 export class RunnerError extends Error {
-  constructor(code, exitCode, detail) { super(detail); this.code=code; this.exitCode=exitCode; }
+  constructor(code, exitCode, detail, extra) { super(detail); this.code=code; this.exitCode=exitCode; this.extra=extra; }
 }
 const digestText = value => digest(value);
+export function parseInputs(value) {
+  try { return inputs.parse(value); } catch { throw new RunnerError('invalid-input',2,'Expected a SHA-256 input manifest'); }
+}
 export function makeDraft(input) {
   let b;
   try { b=bundle.parse(input); } catch { throw new RunnerError('invalid-input',2,'Expected a successful legacy PlanResult and SHA-256 input manifest'); }

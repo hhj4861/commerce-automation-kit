@@ -10,7 +10,7 @@
     "preflight": "node tools/check-dependency.mjs",
     "cli": "node src/cli.mjs",
     "test": "node --import tsx --test --test-concurrency=1 test/*.test.mjs",
-    "typecheck": "node --check src/draft.mjs && node --check src/cli.mjs && node --check tools/check-dependency.mjs"
+    "typecheck": "node --check src/draft.mjs && node --check src/inputs.mjs && node --check src/cli.mjs && node --check tools/check-dependency.mjs"
   },
   "dependencies": {
     "zod": "^3.23.0"

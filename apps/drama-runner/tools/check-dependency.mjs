@@ -15,7 +15,7 @@ export function checkDependency() {
   if (createHash('sha256').update(readFileSync(resolve(root, 'package-lock.json'))).digest('hex') !== ATOMWORKS_LOCK_SHA) throw new Error('atomworks lock mismatch');
   for (const [name, entry] of Object.entries(resolvedEntries())) {
     const installed = realpathSync(fileURLToPath(entry));
-    const expected = realpathSync(resolve(root, 'packages/ts', name));
+    const expected = realpathSync(resolve(root, 'packages/ts', name.split('/')[0]));
     if (!installed.startsWith(expected + '/dist/')) throw new Error(`unexpected dependency: ${name}`);
   }
   return { root, commit: ATOMWORKS_COMMIT };
