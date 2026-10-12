@@ -10,9 +10,9 @@
 - 공백 검사: 기존 추적 파일의 `git diff --check`는 통과했다. 새 파일까지 staging한 `git diff --cached --check`는 `LICENSE-Pretendard.txt:22` 원문 줄 끝 공백 1건으로 실패(종료 2). 요구된 blob 보존을 우선하여 원문을 수정하거나 검사 예외를 추가하지 않았다. 코드·다른 문서에는 공백 오류가 없다.
 - 시험 준비 오류: 최초 두 실행의 CLI 시험 2개는 임시 cwd의 tsx 해석 문제, 이어 Vitest의 import.meta.resolve 미지원으로 실패했다. createRequire로 기존 tsx의 파일 URL을 구한 뒤 기능 회귀 실패(15/17)를 별도로 확인했다. 로그를 구분해 남겼다.
 - 실제 렌더: 로컬 ffmpeg drawtext로 번들 4역할과 한글·공백 텍스트 경로를 사용해 640×360 PNG 1프레임 생성·ffprobe 확인 통과. `/private/tmp/codex-H-fonts/` 아래 해당 임시 결과는 삭제했다.
-- 미완료 검증: `npm test -w @cak/drama-runner`는 legacy 시험 1 통과, runner 시험 파일 1 실패. `@atomworks/kernel`이 현재 node_modules에 없어 로딩에서 중단됨(ERR_MODULE_NOT_FOUND). runner 내부 개별 시험은 실행되지 않았다. 새 설치 금지에 따라 패키지 설치·링크 추가·다른 worktree 수정 없이 보고한다.
+- runner 시험: 작업자 실행에서는 `apps/drama-runner/runtime/node_modules`(atomworks 고정 pin 링크)가 준비되지 않아 `@atomworks/kernel` 로딩 실패(ERR_MODULE_NOT_FOUND)로 중단됐다. 오케스트레이터가 기존 worktree의 같은 lock(`runtime/package-lock.json` 동일 확인) node_modules를 복사하고 `DRAMA_TEST_STATE`(비동기화 로컬)·`DRAMA_TEST_ARTIFACTS`를 지정해 재실행 — **22/22 통과**, 건너뜀 없음.
 - 안내: 실행 스킬은 저장소 폰트와 style 기준 경로를 안내한다. 과거 Downloads 경로 기록은 수정하지 않았다. 목록은 H-report.md에 남긴다. shopshorts 폰트 원본은 변경하지 않았다.
 - 환경: Node 22.23.3, 기존 node_modules, worker/Claude 플래그 OFF. 유료 호출·영상 재생성·새 패키지 설치 없음. 로그는 사용자 지정 `20261012-drama-fonts/H/`, SQLite용 경로는 `/private/tmp/codex-H-fonts/`로 지정했다.
-- 현재 결과: 폰트 수정과 drama-series 검증 완료. runner 전체 검증은 의존성 누락으로 미완료이며 로컬 커밋으로 인계한다.
-- 다음: 오케스트레이터가 승인된 기존 Atomworks 의존성을 준비하고 runner 시험을 재실행한 뒤 `fix/drama-fonts-in-repo`를 push하여 `feat/drama-regression-pilot` 대상 PR을 생성한다. 사용자 지시에 따라 이 작업자는 push·PR 생성·머지를 수행하지 않는다.
+- 현재 결과: 폰트 수정, drama-series 320/320, drama-runner 22/22, typecheck 통과.
+- 다음: `fix/drama-fonts-in-repo` → `feat/drama-regression-pilot` PR. 머지는 사용자 승인 후.
 - 한계: 일반 파일 검사는 폰트 형식·글리프 완전성 검사나 실행 중 파일 교체 방지를 보장하지 않는다. 삭제된 파일럿 클립은 복구하지 않았으므로 원본 파일럿 전체 재조립은 미확인이다. 삭제 원본과 새 5파일의 398 B 차이는 라이선스 텍스트 판본 차이로 추정할 뿐 확인할 수 없다.
