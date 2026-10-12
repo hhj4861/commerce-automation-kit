@@ -34,10 +34,10 @@ jobs:
     env:
       HOMEBREW_NO_AUTO_UPDATE: '1'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           persist-credentials: false
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           # drama-series의 engines >=20을 충족하며 runner와 같은 버전을 쓴다.
           node-version: '22.23.3'
@@ -82,18 +82,18 @@ jobs:
             echo '::error::ATOMWORKS_READ_TOKEN이 필요합니다. hhj4861/atomworks만 선택한 fine-grained PAT(contents: read)를 저장소 Actions secret에 설정하세요. fork/Dependabot PR에는 secret이 전달되지 않으므로 이 job은 실패합니다.'
             exit 1
           fi
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           path: commerce-automation-kit-worktrees/drama-ci
           persist-credentials: false
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           repository: hhj4861/atomworks
           ref: ${{ env.ATOMWORKS_COMMIT }}
           token: ${{ secrets.ATOMWORKS_READ_TOKEN }}
           path: atomworks-worktrees/drama-consumer-pin
           persist-credentials: false
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: '22.23.3'
       - name: README와 고정 소스 대조
