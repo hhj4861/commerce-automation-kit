@@ -131,3 +131,56 @@ node --import tsx src/cli/index.ts keyframe-check \
 장면 지문은 스타일, 장소·구도, 참조 자산, 얼굴·의상, 블로킹, 첫 비트, 행동·화면 설명, 사용·휴대 소품, 같은 장소의 앞 컷 소품 상태, 화자 순서·대사 수 및 안전 검사 항목에 결합된다. 대사 문구와 대사 검증 상태만 바뀌면 이미지 승인은 유지된다. 장면·자산 ID·실제 이미지가 바뀌면 기존 승인을 거부한다. 기존 대본 내용 지문의 의미는 바꾸지 않는다.
 
 **범위:** 이는 주어진 사람 승인 기록과 단일 컷 이미지의 결합 검사다. 사용자 신원·발화 진위나 원격 자산 ID의 실제 출처를 인증하지 않는다. 회차 전체 승인, 실행 원장, 출시 승인을 대신하지 않으므로 성공해도 항상 `authorized:false`이며 shot-v1 `plan/assemble` 차단은 유지한다. 생성 API, 유료 호출, 대본 안 `cut.keyframe` 변경은 하지 않는다. 부분 출력은 보존하지만 검사를 통과하지 않으면 사용할 수 없다(`source`는 evidence.json, `approved`는 binding.json을 마지막에 쓴다).
+
+### shot-v1 회차 편집 잠금과 전체 컷 승인 결합
+
+회차 편집 시작 때 소유 `agent + session`을 등록한다. 같은 codex라도 session이 다르면 다른 소유자다. 다음은 모두 로컬 협업 도구이며 OS 권한 인증이나 분산 잠금이 아니다.
+
+```sh
+node --import tsx src/cli/index.ts episode-lock \
+  --episode ep01.json --agent codex --session session-A --lock-revision 0
+node --import tsx src/cli/index.ts episode-lock-status --episode ep01.json
+```
+
+응답의 `lock.lockId`, `lock.revision`, `episodeSha`를 이후 변경 명령에 그대로 전달한다. `episodeSha`는 대본 **파일 바이트** 해시다. 내용이 같아도 직렬화가 바뀌면 새 값을 읽어야 한다. status 조회만으로 기존 편집 초안을 새 파일에 덮지 말고, 변경된 대본을 다시 읽고 합친 뒤 실행한다.
+
+```sh
+# GUARD는 설명용 자리표시자: 실제 값으로 아래 옵션 전체를 전달한다.
+# --agent codex --session session-A --lock-id <UUID> --lock-revision 1 --episode-sha sha256:<64hex>
+node --import tsx src/cli/index.ts episode-edit \
+  --episode ep01.json --input edited-episode.json <GUARD>
+node --import tsx src/cli/index.ts episode-handoff \
+  --episode ep01.json <GUARD> --to-agent codex --to-session session-B --note '다음 세션에 편집 인계'
+node --import tsx src/cli/index.ts episode-unlock \
+  --episode ep01.json <GUARD> --note '편집 종료'
+```
+
+`<GUARD>`는 실제 셸 문법이 아니므로 위 주석의 옵션들로 바꾼다. 인계/해제/재획득 때 소유권 revision이 증가한다. 해제해도 `.lock.json`은 삭제하지 않으며, 재획득에는 현재 revision을 전달한다. 편집은 소유권을 바꾸지 않고 episodeSha로 경쟁을 검사한다. 오래된 UUID/revision/SHA, 다른 세션, 잠금 대상 번호·시리즈 변경, shot-v1 정책 제거를 거부한다.
+
+기존 `approve-line`·`judge-apply`도 shot-v1이거나 잠금이 있는 회차에서는 같은 소유권 옵션이 필수다. `judge-apply --episode-out`은 잠긴 원본 경로만 허용한다. 일반 `--out`과 JSON 출력으로 잠긴 회차·잠금 메타데이터·링크를 덮을 수 없다. 부모 경로 별칭은 실제 경로로 확인하며 대소문자를 바꾼 `.LOCK.JSON`·`.WRITER`도 보호한다. 회차 파일 자체의 다른 대소문자 표기는 플랫폼에 따라 안전하게 거부될 수 있으므로 최초 등록 경로를 사용한다. 잠금 없는 legacy 회차의 정상 CLI 동작과 지문은 유지한다.
+
+**중단 복구:** 쓰기 작업은 `<episode>.writer/` 원자 생성으로 직렬화한다. lease·시간 만료·자동 강제 회수는 없다. 프로세스가 죽으면 이 폴더를 남기고 다음 작업은 명시 오류로 멈춘다. 운영자는 holder.json의 PID만 믿지 말고 해당 회차를 사용하는 모든 세션/프로세스가 중지됐는지 확인하고, 대본·잠금·남은 임시 파일을 보존/대조한 뒤 잔여 writer 폴더만 수동 정리한다. `.lock.json`을 지우거나 revision을 초기화하지 않는다. 소유권을 모르면 중단 상태를 유지한다. 다른 기기에서 동기화된 디렉터리에 동시에 쓰는 방식은 지원하지 않는다.
+
+대본 한 파일은 같은 디렉터리의 임시 파일 → atomic rename으로 교체한다. 잠금 소유권 파일은 그 편집에서 갱신하지 않으므로 두 파일을 동시에 커밋하는 트랜잭션을 가장하지 않는다. `judge-apply`는 CAS에 성공한 대본을 먼저 저장하고 보고서를 저장한다. 보고서 쓰기나 완료 응답이 실패했을 때 대본까지 되돌려졌다고 가정하지 말고 status와 실제 대본을 확인한다. 대본·판정 보고서의 영속 복구 원장은 후속 실행 상태 작업 범위다.
+
+전체 컷 집계 입력은 다음과 같다. source는 manifest 파일의 디렉터리에 상대적이며, **승인된** 키프레임 묶음을 가리켜야 한다.
+
+```json
+{"schemaVersion":1,"entries":[
+  {"cutId":"c1","assetId":"actual-asset-c1","source":"c1-approved"},
+  {"cutId":"c2","assetId":"actual-asset-c2","source":"c2-approved"}
+]}
+```
+
+```sh
+node --import tsx src/cli/index.ts episode-keyframes-build \
+  --series series.json --episode ep01.json --keyframes all-keyframes.json \
+  <GUARD> --out episode-keyframes.json
+node --import tsx src/cli/index.ts episode-keyframes-check \
+  --series series.json --episode ep01.json --keyframes all-keyframes.json \
+  <GUARD> --report episode-keyframes.json
+```
+
+연결 회차는 `--prev-episode`도 필요하다. 모든 컷이 정확히 한 번 있어야 하며 대본 순서로 정렬한다. 각 컷의 실제 PNG·승인 기록을 재검사하고 마지막에 모든 입력 해시와 장르·대본·잠금을 다시 대조한다. 결과는 검사 시점의 스냅샷 증거이며 향후 사용 시 `episode-keyframes-check`로 재확인한다. 대사 문구만 바뀌면 개별 이미지 승인은 유지하지만 회차 문맥은 바뀌므로 집계 보고서를 새로 만든다. 소유권 인계 뒤에도 보고서를 새로 묶는다.
+
+`authorized:false`는 그대로다. 이 결과는 각 컷의 기존 승인 기록을 묶은 것이며, 회차 미리보기의 새 사람 승인이나 시나리오/전체 영상 의미 판정, 실행·비용·출시 관문을 대신하지 않는다. 보고서가 있어도 shot-v1 영상 생성·조립 차단을 해제하지 않는다.

@@ -353,3 +353,27 @@ export interface DramaKeyframeBinding {
   approvalDigest: string;
   bindingDigest: string;
 }
+
+/** Cooperative local episode editing; no authentication or video execution permission. */
+export interface DramaEpisodeOwner { agent: 'claude' | 'codex'; session: string }
+export interface DramaEpisodeLock {
+  schemaVersion: 1;
+  kind: 'drama-episode-lock';
+  lockId: string;
+  episodePath: string;
+  target: { seriesId: string; episodeNo: number };
+  revision: number;
+  owner: DramaEpisodeOwner | null;
+  updatedAt: string;
+  lastChange: { kind: 'acquire' | 'handoff' | 'release'; by: DramaEpisodeOwner; note: string };
+}
+export interface DramaEpisodeKeyframes {
+  schemaVersion: 1;
+  kind: 'drama-episode-keyframes';
+  authorized: false;
+  target: { seriesId: string; episodeNo: number };
+  contextDigest: string;
+  lock: { lockId: string; revision: number; owner: DramaEpisodeOwner };
+  cuts: DramaKeyframeBinding[];
+  digest: string;
+}
