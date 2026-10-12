@@ -40,7 +40,7 @@
 
 | Compose 프로젝트 | 상태 | 실행 위치 | 상태 데이터 |
 |---|---|---|---|
-| `shared-ai-gateway` (LiteLLM, Postgres 16.15) | 실행 | `/opt/shared-ai/repo/services/ai-gateway` | 볼륨 `shared-ai-gateway_postgres-data`(DB 20MB, 테이블 86개), `.env`, `.runtime/`(앱별 env, `litellm.json`) |
+| `shared-ai-gateway` (LiteLLM, Postgres 16.15) | 실행 | `/opt/shared-ai/repo/services/ai-gateway` | 볼륨 `shared-ai-gateway_postgres-data`(DB 20MB, 기본 테이블 78개·뷰 포함 86개), `.env`, `.runtime/`(앱별 env, `litellm.json`) |
 | `shared-ai-accounts` (accounts v1) | 실행 | `/opt/shared-ai/releases/accounts-476a7c0/services/ai-gateway` | 볼륨 `shared-ai-accounts_accounts-data`(180KB), 릴리스 안의 `.env.accounts`(링크가 아닌 실파일), `/opt/shared-ai/accounts/` |
 | `shared-topic-discovery` | 실행 | `/opt/shared-ai/releases/discovery-7e9d866…/services/topic-discovery` | `/opt/shared-ai/discovery/`(`.env`, `jev.env`, `data/discovery.sqlite`). 릴리스 안의 `data`·`.env`는 이 경로를 가리키는 링크다 |
 | `shared-ai-edge` (Caddy) | 실행 | `/opt/shared-ai/releases/discovery-e6df2e05…/services/shared-ai-host` | 없음(Caddyfile만) |
@@ -136,6 +136,15 @@
    - 해지하면 옛 디스크와 스냅샷에 남은 사본이 쓸모없어진다.
 2. 운영 Hanmadi(Vercel) 환경 변수 이름에 `AI_ACCOUNTS_*`와 `DIFY_*`가 없는지 확인한다. 값은 보지 않는다. 있으면 퇴역 전에 Hanmadi에서 먼저 뺀다. `DIFY_*`가 있으면 Hanmadi가 Dify를 자동으로 고르기 때문이다(`apps/hanmadi/lib/conversation-provider.ts` 18-19행).
 3. Festa 담당 저장소·세션에서 운영 Festa가 `/accounts`를 쓰는지 확인한다. 쓰면 이번 점검에서는 #19를 빼고 v1을 그대로 옮긴다. 이때는 §3의 accounts 행을 "복사"로 바꾸고, accounts 경로도 Caddyfile에 남긴다. #19는 열린 과제로 남는다.
+- 2026-10-12 확인한 근거(Cloud Run `shared-ai` 요청 기록 30일, 읽기 전용):
+  - Dify 경로: 9-27~28 구축·QA 뒤 호출이 0건이다.
+  - `/accounts`:
+    - 9-28~29 시험 때 호출이 몰려 있다.
+    - 9-30에 2건이 있었다. Cloudflare 대역(172.71.x.x)에서 왔으며 Festa로 추정한다.
+    - 10-04 16:48 UTC에 3건(`GET /accounts/connections`, 200)이 있었다. AWS us-east-1 대역(54.82.x.x)의 node 클라이언트이고, 같은 날 Hanmadi LiteLLM 호출과 같은 유형이라 Vercel 배포(운영 또는 프리뷰)로 추정한다.
+    - 그 뒤로는 0건이다.
+  - 따라서 선행 조건 2는 기록만으로 끝낼 수 없다. Vercel CLI와 프로젝트 연결이 없어 이름 조회를 못 했으므로, 사용자가 Vercel의 Hanmadi 운영·프리뷰 환경 변수에서 `AI_ACCOUNTS_*`를 확인한다.
+  - `docs/HANMADI-V2-IMPLEMENTATION.md`는 이 변수를 v2 「개인 AI」 기능용으로 적고 있다. 변수가 있으면 퇴역 뒤 그 기능은 실패를 표시한다. 연결된 Hanmadi 계정은 없어(§4 표) 대화 기능에는 영향이 없다.
 
 - **남는 사본**: 아래 셋은 순서대로 지운다(§8). 1번이 먼저 끝나면 남은 사본은 무해하다.
   - 옛 디스크
@@ -146,7 +155,7 @@
 
 ### 5-1. 코드 PR ★
 
-Terraform·`startup.sh`·Caddyfile·테스트·README를 한 PR로 만든다. 이 PR은 점검 시작 때 머지한다(§6 W6). 미리 머지해 두면 그사이 누가 apply할 때 새 디스크만 만들어지고 인스턴스 삭제에서 실패하는 어중간한 상태가 생길 수 있다.
+Terraform·`startup.sh`·Caddyfile·테스트·README를 한 PR로 만든다(#195, 2026-10-12 작성, CI 확인). 이 PR은 점검 시작 때 머지한다(§6 W6). 미리 머지해 두면 그사이 누가 apply할 때 새 디스크만 만들어지고 인스턴스 삭제에서 실패하는 어중간한 상태가 생길 수 있다.
 
 `services/shared-ai-host/main.tf`:
 
@@ -253,6 +262,13 @@ class StartupPolicy(unittest.TestCase):
 
 ### 5-2. 복원 리허설 (운영 VM, 중단 없음)
 
+**결과 (2026-10-12):** 통과. 서비스 중단은 없었다.
+- 덤프: 0.74MB, 0.9초
+- 같은 digest의 임시 컨테이너(`--network none`, 데이터는 tmpfs) 준비: 3.3초
+- 복원: 1.1초
+- 기본 테이블 78개의 행 수가 모두 같았다(합계 2,884행). 덤프 중 바뀐 테이블은 없었다.
+- 임시 컨테이너와 덤프는 지웠다.
+
 1. 현재 DB를 덤프한다.
 2. 네트워크가 없는 임시 `postgres:16` 컨테이너(같은 digest)에 복원한다.
 3. 모든 테이블의 행 수가 같은지 본다.
@@ -272,13 +288,22 @@ order by 1;
 
 ### 5-3. 점검 시각
 
+**결과 (2026-10-12):** LiteLLM 사용 기록 기준이다.
+- 최근 14일 동안 매일 03~06시(KST)에 호출이 0건이었다.
+- 최근 4주 주말(토·일)에는 10~15시(KST) 호출이 0건이었다(15시대 4건 제외).
+- 평일 09시대가 가장 붐빈다(14일 중 11일).
+- 사람이 지켜볼 수 있는 **주말 10~12시(KST)**를 권한다. 대안은 03~06시다.
+- 일일 스냅샷(04:00 UTC = 13:00 KST)과는 겹치지 않는다.
+
 최근 14일 LiteLLM 사용 기록에서 시간대별 호출 수를 세어 가장 한산한 1시간을 고른다. 날짜·시각은 사용자와 확정한다.
 
 ### 5-4. 선행 조건 확인
 
 §4의 선행 조건 세 가지를 끝낸다: 제공사 해지, Hanmadi 환경 변수 이름, Festa 사용 여부. 하나라도 남으면 점검을 미루거나, §4의 대체안대로 #19를 빼고 진행한다.
 
-## 6. 점검 절차 (예상 중단 45~60분, 리허설 뒤 갱신)
+## 6. 점검 절차 (예상 중단 45~60분)
+
+리허설 결과 DB 덤프·복원은 합계 약 5초다. 예상 시간의 대부분은 VM 재생성, 시작 스크립트, 이미지 로드, 확인 단계다.
 
 노트북에서 쓰는 이름:
 
