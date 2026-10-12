@@ -21,7 +21,7 @@
 | edge | Cloud Run `shared-ai`(공개 caddy 이미지, `reverse-proxy --to <VM IP>:8080` 인자, Terraform 관리, `allUsers`) → Direct VPC(egress `PRIVATE_RANGES_ONLY`, 프록시 서브넷 /26, Private Google Access 켜짐) → VM Caddy | VM Caddy가 접두사를 떼고 `/llm/*`(허용목록 6개), `/discovery/*`, `/accounts/*`, Dify 경로, `/health`를 라우팅한다. 그 외 404 |
 | LiteLLM + Postgres 16 | VM(:4100, 루프백) | 메모리 638MiB(+DB 53MiB). 앱별 가상 키(팀·모델 허용목록·30일 예산·RPM 30), JEV(TypeSafe) 패스스루, Gemini native `generateContent`, ElevenLabs STT/TTS. `STORE_MODEL_IN_DB=False`. 관리 작업은 IAP SSH 뒤 루프백에서 `gateway.py`로 한다 |
 | topic-discovery | VM(:4195), SQLite | 70MiB. **운영 이미지는 `7e9d866`(PR #156 머지, 코드 `discovery-v1.2`)**이다. README의 "v1.1(`3857765`)"은 오래된 기록이다(Phase 0 확인). main의 v2.x·native review는 미배포다(클라이언트와 공동 배포 필요). DB 행 수는 requests 11, active 0, action_results 8. `BEGIN IMMEDIATE`, scope 잠금, 멱등성, 일일 예산. JEV는 node bridge로 호출한다(클라이언트 제한 5초, 서브프로세스 12초). 운영 JEV 키 만료 **2026-11-02 06:00 UTC**. 자동 백업 없음, 수동 배포 |
-| accounts v1 | VM(:4190), SQLite + Fernet | 68MiB. **실사용자 없음**(Hanmadi 변수 미주입). 행은 9/29 QA 연결 15건뿐이다: festa claude(connected 1·disconnected 5), festa codex(connected 1·disconnected 4), hanmadi codex(disconnected 3·error 1). `codex`는 ChatGPT 기기 로그인 전용이다(API 키는 400). `claude`는 API 키 또는 `claude-code` 로그인이다. POST는 202를 돌려주고 비동기로 검증한다. provider당 미해제 연결은 1개(409)이고, 만료되면 행을 남긴 채 `expired`로 바꾼다. fcntl 잠금, 서브프로세스, 최대 15분 로그인, 60초 정리 루프 |
+| accounts v1 | VM(:4190), SQLite + Fernet | 68MiB. **실사용자 없음**(9/29 QA 뒤 호출은 9/30 2건·10/04 3건뿐). 2026-10-12 정정: Hanmadi 운영에는 `AI_ACCOUNTS_*` 등록 기록(9/28)이 있고, Festa 운영에는 secret이 설정돼 있다(`docs/plans/20261012-shared-ai-vm-maintenance.md` §4). 행은 9/29 QA 연결 15건뿐이다: festa claude(connected 1·disconnected 5), festa codex(connected 1·disconnected 4), hanmadi codex(disconnected 3·error 1). `codex`는 ChatGPT 기기 로그인 전용이다(API 키는 400). `claude`는 API 키 또는 `claude-code` 로그인이다. POST는 202를 돌려주고 비동기로 검증한다. provider당 미해제 연결은 1개(409)이고, 만료되면 행을 남긴 채 `expired`로 바꾼다. fcntl 잠금, 서브프로세스, 최대 15분 로그인, 60초 정리 루프 |
 | Dify | VM(:4180) | **10/09 중지**(재시작 정책 `no`, 데이터 보존). 운영 미사용: nginx 접근 로그에 9/27~28 구축·QA 호출만 있고 그 뒤 API 호출 0건 |
 | 배포 | (설계만) `deploy/litellm` → WIF(단일 SA) → IAP SSH → `litellm-release.py`(pg_dump·롤백) | **WIF는 적용된 적이 없어(Phase 1 확인) `deploy/litellm` 자동 배포는 동작한 적이 없다.** 실제 배포는 모두 수동이다. Terraform은 수동으로 apply한다. **shared-ai-host state는 저장소를 옮기기 전 위치(iCloud `IdeaProjects/97.개인/workSpace/commerce-automation-kit/data/shared-ai/`)에 있다**(serial 16, 2026-09-27). WIF 모듈(`ops/deploy/gcp-identity`)은 state가 없는데, 적용된 적이 없기 때문이다 |
 | 비밀값 | VM `.env`(0600), Cloudflare `cak-credential-broker`(discovery 클라이언트 키·JEV 키) | Secret Manager 미사용 |
@@ -31,8 +31,8 @@
 
 | 소비자 | 사용 기능 | 지연 제한 |
 |---|---|---|
-| Hanmadi (Vercel) | chat, STT/TTS, 영상 분석(Gemini native), JEV, 일일 진단 cron. `AI_ACCOUNTS_*` 미주입 | JEV 12초. 중복을 막으려고 자동 재시도하지 않음 |
-| Festa (Cloudflare Pages) | `AI_PROVIDER=litellm`일 때 chat, JEV shadow | JEV shadow 3초. venture-studio#69가 머지되면 응답 뒤(`waitUntil`) 실행 |
+| Hanmadi (Vercel) | chat, STT/TTS, 영상 분석(Gemini native), JEV, 일일 진단 cron. 2026-10-12 정정: Production에 `AI_ACCOUNTS_*`(9/28)와 `DIFY_*`·`CONVERSATION_PROVIDER`(9/27)를 등록한 기록이 있고, 지운 기록은 없다(점검 계획 §4) | JEV 12초. 중복을 막으려고 자동 재시도하지 않음 |
+| Festa (Cloudflare Pages) | `AI_PROVIDER=litellm`일 때 chat, JEV shadow. 「개인 AI」는 accounts v1을 쓴다(`AI_ACCOUNTS_*` 설정, 9/30 뒤 호출 0건, 2026-10-12 확인) | JEV shadow 3초. venture-studio#69가 머지되면 응답 뒤(`waitUntil`) 실행 |
 | topic-discovery | 공개 `/llm`으로 JEV 호출(`JEV_BASE_URL`은 Phase 0에서 확인) | bridge 5초. 넘으면 후보가 `held`(`jev_unavailable`)로 끝남 |
 | Shopshorts 워커·블로그 Actions | `/discovery`만 사용(블로그 워크플로 2곳에 URL 하드코딩) | — |
 | Replay, Dify | 실사용 없음 | — |
@@ -98,7 +98,7 @@ GitHub Actions(WIF)             — 이미지 빌드·푸시(로컬 Docker 없�
 | D3 | edge | **기존 서비스를 Caddyfile 내장 이미지로 바꿔 경로별 라우터로 유지** | URL이 바뀌지 않고 관리 경로 차단도 유지된다. `tests/edge.py`를 재사용한다. 이미지 digest가 라우팅을 고정하므로 리비전을 되돌리면 설정도 되돌아간다 |
 | **D4** | **accounts** | **API 키 연결 전용으로 재설계하고 VM 폐기와 분리.** 폐기 때 `/accounts`는 404로 바꾸고, v2는 크리티컬 패스 밖의 Phase 7에서 만든다. `openai` provider를 추가하고, `codex`는 구독 로그인 값으로 남겨 400으로 거부한다 | 제공사 원문(§8.2): Anthropic은 사용자 대신 구독 자격으로 요청하거나 Claude.ai 자격·세션 토큰을 수집·저장·중개하는 것을 허용하지 않는다. OpenAI가 제3자 앱에 ChatGPT 플랜 사용을 여는 것은 일부 상업 파트너 대상 제한 시험이다. 실사용자가 없다. 기존 `codex` 값의 의미를 바꾸면 append-only 규칙에 어긋난다 |
 | D5 | LiteLLM `codex-<id>` 구독 워커 라우트 | **폐기** | 실행 중인 컨테이너가 없고 관리자 CLI 전용이다. D4와 같은 약관 쟁점이 있다 |
-| D6 | Dify | **폐기**(최종 스냅샷 보관 후 삭제) | 운영 미사용(Phase 0에서 Hanmadi `DIFY_*` 변수 부재 확인) |
+| D6 | Dify | **폐기**(최종 스냅샷 보관 후 삭제) | 운영 미사용(9/28 뒤 Dify 경로 호출 0건). 2026-10-12 정정: Phase 0의 "Hanmadi `DIFY_*` 변수 부재 확인"은 틀렸다. Production 등록 기록(9/27)이 있으므로 점검 전에 뺀다(점검 계획 §4) |
 | **D7** | discovery 앱 버전 | **인프라 이전 전에 VM에서 운영 `7e9d866`(v1.2) → main(+#161) 릴리스를 먼저 한다. 인프라는 같은 앱 버전에 저장소 계층만 바꿔 옮긴다** | 앱 변화와 인프라 회귀를 한 번에 섞으면 원인을 구분할 수 없다. 대기 중인 v2.7 실검증도 이 릴리스에서 한다. 대안은 `7e9d866`에 `PostgresStore`만 백포트하는 것이다(저장소 코드를 두 번 작성) |
 
 ## 4. Global Constraints
