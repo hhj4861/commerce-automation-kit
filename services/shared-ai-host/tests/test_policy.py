@@ -58,7 +58,7 @@ class SecretPolicy(unittest.TestCase):
         names = block("locals {")
         for name in self.NAMES:
             self.assertIn(f'"{name}"', names)
-        self.assertRegex(block('resource "google_secret_manager_secret" "managed"'), r'for_each\s*=\s*local\.secrets')
+        self.assertRegex(block('resource "google_secret_manager_secret" "managed"'), r'for_each\s*=\s*var\.serverless_staging \? local\.secrets : toset\(\[\]\)')
         self.assertNotIn("google_secret_manager_secret_version", TF)
 
     def test_secret_versions_must_be_pinned_numbers(self):

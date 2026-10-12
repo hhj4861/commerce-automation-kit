@@ -10,7 +10,7 @@ export function publicAccountConnections(value) {
   const ids = new Set();
   return value.connections.map(record => {
     if (!record || typeof record.id !== 'string' || !/^[a-f0-9]{32}$/.test(record.id) || ids.has(record.id) ||
-        !['codex', 'claude'].includes(record.provider) || !states.has(record.state) ||
+        !['codex', 'claude', 'openai'].includes(record.provider) || !states.has(record.state) ||
         !Array.isArray(record.models) || record.models.length > 30 ||
         record.models.some(m => typeof m !== 'string' || !/^[a-zA-Z0-9.-]{1,100}$/.test(m))) fail('invalid_connections');
     ids.add(record.id);
@@ -69,7 +69,9 @@ export function createAccountClient(options) {
   return Object.freeze({
     list,
     async connect(provider, { apiKey, ttlSeconds, authMethod } = {}) {
-      if (!['codex', 'claude'].includes(provider)) fail('unsupported_provider', 400);
+      if (!['codex', 'claude', 'openai'].includes(provider)) fail('unsupported_provider', 400);
+      if (provider === 'openai' && (authMethod !== undefined && authMethod !== 'api-key')) fail('invalid_auth_method', 400);
+      if (provider === 'openai' && (typeof apiKey !== 'string' || !/^sk-[A-Za-z0-9_-]{20,500}$/.test(apiKey) || apiKey.startsWith('sk-ant-'))) fail('openai_api_key_required', 400);
       const native = provider === 'claude' && authMethod === 'claude-code';
       if (authMethod !== undefined && !['api-key', 'claude-code'].includes(authMethod)) fail('invalid_auth_method', 400);
       if ((native && apiKey !== undefined) || (provider === 'codex' && authMethod !== undefined)) fail('invalid_auth_method', 400);

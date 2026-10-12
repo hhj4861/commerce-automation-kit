@@ -94,7 +94,8 @@ resource "google_artifact_registry_repository" "images" {
   depends_on = [google_project_service.api]
 }
 resource "google_secret_manager_secret" "managed" {
-  for_each  = local.secrets
+  # Staging-only, provider key copies included: production keeps its keys on the VM.
+  for_each  = var.serverless_staging ? local.secrets : toset([])
   secret_id = each.value
   replication {
     auto {}

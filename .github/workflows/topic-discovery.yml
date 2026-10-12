@@ -7,6 +7,17 @@ permissions:
 jobs:
   contract:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: discovery
+          POSTGRES_PASSWORD: synthetic-ci-password
+          POSTGRES_DB: discovery_contract
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U discovery -d discovery_contract"
+          --health-interval 5s --health-timeout 5s --health-retries 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -19,6 +30,12 @@ jobs:
         env:
           PYTHONDONTWRITEBYTECODE: '1'
           DISCOVERY_TEST_DIR: ${{ runner.temp }}
+      - run: pip install --no-deps --require-hashes -r services/topic-discovery/requirements.txt
+      - run: python services/topic-discovery/run_postgres_contract.py
+        env:
+          PYTHONDONTWRITEBYTECODE: '1'
+          DISCOVERY_TEST_DIR: ${{ runner.temp }}
+          DISCOVERY_TEST_DATABASE_URL: postgresql://discovery:synthetic-ci-password@127.0.0.1:5432/discovery_contract
       - run: npm install --prefix apps/credential-broker --ignore-scripts --no-save --package-lock=false
       - run: node --test services/topic-discovery/test-*.mjs apps/credential-broker/test/*.test.mjs apps/shopshorts/test/topic-discovery.test.mjs apps/shopshorts/test/studio-codex.test.mjs apps/shopshorts/test/llm-claude.test.mjs
         env:
