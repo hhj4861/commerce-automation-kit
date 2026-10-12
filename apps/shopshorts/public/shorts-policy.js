@@ -1,6 +1,8 @@
+import {modernProject,defaultHeader} from './video-typography.js';
 // Planning defaults, not YouTube ranking thresholds. Explicit lengths and saved edits win.
 export const SHORTS_DEFAULT_SECONDS = 45;
 export function openingCaption(project, clip) {
+ if(modernProject(project))return defaultHeader(project,clip);
  const text=project.scenes?.[0]?.visualDirection?.hookText;
  if(project.brief?.format!=='short'||project.brief?.visualQuality!=='explain-v1'||!clip||!text)return [];
  // One bounded line avoids font-specific newline glyphs in FFmpeg drawtext.

@@ -137,3 +137,5 @@
 .cut-editor.focused .cut-grid{flex:1 0 300px;min-height:300px}.cut-editor.focused .cut-player{min-height:280px}.cut-editor.focused .monitor{min-height:220px}.cut-editor.focused .monitor[style*="9/16"]{height:clamp(220px,calc(100vh - 600px),450px)}
 
 .motion-form{margin:10px 0;padding:12px;border:1px dashed var(--line);border-radius:10px;background:#faf9fe}.motion-form .field{margin-bottom:10px}.motion-form .field>span{font-size:12px}.motion-form input,.motion-form select{padding:8px!important;font-size:13px}.motion-form input[type=color]{height:38px}.motion-form .hint{margin:6px 0 10px}
+
+@font-face{font-family:'Studio Pretendard';src:url('/Pretendard-SemiBold.otf') format('opentype');font-weight:600;font-display:swap}
