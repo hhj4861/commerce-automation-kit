@@ -77,3 +77,20 @@ jobs:
           else
             docker compose -f compose.yaml -f compose.test.yaml down -v
           fi
+  cloudrun-image:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Boot the Cloud Run image with the committed staging config
+        run: |
+          set -euo pipefail
+          docker build --build-arg TARGET=staging -t cak-litellm-cloudrun services/ai-gateway/cloudrun
+          docker run -d --name litellm -p 8080:8080 -e LITELLM_MASTER_KEY=sk-ci-only-placeholder-0000 \
+            -e HANMADI_CHAT_API_KEY=ci-placeholder -e ELEVENLABS_API_KEY=ci-placeholder \
+            -e STORE_MODEL_IN_DB=False -e LITELLM_TELEMETRY=False cak-litellm-cloudrun
+          for i in $(seq 1 60); do curl -fsS localhost:8080/health/liveliness >/dev/null && break; sleep 3; done
+          curl -fsS -H "Authorization: Bearer sk-ci-only-placeholder-0000" localhost:8080/v1/models \
+            | python3 -c "import json,sys; ids=sorted(m['id'] for m in json.load(sys.stdin)['data']); assert ids == ['hanmadi-chat','hanmadi-stt','hanmadi-tts'], ids; print(ids)"
+      - if: failure()
+        run: docker logs litellm 2>&1 | tail -80

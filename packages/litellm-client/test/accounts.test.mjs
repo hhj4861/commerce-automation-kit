@@ -43,3 +43,18 @@ test('connections validate methods, expiries, provider errors and redirect desti
   assert.equal(count, 0);
   await assert.rejects(client.connect('codex'), error => error.code === 'quota_exceeded' && !error.message.includes('private'));
 });
+
+test('OpenAI API-key connections are append-only and credentials stay private', async () => {
+  const id = 'f'.repeat(32), key = 'sk-proj-' + 'x'.repeat(40);
+  const calls = [];
+  const client = createAccountClient({ ...config, fetch: async (url, init) => {
+    calls.push(JSON.parse(init.body));
+    return Response.json({ id, provider: 'openai', state: 'connected', models: ['gpt-test'], apiKey: key });
+  }});
+  assert.deepEqual(await client.connect('openai', { apiKey: key }), { id, provider: 'openai', state: 'connected', models: ['gpt-test'] });
+  assert.equal(calls[0].apiKey, key);
+  for (const input of [{apiKey:'bad'},{apiKey:key,authMethod:'claude-code'},{apiKey:'sk-ant-api'+'x'.repeat(40)}]) {
+    await assert.rejects(client.connect('openai',input));
+  }
+  assert.equal(calls.length,1);
+});

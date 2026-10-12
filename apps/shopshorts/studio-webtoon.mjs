@@ -1,3 +1,5 @@
+import {architectureQuality} from './public/architecture-quality.js';
+import {checkArchitectureRuntime} from './studio-architecture-blender.mjs';
 import {isHybrid,sceneRoute,hybridPlan} from './public/hybrid-plan.js';
 import {renderHybridScene,checkHybridRuntime} from './studio-hybrid-render.mjs';
 import {createHash} from 'node:crypto';
@@ -46,14 +48,15 @@ export async function checkWebtoonReview(job){
  if(!review.passed)throw depthFailure();
 }
 // All planned cost is checked before either narration or the first paid request.
-export async function prepareWebtoon(job,env,work,io,checkpoint,{run=args=>higgsfieldCommand(args,env),fetcher=fetch,generate=generateHiggsfieldScene,render=renderSvgScene,renderHybrid=renderHybridScene,hybridReady=checkHybridRuntime}={}){
+export async function prepareWebtoon(job,env,work,io,checkpoint,{run=args=>higgsfieldCommand(args,env),fetcher=fetch,generate=generateHiggsfieldScene,render=renderSvgScene,renderHybrid=renderHybridScene,hybridReady=checkHybridRuntime,blenderReady=checkArchitectureRuntime}={}){
  await checkWebtoonReview(job);
  const cap=job.brief.maxCredits;
  if(!Number.isInteger(cap)||cap<1||cap>1000)throw Error('웹툰 제작의 총 크레딧 상한을 먼저 설정해 주세요.');
  const wanted=job.scenes.filter(s=>!job.assets[s.id]&&(!job.task.sceneIds||job.task.sceneIds.includes(s.id)));
- const route=s=>isHybrid(job.brief)?sceneRoute(s,job.scenes.indexOf(s)).renderer:'webtoon';
+ const route=s=>isHybrid(job.brief)?sceneRoute(s,job.scenes.indexOf(s),job.brief).renderer:'webtoon';
  const needsArt=s=>!isHybrid(job.brief)||['higgsfield','webtoon'].includes(route(s));
- if(wanted.some(s=>['motion','3d'].includes(route(s)))&&!await hybridReady(env))throw Error('자동 혼합 모션 렌더러를 사용할 수 없습니다. 제작 워커의 Node 22와 HyperFrames를 확인하세요.');
+ if(architectureQuality(job.brief)&&wanted.some(s=>route(s)==='3d'))await blenderReady(env);
+ if(wanted.some(s=>route(s)==='motion'||route(s)==='3d'&&!architectureQuality(job.brief))&&!await hybridReady(env))throw Error('자동 혼합 모션 렌더러를 사용할 수 없습니다. 제작 워커의 Node 22와 HyperFrames를 확인하세요.');
  const plans=[];
  for(const s of wanted){
   if(needsArt(s)&&job.assets[s.id+'-art']?.signature!==signature(job,s))plans.push({scene:paidArt(job,s),job});
