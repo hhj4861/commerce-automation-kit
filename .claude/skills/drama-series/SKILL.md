@@ -11,7 +11,9 @@ CLI: `npm run --silent cli -w @cak/drama-series -- <명령>` (이하 `ds <명령
 
 ## 0. 작업 폴더
 - 대본·관문 기록(커밋): `docs/videos/<YYYYMMDD-작업명>/` — `series.json`, `ep01.json`, `gates/`, `judge/`
-- 영상·이미지(커밋 안 함): `/Users/admin/Downloads/vedio/drama/<YYYYMMDD-작업명>/{refs,clips,out}`
+- 영상·이미지 산출물(커밋 안 함): `~/Downloads/vedio/drama/<YYYYMMDD-작업명>/{refs,clips,out}` — 디스크 정리로 지워질 수 있다.
+- 재사용 폰트 원본(라이선스와 함께 커밋): `packages/drama-series/assets/fonts/`. 출처·역할별 사용은 같은 폴더의 `README.md`를 따른다. 폰트를 Downloads 산출물 폴더에만 두지 않는다.
+- `--style` JSON의 상대 `fontFile`은 **style 파일이 있는 폴더 기준**이다. 절대경로는 유지한다. `--font`는 기존 CLI 경로 규칙(실행 위치/`INIT_CWD`)을 따른다. 기본 폰트와 지정한 역할별 폰트는 일반 파일이어야 하며 누락 시 조립을 거부한다.
 
 ## 1. 주제 관문 (조회 유발 요소)
 1. 장르를 정한다. `ds genres`로 장르 팩을 확인한다. 맞는 팩이 없으면 `packages/drama-series/genres/`에 새 팩을 추가한다(코드 수정 없음).
@@ -55,7 +57,7 @@ CLI: `npm run --silent cli -w @cak/drama-series -- <명령>` (이하 `ds <명령
 5. 접수 결과가 불명확하면(타임아웃) 중복 제출하지 말고 작업 이력부터 확인한다.
 
 ## 7. 조립과 검수
-- `ds assemble --series … --episode … --gates <dir>/gates --clips …/clips --out …/out/ep01.mp4 --font /System/Library/Fonts/AppleSDGothicNeo.ttc` — 대사 컷마다 통과한 `verify-clip` 기록이 없으면 조립을 거부한다
+- 저장소 루트에서 `ds assemble --series … --episode … --gates <dir>/gates --clips …/clips --out …/out/ep01.mp4 --font packages/drama-series/assets/fonts/Pretendard-SemiBold.otf` — 대사 컷마다 통과한 `verify-clip` 기록이 없으면 조립을 거부한다
 - 독백(`plan.json`의 `voiceOver`)이 있으면 목소리를 사용자와 정한 뒤 `tts-narration` 원자로 만든다. 아직 자동 믹스는 없으므로 사용자에게 알린다.
 - 결과 경로를 알리고 **사람 검수**를 받는다. 업로드는 이 스킬 범위 밖(`youtube-upload` 원자, 별도 승인).
 

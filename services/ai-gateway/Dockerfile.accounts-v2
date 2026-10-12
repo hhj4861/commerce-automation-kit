@@ -1,0 +1,8 @@
+FROM python:3.12-slim-bookworm
+WORKDIR /app
+COPY requirements.accounts-v2.txt ./
+RUN pip install --no-cache-dir -r requirements.accounts-v2.txt
+COPY accounts_v2.py accounts_store.py accounts_provider.py ./
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
+USER 65532:65532
+CMD ["python", "accounts_v2.py"]

@@ -1,8 +1,9 @@
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import type { DramaEpisode } from '@cak/contracts';
 import { buildAssembleArgs, cuesFromEpisode, prependColdOpen, trimWindow, type AssembleLayout, type AssembleSpec, type TrimSpec } from '../core/assemble-args.js';
 import { FfmpegError, hasAudio, probeDuration, runFfmpeg } from './ffmpeg.js';
+import { assertUnprotectedOutput } from './episode-lock.js';
 
 export interface AssembleEpisodeInput {
   episode: DramaEpisode;
@@ -30,6 +31,19 @@ export interface AssembleEpisodeInput {
 export function assembleEpisode(input: AssembleEpisodeInput): { out: string; durationSec: number; cues: number } {
   if (input.episode.shotPolicy !== undefined) throw new FfmpegError('shot-v1 조립 차단: 실행·출시 승인 결합 경로 미구현');
   if (input.episode.continuesFromEpisode) throw new FfmpegError('회차 연결 조립 차단: 승인된 앞 회차 출시/프레임 결합 경로 미구현');
+  assertUnprotectedOutput(input.workDir);
+  assertUnprotectedOutput(input.out);
+  // 직접 호출도 ffprobe/ffmpeg 실행·출력 생성 전에 검사한다.
+  const fonts: [string, string][] = [['default', input.fontFile]];
+  for (const role of ['title', 'kicker', 'subtitle', 'caption', 'label'] as const) {
+    const font = input.styles?.[role]?.fontFile;
+    if (font !== undefined) fonts.push([role, font]);
+  }
+  for (const [role, font] of fonts) {
+    let isFile = false;
+    try { isFile = statSync(font).isFile(); } catch { /* 누락·접근 불가도 아래 입력 오류로 보고 */ }
+    if (!isFile) throw new FfmpegError(`폰트 파일 없음 또는 일반 파일 아님: ${role} — ${font}`);
+  }
   const files = input.episode.cuts.map((c) => {
     const f = input.clipFiles[c.id];
     if (!f || !existsSync(f)) throw new FfmpegError(`클립 파일 없음: ${c.id}`);
@@ -38,11 +52,20 @@ export function assembleEpisode(input: AssembleEpisodeInput): { out: string; dur
   });
   const windows = input.episode.cuts.map((c, i) => trimWindow(probeDuration(files[i]!), input.trims?.[c.id]));
   const durations = windows.map((w) => w.durationSec);
-  mkdirSync(input.workDir, { recursive: true });
   const co = input.coldOpen ?? null;
   if (co && !existsSync(co.file)) throw new FfmpegError(`콜드 오픈 클립 없음: ${co.file}`);
   const baseCues = cuesFromEpisode(input.episode, durations);
-  const cues = (co ? prependColdOpen(baseCues, co.durationSec, co.caption) : baseCues).map((c, i) => {
+  const cueTexts = co ? prependColdOpen(baseCues, co.durationSec, co.caption) : baseCues;
+  // 모든 파생 출력부터 검사하여 일부 자막만 쓴 뒤 충돌하는 것도 막는다.
+  const outputs = [
+    ...cueTexts.map((_, i) => join(input.workDir, `cue-${i}.txt`)),
+    ...(input.aiLabel ? [join(input.workDir, 'ai-label.txt')] : []),
+    ...(input.title ? [join(input.workDir, 'title.txt')] : []),
+    ...(input.kicker ? [join(input.workDir, 'kicker.txt')] : []),
+  ];
+  outputs.forEach(assertUnprotectedOutput);
+  mkdirSync(input.workDir, { recursive: true });
+  const cues = cueTexts.map((c, i) => {
     const textFile = join(input.workDir, `cue-${i}.txt`);
     writeFileSync(textFile, c.text);
     return { startSec: c.startSec, endSec: c.endSec, position: c.position, textFile, chars: [...c.text].length };
