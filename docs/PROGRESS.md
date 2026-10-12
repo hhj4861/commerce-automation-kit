@@ -42,6 +42,8 @@ cd packages/keyword-intel && npm test     # 128개 통과하면 정상(2026-09-0
 | youtube-upload (#11) | ✅ **착수(07-27) + comment 명령(07-28)** — 롱폼 YouTube Data API 업로드(videos.insert+썸네일+챕터) + **댓글 작성**(commentThreads.insert, 쇼츠 파트너스 링크 노출용 — 제휴 링크 댓글은 대가성 고지 없으면 거부). OAuth 리프레시 토큰 무인. 테스트 16. **force-ssl 스코프 추가로 구 토큰은 comment 사용 전 `auth` 재인증 1회 필요**(채널 선택 함정: BetterrShop=「모두의 상품」). 댓글 고정은 API 미지원(수동) |
 | drama-series (#15) | **착수(2026-10-06)** — 장르 팩(데이터) 기반 AI 미니시리즈 제작 원자: 주제 관문(조회 유발 요소 2개 이상·수위 안전, JEV)→통과 주제만 시나리오, 구조·대사(발음 규칙+JEV 판정)·장소 연속성·소품 개연성·시나리오 구조 관문, 검증 대사만 생성 명세 발급(지문 불일치·미실측 단가·예산 초과 차단), Seedance 2.5 명세, whisper 대사 대조, ffmpeg 조립. 외부 호출 없음 — 실행은 `.claude/skills/drama-series`. 근거: `docs/videos/20261006-minidrama-pilot/`. 2단계 Shopshorts Studio `drama-series-v1`은 Codex "영상제작실-편집-개선" 머지 후 |
 
+**drama-series 폰트 보존 (2026-10-12, 작업 H)**: 재사용 폰트·라이선스를 `packages/drama-series/assets/fonts/`에 반입하고 파일럿 style을 저장소 상대경로로 전환했다. CLI는 style 폴더 기준으로 fontFile을 해석하며 어댑터는 외부 실행·쓰기 전에 폰트를 검사한다. drama-series 320/320·typecheck·4역할 drawtext 스모크 통과. drama-runner 22/22 통과(오케스트레이터 재시험 — `apps/drama-runner/runtime/node_modules` 준비, `DRAMA_TEST_STATE`·`DRAMA_TEST_ARTIFACTS` 지정). PR → `feat/drama-regression-pilot`. 상세: `docs/tasks/20261012-drama-fonts-in-repo.md`.
+
 **keyword-intel 게이트 현황**
 
 | 게이트 | 상태 | 근거 |

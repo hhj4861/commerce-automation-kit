@@ -74,7 +74,8 @@ it.each(['cue-0.txt', 'ai-label.txt', 'title.txt', 'kicker.txt'])('assemble 파�
   delete ctx.episode.shotPolicy;
   ctx.episode.cuts[0]!.caption = '시험';
   const clip = join(dir, 'clip.mp4'); writeFileSync(clip, 'stub');
-  expect(() => assembleEpisode({ episode: ctx.episode, clipFiles: { c1: clip }, out: join(dir, 'out.mp4'), fontFile: 'stub', workDir: dir, aiLabel: '시험', title: '시험', kicker: '시험' })).toThrow(/보호|shot-v1/);
+  // ffmpeg는 mock이므로 일반 파일 stub을 폰트에도 쓰고 출력 보호까지 도달시킨다.
+  expect(() => assembleEpisode({ episode: ctx.episode, clipFiles: { c1: clip }, out: join(dir, 'out.mp4'), fontFile: clip, workDir: dir, aiLabel: '시험', title: '시험', kicker: '시험' })).toThrow(/보호|shot-v1/);
   expect(runFfmpeg).not.toHaveBeenCalled();
   expect(readFileSync(target)).toEqual(before); expect(readFileSync(target + '.lock.json')).toEqual(lock);
 });
