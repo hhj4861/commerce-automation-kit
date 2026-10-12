@@ -23,6 +23,7 @@ const scenes=[
 ];
 function fixture(){
  const p={...createProject(brief),scenes:structuredClone(scenes),visualStyle:'따뜻한 창빛과 남색 그림자. 같은 흰 종이와 나무 책상.',automation:{version:1},approved:true,task:{id:'fixture',action:'media',state:'done'}};
+ delete p.pipelineVersion; // Legacy synthetic-tone fixture; new pipeline alignment has separate E2E.
  p.assets=Object.fromEntries(scenes.map(s=>[s.id,{kind:s.kind,key:`studio/${p.id}/${s.id}`} ]));
  const voice=normalizeEdit(p).voice;
  for(const s of p.scenes)p.assets[narrationId(s.id)]={key:`studio/${p.id}/${s.id}.mp3`,kind:'audio',purpose:'narration',voice,text:s.narration,duration:9};

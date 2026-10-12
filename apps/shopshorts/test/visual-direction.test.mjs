@@ -69,7 +69,7 @@ test('shorts hook starts on frame zero and user deletion is preserved; metadata 
 test('related video is a validated handoff, not a false automatic YouTube association',()=>{
  assert.equal(relatedVideoUrl('https://youtu.be/lQaYhIJePu0?si=tracking'),'https://www.youtube.com/watch?v=lQaYhIJePu0');
  for(const url of ['https://evil.test/watch?v=lQaYhIJePu0','javascript:alert(1)','https://youtube.com/watch?v=bad'])assert.throws(()=>relatedVideoUrl(url));
- const f=fixture(),p={...createProject(f.brief),...scenarioResult(f,f.brief),render:{key:'render'},approved:true};
+ const f=fixture(),p={...createProject(f.brief),...scenarioResult(f,f.brief),render:{key:'render',sha256:'fixture',verification:{version:'studio-production-v1',passed:true,sha256:'fixture'}},approved:true};
  const changed=changeProject(p,'publish',{platforms:['youtube'],privacy:'private',title:p.title,description:'설명',reviewed:true,relatedVideoUrl:'https://youtu.be/lQaYhIJePu0'});
  assert.equal(changed.publication.relatedVideoStatus,'manual-required');
 });

@@ -1,3 +1,4 @@
+import {PIPELINE_VERSION,requireFinalReview,sharedPipeline} from './production-pipeline.js';
 import {TYPOGRAPHY} from '../public/video-typography.js';
 import {architectureDefaults} from '../public/architecture-quality.js';
 import {hybridScene,hybridPlan} from '../public/hybrid-plan.js';
@@ -105,13 +106,13 @@ export function validateTimeline(input, job) {
 }
 export function createProject(input) {
   const brief=validateBrief(architectureDefaults({...input,captionPosition:input.captionPosition??'bottom',visualQuality:VISUAL_QUALITY,typography:TYPOGRAPHY}));
-  return { id: crypto.randomUUID(), revision: 0, title: input.topic?.slice(0, 100), brief, ...(webtoon(brief)?{voicePreference:brief.voiceId}:{}), scenes: [], assets: {}, edit: null, approved: false, render: null, upload: null, task: null, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+  return { pipelineVersion:PIPELINE_VERSION, id: crypto.randomUUID(), revision: 0, title: input.topic?.slice(0, 100), brief, ...(brief.voiceId?{voicePreference:brief.voiceId}:{}), scenes: [], assets: {}, edit: null, approved: false, render: null, upload: null, task: null, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
 }
 export function changeProject(original, action, body) {
   const job = structuredClone(original);
   if (busy(job)) fail('현재 작업이 끝난 뒤 수정하세요.', 409);
   if (job.upload) fail('업로드가 접수된 프로젝트는 변경할 수 없습니다. 새 프로젝트를 만드세요.', 409);
-  const invalidate = () => { job.approved = false; job.render = null; job.task = null; delete job.productionPlan; };
+  const invalidate = () => { job.approved = false; job.render = null; job.task = null; delete job.productionPlan; delete job.manualTimeline; };
   if (action === 'scenes') {
     const scenes = validateScenes(body.scenes,{animationStyle:animated(job.brief)});
     if (scenes.reduce((sum, s) => sum + s.duration, 0) > (job.brief.format === 'short' ? 180 : 600)) fail('장면의 전체 길이가 형식의 최대 길이를 넘었습니다.');
@@ -124,7 +125,7 @@ export function changeProject(original, action, body) {
     if(job.edit?.voice!==undefined)job.voicePreference=job.edit.voice;
     job.scenes = scenes; job.title = String(body.title || job.title).slice(0, 100); job.edit = null; invalidate();
   } else if (action === 'edit') {
-    job.edit = validateEdit(body, job); job.render = null; job.task = null;
+    job.edit = validateEdit(body, job);if(sharedPipeline(job))job.manualTimeline=true; job.render = null; job.task = null;
   } else if (action === 'scenario') {
     if (body.confirm !== true) fail('대본 생성 요청을 확인하세요.');
     invalidate(); job.task = { action, state: 'queued' };
@@ -146,6 +147,7 @@ export function changeProject(original, action, body) {
     job.render = null; job.task = { action, state: 'queued' };
   } else if (action === 'publish') {
     if (body.reviewed !== true || !job.render || !job.approved) fail('최종 영상을 생성하고 검수 확인을 체크하세요.');
+    requireFinalReview(job);
     if (!Array.isArray(body.platforms) || !body.platforms.length || body.platforms.some(p => !PLATFORMS.includes(p))) fail('업로드 플랫폼을 선택하세요.');
     if (job.brief.format === 'long' && body.platforms.some(p => p !== 'youtube')) fail('롱폼 업로드는 YouTube를 지원합니다.');
     if (!['private', 'unlisted', 'public'].includes(body.privacy)) fail('공개 범위를 선택하세요.');

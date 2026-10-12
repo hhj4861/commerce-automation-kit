@@ -1,3 +1,4 @@
+import {sharedPipeline} from './production-pipeline.js';
 import {modernProject,defaultCaption,captionPhrases} from '../public/video-typography.js';
 import {createProject, changeProject, validateEdit, fail} from './studio.js';
 import {llmOwner} from './llm-account-api.js';
@@ -41,7 +42,7 @@ export function continueAutomatic(project) {
   if (project.task?.action !== 'media' || project.task.state !== 'done') return project;
   if (!project.automation) {
     // Manual hybrid editing starts with measured speech/captions but never auto-renders.
-    if (!['webtoon','hybrid'].includes(project.brief.productionStyle) || project.edit || !project.approved || project.scenes.some(s=>!project.assets[s.id])) return project;
+    if (!(sharedPipeline(project)?['cinematic','animation','webtoon','hybrid']:['webtoon','hybrid']).includes(project.brief.productionStyle) || project.edit || !project.approved || project.scenes.some(s=>!project.assets[s.id])) return project;
     return {...project,edit:validateEdit(cinematicEdit(project),project)};
   }
   if (!project.approved || project.scenes.some(scene => !project.assets[scene.id])) fail('완료되지 않은 장면이 있어 영상을 조립할 수 없습니다.', 409);

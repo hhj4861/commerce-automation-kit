@@ -42,7 +42,8 @@ test('owned opening has no additional provider cost and body still uses authored
  const engine=await prepareWebtoon(p,{},'/unused',{},async()=>{},{blenderReady:async()=>true,run:async()=>{paid++;throw Error('Unexpected provider call');},renderHybrid:async(j,s,w,e,r)=>{assert.equal(r,'3d');assert.equal(s.hybrid.authored.id,RECIPE_ID);rendered++;return {data:Buffer.from('contract fixture'),type:'video/mp4'};}});
  await engine.scene(p.scenes[1],7);assert.equal(paid,0);assert.equal(rendered,1);
 });
-function withAudio(){const p=make();const durations=[3.14,6.67,7.14,8,7.06,6.68];for(const [i,s]of p.scenes.entries())p.assets['narration-'+s.id]={key:s.id,kind:'audio',purpose:'narration',voice:p.brief.voiceId,text:s.narration,narrationSpeed:1.1,duration:durations[i]};return p;}
+function withAudio(){const p=make();delete p.pipelineVersion; // legacy imported narration compatibility
+const durations=[3.14,6.67,7.14,8,7.06,6.68];for(const [i,s]of p.scenes.entries())p.assets['narration-'+s.id]={key:s.id,kind:'audio',purpose:'narration',voice:p.brief.voiceId,text:s.narration,narrationSpeed:1.1,duration:durations[i]};return p;}
 test('measured timeline carries the six-second opening across speech and preserves complete captions and ending',()=>{
  const p=withAudio(),edit=validateEdit(cinematicEdit(p),p),spans=clipSpans(edit);
  assert.ok(spans[0].end/FPS<3.5);const carry=openingCarry(p,edit,edit.clips[1]);assert.equal(carry.offset,spans[1].start/FPS);assert.equal(carry.offset+carry.duration,6);

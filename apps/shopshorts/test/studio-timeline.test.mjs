@@ -10,7 +10,7 @@ import {localStudioStore} from '../studio-local.mjs';
 import {executeStudioTask,command} from '../studio-runner.mjs';
 
 function fixture(){
- const p=createProject({category:'건축학',topic:'시간과 공간',format:'short',duration:16});
+ const p=createProject({category:'건축학',productionStyle:'cinematic',topic:'시간과 공간',format:'short',duration:16});
  p.scenes=[1,2].map(i=>({id:`scene-${i}`,narration:'공간을 살펴봐요.',prompt:'An original room',duration:1,kind:'image'}));
  p.approved=true;p.assets={'scene-1':{kind:'image'},'scene-2':{kind:'image'},music:{kind:'audio'},speech:{kind:'audio',purpose:'narration'}};
  p.edit=normalizeEdit(p);p.edit.voice='none';return p;
@@ -60,7 +60,7 @@ test('browser music seeks source offset, fades and silences gaps, stops pending 
 test('real render has exact video gaps plus delayed, trimmed, fading and overlapping 48kHz music', {timeout:90000},async()=>{
  const dir=await mkdtemp(join(tmpdir(),'studio-timeline-render-')),store=localStudioStore(dir,{});
  try{
-  let p=fixture();
+  let p=fixture();p.edit.captions=[]; // Isolate visual gaps from the deliberate opening header overlay.
   for(const [i,color] of ['blue','red'].entries()){
    const id=`scene-${i+1}`,file=join(dir,id+'.png'),key=`studio/${p.id}/${id}`;
    await command('ffmpeg',['-y','-v','error','-f','lavfi','-i',`color=${color}:s=160x90`,'-frames:v','1',file],{});

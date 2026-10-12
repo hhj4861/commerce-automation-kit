@@ -1,3 +1,4 @@
+import {PIPELINE_VERSION} from './production-pipeline.js';
 import {createAuthoredProject} from './authored-project.js';
 import { startScenario, syncScenario, scenarioRuntime } from './studio-scenario-account.js';
 import { CATEGORIES, VOICES, PLATFORMS, createProject, changeProject, busy, fail, validateScenes } from './studio.js';
@@ -10,7 +11,7 @@ export async function studioApi(request, env, store, { localWorker = false, reco
   const worker = localWorker || workerAuthorized(request, env);
   try {
     if (!['GET', 'HEAD'].includes(request.method) && !sameOrigin(request)) fail('다른 사이트에서 요청할 수 없습니다.', 403);
-    if (parts[0] === 'config' && request.method === 'GET') return json({ categories: CATEGORIES, voices: VOICES, platforms: PLATFORMS, execution: store.execution, capabilities: await store.capabilities(), scenarioRuntime: await scenarioRuntime(request, env, scenarioAccounts), recommendations: !!recommendationGenerate || recommendationAccounts, recommendationProvider: recommendationGenerate ? 'codex' : null, recommendationProviders: recommendationAccounts ? ['codex', 'claude'] : recommendationGenerate ? ['codex'] : [] });
+    if (parts[0] === 'config' && request.method === 'GET') return json({ productionPipeline:{version:PIPELINE_VERSION,finalInspection:true,captionAlignment:'whisper-words-v1',humanPublicationReview:true}, categories: CATEGORIES, voices: VOICES, platforms: PLATFORMS, execution: store.execution, capabilities: await store.capabilities(), scenarioRuntime: await scenarioRuntime(request, env, scenarioAccounts), recommendations: !!recommendationGenerate || recommendationAccounts, recommendationProvider: recommendationGenerate ? 'codex' : null, recommendationProviders: recommendationAccounts ? ['codex', 'claude'] : recommendationGenerate ? ['codex'] : [] });
     if (parts.length===1 && parts[0]==='recommendations' && request.method==='POST') return json(await recommendBrief(await request.json(),env,{generate:recommendationGenerate,signal:request.signal}));
     if (parts.length===1 && parts[0]==='automatic' && request.method==='POST') return json(await startAutomatic(request, env, store, await request.json(), scenarioAccounts), 201);
     if(parts.length===1&&parts[0]==='recipes'&&request.method==='POST'){const input=await request.json();const project=createAuthoredProject(input?.id);await store.create(project);return json({project},201);}
