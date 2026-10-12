@@ -14,6 +14,7 @@ import { executionStatus, resumeStep } from '../public/studio-status.js';
 
 function project() {
   const p = createProject({ category: '심리학', topic: '대화', format: 'short', duration: 16 });
+  delete p.pipelineVersion; // Legacy audio cache contract; new alignment has dedicated tests.
   p.scenes = [{ id: 'scene-1', narration: '천천히 이야기해요.', prompt: 'A calm family.', duration: 6, kind: 'image' }];
   p.approved = true;
   p.edit = normalizeEdit(p); p.edit.voice = VOICES[1].id;

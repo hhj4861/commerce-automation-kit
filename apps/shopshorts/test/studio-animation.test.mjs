@@ -56,6 +56,7 @@ test('real renderer outputs playable moving MP4 and worker bypasses image/video 
  const dir=await mkdtemp(join(tmpdir(),'animation-test-'));t.after(()=>rm(dir,{recursive:true,force:true}));
  const short={...scene,duration:1};
  const job={...createProject(brief),scenes:[short],task:{id:'animation-fixture',action:'media'}};
+ delete job.pipelineVersion; // Existing media-only renderer contract; measured narration has separate integration coverage.
  // Full worker route (including existing content lint), no paid provider calls.
  const stored=new Map(),deltas=[];
  const io={workDir:dir,writeAsset:async(k,data,type)=>stored.set(k,{data,type})};

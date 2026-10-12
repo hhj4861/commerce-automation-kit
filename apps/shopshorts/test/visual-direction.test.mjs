@@ -58,9 +58,10 @@ test('automatic summary renders real landscape frames without any paid media cal
 
 test('shorts hook starts on frame zero and user deletion is preserved; metadata stays relevant',()=>{
  const f=fixture(),p={...createProject(f.brief),...scenarioResult(f,f.brief)};const edit=normalizeEdit(p);
- assert.equal(SHORTS_DEFAULT_SECONDS,45);assert.equal(edit.captions[0].startFrame,0);assert.equal(edit.captions[0].endFrame,90);assert.equal(edit.captions[0].position,'top');
+ assert.equal(SHORTS_DEFAULT_SECONDS,45);assert.equal(edit.captions[0].startFrame,0);assert.equal(edit.captions[0].endFrame,105);assert.equal(edit.captions[0].position,'top');
  assert.deepEqual(normalizeEdit({...p,edit:{...edit,captions:[]}}).captions,[]);
- assert.deepEqual(normalizeEdit({...p,brief:{...p.brief,format:'long'}}).captions,[]);
+ assert.equal(normalizeEdit({...p,brief:{...p.brief,format:'long'}}).captions[0].presentation,'modern-header-v1');
+ const legacy={...p,brief:{...p.brief}};delete legacy.brief.typography;assert.equal(normalizeEdit(legacy).captions[0].endFrame,90);
  assert.match(suggestedDescription(p),/#건축/);assert.doesNotMatch(suggestedDescription(p),/automobile/);
  assert.throws(()=>scenarioResult({...f,scenes:f.scenes.map((s,i)=>i?s:{...s,visualDirection:direction(1)})},f.brief),/첫 3초/);
 });
@@ -68,7 +69,7 @@ test('shorts hook starts on frame zero and user deletion is preserved; metadata 
 test('related video is a validated handoff, not a false automatic YouTube association',()=>{
  assert.equal(relatedVideoUrl('https://youtu.be/lQaYhIJePu0?si=tracking'),'https://www.youtube.com/watch?v=lQaYhIJePu0');
  for(const url of ['https://evil.test/watch?v=lQaYhIJePu0','javascript:alert(1)','https://youtube.com/watch?v=bad'])assert.throws(()=>relatedVideoUrl(url));
- const f=fixture(),p={...createProject(f.brief),...scenarioResult(f,f.brief),render:{key:'render'},approved:true};
+ const f=fixture(),p={...createProject(f.brief),...scenarioResult(f,f.brief),render:{key:'render',sha256:'fixture',verification:{version:'studio-production-v1',passed:true,sha256:'fixture'}},approved:true};
  const changed=changeProject(p,'publish',{platforms:['youtube'],privacy:'private',title:p.title,description:'설명',reviewed:true,relatedVideoUrl:'https://youtu.be/lQaYhIJePu0'});
  assert.equal(changed.publication.relatedVideoStatus,'manual-required');
 });

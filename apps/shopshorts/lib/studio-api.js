@@ -1,3 +1,6 @@
+import {PIPELINE_VERSION} from './production-pipeline.js';
+import {createAuthoredProject} from './authored-project.js';
+import {METADATA_MAX_BYTES} from './youtube-metadata.js';
 import { startScenario, syncScenario, scenarioRuntime } from './studio-scenario-account.js';
 import { CATEGORIES, VOICES, PLATFORMS, createProject, changeProject, busy, fail, validateScenes } from './studio.js';
 import { sameOrigin, workerAuthorized } from './google-auth.js';
@@ -9,11 +12,16 @@ export async function studioApi(request, env, store, { localWorker = false, reco
   const worker = localWorker || workerAuthorized(request, env);
   try {
     if (!['GET', 'HEAD'].includes(request.method) && !sameOrigin(request)) fail('다른 사이트에서 요청할 수 없습니다.', 403);
-    if (parts[0] === 'config' && request.method === 'GET') return json({ categories: CATEGORIES, voices: VOICES, platforms: PLATFORMS, execution: store.execution, capabilities: await store.capabilities(), scenarioRuntime: await scenarioRuntime(request, env, scenarioAccounts), recommendations: !!recommendationGenerate || recommendationAccounts, recommendationProvider: recommendationGenerate ? 'codex' : null, recommendationProviders: recommendationAccounts ? ['codex', 'claude'] : recommendationGenerate ? ['codex'] : [] });
+    if (parts[0] === 'config' && request.method === 'GET') return json({ productionPipeline:{version:PIPELINE_VERSION,finalInspection:true,captionAlignment:'whisper-words-v1',humanPublicationReview:true}, categories: CATEGORIES, voices: VOICES, platforms: PLATFORMS, execution: store.execution, capabilities: await store.capabilities(), scenarioRuntime: await scenarioRuntime(request, env, scenarioAccounts), recommendations: !!recommendationGenerate || recommendationAccounts, recommendationProvider: recommendationGenerate ? 'codex' : null, recommendationProviders: recommendationAccounts ? ['codex', 'claude'] : recommendationGenerate ? ['codex'] : [] });
     if (parts.length===1 && parts[0]==='recommendations' && request.method==='POST') return json(await recommendBrief(await request.json(),env,{generate:recommendationGenerate,signal:request.signal}));
     if (parts.length===1 && parts[0]==='automatic' && request.method==='POST') return json(await startAutomatic(request, env, store, await request.json(), scenarioAccounts), 201);
+    if(parts.length===1&&parts[0]==='recipes'&&request.method==='POST'){const input=await request.json();const project=createAuthoredProject(input?.id);await store.create(project);return json({project},201);}
+    if (parts.length===1 && parts[0]==='metadata-project' && request.method==='POST') {
+      const project = {...createProject({category:'직접 입력', topic:'첨부 영상 게시 문구', format:'short', duration:45}), purpose:'metadata'};
+      await store.create(project); return json({project}, 201);
+    }
     if (!parts.length) {
-      if (request.method === 'GET') return json({ projects: await Promise.all((await store.list()).map(project => syncScenario(store, project, scenarioAccounts))) });
+      if (request.method === 'GET') return json({ projects: await Promise.all((await store.list()).filter(p => worker || (url.searchParams.get('purpose')==='metadata' ? p.purpose==='metadata' : p.purpose!=='metadata')).map(project => syncScenario(store, project, scenarioAccounts))) });
       if (request.method === 'POST') {
         const project = createProject(await request.json());
         await store.create(project); return json({ project }, 201);
@@ -44,6 +52,25 @@ export async function studioApi(request, env, store, { localWorker = false, reco
       if (!await store.cas(next, project.revision)) fail('다른 창에서 변경되었습니다. 새로고침 후 다시 시도하세요.', 409);
       return json({ project: next });
     };
+    if (action === 'metadata-source' && request.method === 'POST') {
+      if (project.purpose !== 'metadata' || busy(project)) fail('분석 중이거나 첨부 영상 전용 작업이 아닙니다.',409);
+      if (Number(url.searchParams.get('revision')) !== project.revision || !url.searchParams.has('revision')) fail('변경된 작업을 다시 불러오세요.',409);
+      if (request.headers.get('content-type')?.split(';')[0] !== 'video/mp4') fail('MP4 파일을 선택하세요.');
+      if (Number(request.headers.get('content-length')) > METADATA_MAX_BYTES) fail('파일은 50MB 이하만 지원합니다.',413);
+      const reader = request.body?.getReader(), chunks=[]; let size=0;
+      if (!reader) fail('영상 파일이 없습니다.');
+      while (true) { const {done,value}=await reader.read(); if(done)break; size+=value.byteLength; if(size>METADATA_MAX_BYTES){await reader.cancel();fail('파일은 50MB 이하만 지원합니다.',413);} chunks.push(value); }
+      if (size<12) fail('정상적인 MP4 영상을 선택하세요.');
+      const bytes=new Uint8Array(size);let offset=0;for(const chunk of chunks){bytes.set(chunk,offset);offset+=chunk.byteLength;}
+      if (String.fromCharCode(...bytes.slice(4,8))!=='ftyp') fail('정상적인 MP4 영상을 선택하세요.');
+      const key=`studio/${id}/${crypto.randomUUID()}-metadata.mp4`;
+      await store.writeAsset(key, bytes, 'video/mp4');
+      return save({...project, metadataSource:{key,type:'video/mp4',name:String(url.searchParams.get('name')||'첨부 영상').slice(0,100)}, metadataResult:null, metadataProgress:null, task:null});
+    }
+    if (action === 'metadata-source' && request.method === 'GET') {
+      if (!project.metadataSource) fail('첨부 영상이 없습니다.',404);
+      return store.readAsset(project.metadataSource.key,request);
+    }
     if (action === 'assets' && request.method === 'POST') {
       if (busy(project) || project.upload) fail('작업 중이거나 업로드된 프로젝트입니다.', 409);
       if (url.searchParams.get('rights') !== 'confirmed') fail('직접 제작했거나 사용권이 있는 파일인지 확인하세요.');
@@ -77,7 +104,7 @@ export async function studioApi(request, env, store, { localWorker = false, reco
         if (action === 'failure') { next.task.state = 'failed'; next.task.error = String(body.error || '제작 실패').slice(0, 1000); }
         else {
           const result = body.result || {};
-          const legalKeys = { scenario: ['title', 'scenes'], media: ['assets', 'mediaJobs', 'productionPlan'], narration: ['assets'], render: ['render'], publish: ['upload'] }[project.task.action];
+          const legalKeys = { scenario: ['title', 'scenes'], media: ['assets', 'mediaJobs', 'productionPlan'], narration: ['assets'], render: ['render'], publish: ['upload'], metadata: ['metadataResult','metadataProgress'] }[project.task.action];
           for (const field of Object.keys(result)) if (!legalKeys?.includes(field)) fail('작업 결과 필드가 일치하지 않습니다.');
           if (result.scenes) { result.scenes = validateScenes(result.scenes,{stripMotion:true}); next.assets = {}; next.edit = null; }
           Object.assign(next, result);
@@ -85,6 +112,10 @@ export async function studioApi(request, env, store, { localWorker = false, reco
         }
       }
       return save(action === 'complete' ? continueAutomatic(next) : next);
+    }
+    if (action === 'metadata') {
+      const caps=await store.capabilities();
+      if (!caps.metadata || !Number.isFinite(Date.parse(caps.workerAt)) || Date.now()-Date.parse(caps.workerAt)>90000) fail('영상 분석 서버가 준비되지 않았습니다. 관리자에게 분석 연결을 확인해 주세요.',503);
     }
     if (action === 'approve') {
       if (busy(project) || project.upload || body.approved !== true || !project.scenes.length) fail('대본을 검수하고 확인하세요.');

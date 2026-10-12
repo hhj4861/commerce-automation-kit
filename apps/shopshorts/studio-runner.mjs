@@ -1,3 +1,10 @@
+import {sharedPipeline,requireFinalReview,PIPELINE_VERSION} from './lib/production-pipeline.js';
+import {productionPreflight} from './studio-preflight.mjs';
+import {verifyFinalVideo} from './studio-final-qa.mjs';
+import {createHash} from 'node:crypto';
+import {openingCarry} from './studio-authored-timeline.mjs';
+import {renderCaptionArtwork,artworkFilter} from './studio-typography.mjs';
+import {generateVideoMetadata} from './studio-metadata.mjs';
 import {webtoon} from './lib/webtoon-plan.js';
 import {prepareWebtoon,checkWebtoonReview} from './studio-webtoon.mjs';
 import {explainer} from './lib/explainer-production.js';
@@ -22,7 +29,7 @@ import { FPS, FONTS, normalizeEdit, frameCount, clipSpans } from './public/edito
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const GOOGLE = 'https://generativelanguage.googleapis.com/v1beta';
-export const capabilities = env => ({ workerAt: new Date().toISOString(), scenario: false, animation: true, hybrid: motionCapability(env) && env.SHOPSHORTS_MEDIA_PROVIDER === 'higgsfield' && !!env.ELEVENLABS_API_KEY, webtoon: env.SHOPSHORTS_MEDIA_PROVIDER === 'higgsfield' && !!env.ELEVENLABS_API_KEY, motion: motionCapability(env), image: env.SHOPSHORTS_MEDIA_PROVIDER === 'higgsfield' || !!env.GEMINI_API_KEY, video: env.SHOPSHORTS_MEDIA_PROVIDER === 'higgsfield' || !!env.GEMINI_API_KEY, mediaProvider: env.SHOPSHORTS_MEDIA_PROVIDER === 'higgsfield' ? 'higgsfield' : 'google', voice: !!env.ELEVENLABS_API_KEY, shortsUpload: !!(env.UPLOAD_POST_API_KEY && env.UPLOAD_POST_USER), longUpload: !!env.YOUTUBE_CLIENT_SECRET });
+export const capabilities = env => ({ workerAt: new Date().toISOString(), scenario: false, metadata: !!(env.GEMINI_API_KEY && env.YOUTUBE_API_KEY), animation: true, hybrid: motionCapability(env) && env.SHOPSHORTS_MEDIA_PROVIDER === 'higgsfield' && !!env.ELEVENLABS_API_KEY, webtoon: env.SHOPSHORTS_MEDIA_PROVIDER === 'higgsfield' && !!env.ELEVENLABS_API_KEY, motion: motionCapability(env), image: env.SHOPSHORTS_MEDIA_PROVIDER === 'higgsfield' || !!env.GEMINI_API_KEY, video: env.SHOPSHORTS_MEDIA_PROVIDER === 'higgsfield' || !!env.GEMINI_API_KEY, mediaProvider: env.SHOPSHORTS_MEDIA_PROVIDER === 'higgsfield' ? 'higgsfield' : 'google', voice: !!env.ELEVENLABS_API_KEY, shortsUpload: !!(env.UPLOAD_POST_API_KEY && env.UPLOAD_POST_USER), longUpload: !!env.YOUTUBE_CLIENT_SECRET });
 export function command(bin, args, env, timeout = 600000) {
   return new Promise((resolveP, reject) => {
     const child = spawn(bin, args, { cwd: ROOT, env: { ...process.env, ...env }, stdio: ['ignore', 'pipe', 'pipe'] });
@@ -61,7 +68,7 @@ async function lintProject(job, work, env, publication = false) {
     if (result.ok !== true) throw new Error('대본 검증에 실패했습니다. 과장·효능·가짜 경험 표현을 수정하세요.');
   }
 }
-export function sceneFfmpegArgs(source, target, scene, edit, aspect, narration, actualDuration, sponsored, clip = null, captions = [], cinema = false, animation = false) {
+export function sceneFfmpegArgs(source, target, scene, edit, aspect, narration, actualDuration, sponsored, clip = null, captions = [], cinema = false, animation = false, artwork = []) {
   const duration = clip ? (clip.outFrame-clip.inFrame)/FPS : edit.durations[scene.id];
   const [w, h] = aspect === '9:16' ? [1080, 1920] : [1920, 1080];
   const args = ['-y', '-hide_banner', '-loglevel', 'error', ...(scene.kind === 'image' ? ['-loop', '1'] : cinema || animation ? [] : ['-stream_loop', '-1']), '-i', source];
@@ -78,6 +85,7 @@ export function sceneFfmpegArgs(source, target, scene, edit, aspect, narration, 
   if (clip) vf += `,trim=start_frame=${clip.inFrame}:end_frame=${clip.outFrame},setpts=PTS-STARTPTS`;
   if (captions.length) vf += ',' + captions.join(',');
   if (sponsored) vf += ",drawtext=text='(광고)':fontsize=36:fontcolor=white:box=1:boxcolor=black@0.7:x=40:y=60";
+  vf=artworkFilter(vf,artwork);
   args.push('-map', '0:v:0', '-map', '1:a:0', '-vf', vf, '-af', clip ? `atrim=start=${clip.inFrame/FPS}:end=${clip.outFrame/FPS},asetpts=PTS-STARTPTS,apad` : 'apad', '-t', String(duration), '-c:v', 'libx264', '-preset', cinema?'medium':'veryfast', ...(cinema?['-crf','18']:[]), ...(clip ? ['-bf','0'] : []), '-pix_fmt', 'yuv420p', '-c:a', clip ? 'pcm_s16le' : 'aac', '-ar', '44100', '-ac', '2', '-movflags', '+faststart', target);
   return args;
 }
@@ -106,22 +114,31 @@ async function renderProject(job, work, env, io) {
   for (const {clip,start,end} of clipSpans(timeline).sort((a,b)=>a.start-b.start)) {
     await gap(start-cursor);cursor=end;
     const id=clip.sceneId;
-    const scene = job.scenes.find(s => s.id === id), source = join(work, `${id}.source`);
+    const scene = job.scenes.find(s => s.id === id);
+    let source = join(work, `${id}.source`);
     await writeFile(source, await io.readAsset(job.assets[id].key));
+    const carry=openingCarry(job,timeline,clip);
+    if(carry?.key){
+      const opening=join(work,'authored-opening.source'),combined=join(work,`${clip.id}-opening-carry.mp4`);
+      await writeFile(opening,await io.readAsset(carry.key));
+      await command('ffmpeg',['-y','-v','error','-i',source,'-ss',String(carry.offset),'-i',opening,'-filter_complex',`[0:v]fps=30,setsar=1[body];[1:v]scale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2,fps=30,setsar=1,setpts=PTS-STARTPTS[intro];[body][intro]overlay=enable='lt(t,${carry.duration})':eof_action=pass[out]`,'-map','[out]','-an','-t',String((clip.outFrame-clip.inFrame)/FPS),'-c:v','libx264','-crf','16','-preset','fast','-pix_fmt','yuv420p',combined],env);
+      source=combined;
+    }
     let vo = null, voDuration = 0;
     if (job.edit.voice !== 'none') {
       const narration = await narrationFile(job, scene, work, env, io, { runCli: cli, command });
       vo = narration.file; voDuration = narration.duration;
     }
-    const captionFilters=[];
+    const captionFilters=[],artwork=[];
     for(const [index,caption] of timeline.captions.filter(c=>c.clipId===clip.id).entries()) {
+      if(caption.presentation){artwork.push(await renderCaptionArtwork(caption,job.brief.aspect,join(work,`${clip.id}-caption-${index}.png`)));continue;}
       const textPath=join(work,`${clip.id}-caption-${index}.txt`);
       await writeFile(textPath,caption.text);
       captionFilters.push(captionFilter(caption,textPath));
     }
     // PCM intermediates avoid AAC padding changing frame boundaries during concatenation.
     const target = join(work, `${"segment-"+segments.length}.${job.edit.version===2?'mov':'mp4'}`);
-    await command('ffmpeg', sceneFfmpegArgs(source, target, scene, job.edit, job.brief.aspect, vo, voDuration, job.brief.category === '상품광고', job.edit.version===2?clip:null,captionFilters,cinematic(job.brief),animated(job.brief)||webtoon(job.brief)), env);
+    await command('ffmpeg', sceneFfmpegArgs(source, target, scene, job.edit, job.brief.aspect, vo, voDuration, job.brief.category === '상품광고', job.edit.version===2?clip:null,captionFilters,cinematic(job.brief),animated(job.brief)||webtoon(job.brief),artwork), env);
     segments.push(target);
   }
   await gap(frameCount(timeline)-cursor);
@@ -139,24 +156,31 @@ async function renderProject(job, work, env, io) {
     await command('ffmpeg',['-y','-hide_banner','-loglevel','error','-i',joined,...inputs,'-filter_complex',musicFilter(music),'-map','0:v','-map','[a]','-c:v','copy','-c:a','aac','-t',String(frameCount(timeline)/FPS),'-movflags','+faststart',final],env);
   } else if(job.edit.version===2) await command('ffmpeg', ['-y','-hide_banner','-loglevel','error','-i',joined,'-c:v','copy','-c:a','aac','-movflags','+faststart',final],env);
   else await writeFile(final, await readFile(joined));
+  const verification=sharedPipeline(job)?await verifyFinalVideo(final,job,work):null;
+  if(verification)verification.production={engine:PIPELINE_VERSION,recipe:job.authoredRecipe||null,typography:job.brief.typography||null,reviewDigest:job.depthReview?.digest||null,voice:timeline.voice,speed:job.brief.narrationSpeed||1,scenes:job.scenes.map(s=>({id:s.id,provider:job.assets[s.id]?.provider||job.assets[s.id]?.source,sourceHash:job.assets[s.id]?.renderReport?.sourceHash||null,alignment:job.assets['narration-'+s.id]?.alignment?.version||null}))};
+  const sha256=createHash('sha256').update(await readFile(final)).digest('hex');
   const key = `studio/${job.id}/${job.task.id}-final.mp4`;
+  if(verification)await io.writeAsset(`studio/${job.id}/${job.task.id}-verification.json`,Buffer.from(JSON.stringify(verification,null,2)),'application/json');
   await io.writeAsset(key, await readFile(final), 'video/mp4');
-  return { render: { key, type: 'video/mp4', createdAt: new Date().toISOString(), duration: frameCount(timeline)/FPS } };
+  return { render: { key, ...(verification?{verification,sha256,pipelineVersion:PIPELINE_VERSION}:{}), type: 'video/mp4', createdAt: new Date().toISOString(), duration: frameCount(timeline)/FPS } };
 }
-export async function executeStudioTask(job, env, io, checkpoint, { fetcher = fetch, runCli = cli, runHiggsfield } = {}) {
+export async function executeStudioTask(job, env, io, checkpoint, { fetcher = fetch, runCli = cli, runHiggsfield, preflight=productionPreflight } = {}) {
   const action = job.task.action;
+  if(sharedPipeline(job))env={...env,SHOPSHORTS_WHISPER_CACHE:env.SHOPSHORTS_WHISPER_CACHE||join(io.workDir,'whisper-models')};
   if (action === 'scenario') throw new Error('시나리오는 연결한 Codex·Claude 계정으로 다시 요청하세요.');
+  if (action === 'metadata') return generateVideoMetadata(job, env, io, checkpoint, {fetcher});
   const work = join(io.workDir, job.id);
   await mkdir(work, { recursive: true });
+  if(sharedPipeline(job)&&['media','narration','render'].includes(action))await preflight(job,env,{command,fetcher});
   await lintProject(job, work, env, action === 'publish');
   if(webtoon(job.brief)&&['media','narration','render'].includes(action))await checkWebtoonReview(job);
   if (action === 'narration') return generateNarration(job, work, env, io, checkpoint, { runCli, command });
   if (action === 'media') {
     let assets = { ...job.assets };
     const hybrid=webtoon(job.brief)?await prepareWebtoon(job,env,work,io,checkpoint,{...(runHiggsfield?{run:runHiggsfield}:{}),fetcher}):null;
-    if(explainer(job.brief)&&(job.automation||hybrid)&&!job.edit){
+    if(explainer(job.brief)&&(job.automation||hybrid||sharedPipeline(job))&&!job.edit){
       const prepared={...job,assets,edit:normalizeEdit(job)};
-      assets=(await generateNarration(prepared,work,env,io,checkpoint,{runCli,command})).assets;
+      if(prepared.edit.voice!=='none')assets=(await generateNarration(prepared,work,env,io,checkpoint,{runCli,command})).assets;
     }
     for (const scene of job.scenes) {
       if (assets[scene.id] || (job.task.sceneIds && !job.task.sceneIds.includes(scene.id))) continue;
@@ -207,7 +231,7 @@ export async function executeStudioTask(job, env, io, checkpoint, { fetcher = fe
     }
     // Measure/cache speech before the automatic timeline is built. Resume uses
     // persisted voice+text assets and never pays for already-completed speech.
-    if((job.automation||hybrid) && (cinematic(job.brief)||animated(job.brief)||hybrid) && !job.edit) {
+    if((job.automation||hybrid||sharedPipeline(job)) && (cinematic(job.brief)||animated(job.brief)||hybrid) && !job.edit) {
       const prepared={...job,assets,edit:normalizeEdit(job)};
       const result=prepared.edit.voice!=='none'?await generateNarration(prepared,work,env,io,checkpoint,{runCli,command}):{assets};
       // Fail in the executing worker, where the exact corrective message is
@@ -220,8 +244,11 @@ export async function executeStudioTask(job, env, io, checkpoint, { fetcher = fe
   }
   if (action === 'render') return renderProject(job, work, env, io);
   if (action === 'publish') {
+    requireFinalReview(job);
     const video = join(work, 'publish.mp4');
-    await writeFile(video, await io.readAsset(job.render.key));
+    const data=await io.readAsset(job.render.key);
+    if(sharedPipeline(job)&&createHash('sha256').update(data).digest('hex')!==job.render.sha256)throw Error('검수한 영상과 업로드 파일이 다릅니다. 다시 렌더해 주세요.');
+    await writeFile(video,data);
     const p = job.publication, description = `${job.brief.category === '상품광고' ? '(광고)\n' : ''}${p.description}\nAI 생성 콘텐츠`;
     if (job.brief.format === 'long') {
       if (!env.YOUTUBE_CLIENT_SECRET) throw new Error('YouTube 업로드 계정을 먼저 연결하세요.');

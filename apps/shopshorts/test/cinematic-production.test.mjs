@@ -23,6 +23,7 @@ const scenes=[
 ];
 function fixture(){
  const p={...createProject(brief),scenes:structuredClone(scenes),visualStyle:'따뜻한 창빛과 남색 그림자. 같은 흰 종이와 나무 책상.',automation:{version:1},approved:true,task:{id:'fixture',action:'media',state:'done'}};
+ delete p.pipelineVersion; // Legacy synthetic-tone fixture; new pipeline alignment has separate E2E.
  p.assets=Object.fromEntries(scenes.map(s=>[s.id,{kind:s.kind,key:`studio/${p.id}/${s.id}`} ]));
  const voice=normalizeEdit(p).voice;
  for(const s of p.scenes)p.assets[narrationId(s.id)]={key:`studio/${p.id}/${s.id}.mp3`,kind:'audio',purpose:'narration',voice,text:s.narration,duration:9};
@@ -98,7 +99,8 @@ test('real automatic pipeline caches measured speech, renders camera motion, hol
  const video=probe.streams.find(s=>s.codec_type==='video');assert.equal(video.width,1920);assert.equal(video.height,1080);assert.equal(Number(video.nb_frames),frameCount(p.edit));assert.equal(result.render.duration,frameCount(p.edit)/30);
  const raw=join(dir,'frames.rgb');await command('ffmpeg',['-y','-v','error','-i',final,'-vf','fps=5,scale=96:54','-pix_fmt','rgb24','-f','rawvideo',raw],{});
  const pixels=await readFile(raw),size=96*54*3;
- const difference=(a,b)=>{let sum=0;for(let i=0;i<size;i++)sum+=Math.abs(pixels[a*size+i]-pixels[b*size+i]);return sum/size;};
+ const difference=(a,b)=>{let sum=0;const region=96*32*3;for(let i=0;i<region;i++)sum+=Math.abs(pixels[a*size+i]-pixels[b*size+i]);return sum/region; // Compare media above the timed subtitle, which deliberately disappears.
+ };
  assert.ok(difference(0,8)>1,'image camera visibly moves');
  const last=Math.floor(pixels.length/size)-1;assert.ok(difference(last-1,last)<2,'short video holds its last frame instead of looping');
  const audio=join(dir,'speech.raw');await command('ffmpeg',['-y','-v','error','-i',final,'-vn','-ac','1','-ar','44100','-f','f32le',audio],{});

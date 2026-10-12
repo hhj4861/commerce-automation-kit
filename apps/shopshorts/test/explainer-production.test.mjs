@@ -34,7 +34,7 @@ test('selected topic is researched before script, evidence is retained, missing 
   calls++;if(mockReview(prompt))return mockReview(prompt);if(calls===1){assert.match(prompt,/내장 웹 검색/);assert.match(prompt,/초고층/);return {searched:true,value:research};}
   assert.match(prompt,/source-1/);assert.match(prompt,/실제 측정값/);return {value:generated};
  }});
- assert.deepEqual(phases,['research','scenario']);assert.equal(calls,3);assert.deepEqual(result.research.facts,research.facts);
+ assert.deepEqual(phases,['research','scenario','review']);assert.equal(calls,3);assert.deepEqual(result.research.facts,research.facts);
  assert.deepEqual(scenarioResult(result,brief).research,result.research);
  assert.equal(result.scenes[0].animation.presentation,'illustrated');
  assert.equal(result.scenes[1].animation.presentation,'diagram');
@@ -59,13 +59,14 @@ test('real automatic render measures 1.15x speech, fits animation/captions, resu
  const io={workDir:dir,writeAsset:async(k,d)=>assets.set(k,d),readAsset:async k=>{assert.ok(assets.has(k));return assets.get(k);}};
  const runCli=async(_,args)=>{calls++;await command('ffmpeg',['-y','-v','error','-f','lavfi','-i','sine=frequency=440:duration=1.5','-c:a','libmp3lame',args[args.indexOf('--out')+1]],{});};
  let job={...createProject(brief),voicePreference:brief.voiceId,scenes:[{...scenes[0],duration:8}],approved:true,automation:{version:2},task:{id:'media-test',action:'media',state:'running'}};
+ delete job.pipelineVersion; // Legacy tone is not spoken narration; new alignment deliberately rejects tones.
  const result=await executeStudioTask(job,{ELEVENLABS_API_KEY:'fixture'},io,async d=>checkpoints.push(structuredClone(d)),{runCli,fetcher:()=>assert.fail('no external media call'),runHiggsfield:()=>assert.fail('animation must bypass Higgsfield')});
  assert.equal(calls,1);assert.ok(checkpoints[0].assets['narration-s1']);assert.equal(result.assets.s1.provider,'animation-svg');
  job={...job,assets:result.assets,task:{...job.task,state:'done'}};
  const audio=narrationAsset(job,job.scenes[0],brief.voiceId);assert.equal(audio.narrationSpeed,1.15);assert.ok(audio.duration<1.4&&audio.duration>1.2);
  assert.equal(narrationReady({...job,brief:{...brief,narrationSpeed:1}},normalizeEdit(job)),false);
  const resumed=await executeStudioTask({...job,task:{...job.task,state:'running'}},{},io,async()=>{}, {runCli:()=>assert.fail('no regeneration')});assert.deepEqual(resumed.assets,job.assets);
- job=continueAutomatic(job);assert.equal(job.task.action,'render');assert.equal(job.edit.captions[0].position,'middle');assert.equal(job.edit.voice,brief.voiceId);
+ job=continueAutomatic(job);assert.equal(job.task.action,'render');assert.equal(job.edit.captions.find(c=>c.source==='script').y,50);assert.equal(job.edit.voice,brief.voiceId);
  const duration=job.edit.clips[0].outFrame/30;assert.ok(duration>=audio.duration+.3&&duration<audio.duration+.335);assert.ok(duration<8);
  const final=await executeStudioTask(job,{},io,async()=>{});const file=join(dir,'final.mp4');await writeFile(file,assets.get(final.render.key));
  const probe=JSON.parse(await command('ffprobe',['-v','error','-show_streams','-show_format','-of','json',file],{}));assert.equal(probe.streams[0].width,1080);assert.equal(probe.streams[0].height,1920);assert.ok(probe.streams.some(s=>s.codec_type==='audio'));assert.ok(Math.abs(Number(probe.format.duration)-duration)<.05);
@@ -75,6 +76,7 @@ test('explicit cinematic selection routes to Higgsfield even without provider en
  const dir=await mkdtemp(join(tmpdir(),'explainer-higgs-'));t.after(()=>rm(dir,{recursive:true,force:true}));
  const p=createProject({...brief,productionStyle:'cinematic'}),id='11111111-1111-1111-1111-111111111111',ops=[];
  const png=new Resvg('<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"><rect width="10" height="10" fill="gold"/></svg>').render().asPng();
+ delete p.pipelineVersion; // Provider-routing fixture for the existing media-only workflow.
  const job={...p,approved:true,scenes:[{id:'s1',duration:4,kind:'image',narration:'구조를 살펴보세요.',prompt:'Original architecture'}],task:{id:'test',action:'media'}};
  const result=await executeStudioTask(job,{}, {workDir:dir,writeAsset:async()=>{}},async()=>{}, {runHiggsfield:async args=>{ops.push(args[1]);return args[1]==='cost'?{credits:2}:args[1]==='create'?{id}:{id,status:'completed',result_url:'https://media.higgsfield.ai/fixture.png'};},fetcher:async url=>{assert.equal(url.hostname,'media.higgsfield.ai');return new Response(png,{headers:{'content-type':'image/png'}});}});
  assert.deepEqual(ops,['cost','create','get']);assert.equal(result.assets.s1.provider,'higgsfield');

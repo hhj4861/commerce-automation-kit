@@ -1,3 +1,5 @@
+import {sharedPipeline} from './lib/production-pipeline.js';
+import {alignNarration,validAlignment,scenePhrases} from './studio-alignment.mjs';
 import { createHash } from 'node:crypto';
 import { readFile, writeFile, rename, unlink } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -46,19 +48,25 @@ export async function generateNarration(job, work, env, io, checkpoint, tools) {
   const assets = { ...job.assets }, edit = normalizeEdit(job);
   if (!job.approved || edit.voice === 'none') throw Error('대본을 검수하고 목소리를 선택해 주세요.');
   for (const scene of narrationScenes(job, edit)) {
-    if (narrationAsset(job, scene, edit.voice)) continue;
+    const cached=narrationAsset(job,scene,edit.voice);
+    if(cached&&(!sharedPipeline(job)||validAlignment(cached.alignment,scene.narration,cached.duration,scenePhrases(job,scene))))continue;
     const { data, duration, hash } = await narrationFile(job, scene, work, env, io, tools);
     const key = `studio/${job.id}/narration-${hash}.mp3`;
     await io.writeAsset(key, data, 'audio/mpeg');
     assets[narrationId(scene.id)] = { key, kind: 'audio', type: 'audio/mpeg', purpose: 'narration', source: 'ai', voice: edit.voice, text: scene.narration, narrationSpeed:narrationRate(job), duration, name: scene.id };
     await checkpoint({ assets: structuredClone(assets) });
+    if(sharedPipeline(job)){
+      assets[narrationId(scene.id)].alignment=await alignNarration(job,scene,{file:join(work,`${hash}.mp3`),hash,duration},work,env,tools.command);
+      await checkpoint({assets:structuredClone(assets)});
+    }
   }
   return { assets };
 }
 
 // Provider details may contain request data. Return only an allowlisted user message.
 export function narrationFailure(error) {
- const message=String(error?.message||'');
+ const message=[error?.message,error?.code,error?.cause?.message,error?.cause?.code].filter(Boolean).join(' ');
+ if(/CERT|certificate|UNABLE_TO_VERIFY|SELF_SIGNED|issuer/i.test(message))return '음성 서비스의 보안 인증서를 확인하지 못했어요. 네트워크 또는 신뢰된 인증서 설정을 확인해 주세요. 인증서 검증은 해제하지 않습니다.';
  if(/quota_exceeded|insufficient_credits|payment_required|\b402\b/i.test(message))return '음성 생성 사용량이 부족해요. 사용 한도를 확인한 뒤 다시 시도해 주세요.';
  if(/voice_not_found|voice_not_allowed|voice_access|\b404\b/i.test(message))return '이 목소리를 사용할 수 없어요. 다른 목소리를 선택한 뒤 음성을 다시 만들어 주세요.';
  if(/too_many_concurrent_requests|rate_limit|\b429\b/i.test(message))return '음성 생성 요청이 몰리고 있어요. 잠시 후 다시 시도해 주세요.';
