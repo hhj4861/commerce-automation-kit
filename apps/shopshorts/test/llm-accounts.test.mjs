@@ -270,3 +270,48 @@ test('a new account recommendation is a fresh job and its own encrypted history 
  assert.equal(patches.at(-1).job.state,'done');
  assert.equal((await accountAction(env,b,'recommendation',{id:'old-job'})).status,404);
 });
+
+
+test('transient reads and lost claim/completion acknowledgments preserve one execution and one result', async t => {
+  const {env,db}=fixture(); t.after(()=>db.close());
+  await accountRunner(env,{operation:'poll'}); await accountAction(env,a,'connect',{provider:'codex'});
+  let droppedClaim=false,droppedDone=false,failedRead=false,executions=0,finished=false;
+  const call=async (_path,input)=>{
+    if(input.operation==='read' && droppedClaim && !failedRead){failedRead=true;throw new DOMException('timeout','TimeoutError');}
+    const result=await accountRunner(env,input);
+    if(input.operation==='write' && !droppedClaim){droppedClaim=true;throw new DOMException('timeout','TimeoutError');}
+    if(input.operation==='write' && input.value.job.state==='done' && !droppedDone){droppedDone=true;throw new TypeError('fetch failed');}
+    return result;
+  };
+  const worker=startAccountWorker({call,retryDelayMs:0,intervalMs:100000,log(){},execute:async (_,{update})=>{
+    executions++;await update({credential:auth});await update({job:{state:'done'}});finished=true;
+  }});
+  try{await waitFor(()=>finished);assert.equal(executions,1);assert.ok(droppedClaim&&droppedDone&&failedRead);assert.equal((await accountAction(env,a,'status')).job.state,'done');}
+  finally{await worker.stop();}
+});
+
+test('temporary read failure recovers but disconnect during an uncertain write cannot restore credentials', async t=>{
+  const {env,db}=fixture();t.after(()=>db.close());await accountRunner(env,{operation:'poll'});await accountAction(env,a,'connect',{provider:'codex'});
+  let transientRead=false,disconnect=false,done=false;
+  const call=async(_path,input)=>{
+    if(input.operation==='read'&&!transientRead){transientRead=true;throw Object.assign(Error('unavailable'),{status:503});}
+    if(input.operation==='write'&&input.value.credential&&!disconnect){disconnect=true;await accountAction(env,a,'disconnect');throw new TypeError('fetch failed');}
+    return accountRunner(env,input);
+  };
+  const worker=startAccountWorker({call,retryDelayMs:0,intervalMs:100000,log(){},execute:async(_,{update})=>{
+    await update({job:{phase:'research'}});
+    await assert.rejects(update({credential:auth}),{code:'STALE_ACCOUNT'});done=true;
+  }});
+  try{await waitFor(()=>done);assert.ok(transientRead&&disconnect);assert.equal((await accountAction(env,a,'status')).connected,false);}
+  finally{await worker.stop();}
+});
+
+test('permanent broker authorization failures are not retried',async()=>{
+ let calls=0;const worker=startAccountWorker({intervalMs:100000,retryDelayMs:0,log(){},call:async()=>{calls++;throw Object.assign(Error('unauthorized'),{status:401});}});
+ await waitFor(()=>calls===1);await worker.stop();assert.equal(calls,1);
+});
+
+test('transient broker outage has a bounded retry count',async()=>{
+ let calls=0;const worker=startAccountWorker({intervalMs:100000,retryDelayMs:0,log(){},call:async()=>{calls++;throw new DOMException('timeout','TimeoutError');}});
+ await waitFor(()=>calls===2);await worker.stop();assert.equal(calls,2);
+});
