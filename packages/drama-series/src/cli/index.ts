@@ -2,6 +2,8 @@
  * drama-series CLI — 판단 없는 검사·명세·조립. 외부 호출(JEV·힉스필드)은 하지 않는다.
  *
  *   genres
+ *   episode-lock/episode-lock-status/episode-handoff/episode-unlock/episode-edit
+ *   episode-keyframes-build/episode-keyframes-check (see README for ownership CAS arguments)
  *   keyframe-build   --series --episode --cut --aspect 16:9 --out request.json
  *   keyframe-source  --series --episode --cut --asset <id> --file image.png --out <new-directory>
  *   keyframe-approve --series --episode --cut --asset <id> --source <directory> --approval human.json --out <new-directory>
@@ -47,6 +49,8 @@ import { prepareReleaseSource, checkContinuationSource } from '../adapters/relea
 import { readStrictJsonFile } from '../adapters/media-evidence.js';
 import { contentSha } from '../core/release-source.js';
 import { prepareVisualVerdict, applyVisualVerdict } from '../adapters/visual-verdict.js';
+import { acquireEpisodeLock, episodeLockStatus, changeEpisodeOwner, withEpisodeOwner, assertUnprotectedOutput, type EpisodeGuard } from '../adapters/episode-lock.js';
+import { buildEpisodeKeyframes, checkEpisodeKeyframes } from '../adapters/episode-keyframes.js';
 import { writeKeyframeRequest, prepareKeyframeEvidence, approveKeyframeEvidence, checkKeyframeApproval } from '../adapters/keyframe-evidence.js';
 import { parseTrimSpec } from '../core/assemble-args.js';
 import { joinSimilarity } from '../adapters/ffmpeg.js';
@@ -69,6 +73,7 @@ type Opts = Record<string, string | boolean | undefined>;
 const abs = (p: string) => (isAbsolute(p) ? p : resolve(process.env.INIT_CWD ?? process.cwd(), p));
 const readJson = (p: string): unknown => JSON.parse(readFileSync(abs(p), 'utf8'));
 function writeJson(p: string, v: unknown): void {
+  assertUnprotectedOutput(abs(p));
   mkdirSync(dirname(abs(p)), { recursive: true });
   writeFileSync(abs(p), JSON.stringify(v, null, 2) + '\n');
 }
@@ -79,7 +84,9 @@ const metaPath = (p: string) => `${p.replace(/\.json$/, '')}.meta.json`;
 function opts(rest: string[], names: Record<string, 'string' | 'boolean'>): Opts {
   const options = Object.fromEntries(Object.entries(names).map(([k, type]) => [k, { type }]));
   try {
-    return parseArgs({ args: rest, options, allowPositionals: false }).values as Opts;
+    const values=parseArgs({ args: rest, options, allowPositionals: false }).values as Opts;
+    if(typeof values.out==='string')assertUnprotectedOutput(abs(values.out));
+    return values;
   } catch (e) {
     throw new UsageError(e instanceof Error ? e.message : String(e));
   }
@@ -98,6 +105,17 @@ function loadCtx(o: Opts, read: (p:string)=>unknown = readJson): GateContext {
   const ctx: GateContext = { series, episode, genre: loadGenre(series.genreId), ...(prev ? { prev: { episode: parseEpisode(read(prev)) } } : {}) };
   assertContinuation(ctx);
   return ctx;
+}
+const guardOptions={agent:'string',session:'string','lock-id':'string','lock-revision':'string','episode-sha':'string'} as const;
+function guardOf(o:Opts):EpisodeGuard {
+  const agent=req(o,'agent');if(agent!=='codex' && agent!=='claude')throw new UsageError('--agent codex|claude');
+  return {owner:{agent,session:req(o,'session')},lockId:req(o,'lock-id'),revision:Number(req(o,'lock-revision')),episodeSha:req(o,'episode-sha')};
+}
+function needsEpisodeLock(path:string):boolean {
+  return existsSync(abs(path)+'.lock.json') || parseEpisode(readJson(path)).shotPolicy?.version==='shot-v1';
+}
+function lockedCtx(o:Opts,episode:GateContext['episode']):GateContext {
+  return loadCtx(o,p=>abs(p)===abs(req(o,'episode'))?episode:readStrictJson(p));
 }
 function saveReport(dir: string, r: DramaGateReport): void {
   writeJson(join(dir, `${r.gate}.json`), r);
@@ -128,6 +146,34 @@ function kindOf(v: string): EpisodeJudgeKind {
 function main(argv: string[]): number {
   const [cmd, ...rest] = argv;
   switch (cmd) {
+    case 'episode-lock': {
+      const o=opts(rest,{episode:'string',agent:'string',session:'string','lock-revision':'string'});
+      const agent=req(o,'agent');if(agent!=='codex' && agent!=='claude')throw new UsageError('--agent codex|claude');
+      out(acquireEpisodeLock(abs(req(o,'episode')),{agent,session:req(o,'session')},Number(optStr(o,'lock-revision')??'0')));return 0;
+    }
+    case 'episode-lock-status': {
+      const o=opts(rest,{episode:'string'});out(episodeLockStatus(abs(req(o,'episode'))));return 0;
+    }
+    case 'episode-handoff':
+    case 'episode-unlock': {
+      const o=opts(rest,{episode:'string',...guardOptions,'to-agent':'string','to-session':'string',note:'string'});
+      const agent=cmd==='episode-handoff'?req(o,'to-agent'):null;
+      if(agent!==null && agent!=='codex' && agent!=='claude')throw new UsageError('--to-agent codex|claude');
+      out(changeEpisodeOwner(abs(req(o,'episode')),guardOf(o),agent?{agent,session:req(o,'to-session')}:null,req(o,'note')));return 0;
+    }
+    case 'episode-edit': {
+      const o=opts(rest,{episode:'string',input:'string',...guardOptions});
+      const next=parseEpisode(readStrictJson(req(o,'input')));
+      withEpisodeOwner(abs(req(o,'episode')),guardOf(o),tx=>tx.write(next));
+      out({ok:true,...episodeLockStatus(abs(req(o,'episode')))});return 0;
+    }
+    case 'episode-keyframes-build':
+    case 'episode-keyframes-check': {
+      const o=opts(rest,{episode:'string',series:'string','prev-episode':'string',keyframes:'string',out:'string',report:'string',...guardOptions});
+      const input={episodePath:abs(req(o,'episode')),seriesPath:abs(req(o,'series')),prevPath:optStr(o,'prev-episode')?abs(req(o,'prev-episode')):undefined,manifestPath:abs(req(o,'keyframes')),guard:guardOf(o)};
+      out(cmd==='episode-keyframes-build'?buildEpisodeKeyframes(input,abs(req(o,'out'))):checkEpisodeKeyframes(input,abs(req(o,'report'))));return 0;
+    }
+
     case 'keyframe-build': {
       const o=opts(rest,{series:'string',episode:'string','prev-episode':'string',cut:'string',aspect:'string',out:'string'});
       const request=writeKeyframeRequest(loadCtx(o,readStrictJson),req(o,'cut'),optStr(o,'aspect')??'16:9',abs(req(o,'out')));
@@ -235,9 +281,24 @@ function main(argv: string[]): number {
     }
 
     case 'judge-apply': {
-      const o = opts(rest, { kind: 'string', series: 'string', episode: 'string', 'prev-episode': 'string', request: 'string', response: 'string', gates: 'string', 'episode-out': 'string' });
+      const o = opts(rest, { kind: 'string', series: 'string', episode: 'string', 'prev-episode': 'string', request: 'string', response: 'string', gates: 'string', 'episode-out': 'string', ...guardOptions });
       const kind = kindOf(req(o, 'kind'));
       const gates = req(o, 'gates');
+      if(needsEpisodeLock(req(o,'episode'))) {
+        if(optStr(o,'episode-out') && abs(req(o,'episode-out'))!==abs(req(o,'episode')))throw new UsageError('잠긴 회차의 episode-out은 원본 경로만 허용');
+        const result=withEpisodeOwner(abs(req(o,'episode')),guardOf(o),tx=>{
+          const ctx=lockedCtx(o,tx.episode),meta=readMeta(req(o,'request'),kind),binding=contextBinding(ctx);
+          if(meta.fingerprint!==fingerprintOf(ctx.series,ctx.episode) || (binding.reviewContextDigest && meta.reviewContextDigest!==binding.reviewContextDigest))throw new Error('판정 요청 이후 대본/문맥 변경');
+          const verdicts=parseJevResponse(readStrictJson(req(o,'response')),meta.questions);
+          const result=applyVerdicts(kind,ctx,meta.questions,verdicts,basename(req(o,'response')),new Date().toISOString(),meta);
+          assertUnprotectedOutput(abs(join(gates,`${result.report.gate}.json`)));
+          if(kind==='dialogue')tx.write(result.episode);
+          return result;
+        });
+        saveReport(gates,result.report);
+        out({ok:result.report.ok,report:result.report,...(kind==='dialogue'?{verifiedLines:result.episode.cuts.flatMap(c=>c.lines).filter(l=>l.verification.status==='verified').length}:{})});
+        return result.report.ok?0:1;
+      }
       const ctx = loadCtx(o);
       const meta = readMeta(req(o, 'request'), kind);
       const binding = contextBinding(ctx);
@@ -255,8 +316,19 @@ function main(argv: string[]): number {
     }
 
     case 'approve-line': {
-      const o = opts(rest, { episode: 'string', series: 'string', 'prev-episode': 'string', cut: 'string', line: 'string', by: 'string', note: 'string' });
+      const o = opts(rest, { episode: 'string', series: 'string', 'prev-episode': 'string', cut: 'string', line: 'string', by: 'string', note: 'string', ...guardOptions });
       const path = req(o, 'episode');
+      if(needsEpisodeLock(path)) {
+        const result=withEpisodeOwner(abs(path),guardOf(o),tx=>{
+          const episode=tx.episode,linked=episode.continuesFromEpisode || episode.startsFresh || optStr(o,'prev-episode');
+          const ctx=linked?lockedCtx(o,episode):undefined,i=Number(req(o,'line'));
+          const cut=episode.cuts.find(c=>c.id===req(o,'cut')),line=Number.isInteger(i)?cut?.lines[i]:undefined;
+          if(!cut || !line)throw new UsageError('해당 컷·대사 없음');
+          if(ctx?isContextLineCleared(ctx,cut,line):isLineCleared(cut,line))throw new Error('이미 검증/승인된 대사');
+          line.verification={status:'human-approved',approvedBy:req(o,'by'),at:new Date().toISOString(),note:req(o,'note'),lineHash:lineHash(cut,line),...(ctx?contextBinding(ctx):{})};
+          tx.write(episode);return {ok:true,cut:cut.id,line:i,text:line.text};
+        });out(result);return 0;
+      }
       const episode = parseEpisode(readJson(path));
       const linked = episode.continuesFromEpisode || episode.startsFresh || optStr(o, 'prev-episode');
       const ctx = linked ? loadCtx(o) : undefined;
