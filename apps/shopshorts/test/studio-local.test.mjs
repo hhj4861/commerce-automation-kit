@@ -10,7 +10,7 @@ import { normalizeEdit } from '../public/editor-model.js';
 
 test('local persistence supports CAS, partial media and byte-range streaming',async()=>{
  const dir=await mkdtemp(join(tmpdir(),'studio-store-'));
- try{const store=localStudioStore(dir,{}),p=createProject({category:'건축학',topic:'작은 집',format:'long',duration:120});await store.create(p);assert.equal(await store.cas({...p,revision:1},0),true);assert.equal(await store.cas({...p,revision:2},0),false);await store.writeAsset(`studio/${p.id}/test.mp4`,Buffer.from('0123456789'),'video/mp4');const response=await store.readAsset(`studio/${p.id}/test.mp4`,new Request('http://local',{headers:{range:'bytes=2-5'}}));assert.equal(response.status,206);assert.equal(response.headers.get('content-range'),'bytes 2-5/10');assert.equal(await response.text(),'2345');assert.equal((await store.readAsset(`studio/${p.id}/test.mp4`,new Request('http://local',{headers:{range:'bytes=-3'}}))).status,206);await assert.rejects(store.readAsset('../secret'));}finally{await rm(dir,{recursive:true,force:true});}
+ try{const store=localStudioStore(dir,{}),p=createProject({category:'건축학',productionStyle:'cinematic',topic:'작은 집',format:'long',duration:120});await store.create(p);assert.equal(await store.cas({...p,revision:1},0),true);assert.equal(await store.cas({...p,revision:2},0),false);await store.writeAsset(`studio/${p.id}/test.mp4`,Buffer.from('0123456789'),'video/mp4');const response=await store.readAsset(`studio/${p.id}/test.mp4`,new Request('http://local',{headers:{range:'bytes=2-5'}}));assert.equal(response.status,206);assert.equal(response.headers.get('content-range'),'bytes 2-5/10');assert.equal(await response.text(),'2345');assert.equal((await store.readAsset(`studio/${p.id}/test.mp4`,new Request('http://local',{headers:{range:'bytes=-3'}}))).status,206);await assert.rejects(store.readAsset('../secret'));}finally{await rm(dir,{recursive:true,force:true});}
 });
 test('local runner claims once, persists checkpoints and restart makes interrupted work explicit',async()=>{
  const dir=await mkdtemp(join(tmpdir(),'studio-queue-'));const store=localStudioStore(dir,{});let calls=0;
@@ -24,7 +24,7 @@ test('real ffmpeg assembles ordered mixed image/video plus BGM into landscape fi
   await command('ffmpeg',['-y','-loglevel','error','-f','lavfi','-i','color=c=blue:s=160x90','-frames:v','1',image],{});
   await command('ffmpeg',['-y','-loglevel','error','-f','lavfi','-i','color=c=red:s=160x90:r=30','-t','1','-c:v','libx264',video],{});
   await command('ffmpeg',['-y','-loglevel','error','-f','lavfi','-i','sine=frequency=440:duration=1',music],{});
-  let p=createProject({category:'건축학',topic:'작은 집',format:'long',duration:16});
+  let p=createProject({category:'건축학',productionStyle:'cinematic',topic:'작은 집',format:'long',duration:16});delete p.pipelineVersion; // Explicit legacy runner fixture.
   p=changeProject(p,'scenes',{scenes:[{id:'scene-1',narration:'집을 살펴봐요.',prompt:'An original blue house.',duration:1,kind:'image'},{id:'scene-2',narration:'공간을 나눠요.',prompt:'An original red room.',duration:1,kind:'video'}]});p.approved=true;
   for(const [id,file,kind,type] of [['scene-1',image,'image','image/png'],['scene-2',video,'video','video/mp4'],['music',music,'audio','audio/wav']]){const key=`studio/${p.id}/${id}`;await store.writeAsset(key,await readFile(file),type);p.assets[id]={key,kind,type};}
   p=changeProject(p,'edit',{order:['scene-2','scene-1'],durations:{'scene-1':1,'scene-2':1},voice:'none',music:'music',musicVolume:.1});p=changeProject(p,'render',{});p.task.state='running';
@@ -40,7 +40,7 @@ test('real ffmpeg assembles ordered mixed image/video plus BGM into landscape fi
 test('image generation checkpoints assets and publish records intent before mocked upload',async()=>{
  const dir=await mkdtemp(join(tmpdir(),'studio-provider-')), store=localStudioStore(dir,{});
  try{
-  let p=createProject({category:'건축학',topic:'작은 집',format:'long',duration:16});
+  let p=createProject({category:'건축학',productionStyle:'cinematic',topic:'작은 집',format:'long',duration:16});delete p.pipelineVersion; // Explicit legacy runner fixture.
   p=changeProject(p,'scenes',{scenes:[{id:'scene-1',narration:'공간을 나눠 보세요.',prompt:'An original small blue house.',duration:8,kind:'image'}]});
   p=changeProject(p,'media',{approved:true});p.task.state='running';
   let checkpoints=[];
@@ -61,7 +61,7 @@ test('frame timeline renders reordered source ranges and captions on exact frame
   const source=join(dir,'colors.mp4'),music=join(dir,'tone.wav');
   await command('ffmpeg',['-y','-loglevel','error','-f','lavfi','-i','color=red:s=160x90:r=30:d=1','-f','lavfi','-i','color=blue:s=160x90:r=30:d=1','-filter_complex','[0:v][1:v]concat=n=2:v=1:a=0[v]','-map','[v]','-c:v','libx264',source],{});
   await command('ffmpeg',['-y','-loglevel','error','-f','lavfi','-i','sine=frequency=440:duration=1',music],{});
-  let p=createProject({category:'건축학',topic:'공간의 색',format:'long',duration:16});
+  let p=createProject({category:'건축학',productionStyle:'cinematic',topic:'공간의 색',format:'long',duration:16});
   p=changeProject(p,'scenes',{scenes:[{id:'scene-1',narration:'공간의 색을 살펴봐요.',prompt:'An original room.',duration:2,kind:'video'}]});p.approved=true;
   for(const [id,file,kind,type] of [['scene-1',source,'video','video/mp4'],['music',music,'audio','audio/wav']]){const key=`studio/${p.id}/${id}`;await store.writeAsset(key,await readFile(file),type);p.assets[id]={key,kind,type};}
   const e=normalizeEdit(p);e.voice='none';e.clips=[{id:'blue',sceneId:'scene-1',inFrame:30,outFrame:45},{id:'red',sceneId:'scene-1',inFrame:0,outFrame:15},{id:'one-frame',sceneId:'scene-1',inFrame:45,outFrame:46}];e.music='music';e.musicVolume=.2;

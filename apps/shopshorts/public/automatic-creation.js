@@ -22,7 +22,7 @@ const busy=project=>['queued','running'].includes(project.task?.state);
 export function automaticStatus(project) {
   if(project.upload?.state==='done')return '발행 완료';
   if(project.task?.state==='failed'||project.upload?.state==='failed')return '확인 필요';
-  if(busy(project)&&project.task.action==='scenario'&&project.brief.workflow==='explainer-v1')return project.task.state==='queued'?'자료 검색 요청 대기 중':project.task.phase==='scenario'?'확인한 자료로 대본 작성 중':'선택한 주제의 자료 확인 중';
+  if(busy(project)&&project.task.action==='scenario'&&project.brief.workflow==='explainer-v1')return project.task.state==='queued'?'자료 검색 요청 대기 중':({scenario:'확인한 자료로 대본 작성 중',review:'대본의 설명과 결말 검토 중',revision:'검토 내용을 반영해 대본 보완 중'}[project.task.phase]||'선택한 주제의 자료 확인 중');
   if(busy(project)&&project.task.action==='media'&&project.brief.workflow==='explainer-v1'){const n=project.scenes.length,a=Object.values(project.assets||{}).filter(a=>a.purpose==='narration').length,m=project.scenes.filter(s=>project.assets[s.id]).length;return a<n?`음성 생성 ${a} / ${n}`:`장면 생성 ${m} / ${n}`;}
   if(busy(project))return ({scenario:'대본 생성',media:'장면 생성',render:'음성·자막·영상 조립',publish:'업로드',narration:'음성 생성'}[project.task.action]||'제작')+(project.task.state==='queued'?' 대기 중':' 중');
   if(project.render)return '발행 검수';

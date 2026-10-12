@@ -62,7 +62,7 @@ test('worker completes media and queues render atomically; browser cannot comple
  assert.equal(p.task.action,'render');assert.equal(p.task.state,'queued');assert.equal(p.edit.clips.length,2);assert.ok(p.edit.captions.filter(c=>c.source==='script').length>=2);for(const clip of p.edit.clips)assert.equal(p.edit.captions.filter(c=>c.clipId===clip.id&&c.source==='script').map(c=>c.text).join('').replace(/\s/gu,''),p.scenes.find(s=>s.id===clip.sceneId).narration.replace(/\s/gu,''));assert.equal(p.edit.captions[0].presentation,'modern-header-v1');assert.notEqual(p.edit.voice,'none');assert.equal(p.upload,null);
  assert.equal((await f.request(`/${p.id}/complete`,body,{localWorker:true})).status,409);
  p=(await f.request(`/${p.id}/claim`,{revision:p.revision},{localWorker:true})).project;
- p=(await f.request(`/${p.id}/complete`,{revision:p.revision,taskId:p.task.id,result:{render:{key:`studio/${p.id}/final.mp4`}}},{localWorker:true})).project;
+ p=(await f.request(`/${p.id}/complete`,{revision:p.revision,taskId:p.task.id,result:{render:{key:`studio/${p.id}/final.mp4`,sha256:'fixture',verification:{passed:true,version:'studio-production-v1',sha256:'fixture'}}}},{localWorker:true})).project;
  assert.equal(p.task.state,'done');assert.equal(automaticStatus(p),'발행 검수');assert.equal(p.upload,null);
  assert.equal((await f.request(`/${p.id}/publish`,{revision:p.revision,platforms:['youtube'],privacy:'private',title:p.title})).status,400);
  const publication=await f.request(`/${p.id}/publish`,{revision:p.revision,reviewed:true,platforms:['youtube'],privacy:'private',title:p.title});assert.equal(publication.project.task.action,'publish');
@@ -98,7 +98,7 @@ test('local worker matches cloud continuation and local storage rejects duplicat
  const {startLocalStudio,localStudioStore}=await import('../studio-local.mjs');const {mkdtemp,rm}=await import('node:fs/promises');const {tmpdir}=await import('node:os');const {join}=await import('node:path');
  const dir=await mkdtemp(join(tmpdir(),'cak-auto-local-'));t.after(()=>rm(dir,{recursive:true,force:true}));
  const store=localStudioStore(dir,{});let p={...createProject({...input,topic:'감정'}),scenes,automation:{version:1}};p=changeProject(p,'media',{approved:true});await store.create(p);await assert.rejects(store.create(p),/이미 생성/);
- const worker=startLocalStudio(store,{},async job=>job.task.action==='media'?{assets:Object.fromEntries(scenes.map(s=>[s.id,{key:`studio/${p.id}/${s.id}.png`,kind:'image'}]))}:{render:{key:`studio/${p.id}/final.mp4`}});t.after(()=>worker.stop());
+ const worker=startLocalStudio(store,{},async job=>job.task.action==='media'?{assets:Object.fromEntries(scenes.map(s=>[s.id,{key:`studio/${p.id}/${s.id}.png`,kind:'image'}]))}:{render:{key:`studio/${p.id}/final.mp4`,sha256:'fixture',verification:{passed:true,version:'studio-production-v1',sha256:'fixture'}}});t.after(()=>worker.stop());
  await worker.tick();p=await store.get(p.id);assert.equal(p.task.action,'render');assert.equal(p.task.state,'queued');
  await worker.tick();p=await store.get(p.id);assert.equal(p.task.state,'done');assert.equal(p.upload,null);assert.equal(automaticStatus(p),'발행 검수');
 });

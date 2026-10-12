@@ -71,10 +71,12 @@ export async function syncScenario(store, project, call, now = Date.now()) {
       }
     } else if (job.state === 'failed') {
       next.task.state = 'failed'; next.task.error = job.error || '시나리오 생성에 실패했습니다. 다시 시도하세요.';
-    } else if (job.state === 'running') {next.task.state = 'running';if(['research','scenario'].includes(job.phase))next.task.phase=job.phase;}
+    } else if (job.state === 'running') {next.task.state = 'running';if(['research','scenario','review','revision'].includes(job.phase))next.task.phase=job.phase;}
   }
   if (busy(next) && now >= task.deadline) {
-    next.task.state = 'failed'; next.task.error = '시나리오 생성 시간이 초과됐습니다. 계정 실행기 상태를 확인하고 다시 시도하세요.';
+    next.task.state = 'failed';
+    const phase={research:'자료 검색',scenario:'대본 작성',review:'대본 검토',revision:'대본 보완'}[next.task.phase]||'계정 실행기 응답 대기';
+    next.task.error = `${phase} 단계에서 제한 시간을 초과했습니다. 요청 ${task.id}의 실행기 상태를 확인한 뒤 다시 시도하세요.`;
   }
   if (JSON.stringify(next.task) === JSON.stringify(task)) return project;
   next = changed(next);

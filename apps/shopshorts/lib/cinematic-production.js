@@ -1,3 +1,4 @@
+import {sharedPipeline,validCaptionAlignment} from './production-pipeline.js';
 import {RECIPE_ID,authoredCaptionPhrases,authoredCaptionLayout} from '../public/authored-recipes.js';
 import {modernProject,defaultCaption,captionPhrases} from '../public/video-typography.js';
 import {explainer} from './explainer-production.js';
@@ -29,12 +30,14 @@ export function cinematicEdit(project) {
     if(clip.outFrame>900)throw Error(`장면 ${scene.id}의 음성이 너무 길어요. 대본을 나누거나 줄여 주세요.`);
     edit.captions=edit.captions.flatMap(c=>c.clipId!==clip.id?[c]:c.startFrame<clip.outFrame-clip.inFrame?[{...c,endFrame:Math.min(c.endFrame,clip.outFrame-clip.inFrame)}]:[]);
     const phrases=project.authoredRecipe===RECIPE_ID?authoredCaptionPhrases(scene):captionPhrases(scene.narration,project.brief.aspect==='9:16'?(modernProject(project)?14:18):(modernProject(project)?28:32));
+    const aligned=sharedPipeline(project)?audio?.alignment:null;
+    if(sharedPipeline(project)&&edit.voice!=='none'&&(!validCaptionAlignment(aligned,scene.narration,audio.duration)||aligned.phrases.length!==phrases.length||aligned.phrases.some((p,i)=>p.text!==phrases[i])))throw Error('실제 음성의 자막 정렬이 아직 완료되지 않았습니다. 음성 생성을 이어가 주세요.');
     const weights=phrases.map(t=>Array.from(t.replace(/\s/gu,'')).length);
     const sum=weights.reduce((a,b)=>a+b,0), frames=Math.min(clip.outFrame,Math.ceil((audio?.duration||scene.duration)*FPS));
     let used=0;
     phrases.forEach((text,i)=>{
-      const startFrame=Math.round(used/sum*frames);used+=weights[i];
-      let endFrame=Math.round(used/sum*frames);
+      const startFrame=aligned?Math.max(0,Math.floor(aligned.phrases[i].start*FPS)):Math.round(used/sum*frames);used+=weights[i];
+      let endFrame=aligned?Math.min(clip.outFrame,Math.ceil(aligned.phrases[i].end*FPS)):Math.round(used/sum*frames);
       if(project.authoredRecipe===RECIPE_ID&&scene.id==='ending'&&i===phrases.length-1)endFrame=Math.max(endFrame,clip.outFrame-10);
       if(endFrame-startFrame<12)throw Error(`장면 ${scene.id}의 자막이 너무 빨라요. 대본을 줄이거나 장면을 나누어 주세요.`);
       edit.captions.push({id:`${clip.id}-caption-${i}`,clipId:clip.id,source:'script',text,startFrame,endFrame,font:'gothic',size:project.brief.aspect==='9:16'?52:44,color:'#ffffff',position:'bottom',background:false,outlineWidth:2,outlineColor:'#000000',...(explainer(project.brief)?{x:50,y:project.brief.captionPosition==='middle'?50:['webtoon','hybrid'].includes(project.brief.productionStyle)?82:88,position:project.brief.captionPosition,font:'gothic',size:project.brief.aspect==='9:16'?48:44,background:!['webtoon','hybrid'].includes(project.brief.productionStyle),backgroundColor:project.brief.productionStyle==='animation'?'#fcf8e9':'#161616',backgroundOpacity:.96,color:project.brief.productionStyle==='animation'?'#34372f':'#ffffff',outlineWidth:['webtoon','hybrid'].includes(project.brief.productionStyle)?3:0}:{}),...(modernProject(project)?{...defaultCaption(project.brief.aspect),...(project.brief.captionPosition==='middle'?{y:50,position:'middle'}:{})}:{})});

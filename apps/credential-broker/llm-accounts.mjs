@@ -27,7 +27,7 @@ export function publicAccount(value = {}, now = Date.now()) {
     connected: !!value.credential, provider: value.credential ? value.provider || 'codex' : null,
     account: value.credential ? String(value.account || (value.provider === 'claude' ? 'Claude' : 'ChatGPT')).slice(0, 200) : null,
     job: job ? { id: job.id, kind: job.kind, provider: job.provider || value.provider || 'codex', state, deadline: job.deadline,
-      ...(['research','scenario'].includes(job.phase)?{phase:job.phase}:{}),
+      ...(['research','scenario','review','revision'].includes(job.phase)?{phase:job.phase}:{}),
       error: expired ? '연결 시간이 지났거나 실행기가 중단됐습니다. 다시 시도하세요.' : job.error || null,
       ...(device ? { device: { url: device.url, code: device.code } } : {}),
       ...(manual ? { manual: { url: manual.url }, codeSubmitted: job.codeSubmitted === true } : {}),

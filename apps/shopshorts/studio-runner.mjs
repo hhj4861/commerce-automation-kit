@@ -1,3 +1,7 @@
+import {sharedPipeline,requireFinalReview,PIPELINE_VERSION} from './lib/production-pipeline.js';
+import {productionPreflight} from './studio-preflight.mjs';
+import {verifyFinalVideo} from './studio-final-qa.mjs';
+import {createHash} from 'node:crypto';
 import {openingCarry} from './studio-authored-timeline.mjs';
 import {renderCaptionArtwork,artworkFilter} from './studio-typography.mjs';
 import {generateVideoMetadata} from './studio-metadata.mjs';
@@ -152,25 +156,31 @@ async function renderProject(job, work, env, io) {
     await command('ffmpeg',['-y','-hide_banner','-loglevel','error','-i',joined,...inputs,'-filter_complex',musicFilter(music),'-map','0:v','-map','[a]','-c:v','copy','-c:a','aac','-t',String(frameCount(timeline)/FPS),'-movflags','+faststart',final],env);
   } else if(job.edit.version===2) await command('ffmpeg', ['-y','-hide_banner','-loglevel','error','-i',joined,'-c:v','copy','-c:a','aac','-movflags','+faststart',final],env);
   else await writeFile(final, await readFile(joined));
+  const verification=sharedPipeline(job)?await verifyFinalVideo(final,job,work):null;
+  if(verification)verification.production={engine:PIPELINE_VERSION,recipe:job.authoredRecipe||null,typography:job.brief.typography||null,reviewDigest:job.depthReview?.digest||null,voice:timeline.voice,speed:job.brief.narrationSpeed||1,scenes:job.scenes.map(s=>({id:s.id,provider:job.assets[s.id]?.provider||job.assets[s.id]?.source,sourceHash:job.assets[s.id]?.renderReport?.sourceHash||null,alignment:job.assets['narration-'+s.id]?.alignment?.version||null}))};
+  const sha256=createHash('sha256').update(await readFile(final)).digest('hex');
   const key = `studio/${job.id}/${job.task.id}-final.mp4`;
+  if(verification)await io.writeAsset(`studio/${job.id}/${job.task.id}-verification.json`,Buffer.from(JSON.stringify(verification,null,2)),'application/json');
   await io.writeAsset(key, await readFile(final), 'video/mp4');
-  return { render: { key, type: 'video/mp4', createdAt: new Date().toISOString(), duration: frameCount(timeline)/FPS } };
+  return { render: { key, ...(verification?{verification,sha256,pipelineVersion:PIPELINE_VERSION}:{}), type: 'video/mp4', createdAt: new Date().toISOString(), duration: frameCount(timeline)/FPS } };
 }
-export async function executeStudioTask(job, env, io, checkpoint, { fetcher = fetch, runCli = cli, runHiggsfield } = {}) {
+export async function executeStudioTask(job, env, io, checkpoint, { fetcher = fetch, runCli = cli, runHiggsfield, preflight=productionPreflight } = {}) {
   const action = job.task.action;
+  if(sharedPipeline(job))env={...env,SHOPSHORTS_WHISPER_CACHE:env.SHOPSHORTS_WHISPER_CACHE||join(io.workDir,'whisper-models')};
   if (action === 'scenario') throw new Error('시나리오는 연결한 Codex·Claude 계정으로 다시 요청하세요.');
   if (action === 'metadata') return generateVideoMetadata(job, env, io, checkpoint, {fetcher});
   const work = join(io.workDir, job.id);
   await mkdir(work, { recursive: true });
+  if(sharedPipeline(job)&&['media','narration','render'].includes(action))await preflight(job,env,{command,fetcher});
   await lintProject(job, work, env, action === 'publish');
   if(webtoon(job.brief)&&['media','narration','render'].includes(action))await checkWebtoonReview(job);
   if (action === 'narration') return generateNarration(job, work, env, io, checkpoint, { runCli, command });
   if (action === 'media') {
     let assets = { ...job.assets };
     const hybrid=webtoon(job.brief)?await prepareWebtoon(job,env,work,io,checkpoint,{...(runHiggsfield?{run:runHiggsfield}:{}),fetcher}):null;
-    if(explainer(job.brief)&&(job.automation||hybrid)&&!job.edit){
+    if(explainer(job.brief)&&(job.automation||hybrid||sharedPipeline(job))&&!job.edit){
       const prepared={...job,assets,edit:normalizeEdit(job)};
-      assets=(await generateNarration(prepared,work,env,io,checkpoint,{runCli,command})).assets;
+      if(prepared.edit.voice!=='none')assets=(await generateNarration(prepared,work,env,io,checkpoint,{runCli,command})).assets;
     }
     for (const scene of job.scenes) {
       if (assets[scene.id] || (job.task.sceneIds && !job.task.sceneIds.includes(scene.id))) continue;
@@ -221,7 +231,7 @@ export async function executeStudioTask(job, env, io, checkpoint, { fetcher = fe
     }
     // Measure/cache speech before the automatic timeline is built. Resume uses
     // persisted voice+text assets and never pays for already-completed speech.
-    if((job.automation||hybrid) && (cinematic(job.brief)||animated(job.brief)||hybrid) && !job.edit) {
+    if((job.automation||hybrid||sharedPipeline(job)) && (cinematic(job.brief)||animated(job.brief)||hybrid) && !job.edit) {
       const prepared={...job,assets,edit:normalizeEdit(job)};
       const result=prepared.edit.voice!=='none'?await generateNarration(prepared,work,env,io,checkpoint,{runCli,command}):{assets};
       // Fail in the executing worker, where the exact corrective message is
@@ -234,8 +244,11 @@ export async function executeStudioTask(job, env, io, checkpoint, { fetcher = fe
   }
   if (action === 'render') return renderProject(job, work, env, io);
   if (action === 'publish') {
+    requireFinalReview(job);
     const video = join(work, 'publish.mp4');
-    await writeFile(video, await io.readAsset(job.render.key));
+    const data=await io.readAsset(job.render.key);
+    if(sharedPipeline(job)&&createHash('sha256').update(data).digest('hex')!==job.render.sha256)throw Error('검수한 영상과 업로드 파일이 다릅니다. 다시 렌더해 주세요.');
+    await writeFile(video,data);
     const p = job.publication, description = `${job.brief.category === '상품광고' ? '(광고)\n' : ''}${p.description}\nAI 생성 콘텐츠`;
     if (job.brief.format === 'long') {
       if (!env.YOUTUBE_CLIENT_SECRET) throw new Error('YouTube 업로드 계정을 먼저 연결하세요.');
