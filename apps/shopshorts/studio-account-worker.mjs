@@ -1,4 +1,6 @@
 import { randomUUID } from 'node:crypto';
+import { isDeepStrictEqual } from 'node:util';
+import { setTimeout as delay } from 'node:timers/promises';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { runnerRequest } from '../credential-broker/runner-client.mjs';
@@ -22,13 +24,36 @@ export function accountBroker(env = process.env) {
   return (path, body) => runnerRequest(base, key, path, body);
 }
 
-export function startAccountWorker({ env = process.env, call = accountBroker(env), execute = executeProviderJob, intervalMs = 5000, log = console.error, keepAlive = false } = {}) {
+// A dropped broker response is not proof that its CAS write failed. Reconcile
+// before retrying; never replay against a new revision or restore a cancelled job.
+const transient = error => error?.name === 'TimeoutError' ||
+  (error instanceof TypeError && error.message === 'fetch failed') ||
+  [429, 502, 503, 504].includes(error?.status);
+const withoutHistory = ({ recommendations, ...value }) => value;
+const LEASE_MS = 120000; // Covers a bounded read/write retry; job deadline still wins.
+
+export function startAccountWorker({ env = process.env, call = accountBroker(env), execute = executeProviderJob, intervalMs = 5000, log = console.error, keepAlive = false, retryDelayMs = 250 } = {}) {
   const ownerId = randomUUID(), tasks = new Map(); let cursor = null, polling = false, stopped = false;
-  const accountCall = body => call('/runner/accounts', body);
+  const accountCall = async body => {
+    for (let attempt = 0; ; attempt++) {
+      try { return await call('/runner/accounts', body); }
+      catch (error) {
+        if (!transient(error) && !(body.operation === 'write' && error.status === 409)) throw error;
+        if (body.operation === 'write') {
+          try {
+            const {record} = await call('/runner/accounts', {operation:'read', owner:body.owner});
+            if (record?.revision > body.revision && isDeepStrictEqual(withoutHistory(record.value), withoutHistory(body.value))) return {revision:record.revision};
+          } catch (readError) { if (!transient(readError)) throw readError; }
+        }
+        if (!transient(error) || attempt >= 1 || stopped) throw error;
+        await delay(retryDelayMs);
+      }
+    }
+  };
   async function launch(record) {
     const { owner } = record;
     const controller = new AbortController();
-    const initial = { ...record.value, job: { ...record.value.job, state: 'running', runner: ownerId, leaseUntil: Date.now() + 60000 } };
+    const initial = { ...record.value, job: { ...record.value.job, state: 'running', runner: ownerId, leaseUntil: Math.min(record.value.job.deadline, Date.now() + LEASE_MS) } };
     try { await accountCall({ operation: 'write', owner, revision: record.revision, value: initial }); }
     catch { return; } // Another runner or cancellation won the claim.
     if (stopped) return;
@@ -44,7 +69,7 @@ export function startAccountWorker({ env = process.env, call = accountBroker(env
       const next = serial.then(async () => {
         for (let attempt = 0; attempt < 3; attempt++) {
           const fresh = await read();
-          const value = { ...fresh.value, ...patch, job: { ...fresh.value.job, ...patch.job, leaseUntil: Date.now() + 60000 } };
+          const value = { ...fresh.value, ...patch, job: { ...fresh.value.job, ...patch.job, leaseUntil: Math.min(initial.job.deadline, Date.now() + LEASE_MS) } };
           try { await accountCall({ operation: 'write', owner, revision: fresh.revision, value }); return; }
           catch (e) { if (e.status !== 409 || attempt === 2) throw e; }
         }
