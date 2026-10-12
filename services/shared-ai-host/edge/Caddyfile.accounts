@@ -1,0 +1,113 @@
+{
+    admin off
+    auto_https off
+}
+# App trial edge: LiteLLM and discovery allowlists, each with an internal upstream.
+# API-key accounts v2 only. The VM v1 and production edge remain unchanged.
+# TODO(D1): for an https upstream Caddy sends Host as <service>.run.app:443; the 7-5 smoke
+# (models 200) confirms Cloud Run accepts it, else the Host value changes to the bare host.
+:{$PORT:8080} {
+    @llm path /llm/v1/models /llm/v1/chat/completions /llm/v1/responses /llm/v1/embeddings /llm/v1/audio/speech /llm/v1/audio/transcriptions
+    handle @llm {
+        uri strip_prefix /llm
+        reverse_proxy {$LLM_UPSTREAM} {
+            header_up Host {upstream_hostport}
+            flush_interval -1
+        }
+    }
+    @hanmadiVideo {
+        method POST
+        path /llm/v1beta/models/hanmadi-chat:generateContent
+    }
+    handle @hanmadiVideo {
+        uri strip_prefix /llm
+        reverse_proxy {$LLM_UPSTREAM} {
+            header_up Host {upstream_hostport}
+        }
+    }
+    @jev {
+        method POST
+        path /llm/typesafe/v1/systemone
+    }
+    handle @jev {
+        uri strip_prefix /llm
+        reverse_proxy {$LLM_UPSTREAM} {
+            header_up Host {upstream_hostport}
+        }
+    }
+    # Staging only: this edge is IAM-private (operator ID token, no public invoker), so the PoC
+    # reaches the LiteLLM admin API here. The production edge never routes these paths.
+    @admin path /llm/key/generate /llm/key/info /llm/key/delete /llm/health/liveliness
+    handle @admin {
+        uri strip_prefix /llm
+        reverse_proxy {$LLM_UPSTREAM} {
+            header_up Host {upstream_hostport}
+        }
+    }
+    @discoveryStart {
+        method POST
+        path /discovery/v1/discover
+    }
+    @discoveryRead {
+        method GET
+        path_regexp discoveryRead ^/discovery/v1/discover/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$
+    }
+    @discoveryWrite {
+        method POST
+        path_regexp discoveryWrite ^/discovery/v1/discover/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}/(claim|complete)$
+    }
+    handle @discoveryStart {
+        uri strip_prefix /discovery
+        reverse_proxy {$DISCOVERY_UPSTREAM} {
+            header_up Host {upstream_hostport}
+        }
+    }
+    handle @discoveryRead {
+        uri strip_prefix /discovery
+        reverse_proxy {$DISCOVERY_UPSTREAM} {
+            header_up Host {upstream_hostport}
+        }
+    }
+    handle @discoveryWrite {
+        uri strip_prefix /discovery
+        reverse_proxy {$DISCOVERY_UPSTREAM} {
+            header_up Host {upstream_hostport}
+        }
+    }
+    @accountsList {
+        method GET POST
+        path /accounts/connections
+    }
+    @accountsDelete {
+        method DELETE
+        path_regexp accountsDelete ^/accounts/connections/[a-f0-9]{32}$
+    }
+    @accountsChat {
+        method POST
+        path /accounts/v1/chat/completions
+    }
+    handle @accountsList {
+        uri strip_prefix /accounts
+        reverse_proxy {$ACCOUNTS_UPSTREAM} {
+            header_up Host {upstream_hostport}
+        }
+    }
+    handle @accountsDelete {
+        uri strip_prefix /accounts
+        reverse_proxy {$ACCOUNTS_UPSTREAM} {
+            header_up Host {upstream_hostport}
+        }
+    }
+    handle @accountsChat {
+        uri strip_prefix /accounts
+        reverse_proxy {$ACCOUNTS_UPSTREAM} {
+            header_up Host {upstream_hostport}
+        }
+    }
+    handle /health {
+        respond "edge alive" 200
+    }
+    handle {
+        respond "Not found" 404
+    }
+}

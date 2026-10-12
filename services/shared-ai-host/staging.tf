@@ -242,6 +242,13 @@ resource "google_cloud_run_v2_service" "edge_stg" {
         value = google_cloud_run_v2_service.litellm_stg.uri
       }
       dynamic "env" {
+        for_each = try(var.accounts_staging.serve, false) ? [1] : []
+        content {
+          name  = "ACCOUNTS_UPSTREAM"
+          value = google_cloud_run_v2_service.accounts_stg[0].uri
+        }
+      }
+      dynamic "env" {
         for_each = try(var.platform_staging.serve, false) ? [1] : []
         content {
           name  = "DISCOVERY_UPSTREAM"
