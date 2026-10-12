@@ -28,7 +28,7 @@ commerce의 일반 `npm ci`는 종전과 같이 실행한다. SDK는 `runtime/`�
 
 `.github/workflows/drama.yml`은 드라마 두 패키지·contracts·루트 package/lock·워크플로 변경이 있는 PR 및 `feat/drama-regression-pilot`, `main` push에서 실행한다. 두 job은 Node **22.23.3**을 사용한다(drama-series의 `>=20`도 충족). commerce 설치는 같은 루트 lockfile에 `--workspace`를 지정하여 관련 패키지로 한정하고 모두 `--ignore-scripts`를 적용한다.
 
-- `drama-series`: macOS 15에서 FFmpeg/ffprobe가 없으면 Homebrew로 설치하고 AppleSDGothicNeo 존재를 확인한 뒤 시험·타입체크한다. 기존 실제 미디어 조립 시험의 macOS 글꼴 의존성 때문에 이 runner를 사용한다.
+- `drama-series`: macOS 15에서 FFmpeg/ffprobe 및 `drawtext` 필터를 확인한다. 없으면 Homebrew `ffmpeg-full`을 설치하고 해당 bin을 PATH에 우선 등록한다. AppleSDGothicNeo 존재도 확인한 뒤 시험·타입체크한다. 기존 실제 미디어 조립 시험의 macOS 글꼴 의존성 때문에 이 runner를 사용한다. 기본 runner의 축소된 FFmpeg에 `drawtext`가 없으면 실제 조립 시험이 실패하므로 바이너리 존재만으로 준비 완료로 판단하지 않는다.
 - `drama-runner`: `$GITHUB_WORKSPACE/commerce-automation-kit-worktrees/drama-ci`와 `$GITHUB_WORKSPACE/atomworks-worktrees/drama-consumer-pin`에 각각 checkout한다. 기존 `file:../../../../../atomworks-worktrees/drama-consumer-pin/...`과 preflight 경로를 수정하지 않는다. 위 README의 commit·lock SHA와 실제 checkout을 먼저 대조하고 SDK 3개 빌드 → commerce/runtime 설치 → preflight → 시험·타입체크 순서로 실행한다.
 - runner의 `DRAMA_TEST_ARTIFACTS`는 `$HOME/Library/Mobile Documents/drama-ci`로 설정한다. 호스티드 runner의 일반 로컬 폴더이며, 동기화 위치 거부 시험을 재현하는 이름이다. 실제 SQLite 시험은 별도의 `$RUNNER_TEMP/drama-state`를 쓴다. 실제 iCloud 연결·운영 DB 접근은 없다.
 

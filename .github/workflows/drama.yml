@@ -46,11 +46,17 @@ jobs:
           export TMPDIR="$RUNNER_TEMP/drama-series"
           mkdir -p "$TMPDIR"
           echo "TMPDIR=$TMPDIR" >> "$GITHUB_ENV"
-          if ! command -v ffmpeg >/dev/null || ! command -v ffprobe >/dev/null; then
-            brew install ffmpeg
+          # runner의 기본 ffmpeg에는 drawtext가 없을 수 있다.
+          if ! command -v ffmpeg >/dev/null || ! command -v ffprobe >/dev/null ||
+             ! ffmpeg -hide_banner -filters 2>/dev/null | grep -E '[[:space:]]drawtext[[:space:]]' >/dev/null; then
+            brew install ffmpeg-full
+            ffmpeg_bin="$(brew --prefix ffmpeg-full)/bin"
+            export PATH="$ffmpeg_bin:$PATH"
+            echo "$ffmpeg_bin" >> "$GITHUB_PATH"
           fi
           ffmpeg -version
           ffprobe -version
+          ffmpeg -hide_banner -filters | grep -E '[[:space:]]drawtext[[:space:]]'
           test -f /System/Library/Fonts/AppleSDGothicNeo.ttc
       - name: 잠금 파일로 시험 의존성 설치
         run: npm ci --ignore-scripts --workspace @cak/drama-series --workspace @cak/contracts
