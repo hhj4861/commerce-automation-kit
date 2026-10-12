@@ -59,6 +59,12 @@ resource "google_service_account" "discovery_stg" {
   count        = var.platform_staging == null ? 0 : 1
   account_id   = "shared-ai-discovery-stg"
   display_name = "Isolated discovery staging runtime"
+  lifecycle {
+    precondition {
+      condition     = var.serverless_staging
+      error_message = "platform_staging runs behind the Phase 2 stack: set serverless_staging = true."
+    }
+  }
 }
 resource "google_secret_manager_secret_iam_member" "discovery_stg" {
   for_each  = var.platform_staging == null ? toset([]) : toset(values(local.discovery_stg_secrets))
@@ -69,7 +75,7 @@ resource "google_secret_manager_secret_iam_member" "discovery_stg" {
 resource "google_cloud_run_v2_service_iam_member" "discovery_stg_jev" {
   count    = var.platform_staging == null ? 0 : 1
   location = local.region
-  name     = google_cloud_run_v2_service.edge_stg.name
+  name     = google_cloud_run_v2_service.edge_stg[0].name
   role     = "roles/run.invoker"
   member   = "serviceAccount:${google_service_account.discovery_stg[0].email}"
 }
