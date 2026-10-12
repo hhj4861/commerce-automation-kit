@@ -221,7 +221,7 @@ GitHub Actions(WIF)             — 이미지 빌드·푸시(로컬 Docker 없�
   - VM 메모리 사용률이 75% 이상으로 이어진다.
   - 응답 지연이 나빠진다.
   - LiteLLM 기동 시간이 크게 줄어 최소 0대로 (a)를 통과할 가능성이 생긴다.
-- VM 비용: 유일한 디스크 `shared-ai-data`(80GiB pd-balanced, 부팅 겸용)의 실사용량을 확인한 뒤 축소 여부를 정한다. 부팅 디스크는 줄일 수 없으므로, 줄이려면 새 디스크로 VM을 다시 구성해야 한다. 2026-10-12 실측: 21G/77G 사용, 그중 약 17GB는 회수할 수 있는 Docker 이미지와 중지 컨테이너다(`docs/PROGRESS.md` §7 #18).
+- VM 비용: 유일한 디스크 `shared-ai-data`(80GiB pd-balanced, 부팅 겸용)의 실사용량을 확인한 뒤 축소 여부를 정한다. 부팅 디스크는 줄일 수 없으므로, 줄이려면 새 디스크로 VM을 다시 구성해야 한다. 2026-10-12 실측: 21G/77G 사용. 회수할 수 있는 양은 이미지별 크기 기준 약 12GB(Dify 이미지·컨테이너·소스와 미사용 이미지)이고, 새 VM에 필요한 양은 약 6GB다(`docs/PROGRESS.md` §7 #18). 처음 적은 약 17GB는 containerd 이미지 저장소에서 맞지 않는 `docker system df` 집계였다. 점검 계획: `docs/plans/20261012-shared-ai-vm-maintenance.md`.
 - accounts: VM의 v1 구독 로그인에 걸린 D4 제공사 약관 쟁점은 호스팅과 관계없이 남는다. v1 폐기와 Hanmadi API 키 흐름 전환은 별도 과제로 정한다. #183의 v2 코드는 main에 남긴다.
 - 매몰 비용: Phase 0~2와 플랫폼·accounts 스테이징(#172·#173·#176·#183).
 
