@@ -185,7 +185,7 @@ test('Codex scenario uses isolated owner credentials and saves refreshed tokens'
   await executeAccountJob({ credential: auth, job: { kind: 'scenario', input: brief } }, {
     update: async patch => patches.push(patch),
     openServer: async env => { runtime = env; assert.deepEqual(JSON.parse(await readFile(join(env.CODEX_HOME, 'auth.json'), 'utf8')), auth); return { call: async () => ({ account: { type: 'chatgpt' } }), close: async () => {} }; },
-    generator: () => async prompt => { if(mockReview(prompt))return mockReview(prompt); await writeFile(join(runtime.CODEX_HOME, 'auth.json'), JSON.stringify({ ...auth, tokens: { ...auth.tokens, refresh_token: 'rotated' } })); return { value: generatedResult }; },
+    generator: options => { assert.equal(options.timeoutMs,360000); return async prompt => { if(mockReview(prompt))return mockReview(prompt); await writeFile(join(runtime.CODEX_HOME, 'auth.json'), JSON.stringify({ ...auth, tokens: { ...auth.tokens, refresh_token: 'rotated' } })); return { value: generatedResult }; }; },
   });
   assert.deepEqual(patches.at(-1).job.result, result); assert.equal(patches.at(-1).credential.tokens.refresh_token, 'rotated');
   await assert.rejects(stat(runtime.HOME), { code: 'ENOENT' });
