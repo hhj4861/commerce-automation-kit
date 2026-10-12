@@ -90,3 +90,17 @@ test('description and hashtags fit the publishing form without silent truncation
  const value=generated([]);value.suggestions[0].description='가'.repeat(3000);value.suggestions[0].hashtags=Array.from({length:25},(_,i)=>'#'+String(i)+'가'.repeat(56));
  assert.throws(()=>parseMetadata(value,research),/게시 입력란/);
 });
+
+test('live-provider authentication, permission and quota failures are actionable and never expose response bodies', async () => {
+  const job={purpose:'metadata',metadataSource:{key:'video'},task:{action:'metadata',sourceKey:'video',format:'auto'}};
+  for (const [status,message] of [[401,/Gemini 인증.*중앙/],[403,/Gemini 접근.*사용 권한/],[429,/Gemini 이용 한도/],[500,/영상 분석에 실패/]]) {
+    const stages=[], calls=[];
+    await assert.rejects(generateVideoMetadata(job,{GEMINI_API_KEY:'private-fixture-key',YOUTUBE_API_KEY:'test'},{readAsset:async()=>Buffer.from('fixture')},async p=>stages.push(p.metadataProgress.stage),{
+      probe:async()=>media,
+      fetcher:async(url,options)=>{calls.push({url,options});return new Response('private-provider-response',{status});},
+    }),error=>message.test(error.message) && !/private-fixture-key|private-provider-response/.test(error.message));
+    assert.deepEqual(stages,['analysis']);
+    assert.equal(calls.length,1);
+    assert.match(calls[0].url,/generativelanguage.googleapis.com/);
+  }
+});

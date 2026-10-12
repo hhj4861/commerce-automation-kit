@@ -28,6 +28,9 @@ async function generateJSON(parts, env, fetcher) {
   try {
     response = await fetcher(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {method: 'POST', headers: {'x-goog-api-key': env.GEMINI_API_KEY, 'content-type': 'application/json'}, body: JSON.stringify({systemInstruction: {parts: [{text: boundary}]}, contents: [{role: 'user', parts}], generationConfig: {responseMimeType: 'application/json', temperature: .3, maxOutputTokens: 16000}}), signal: AbortSignal.timeout(180000)});
   } catch { throw Error('영상 분석 연결 시간이 초과됐습니다. 잠시 후 다시 시도하세요.'); }
+  if (response.status === 401) throw Error('Gemini 인증에 실패했습니다(401). 관리자에게 중앙에 등록된 Gemini API 키 확인을 요청하세요.');
+  if (response.status === 403) throw Error('Gemini 접근이 거부됐습니다(403). 관리자에게 API 사용 권한과 서비스 이용 가능 여부를 확인해 주세요.');
+  if (response.status === 429) throw Error('Gemini 이용 한도에 도달했습니다(429). 잠시 후 다시 시도하거나 관리자에게 이용 한도를 확인해 주세요.');
   if (!response.ok) throw Error(`영상 분석에 실패했습니다(${response.status}). 관리자에게 분석 연결과 이용 한도를 확인해 주세요.`);
   const data = await response.json();
   try { return JSON.parse(data.candidates[0].content.parts.filter(p => !p.thought && p.text).map(p => p.text).join('')); }
