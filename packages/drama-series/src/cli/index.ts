@@ -44,7 +44,8 @@ import type { VideoOptions } from '../adapters/video/seedance-2-5.js';
 import { transcriptGate, transcriptReadiness } from '../core/transcript.js';
 import { isLineCleared, lineHash } from '../core/line-hash.js';
 import { parseWhisperJson, transcribe } from '../adapters/transcribe/whisper.js';
-import { assembleEpisode, type AssembleEpisodeInput } from '../adapters/assemble.js';
+import { assembleEpisode } from '../adapters/assemble.js';
+import { loadAssembleStyles } from './assemble-style.js';
 import { prepareReleaseSource, checkContinuationSource } from '../adapters/release-source.js';
 import { readStrictJsonFile } from '../adapters/media-evidence.js';
 import { contentSha } from '../core/release-source.js';
@@ -443,7 +444,7 @@ function main(argv: string[]): number {
         kicker: optStr(o, 'kicker') ?? null,
         coldOpen: coldOpen(optStr(o, 'cold-open'), optStr(o, 'cold-open-caption'), dir),
         ...(optStr(o, 'trim') ? { trims: parseTrimSpec(optStr(o, 'trim')!) } : {}),
-        ...(optStr(o, 'style') ? { styles: readJson(abs(req(o, 'style'))) as NonNullable<AssembleEpisodeInput['styles']> } : {}),
+        ...(optStr(o, 'style') ? { styles: loadAssembleStyles(abs(req(o, 'style'))) } : {}),
         ...(aspect === '9:16' ? { layout: 'blur-fill' as const, width: 1080, height: 1920 } : {}),
       });
       out({ ok: true, ...result });

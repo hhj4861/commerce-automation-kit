@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import type { DramaEpisode } from '@cak/contracts';
 import { buildAssembleArgs, cuesFromEpisode, prependColdOpen, trimWindow, type AssembleLayout, type AssembleSpec, type TrimSpec } from '../core/assemble-args.js';
@@ -33,6 +33,17 @@ export function assembleEpisode(input: AssembleEpisodeInput): { out: string; dur
   if (input.episode.continuesFromEpisode) throw new FfmpegError('회차 연결 조립 차단: 승인된 앞 회차 출시/프레임 결합 경로 미구현');
   assertUnprotectedOutput(input.workDir);
   assertUnprotectedOutput(input.out);
+  // 직접 호출도 ffprobe/ffmpeg 실행·출력 생성 전에 검사한다.
+  const fonts: [string, string][] = [['default', input.fontFile]];
+  for (const role of ['title', 'kicker', 'subtitle', 'caption', 'label'] as const) {
+    const font = input.styles?.[role]?.fontFile;
+    if (font !== undefined) fonts.push([role, font]);
+  }
+  for (const [role, font] of fonts) {
+    let isFile = false;
+    try { isFile = statSync(font).isFile(); } catch { /* 누락·접근 불가도 아래 입력 오류로 보고 */ }
+    if (!isFile) throw new FfmpegError(`폰트 파일 없음 또는 일반 파일 아님: ${role} — ${font}`);
+  }
   const files = input.episode.cuts.map((c) => {
     const f = input.clipFiles[c.id];
     if (!f || !existsSync(f)) throw new FfmpegError(`클립 파일 없음: ${c.id}`);
