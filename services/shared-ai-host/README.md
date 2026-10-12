@@ -23,19 +23,19 @@ Terraform 1.5.7 / Google provider 7.46.1의 fmt·validate·시작 스크립트 �
 
 ## 구성
 
-- Iowa VM: 2026-10-09부터 `e2-small`(공유 2 vCPU/2 GiB, Dify 중지 뒤 상주 약 1.1GB), 80 GiB balanced 영구 디스크. 서버리스 전환(`docs/20261009-shared-ai-serverless-migration-plan.md`)이 2026-10-12 Phase 2 게이트에서 보류되어 이 축소 구성이 기본 운영 구성이다. 이전 구성 `e2-standard-2`(2 vCPU/8 GiB)·`e2-standard-4`(4 vCPU/16 GiB)도 허용값으로 남긴다.
+- Iowa VM: 2026-10-09부터 `e2-small`(공유 2 vCPU/2 GiB, Dify 중지 뒤 상주 약 1.1GB), 부팅 디스크는 `shared-ai-boot` 20 GiB balanced다. 2026-10-12 점검(`docs/plans/20261012-shared-ai-vm-maintenance.md`)에서 80 GiB `shared-ai-data`로부터 다시 구성했고, 옛 디스크는 되돌리기용으로 연결하지 않은 채 D+7까지 둔다. 서버리스 전환(`docs/20261009-shared-ai-serverless-migration-plan.md`)이 2026-10-12 Phase 2 게이트에서 보류되어 이 축소 구성이 기본 운영 구성이다. 이전 구성 `e2-standard-2`(2 vCPU/8 GiB)·`e2-standard-4`(4 vCPU/16 GiB)도 허용값으로 남긴다.
 - 서버리스 스테이징(`staging.tf`·`platform-staging.tf`·`accounts-staging.tf`)은 같은 결정에 따라 꺼 둔다.
   - `serverless_staging`(기본 `false`)가 Phase 2 스택과 스테이징 시크릿 컨테이너(공급자 키 사본 포함)를 함께 켜고 끈다. 플랫폼·accounts 스테이징은 이 값이 `true`일 때만 켤 수 있다.
   - 다시 켜면 시크릿 값을 새로 넣어야 한다. 컨테이너를 지울 때 버전도 함께 지워졌기 때문이다.
   - 스테이징 서브넷은 비용이 없어 남겨 둔다.
-- Dify/LiteLLM은 기존 Compose와 별도 DB를 유지한다. 개인 Codex 워커는 계정별로 추가한다.
+- LiteLLM은 Compose와 별도 DB(Postgres 16)를 쓴다. Dify(D6)와 accounts v1(D4·#19)은 2026-10-12 점검에서 퇴역했고, edge에서 두 경로는 404다. 개인 Codex 워커(D5)는 만들지 않는다.
 - Cloud Run은 TLS 프록시만 담당하며 관리형 `run.app` 주소를 제공한다. 별도 도메인을 구매하지 않는다.
 - Direct VPC로 VM의 8080 포트에 연결한다. 프록시 전용 서브넷(`10.79.0.0/26`)만 해당 포트에 접근한다. Cloud Run 네트워크 태그는 egress 규칙용이므로 VM ingress의 source tag로 사용하지 않는다.
 - VM 외부 IP는 패키지/모델 통신용이다. 인터넷에 22/80/443/8080을 개방하지 않는다. SSH는 IAP 범위만 허용한다.
 - VM에는 서비스 계정을 붙이지 않는다. 프록시 서비스 계정에도 프로젝트 역할을 부여하지 않는다.
-- 디스크 자동 삭제 방지, VM/Cloud Run 삭제 방지, 매일 스냅샷/7일 보존을 설정한다. 스냅샷은 crash-consistent이며 DB 논리 백업·복원 시험의 대체가 아니다.
+- 디스크 자동 삭제 방지, VM/Cloud Run 삭제 방지, 매일 스냅샷/7일 보존을 설정한다. 스냅샷은 crash-consistent이며 DB 논리 백업·복원 시험의 대체가 아니다. Docker 컨테이너 로그는 파일당 10MB·3개로 제한한다(`startup.sh`).
 
-기본 상시 비용 예산용 계산(730시간, USD, 할인/무료 크레딧 미반영): VM 약 $48.92 + 디스크 약 $8 + IPv4 약 $3.65 = **약 $60.57/월**. 스냅샷·Cloud Run·트래픽·세금·모델 API는 별도다. 4-vCPU 구성은 같은 고정 항목 기준 약 $109.49/월이다. $70/$120은 초기 예산 후보이며 청구 상한 보장이 아니다. 리전이나 가격이 바뀌면 apply 전에 다시 계산한다. 2026-10-09 이후 e2-small 기준은 VM 약 $12.2(e2-standard-2 단가의 1/4로 추정, 공식 단가 `TODO(D1)`) + 디스크 약 $8 + IPv4 약 $3.65 ≈ **$23.9/월**이다.
+기본 상시 비용 예산용 계산(730시간, USD, 할인/무료 크레딧 미반영): VM 약 $48.92 + 디스크 약 $8 + IPv4 약 $3.65 = **약 $60.57/월**. 스냅샷·Cloud Run·트래픽·세금·모델 API는 별도다. 4-vCPU 구성은 같은 고정 항목 기준 약 $109.49/월이다. $70/$120은 초기 예산 후보이며 청구 상한 보장이 아니다. 리전이나 가격이 바뀌면 apply 전에 다시 계산한다. 2026-10-09 이후 e2-small 기준은 VM 약 $12.2(e2-standard-2 단가의 1/4로 추정, 공식 단가 `TODO(D1)`) + 디스크 약 $8 + IPv4 약 $3.65 ≈ **$23.9/월**이다. 2026-10-12 점검 뒤에는 디스크가 약 $2라 **약 $17.9/월**이다.
 
 근거: [VM 가격](https://cloud.google.com/products/compute/pricing/general-purpose), [디스크 가격](https://cloud.google.com/compute/disks-image-pricing), [IPv4/트래픽 가격](https://cloud.google.com/vpc/network-pricing), [Cloud Run Direct VPC](https://docs.cloud.google.com/run/docs/configuring/vpc-direct-vpc).
 
@@ -52,6 +52,8 @@ bash -n startup.sh
 ```
 
 개인 계정으로 인증한 `gcloud auth print-access-token --account=<개인계정>`의 stdout을 프로그램 내부에서 받아 `GOOGLE_OAUTH_ACCESS_TOKEN`으로 전달하고, 같은 프로세스에 `TF_VAR_project_id=replay-live-508202`를 설정한다. 기존 `GOOGLE_APPLICATION_CREDENTIALS`, impersonation/credential override 환경변수를 함께 전달하지 않는다. 이 상태에서 `terraform plan -input=false`로 생성할 자원을 검토한다. 사용자가 정한 예산 내에서 `terraform apply`한다. state는 GCS backend에 있다(위 "현재 상태" 참고). 로컬 `.tfstate`는 Git 제외이며 만들지 않는다. 이 모듈에 공급자 API 키나 OAuth 토큰을 넣지 않는다.
+
+> 2026-10-12 점검 이후 VM 재구성·복원은 `docs/plans/20261012-shared-ai-vm-maintenance.md`를 따른다. 아래 순서는 2026-09-27 최초 구축 기록이다. 4번(Dify)과 7번 표의 `CONVERSATION_PROVIDER`·`DIFY_*`는 D6로 폐기됐다.
 
 실제 배포 순서:
 
