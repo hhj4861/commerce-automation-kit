@@ -43,3 +43,13 @@ BRIEF는 웹과 같은 입력 JSON이다. 로컬 시나리오 기본 실행기�
 2. 워커 환경 준비: ffmpeg/ffprobe, 선택한 Blender 실행기, 모션용 Node 22, `SHOPSHORTS_ALIGNMENT_PYTHON`에 Whisper/torch 설치. `SHOPSHORTS_WHISPER_MODEL` 기본 small, `SHOPSHORTS_WHISPER_CACHE`를 지속 작업 경로에 지정하고 모델을 미리 준비한다. 사전 검사는 Python import를 확인하지만 모델 다운로드 성공까지 보증하지 않는다.
 3. 브로커의 새 진행 단계와 제작 워커를 먼저 배포하고 TLS·등록 레시피 생성·검수 통과를 확인한다. 이후 Pages를 배포한다. 구버전 워커에 새 프로젝트만 보내는 부분 배포는 피한다.
 4. 운영 브라우저에서 새 제작 1건과 기존 편집 1건을 검증하고, 실제 영상과 음성·자막·결말을 사람이 확인한다. 신규 유료 생성/발행 예산은 기존 사용자 승인을 따른다.
+
+## 운영 반영 진행 — 사용자 승인 후
+
+- 사용자 승인: #174·#175·#191 머지 및 운영 반영.
+- #174는 최신 main의 메타데이터 import를 보존해 충돌 해결, 관련 17검사 통과 후 머지했다.
+- #175는 레시피/메타데이터 생성 API를 모두 보존해 충돌 해결, 관련 32검사 통과 후 머지했다.
+- #191 + 최신 main 통합 상태: 전체 **483검사 중 481통과·2건너뜀·0실패**, 45.1초, `integrated-tests.log`. 실제 FFmpeg 동등성/완성본 검수 포함.
+- 운영 큐 조회: 기존 15프로젝트, queued/running 0건. 운영은 아직 구버전이다.
+- 운영 Mac의 Python Whisper/torch와 기존 small 모델을 확인했다. 서비스에 지속 캐시 경로를 명시해야 한다. Cloudflare OAuth의 Pages/Workers 쓰기 권한은 확인했다.
+- ElevenLabs TLS 인증서 검증 실패는 유지된다. 코드 배포와 신규 음성 실생성 성공을 구분한다.

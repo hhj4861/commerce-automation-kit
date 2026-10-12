@@ -2,7 +2,7 @@
 
 > **이 파일의 목적:** 새 IDE/새 Claude 세션이 이 문서 하나만 읽고 곧바로 이어서 작업할 수 있게 한다.
 > 설계 근거는 각 문서에, **"지금 어디까지 왔고 다음에 뭘 하나"는 여기에** 기록한다.
-> 최종 갱신: **2026-09-14**
+> 최종 갱신: **2026-10-12**
 
 ---
 
@@ -80,6 +80,19 @@ npm run dlq -- clear [키워드]                # 격리 즉시 해제
 npm run report -- --dry-run                  # 다이제스트 미리보기(전송 안 함)
 npm run report -- --setup                    # 텔레그램 chat_id 탐색
 ```
+
+### 공용 AI 게이트웨이 (shared-ai, GCP `replay-live-508202`)
+
+- 운영 구성: GCE VM `shared-ai`(e2-small, us-central1-a)에서 LiteLLM·Postgres·discovery·accounts v1이 돈다. 그 앞에 Cloud Run edge `shared-ai`(IAM 인증)가 있다. Hanmadi·Festa·Replay·JEV가 이 게이트웨이를 쓴다.
+- **2026-10-12 결정: 서버리스 전환 보류, VM 유지.** Phase 2 콜드 경로 p95가 약 47초(JEV 기준 5초)라 게이트에서 떨어졌다. 근거와 측정표는 `docs/20261009-shared-ai-serverless-migration-plan.md` Phase 2의 「게이트 결과와 결정」에 있다.
+- 서버리스 스테이징은 2026-10-12에 철거했다(§7 #17). 코드·Terraform은 재개 경로로 main에 남기며, `serverless_staging=true`로 다시 켤 수 있다. Terraform 밖에 있는 Neon Free 프로젝트만 남아 있다(비용 $0).
+- 기록:
+  - `docs/qa/20261009-serverless-phase2-handoff.md` — Phase 2 실측
+  - `docs/qa/20261011-serverless-platform-compatibility.md` — 플랫폼 동등성
+  - `docs/qa/20261012-accounts-serverless-staging.md`
+  - `docs/qa/20261012-litellm-cold-start.md`
+  - `docs/20261010-shared-ai-hosting-cost-comparison.md`
+- ⚠️ 모든 `gcloud` 명령에 `--project=replay-live-508202`를 붙인다. 로컬 기본 프로젝트가 이 프로젝트가 아니다.
 
 ---
 
@@ -201,6 +214,9 @@ src/
 | 14 | 쿠팡 파트너스 링크를 유료 광고 랜딩으로 사용 | TODO(D1) | 파트너스 약관의 유료 광고 조건 + Google Ads 브리지 페이지/리디렉션 정책 미확인. 이번 설계는 파트너스 링크를 쓰지 않아 해당 없음(`docs/YOUTUBE-SHORTS-1000-VIEWS-E2E-TEST.md` §6) |
 | 15 | Shorts 단독 동영상 조회 캠페인(VVC) 저장 가능 여부 | TODO(D1) | 공식 문서가 "Shorts ads only VVC"를 언급(입찰 추천 부정확 경고)하나 화면에서 인스트림·인피드 해제 저장이 되는지 미확인. 1회차 집행 때 확인 |
 | 16 | 스마트스토어 화장품 단순유통 추가 서류·스마트에디터 HTML 입력 | 사람 확인 | 네이버 도메인 자동 접근 불가. 판매자센터 화면에서 확인 후 `docs/HANDCREAM-PILOT-CHECKLIST.md` §6 갱신 |
+| 17 | ~~shared-ai 서버리스 스테이징 철거~~ ✅해결(2026-10-12) | — | #188의 `serverless_staging` 스위치(기본 off)를 머지하고 apply했다. 삭제 52, 추가·변경 0이었고, 이후 plan은 No changes다. 운영 공급자 키 사본을 포함한 시크릿 17개가 삭제됐다. 남은 것: 스테이징 서브넷(무료), Neon Free 프로젝트(Terraform 밖, $0, 콘솔에서 삭제 가능), Artifact Registry 이미지(저장소 전체 580MB) |
+| 18 | shared-ai VM 디스크 축소 | 사용자 결정 대기 | `shared-ai-data`는 80GiB pd-balanced(월 약 $8)이고 부팅 디스크를 겸한다. 2026-10-12에 IAP SSH 읽기 전용으로 실측했다. 디스크는 77G 중 21G 사용(28%)이고, 그중 쓰지 않는 Docker 이미지 약 16GB(중지된 Dify 포함)와 중지 컨테이너 0.7GB, 합계 약 17GB를 회수할 수 있다. 빌드 캐시 1.6GB는 docker 기준 회수 가능분이 거의 없다. 메모리는 1,125/1,960MiB 사용(가용 834MiB)이다. 20GiB pd-balanced로 VM을 다시 구성하면 월 약 $6 절감되며, DB 논리 백업·복원과 수십 분 중단이 필요하다. D6 Dify 삭제·#19와 같은 점검 시간에 함께 하는 안을 검토한다 |
+| 19 | accounts v1 구독 로그인 폐기 | 결정 필요 | 마스터 플랜 D4: 제공사 약관상 구독 자격을 중개할 수 없고 실사용자도 없다. VM 유지 결정과 별개로 남는 과제다. Hanmadi는 패키지 0.4.0·API·화면이 codex·claude만 지원한다 |
 
 ---
 
@@ -247,3 +263,5 @@ src/
 | 2026-09-06 (훅 변형 결정) | 사용자 질의 "기존과 달라진 게 없는데 조회수가 나올까?" → 정리: 유료 조회는 예산÷CPV로 도달, 소재는 CPV(조회율)를 정함. **결정: 최종본은 훅 3종(A 문제제시·B 결과선공개·C 호기심) 세트**, 바디·CTA 공유, 광고그룹 1개에 광고 3개로 조회율 비교. 잡 `shorts.job.hook{A,B,C}.json` lint 통과, 훅 B/C 내레이션 생성(`output/handcream-pilot/draft/vo-hooks/`). 발림 비트 5→4초(종이 테스트 7초 시작). 최종 제작비 ≈ 38cr/세트(pro) |
 | 2026-09-06 (훅 B·C 시안) | 훅 B(종이 테스트 선공개)·C(호기심) 3초 클립 std 생성(**실비 9.0cr**, 1303.1→1294.1) → 바디·CTA 공유 클립으로 3편 조립(`handcream-draft-hook{B,C}.mp4`, 1080x1920 14.5초). 프레임 확인: "(광고)" 오버레이·자막 정상. 함정: `--narration-dir` manifest의 `file`은 **절대경로**여야 함(상대경로면 원자가 패키지 기준으로 찾아 ffprobe 실패). 시안 3편은 업로드 대상 아님(실제 제품과 다름) |
 | 2026-09-06 (생성 전 효율 깔때기) | 사용자 지적 "생성 전에 효율 판단 장치가 있어야" → 3층 깔때기 도입. **1층 대본 스코어러**: shopping-shorts `score --jobs …`(TDD 9테스트, 계약 `ScriptScoreReport` append, 9차원 100점: 훅 움직임/길이/밀도·10초 페이오프·내레이션 밀도·자막 가독성·브랜딩 시점·CTA·길이, Google ABCD+Shorts 권장 번역, 참고용). 훅 A/B/C 96→CTA 내레이션 29→20자 축약 후 100 동률. **2층 힉스필드 Virality Predictor 실측**: 3초 훅 클립 job_id로 실행, **0cr**(잔액 불변), `analysis.scores` 반환 — A 62/훅49 > C 51/37 > B 45/30(`output/handcream-pilot/draft/predictor/`). 구조 동률일 때 소재 차이를 가르는 용도. **3층 광고 실측**이 최종 검증. 스킬 §3.5·README 반영. 전체 테스트 497→506 |
+| 2026-10-12 (shared-ai 서버리스 게이트 결정) | Phase 2 스테이징 실측(Codex 세션이 이어받아 진행): (a) 콜드 p95가 JEV 47.16초·chat 47.60초로 불합격, (b)(c)(d)는 통과, (e)는 미실시, (f)는 중단. g2 비용 관측은 사용자 선택으로 약 5.2시간에서 멈췄다. 플랫폼 스테이징(#176)과 accounts v2 스테이징(#183)은 API 수준에서 통과했다(앱 화면·실제 키는 미검증). 콜드 원인은 서버 시작 전 Python import 약 40초다. **사용자 결정: 서버리스 보류, e2-small VM 유지**(기준: 기능이 같고 확장성·범용성에 문제가 없으면 가성비). Codex 기록 5개를 `feat/common-video-generator`에서 main으로 옮겼다. 후속은 §7 #17~19 |
+| 2026-10-12 (shared-ai 스테이징 철거) | #185(결정 기록)와 #188(`serverless_staging` 스위치)을 머지했다. 검토한 plan을 그대로 apply해 스테이징 Terraform 자원 52개를 삭제했다(운영 변경 0, 이후 plan No changes). 확인 결과 Cloud Run 서비스는 운영 `shared-ai` 하나만 남았고, 스케줄러·시크릿은 0개다. VM 디스크·메모리 실측 결과는 §7 #18에 있다 |

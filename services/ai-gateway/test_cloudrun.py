@@ -48,6 +48,10 @@ class CloudRunConfigTest(unittest.TestCase):
         config = gateway.render_cloudrun(SETTINGS, "staging")
         self.assertEqual([m["model_name"] for m in config["model_list"]], ["hanmadi-chat", "hanmadi-stt", "hanmadi-tts"])
 
+    def test_platform_staging_has_the_production_contract(self):
+        self.assertEqual(gateway.render_cloudrun(SETTINGS, "platform-staging"),
+                         gateway.render_cloudrun(SETTINGS, "production"))
+
     def test_subscription_routes_are_never_added(self):
         fake = mock.Mock(routes=lambda root: [{"model_name": "codex-x", "litellm_params": {"model": "x"}}])
         with mock.patch.dict(sys.modules, {"subscriptions": fake}):

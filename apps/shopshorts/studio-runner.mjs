@@ -4,6 +4,7 @@ import {verifyFinalVideo} from './studio-final-qa.mjs';
 import {createHash} from 'node:crypto';
 import {openingCarry} from './studio-authored-timeline.mjs';
 import {renderCaptionArtwork,artworkFilter} from './studio-typography.mjs';
+import {generateVideoMetadata} from './studio-metadata.mjs';
 import {webtoon} from './lib/webtoon-plan.js';
 import {prepareWebtoon,checkWebtoonReview} from './studio-webtoon.mjs';
 import {explainer} from './lib/explainer-production.js';
@@ -28,7 +29,7 @@ import { FPS, FONTS, normalizeEdit, frameCount, clipSpans } from './public/edito
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const GOOGLE = 'https://generativelanguage.googleapis.com/v1beta';
-export const capabilities = env => ({ workerAt: new Date().toISOString(), scenario: false, animation: true, hybrid: motionCapability(env) && env.SHOPSHORTS_MEDIA_PROVIDER === 'higgsfield' && !!env.ELEVENLABS_API_KEY, webtoon: env.SHOPSHORTS_MEDIA_PROVIDER === 'higgsfield' && !!env.ELEVENLABS_API_KEY, motion: motionCapability(env), image: env.SHOPSHORTS_MEDIA_PROVIDER === 'higgsfield' || !!env.GEMINI_API_KEY, video: env.SHOPSHORTS_MEDIA_PROVIDER === 'higgsfield' || !!env.GEMINI_API_KEY, mediaProvider: env.SHOPSHORTS_MEDIA_PROVIDER === 'higgsfield' ? 'higgsfield' : 'google', voice: !!env.ELEVENLABS_API_KEY, shortsUpload: !!(env.UPLOAD_POST_API_KEY && env.UPLOAD_POST_USER), longUpload: !!env.YOUTUBE_CLIENT_SECRET });
+export const capabilities = env => ({ workerAt: new Date().toISOString(), scenario: false, metadata: !!(env.GEMINI_API_KEY && env.YOUTUBE_API_KEY), animation: true, hybrid: motionCapability(env) && env.SHOPSHORTS_MEDIA_PROVIDER === 'higgsfield' && !!env.ELEVENLABS_API_KEY, webtoon: env.SHOPSHORTS_MEDIA_PROVIDER === 'higgsfield' && !!env.ELEVENLABS_API_KEY, motion: motionCapability(env), image: env.SHOPSHORTS_MEDIA_PROVIDER === 'higgsfield' || !!env.GEMINI_API_KEY, video: env.SHOPSHORTS_MEDIA_PROVIDER === 'higgsfield' || !!env.GEMINI_API_KEY, mediaProvider: env.SHOPSHORTS_MEDIA_PROVIDER === 'higgsfield' ? 'higgsfield' : 'google', voice: !!env.ELEVENLABS_API_KEY, shortsUpload: !!(env.UPLOAD_POST_API_KEY && env.UPLOAD_POST_USER), longUpload: !!env.YOUTUBE_CLIENT_SECRET });
 export function command(bin, args, env, timeout = 600000) {
   return new Promise((resolveP, reject) => {
     const child = spawn(bin, args, { cwd: ROOT, env: { ...process.env, ...env }, stdio: ['ignore', 'pipe', 'pipe'] });
@@ -167,6 +168,7 @@ export async function executeStudioTask(job, env, io, checkpoint, { fetcher = fe
   const action = job.task.action;
   if(sharedPipeline(job))env={...env,SHOPSHORTS_WHISPER_CACHE:env.SHOPSHORTS_WHISPER_CACHE||join(io.workDir,'whisper-models')};
   if (action === 'scenario') throw new Error('시나리오는 연결한 Codex·Claude 계정으로 다시 요청하세요.');
+  if (action === 'metadata') return generateVideoMetadata(job, env, io, checkpoint, {fetcher});
   const work = join(io.workDir, job.id);
   await mkdir(work, { recursive: true });
   if(sharedPipeline(job)&&['media','narration','render'].includes(action))await preflight(job,env,{command,fetcher});
