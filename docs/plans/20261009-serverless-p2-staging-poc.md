@@ -10,6 +10,8 @@
 
 **Spec:** `docs/20261009-shared-ai-serverless-migration-plan.md`의 Phase 2(§2·§4·§5·§7·§8 포함). Phase 1 결과는 `docs/plans/20261009-serverless-p1-foundation.md`와 `docs/qa/20261009-serverless-phase1.md`에 있다.
 
+**결과 (2026-10-12):** 게이트 (a)가 불합격해 사용자가 서버리스 전환 보류와 VM 유지를 결정했다. 실측 기록은 `docs/qa/20261009-serverless-phase2-handoff.md`에, 결정과 측정표는 마스터 플랜 Phase 2의 「게이트 결과와 결정」에 있다. 아래 태스크 7의 측정은 이 결정으로 끝낸다.
+
 ## 마스터 플랜과 다른 점 (실행 판단)
 
 | ID | 판단 | 이유 | 틀렸을 때 비용 |
