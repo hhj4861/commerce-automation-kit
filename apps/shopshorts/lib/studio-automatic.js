@@ -24,7 +24,7 @@ export async function startAutomatic(request, env, store, input, call) {
   const brief = recommendationInput(saved.input);
   const result = parseRecommendations(saved.result, true, 'keywords');
   const selected = result.suggestions[input.index];
-  const project = {...createProject({...brief, topic: selected.topic, direction: selected.direction, productionStyle:brief.productionStyle||'cinematic'}), id,
+  const project = {...createProject({...brief, topic: selected.topic, direction: selected.direction, productionStyle:brief.productionStyle||(brief.category==='건축학'?'webtoon':'cinematic')}), id,
     ...(brief.voiceId?{voicePreference:brief.voiceId}:{}),
     automation: {version: brief.workflow?2:1, recommendationId: input.recommendationId, keyword: selected.keyword, ...(selected.caseStudy?{caseStudy:selected.caseStudy}:{}), sources: result.sources, checkedAt: saved.result.checkedAt}};
   try { await store.create(project); }

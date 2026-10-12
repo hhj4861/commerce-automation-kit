@@ -1,3 +1,4 @@
+import {isHybrid} from '../public/hybrid-plan.js';
 // Data-only choreography. Never execute model-provided code, SVG, URLs or filters.
 export const webtoon=brief=>['webtoon','hybrid'].includes(brief?.productionStyle);
 export const KYLE='RU7aSi6lT4uQBXMLgDxK';
@@ -25,8 +26,8 @@ export function webtoonScenes(scenes){
 }
 export function webtoonGuide(brief){
  if(!webtoon(brief))return '';
- return `웹툰 혼합 제작: 첫 장면은 정확히 6초인 Higgsfield 영상, ${brief.productionStyle==='hybrid'?'나머지는 장면 목적에 따라 웹툰 원화, 전체 화면 모션, 코드 3D 구조도를 조합합니다.':'나머지는 독창적인 웹툰 원화와 데이터 기반 동작 도해입니다.'} 모든 kind는 video, 최소 2장면입니다. 섬세한 잉크 선·회화적 질감, 따뜻한 앰버 조명과 청록/남색 배경 대비를 유지합니다. 인물/대상의 정체성을 visualStyle와 각 prompt에서 유지하세요.
+ return `웹툰 혼합 제작: 첫 장면은 정확히 6초인 Higgsfield 영상, ${isHybrid(brief)?'나머지는 장면 목적에 따라 웹툰 원화, 전체 화면 모션, 코드 3D 구조도를 조합합니다.':'나머지는 독창적인 웹툰 원화와 데이터 기반 동작 도해입니다.'} 모든 kind는 video, 최소 2장면입니다. 섬세한 잉크 선·회화적 질감, 따뜻한 앰버 조명과 청록/남색 배경 대비를 유지합니다. 인물/대상의 정체성을 visualStyle와 각 prompt에서 유지하세요.
 모든 장면에 webtoon:{artPrompt,answer,layers}를 추가하세요. artPrompt(1~1600자)는 자막 없는 독창적 웹툰 원화의 공간·대상·구도 설명, answer(1~160자)는 이 장면에서 보여줄 인과적 발견(검토용, 읽지 않음)입니다. 단순 그림 확대가 아니라 같은 대상의 상태가 변해야 합니다.
 layers는 1~12개 데이터 도형으로 각 {id,label,meaning,shape,color,from,to,size,start,end,motion,points?}입니다. id=영문소문자/숫자/하이픈 1~30자, label=대상명 20자 이하, meaning=실제 대사의 어느 대상과 변화를 뜻하는지 240자 이하. shape=rect/ellipse/polygon/path, color=#RRGGBB. from/to=[x,y],size=[폭,높이]는 0~100 정규화된 도해 내부 좌표(크기는 1이상). polygon/path의 points는 해당 도형 내부 0~100 좌표 2~32쌍(polygon 최소3). start/end는 장면의 0~1 진행률이며 start<=.8,end>start. motion=move(다른 위치로 이동)/flow(경로를 따라 입자가 이동)/scale(상태 확대 변화)/reveal(등장). 최소 하나는 move/flow/scale여야 합니다. 임의 HTML/SVG/코드/파일/URL은 금지합니다.
-${brief.productionStyle==='hybrid'?'웹툰 장면의 도해만 원화 옆 패널에 합성됩니다. 모션/3D 장면은 원화 없이 전체 화면을 사용합니다.':'도해는 원화를 가리지 않는 별도 패널(세로 영상은 아래, 가로 영상은 오른쪽)에 합성됩니다.'} 원화는 주인공/핵심 대상이 중앙에 모인 구도로 만드세요. 실측으로 오해시키는 수치·가짜 물리 시뮬레이션을 만들지 마세요. 사물의 실제 모양은 원화, 구조의 인과·비교·흐름은 도해로 구분하세요. 장면 내 before → action → after가 대사와 일치하고 마지막 20%는 결과를 읽도록 합니다. 각 레이어의 의미와 실제 동작을 prompt에도 자연어로 명시해 별도 검토가 가능하게 하세요. 도입과 본문에 쓰이는 원화 생성 비용도 크레딧에 포함됩니다.`;
+${isHybrid(brief)?'웹툰 장면의 도해만 원화 옆 패널에 합성됩니다. 모션/3D 장면은 원화 없이 전체 화면을 사용합니다.':'도해는 원화를 가리지 않는 별도 패널(세로 영상은 아래, 가로 영상은 오른쪽)에 합성됩니다.'} 원화는 주인공/핵심 대상이 중앙에 모인 구도로 만드세요. 실측으로 오해시키는 수치·가짜 물리 시뮬레이션을 만들지 마세요. 사물의 실제 모양은 원화, 구조의 인과·비교·흐름은 도해로 구분하세요. 장면 내 before → action → after가 대사와 일치하고 마지막 20%는 결과를 읽도록 합니다. 각 레이어의 의미와 실제 동작을 prompt에도 자연어로 명시해 별도 검토가 가능하게 하세요. 도입과 본문에 쓰이는 원화 생성 비용도 크레딧에 포함됩니다.`;
 }

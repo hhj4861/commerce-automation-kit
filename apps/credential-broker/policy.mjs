@@ -73,7 +73,7 @@ export function authorizeGithub(claims, env) {
   }
   if (Object.hasOwn(DEPLOYMENT_REFS, claims.ref || '')) {
     const file = 'platform-deploy.yml';
-    if (['refs/heads/deploy/hanmadi', 'refs/heads/deploy/hanmadi-admin'].includes(claims.ref) && !['true', true].includes(claims.ref_protected)) throw new Error('unauthorized');
+    if (['refs/heads/deploy/shopshorts', 'refs/heads/deploy/hanmadi', 'refs/heads/deploy/hanmadi-admin'].includes(claims.ref) && !['true', true].includes(claims.ref_protected)) throw new Error('unauthorized');
     if (claims.repository !== REPOSITORY || claims.repository_id !== '1310729493' ||
         claims.repository_owner_id !== '71001056' || claims.runner_environment !== 'github-hosted' ||
         !(env.GITHUB_DEPLOY_ALLOWED_REFS || '').split(',').includes(claims.ref) ||

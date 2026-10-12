@@ -4,7 +4,7 @@ import {resolve,dirname,sep} from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {randomUUID} from 'node:crypto';
 import {validateBrief,validateScenes,validateEdit,changeProject} from './lib/studio.js';
-import {hybridPlan} from './public/hybrid-plan.js';
+import {hybridPlan,isHybrid} from './public/hybrid-plan.js';
 import {continueAutomatic} from './lib/studio-automatic.js';
 import {executeStudioTask} from './studio-runner.mjs';
 export function localAssetPath(root,key){
@@ -21,7 +21,8 @@ export async function runHybridCli(args,env=process.env,{execute=executeStudioTa
  if(action!=='plan')handle=await open(lock,'wx');
  try{
   let job=JSON.parse(await readFile(source,'utf8'));
-  if(job.brief?.productionStyle!=='hybrid'||!/^[-a-zA-Z0-9]{1,80}$/.test(job.id||''))throw Error('hybrid 프로젝트와 안전한 ID가 필요합니다.');
+  job.brief=validateBrief(job.brief);
+  if(!isHybrid(job.brief)||!/^[-a-zA-Z0-9]{1,80}$/.test(job.id||''))throw Error('hybrid 프로젝트와 안전한 ID가 필요합니다.');
   validateBrief(job.brief);validateScenes(job.scenes);if(job.edit)validateEdit(job.edit,job);const plan=hybridPlan(job);
   if(action==='plan')return {ok:true,plan,paidCalls:0};
   const assets=value('--assets'),work=value('--work');if(!assets||!work)throw Error('--assets와 --work 경로를 지정하세요.');
