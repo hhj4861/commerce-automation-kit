@@ -90,8 +90,14 @@ class Store:
                 yield db
         finally:
             db.close()
+    @contextmanager
+    def transaction(self, scope, platform=None):
+        with self.db() as db:
+            db.execute("BEGIN IMMEDIATE")
+            yield db
+
     def _load(self, db, scope, rid):
-        """Caller holds BEGIN IMMEDIATE; expiration and transitions share one lock."""
+        """Caller holds a scope transaction; expiration and transitions share one lock."""
         row = db.execute("SELECT * FROM requests WHERE scope=? AND id=?", (scope, rid)).fetchone()
         if not row:
             raise Failure("request_not_found", 404)
@@ -102,12 +108,10 @@ class Store:
             db.execute("DELETE FROM active WHERE scope=? AND request_id=?", (scope, rid))
         return data
     def get(self, scope, rid):
-        with self.db() as db:
-            db.execute("BEGIN IMMEDIATE")
+        with self.transaction(scope) as db:
             return self._load(db, scope, rid)
     def save(self, scope, rid, data, expected):
-        with self.db() as db:
-            db.execute("BEGIN IMMEDIATE")
+        with self.transaction(scope) as db:
             current = self._load(db, scope, rid)
             if current["state"] != expected:
                 return current  # Never resurrect expired work or overwrite a terminal snapshot.
@@ -122,8 +126,7 @@ class Store:
         """Persist attempt before dispatch so late/expired responses cannot erase usage."""
         if counter not in ("searchCalls", "jevCalls"):
             raise ValueError("Unsupported attempt counter")
-        with self.db() as db:
-            db.execute("BEGIN IMMEDIATE")
+        with self.transaction(scope) as db:
             current = self._load(db, scope, rid)
             if current["state"] == expected:
                 if current["usage"][counter] >= {"searchCalls": 4, "jevCalls": 3}[counter]:
@@ -139,8 +142,7 @@ class Store:
         elif research_version in HYBRID_VERSIONS:
             raise Failure("review_capability_required", 422)
         now = time.time()
-        with self.db() as db:
-            db.execute("BEGIN IMMEDIATE")
+        with self.transaction(scope, platform) as db:
             row = db.execute("SELECT id,fingerprint FROM requests WHERE scope=? AND idem=?", (scope, key)).fetchone()
             if row:
                 if row["fingerprint"] != digest(value):
@@ -167,8 +169,7 @@ class Store:
         return rid, True
     def claim(self, scope, rid, action_id):
         error = None
-        with self.db() as db:
-            db.execute("BEGIN IMMEDIATE")
+        with self.transaction(scope) as db:
             data = self._load(db, scope, rid)
             if data["state"] != "awaiting_generation" or data["action"]["id"] != action_id or data["usage"]["generationClaims"] >= (3 if data["rubricVersion"] in HYBRID_VERSIONS else 2 if research_workflow(data["input"]) else 1):
                 error = Failure("generation_already_claimed", 409)
@@ -181,8 +182,7 @@ class Store:
         return data
     def take_completion(self, scope, rid, completion):
         error, new = None, False
-        with self.db() as db:
-            db.execute("BEGIN IMMEDIATE")
+        with self.transaction(scope) as db:
             data = self._load(db, scope, rid)
             fingerprint = digest(completion)
             if research_workflow(data["input"]):
@@ -242,7 +242,7 @@ class NaverSearch:
 
 class Jev:
     def __init__(self, env):
-        self.env = {k: v for k, v in env.items() if k in ("PATH", "JEV_BASE_URL", "JEV_API_KEY", "JEV_ALLOW_LOCALHOST")}
+        self.env = {k: v for k, v in env.items() if k in ("PATH", "JEV_BASE_URL", "JEV_API_KEY", "JEV_ALLOW_LOCALHOST", "JEV_CLOUD_RUN_AUDIENCE")}
     def __call__(self, payload):
         run = subprocess.run(["node", str(Path(__file__).with_name("jev-bridge.mjs"))], input=canonical(payload), text=True, capture_output=True, timeout=12, env=self.env)
         if run.returncode != 0 or len(run.stdout) > 1048576:

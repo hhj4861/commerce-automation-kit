@@ -1,5 +1,5 @@
-const names = {scenario:'시나리오 생성',media:'이미지·영상 생성',narration:'대본 음성 생성',render:'영상 렌더',publish:'업로드'};
-const steps = {scenario:2,media:3,narration:4,render:4,publish:5};
+const names = {scenario:'시나리오 생성',media:'이미지·영상 생성',narration:'대본 음성 생성',render:'영상 렌더',publish:'업로드',metadata:'게시 문구 추천'};
+const steps = {scenario:2,media:3,narration:4,render:4,publish:5,metadata:5};
 export function resumeStep(project) {
   // An unfinished or failed task must reopen where its progress/result belongs.
   if(['queued','running','failed'].includes(project.task?.state) && steps[project.task.action])return steps[project.task.action];

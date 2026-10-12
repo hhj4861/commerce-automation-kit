@@ -5,7 +5,27 @@
     "festa": "gemini/gemini-3.5-flash-lite"
   },
   "targets": {
-    "staging": {"apps": ["hanmadi"], "elevenlabs": true},
-    "production": {"apps": ["hanmadi", "replay", "festa"], "elevenlabs": true}
+    "staging": {
+      "apps": [
+        "hanmadi"
+      ],
+      "elevenlabs": true
+    },
+    "production": {
+      "apps": [
+        "hanmadi",
+        "replay",
+        "festa"
+      ],
+      "elevenlabs": true
+    },
+    "platform-staging": {
+      "apps": [
+        "hanmadi",
+        "replay",
+        "festa"
+      ],
+      "elevenlabs": true
+    }
   }
 }

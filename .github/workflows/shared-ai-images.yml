@@ -5,7 +5,7 @@ on:
       image:
         description: Image to build from this main commit
         type: choice
-        options: [litellm-staging, litellm-production, edge-staging]
+        options: [litellm-staging, litellm-production, edge-staging, litellm-platform-staging, edge-platforms, discovery-staging, accounts-staging, edge-accounts]
 permissions:
   contents: read
   id-token: write
@@ -43,8 +43,13 @@ jobs:
           set -euo pipefail
           case "$IMAGE" in
             litellm-staging) context=services/ai-gateway/cloudrun; arg="TARGET=staging" ;;
+            litellm-platform-staging) context=services/ai-gateway/cloudrun; arg="TARGET=platform-staging" ;;
             litellm-production) context=services/ai-gateway/cloudrun; arg="TARGET=production" ;;
             edge-staging) context=services/shared-ai-host/edge; arg="VARIANT=staging" ;;
+            edge-platforms) context=services/shared-ai-host/edge; arg="VARIANT=platforms" ;;
+            discovery-staging) context=.; arg="" ;;
+            accounts-staging) context=services/ai-gateway; arg="" ;;
+            edge-accounts) context=services/shared-ai-host/edge; arg="VARIANT=accounts" ;;
             *) echo "Unknown image" >&2; exit 1 ;;
           esac
           gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
@@ -53,7 +58,13 @@ jobs:
             echo "$IMAGE from $SHA already built: \`$REGISTRY/$IMAGE@$existing\`" >> "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
-          docker build --build-arg "$arg" -t "$ref" "$context"
+          if [ "$IMAGE" = discovery-staging ]; then
+            docker build -f services/topic-discovery/Dockerfile -t "$ref" "$context"
+          elif [ "$IMAGE" = accounts-staging ]; then
+            docker build -f services/ai-gateway/Dockerfile.accounts-v2 -t "$ref" "$context"
+          else
+            docker build --build-arg "$arg" -t "$ref" "$context"
+          fi
           docker push "$ref"
           digest=$(docker inspect --format '{{index .RepoDigests 0}}' "$ref")
           echo "$IMAGE from $SHA: \`$digest\`" >> "$GITHUB_STEP_SUMMARY"

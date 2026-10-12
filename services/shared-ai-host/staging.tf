@@ -1,6 +1,12 @@
 # Phase 2 staging PoC (docs/plans/20261009-serverless-p2-staging-poc.md). No production data
 # or virtual keys: a test master/salt key, an empty Neon (Free) database and the production
-# provider keys only. Remove this file and apply if the gate stops the serverless path.
+# provider keys only. The 2026-10-12 gate decision kept the VM, so the stack is off: an apply
+# with the default destroys it, and the code stays as the way back.
+variable "serverless_staging" {
+  description = "Build the Phase 2 staging stack. Off since the 2026-10-12 gate decision (keep the VM)."
+  type        = bool
+  default     = false
+}
 variable "staging_images" {
   description = "Digests for the first create only; later swaps go through gcloud run deploy (image changes are ignored)."
   type = object({
@@ -28,40 +34,45 @@ variable "warm_ping_via_edge" {
 }
 locals {
   # Env name -> Secret Manager secret, resolved at pinned numeric versions.
-  litellm_stg_secrets = {
+  litellm_stg_secrets = merge({
     LITELLM_MASTER_KEY   = "litellm-stg-master-key"
     LITELLM_SALT_KEY     = "litellm-stg-salt-key"
     DATABASE_URL         = "litellm-stg-database-url"
     HANMADI_CHAT_API_KEY = "hanmadi-chat-api-key"
     ELEVENLABS_API_KEY   = "elevenlabs-api-key"
     TYPESAFE_API_KEY     = "typesafe-api-key"
-  }
+    }, var.platform_staging == null ? {} : {
+    FESTA_CHAT_API_KEY  = "festa-chat-api-key"
+    REPLAY_CHAT_API_KEY = "replay-chat-api-key"
+  })
   # Framing probe reply: how the second hop received a request. Never echoes credentials.
   probe_reply = "{\"method\":\"{http.request.method}\",\"path\":\"{http.request.uri}\",\"host\":\"{http.request.hostport}\",\"content_length\":\"{http.request.header.Content-Length}\"}"
 }
 resource "google_service_account" "litellm_stg" {
+  count        = var.serverless_staging ? 1 : 0
   account_id   = "shared-ai-litellm-stg"
   display_name = "Shared AI LiteLLM staging runtime (PoC)"
   depends_on   = [google_project_service.api]
 }
 resource "google_secret_manager_secret_iam_member" "litellm_stg" {
-  for_each  = toset(values(local.litellm_stg_secrets))
+  for_each  = var.serverless_staging ? toset(values(local.litellm_stg_secrets)) : toset([])
   secret_id = google_secret_manager_secret.managed[each.value].id
   role      = "roles/secretmanager.secretAccessor"
-  member    = "serviceAccount:${google_service_account.litellm_stg.email}"
+  member    = "serviceAccount:${google_service_account.litellm_stg[0].email}"
 }
 resource "google_cloud_run_v2_service" "litellm_stg" {
+  count                = var.serverless_staging ? 1 : 0
   name                 = "litellm-stg"
   location             = local.region
   deletion_protection  = false
   ingress              = "INGRESS_TRAFFIC_INTERNAL_ONLY"
   invoker_iam_disabled = true
   template {
-    service_account                  = google_service_account.litellm_stg.email
+    service_account                  = google_service_account.litellm_stg[0].email
     timeout                          = "300s"
     max_instance_request_concurrency = 20
     scaling {
-      min_instance_count = 0
+      min_instance_count = var.staging_min_instances
       max_instance_count = 1
     }
     containers {
@@ -97,7 +108,7 @@ resource "google_cloud_run_v2_service" "litellm_stg" {
           value_source {
             secret_key_ref {
               secret  = google_secret_manager_secret.managed[env.value].secret_id
-              version = var.secret_versions[env.value]
+              version = local.platform_secret_versions[env.value]
             }
           }
         }
@@ -118,12 +129,13 @@ resource "google_cloud_run_v2_service" "litellm_stg" {
   depends_on = [google_secret_manager_secret_iam_member.litellm_stg]
 }
 resource "google_cloud_run_v2_job" "litellm_stg_migrate" {
+  count               = var.serverless_staging ? 1 : 0
   name                = "litellm-stg-migrate"
   location            = local.region
   deletion_protection = false
   template {
     template {
-      service_account = google_service_account.litellm_stg.email
+      service_account = google_service_account.litellm_stg[0].email
       timeout         = "600s"
       max_retries     = 0
       containers {
@@ -149,7 +161,7 @@ resource "google_cloud_run_v2_job" "litellm_stg_migrate" {
             value_source {
               secret_key_ref {
                 secret  = google_secret_manager_secret.managed[env.value].secret_id
-                version = var.secret_versions[env.value]
+                version = local.platform_secret_versions[env.value]
               }
             }
           }
@@ -165,6 +177,7 @@ resource "google_cloud_run_v2_job" "litellm_stg_migrate" {
 # The staging edge image run as `caddy respond`: during the smoke, the edge's LLM_UPSTREAM
 # points here briefly so the reply shows the Host and Content-Length the second hop received.
 resource "google_cloud_run_v2_service" "probe_stg" {
+  count                = var.serverless_staging ? 1 : 0
   name                 = "shared-ai-probe-stg"
   location             = local.region
   deletion_protection  = false
@@ -195,7 +208,8 @@ resource "google_cloud_run_v2_service" "probe_stg" {
 }
 # The staging edge gets its own subnet: its Direct VPC egress addresses never compete with the
 # production edge on shared-ai-proxy, and the VM firewall (source: the proxy subnet) does not
-# trust it.
+# trust it. Kept while the stack is off: a subnet is free, and deleting it right after the
+# services races the release of their Direct VPC addresses.
 resource "google_compute_subnetwork" "staging" {
   name                     = "shared-ai-staging"
   network                  = google_compute_network.ai.id
@@ -203,6 +217,7 @@ resource "google_compute_subnetwork" "staging" {
   private_ip_google_access = true
 }
 resource "google_cloud_run_v2_service" "edge_stg" {
+  count               = var.serverless_staging ? 1 : 0
   name                = "shared-ai-stg"
   location            = local.region
   deletion_protection = false
@@ -236,7 +251,21 @@ resource "google_cloud_run_v2_service" "edge_stg" {
       }
       env {
         name  = "LLM_UPSTREAM"
-        value = google_cloud_run_v2_service.litellm_stg.uri
+        value = google_cloud_run_v2_service.litellm_stg[0].uri
+      }
+      dynamic "env" {
+        for_each = try(var.accounts_staging.serve, false) ? [1] : []
+        content {
+          name  = "ACCOUNTS_UPSTREAM"
+          value = google_cloud_run_v2_service.accounts_stg[0].uri
+        }
+      }
+      dynamic "env" {
+        for_each = try(var.platform_staging.serve, false) ? [1] : []
+        content {
+          name  = "DISCOVERY_UPSTREAM"
+          value = google_cloud_run_v2_service.discovery_stg[0].uri
+        }
       }
     }
   }
@@ -245,24 +274,28 @@ resource "google_cloud_run_v2_service" "edge_stg" {
   }
 }
 resource "google_cloud_run_v2_service_iam_member" "edge_stg_invoker" {
+  count    = var.serverless_staging ? 1 : 0
   location = local.region
-  name     = google_cloud_run_v2_service.edge_stg.name
+  name     = google_cloud_run_v2_service.edge_stg[0].name
   role     = "roles/run.invoker"
   member   = var.staging_invoker
 }
 resource "google_service_account" "scheduler_stg" {
+  count        = var.serverless_staging ? 1 : 0
   account_id   = "shared-ai-scheduler-stg"
   display_name = "Shared AI staging warm ping (PoC)"
   depends_on   = [google_project_service.api]
 }
 resource "google_cloud_run_v2_service_iam_member" "edge_stg_scheduler" {
+  count    = var.serverless_staging ? 1 : 0
   location = local.region
-  name     = google_cloud_run_v2_service.edge_stg.name
+  name     = google_cloud_run_v2_service.edge_stg[0].name
   role     = "roles/run.invoker"
-  member   = "serviceAccount:${google_service_account.scheduler_stg.email}"
+  member   = "serviceAccount:${google_service_account.scheduler_stg[0].email}"
 }
 # Paused until the g2 window. The liveliness route never queries the database.
 resource "google_cloud_scheduler_job" "litellm_stg_warm" {
+  count            = var.serverless_staging ? 1 : 0
   name             = "litellm-stg-warm"
   region           = local.region
   schedule         = "*/5 * * * *"
@@ -271,10 +304,10 @@ resource "google_cloud_scheduler_job" "litellm_stg_warm" {
   attempt_deadline = "60s"
   http_target {
     http_method = "GET"
-    uri         = var.warm_ping_via_edge ? "${google_cloud_run_v2_service.edge_stg.uri}/llm/health/liveliness" : "${google_cloud_run_v2_service.litellm_stg.uri}/health/liveliness"
+    uri         = var.warm_ping_via_edge ? "${google_cloud_run_v2_service.edge_stg[0].uri}/llm/health/liveliness" : "${google_cloud_run_v2_service.litellm_stg[0].uri}/health/liveliness"
     oidc_token {
-      service_account_email = google_service_account.scheduler_stg.email
-      audience              = var.warm_ping_via_edge ? google_cloud_run_v2_service.edge_stg.uri : google_cloud_run_v2_service.litellm_stg.uri
+      service_account_email = google_service_account.scheduler_stg[0].email
+      audience              = var.warm_ping_via_edge ? google_cloud_run_v2_service.edge_stg[0].uri : google_cloud_run_v2_service.litellm_stg[0].uri
     }
   }
   lifecycle {
@@ -284,6 +317,6 @@ resource "google_cloud_scheduler_job" "litellm_stg_warm" {
   }
   depends_on = [google_project_service.api, google_cloud_run_v2_service_iam_member.edge_stg_scheduler]
 }
-output "staging_edge_url" { value = google_cloud_run_v2_service.edge_stg.uri }
-output "staging_litellm_url" { value = google_cloud_run_v2_service.litellm_stg.uri }
-output "staging_probe_url" { value = google_cloud_run_v2_service.probe_stg.uri }
+output "staging_edge_url" { value = one(google_cloud_run_v2_service.edge_stg[*].uri) }
+output "staging_litellm_url" { value = one(google_cloud_run_v2_service.litellm_stg[*].uri) }
+output "staging_probe_url" { value = one(google_cloud_run_v2_service.probe_stg[*].uri) }

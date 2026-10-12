@@ -144,6 +144,19 @@ export function changeProject(original, action, body) {
   } else if (action === 'render') {
     if (!job.approved || !job.edit || (job.edit.version===2?job.edit.clips.some(c=>!job.assets[c.sceneId]):job.scenes.some(s => !job.assets[s.id]))) fail('대본 승인·장면 생성·편집 저장을 먼저 완료하세요.');
     job.render = null; job.task = { action, state: 'queued' };
+  } else if (action === 'metadata') {
+    const source = job.purpose === 'metadata' ? job.metadataSource : job.render;
+    if (!source?.key) fail('분석할 영상을 먼저 선택하세요.');
+    if (!['auto','short','long'].includes(body.format)) fail('추천받을 형식을 선택하세요.');
+    job.metadataResult = null;
+    job.metadataProgress = {stage:'queued', message:'영상 분석을 기다리고 있어요.'};
+    job.task = {action, state:'queued', sourceKey:source.key, format:body.format};
+  } else if (action === 'metadata-apply') {
+    if (job.purpose === 'metadata' || !job.render || job.metadataResult?.sourceKey !== job.render.key) fail('현재 최종 영상의 추천을 다시 생성하세요.');
+    if (!Number.isInteger(body.index) || body.index < 0 || body.index > 2) fail('적용할 추천안을 선택하세요.');
+    const selected = job.metadataResult.suggestions[body.index];
+    if (!selected) fail('추천안을 찾을 수 없습니다.');
+    job.publication = {...(job.publication || {platforms:['youtube'], privacy:'private'}), title:selected.title, description:selected.description+'\n\n'+selected.hashtags.join(' ')};
   } else if (action === 'publish') {
     if (body.reviewed !== true || !job.render || !job.approved) fail('최종 영상을 생성하고 검수 확인을 체크하세요.');
     if (!Array.isArray(body.platforms) || !body.platforms.length || body.platforms.some(p => !PLATFORMS.includes(p))) fail('업로드 플랫폼을 선택하세요.');
