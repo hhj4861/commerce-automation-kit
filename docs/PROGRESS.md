@@ -91,6 +91,7 @@ npm run report -- --setup                    # 텔레그램 chat_id 탐색
   - `docs/qa/20261011-serverless-platform-compatibility.md` — 플랫폼 동등성
   - `docs/qa/20261012-accounts-serverless-staging.md`
   - `docs/qa/20261012-litellm-cold-start.md`
+  - `docs/qa/20261013-shared-ai-maintenance-claude-status.md` — VM 점검(디스크 축소·Dify 삭제·accounts v1 퇴역)의 Claude 작업 현황: 목적, 완료, 남은 일, Codex 분담
   - `docs/20261010-shared-ai-hosting-cost-comparison.md`
 - ⚠️ 모든 `gcloud` 명령에 `--project=replay-live-508202`를 붙인다. 로컬 기본 프로젝트가 이 프로젝트가 아니다.
 
