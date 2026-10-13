@@ -44,7 +44,8 @@ function scenarioJob(value, now) {
   const job = publicAccount(value, now).job;
   if (job?.kind !== 'scenario') return null;
   return { ...job, projectId: value.job.projectId,
-    ...(job.state === 'done' ? { result: value.job.result } : {}) };
+    ...(job.state === 'done' ? { result: value.job.result } : {}),
+    ...(job.state === 'failed' && value.job.state === 'failed' && value.job.rejection ? {rejection:value.job.rejection} : {}) };
 }
 async function retainScenario(env, owner, record, now) {
   const value = record?.value || {};
@@ -68,15 +69,18 @@ export async function accountAction(env, owner, operation, input = {}, now = Dat
   if (operation === 'scenario-status' || operation === 'scenario-ack') {
     if (!uuid(input.id) || !uuid(input.projectId)) return problem('시나리오 요청을 확인하세요.', 400);
     const current = value.job?.id === input.id;
-    const archived = current ? null : await readVault(env, scenarioName(owner, input.id));
-    const job = current ? scenarioJob(value, now) : archived?.value.job;
+    const archived = current && !value.job.acknowledged ? null : await readVault(env, scenarioName(owner, input.id));
+    const job = current && !value.job.acknowledged ? scenarioJob(value, now) : archived?.value.job;
     if (!job || job.projectId !== input.projectId) return { job: null };
     if (operation === 'scenario-status') return { job };
     if (current && value.job.acknowledged) return { ok: true };
     if (['queued', 'running'].includes(job.state)) return problem('아직 생성 중입니다.');
-    if (current) await writeVault(env, name, { ...value, job: { ...value.job, result: null, acknowledged: true } }, record.revision);
+    // Archive rejected evidence before acknowledgement; a lost CAS is retryable.
+    // It is returned only by the owner/project-bound scenario-status route.
+    if (current && job.rejection) await retainScenario(env, owner, record, now);
+    if (current) await writeVault(env, name, { ...value, job: { ...value.job, result: null, rejection: null, acknowledged: true } }, record.revision);
     // Keep the source revision tombstone to fence delayed archival writers.
-    else await writeVault(env, scenarioName(owner, input.id), { sourceRevision: archived.value.sourceRevision, job: null }, archived.revision);
+    else if (!job.rejection) await writeVault(env, scenarioName(owner, input.id), { sourceRevision: archived.value.sourceRevision, job: null }, archived.revision);
     return { ok: true };
   }
   if (operation === 'notifications') {
