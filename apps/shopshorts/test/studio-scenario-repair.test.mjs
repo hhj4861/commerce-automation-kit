@@ -13,7 +13,7 @@ test('repairs invalid generated duration before independent review and preserves
  let drafts=0,reviews=0;const phases=[];
  const result=await scenarioBrief(brief,{}, {onProgress:async p=>phases.push(p),generate:async prompt=>{
    const review=mockReview(prompt);if(review){reviews++;return review;}
-   drafts++;if(drafts===2){assert.match(prompt,/SCENARIO_FORMAT_INVALID/);assert.match(prompt,/목표 24초/);}
+   drafts++;if(drafts===2){assert.match(prompt,/SCENARIO_FORMAT_INVALID/);assert.match(prompt,/목표 24초/);assert.match(prompt,/scenes\[\]\.duration/);assert.match(prompt,/sum must match target 24 seconds/);}
    return {value:drafts===1?badLength:good};
  }});
  assert.equal(drafts,2);assert.equal(reviews,1);assert.equal(result.scenes.reduce((n,s)=>n+s.duration,0),24);
@@ -73,4 +73,49 @@ test('research searches once; drafting, repair and review use that fixed evidenc
  }});
  assert.equal(calls,4);assert.equal(drafts,2);assert.equal(reviews,1);
  assert.deepEqual(result.research.facts,research.facts);
+});
+
+const webtoon={artPrompt:'같은 건축물이 움직이는 독창적인 그림',answer:'같은 대상의 이동과 결과를 비교한다.',layers:[{id:'building',label:'건물',meaning:'이동하는 대상',shape:'rect',color:'#88bbcc',from:[20,50],to:[70,50],size:[20,20],start:0,end:.8,motion:'move'}]};
+const webtoonGood={...good,scenes:scenes.map((s,i)=>({...s,kind:'video',duration:i===0?6:9,webtoon:structuredClone(webtoon)}))};
+const research={sources:[{id:'source-1',title:'검증용 근거',url:'https://example.com/research'}],facts:[{claim:'이동 전후 같은 대상의 위치를 비교한다.',sourceIds:['source-1']}],limitations:['실제 시공 구조가 아닌 개념도다.']};
+
+test('webtoon field and numeric scene index reach the one repair without echoing invalid values in the hint',async()=>{
+ for(const [mutate,path,rule] of [
+  [v=>{v.scenes[1].webtoon.layers[0].end=0;},'scenes[1].webtoon.layers[0].end','number in 0.1..1, greater than start'],
+  [v=>{v.scenes[1].webtoon.layers[0].color='private-invalid-value';},'scenes[1].webtoon.layers[0].color','#RRGGBB'],
+  [v=>{v.scenes[1].webtoon.layers[0]=null;},'scenes[1].webtoon.layers[0].id','layer object required'],
+  [v=>{v.scenes[0].duration=7;},'scenes[0].duration','opening must be exactly 6 seconds'],
+  [v=>{v.scenes[1].kind='image';},'scenes[1].kind','video required for webtoon/hybrid'],
+ ]){
+  const malformed=structuredClone(webtoonGood);mutate(malformed);
+  let calls=0,drafts=0,reviews=0;
+  const result=await scenarioBrief({...brief,productionStyle:'webtoon'}, {}, {generate:async prompt=>{
+   if(++calls===1)return {searched:true,value:research};
+   const review=mockReview(prompt);if(review){reviews++;return review;}
+   drafts++;
+   assert.ok(!prompt.includes('"kind":"image"},{"id":"scene-2"'));
+   if(drafts===2){const hint=JSON.parse(prompt.split('실패한 필드와 제약: ')[1].split('. 목표 길이')[0]);assert.deepEqual(hint,{path,rule});assert.ok(!JSON.stringify(hint).includes('private-invalid-value'));}
+   return {value:drafts===1?malformed:webtoonGood};
+  }});
+  assert.equal(drafts,2);assert.equal(reviews,1);assert.equal(result.scenes.length,3);
+ }
+});
+
+test('repeated webtoon failure retains a safe diagnostic but not raw input in public errors',async()=>{
+ const malformed=structuredClone(webtoonGood);malformed.scenes[1].webtoon.layers[0].color='private-invalid-value';
+ let calls=0;
+ await assert.rejects(scenarioBrief({...brief,productionStyle:'webtoon'},{},{generate:async()=>++calls===1?{searched:true,value:research}:{value:malformed}}),e=>{
+  assert.deepEqual(e.validationIssue,{path:'scenes[1].webtoon.layers[0].color',rule:'#RRGGBB'});
+  assert.equal(e.code,'SCENARIO_FORMAT_INVALID');assert.ok(!e.message.includes('private-invalid-value'));assert.match(accountFailureMessage('codex',e),/2번 장면의 대상 색상/);
+  for(const provider of ['codex','claude'])assert.ok(!accountFailureMessage(provider,e).includes('private-invalid-value'));
+  return true;
+ });
+ assert.equal(calls,3);
+});
+
+test('format diagnostics reject untrusted path and rule text at the public boundary',()=>{
+ for(const path of ['private-token','scenes[1].private-token','webtoon.layers[private-token].color','scenes[123456].webtoon.layers.color']){
+  const message=accountFailureMessage('codex',{code:'SCENARIO_FORMAT_INVALID',validationIssue:{path,rule:'private-token'}});
+  assert.ok(!message.includes('private-token'));assert.ok(!message.includes('확인 항목'));
+ }
 });
