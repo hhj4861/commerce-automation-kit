@@ -100,10 +100,12 @@ terraform apply identity.tfplan
 장기 서비스 계정 JSON 키는 생성하지 않는다.
 
 릴리스는 triggering SHA의 소스를 archive해 IAP SSH로 전달하고 `/opt/shared-ai/releases/gitops-litellm-<SHA>`에 설치한다.
-기존 `.env`와 `.runtime`을 공유하며 비밀번호·암호화 키·구독 인증을 재발급하지 않는다.
-`shared-ai-gateway` compose project/DB 볼륨을 유지하고 gateway 및 기존 Codex 계정 워커만 갱신한다.
-DB·Dify·별도 accounts 서비스·edge는 재시작하지 않는다. DB/네트워크/볼륨 구조 변경은 별도 운영 작업이다.
-계정 관리 명령과 같은 lock을 잡고, DB dump와 생성 설정 백업 후 render → Compose 검증 → up → readiness를 확인한다.
+기존 `.env`와 `.runtime`을 공유하며 비밀번호·암호화 키를 재발급하지 않는다.
+`shared-ai-gateway` compose project/DB 볼륨을 유지하고 gateway만 갱신한다.
+DB·edge 등 다른 서비스는 재시작하지 않는다. DB/네트워크/볼륨 구조 변경은 별도 운영 작업이다.
+`gitops/litellm.lock`을 잡고, DB dump와 생성 설정 백업 후 `gateway.py render` → Compose 검증 → up → readiness를 확인한다.
+릴리스 전에 `compose.yaml`의 LiteLLM 이미지가 digest로 고정돼 있는지 확인한다.
+2026-10-13: 계정별 구독 워커(D5)와 accounts v1(#19)이 퇴역해 릴리스 대상에서 빠졌다(#222). 남은 구독 overlay 파일은 무시한다.
 
 실패 시 생성 설정과 이전 컨테이너 구성을 복구한다. **DB 스키마 migration은 자동 되돌리지 않는다.**
 `/opt/shared-ai/backups/gitops-litellm-*`의 비공개 dump로 별도 복구가 필요할 수 있다.
@@ -160,7 +162,7 @@ terraform -chdir=ops/deploy/gcp-identity validate
 
 단위 테스트는 브랜치 격리·수동 실행 불일치·OIDC 권한·서버 백업/복구를 검증한다.
 mock 서버 테스트 통과는 실제 GCP 배포 성공을 의미하지 않는다. 첫 Actions 배포에서 실제 인증과 readiness를 확인해야 한다.
-Shorts 제작 워커, Dify, 독립 accounts, broker bootstrap의 자동 배포는 이 파이프라인에 포함하지 않는다.
+Shorts 제작 워커와 broker bootstrap의 자동 배포는 이 파이프라인에 포함하지 않는다. Dify와 accounts v1은 2026-10-13에 퇴역했다.
 
 공식 근거: [Pages CI Direct Upload](https://developers.cloudflare.com/pages/how-to/use-direct-upload-with-continuous-integration/),
 [Pages branch controls](https://developers.cloudflare.com/pages/configuration/branch-build-controls/),

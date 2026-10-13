@@ -93,6 +93,7 @@ Hanmadi 배포 시점:
   - 그 배포 기록(`feat/common-video-generator` 브랜치의 `docs/qa/20261013-hanmadi-music-production.md`)은 퇴역 변수 7개가 없는 상태를 유지했다고 적었다.
   - W1 직전의 퇴역 경로 호출 0건 확인(04:06:09Z 뒤)에는 이 배포 뒤 시간도 들어 있다.
 - 점검 뒤 Codex는 공개 revision이 `f77f853`임을 확인했다. Vercel 관리 API가 403이라 최신 환경 변수는 다시 조회하지 못했다(Codex 회신 10-13).
+  - 2026-10-13 추가(Codex 회신): 11:53Z에 공식 Vercel CLI로 다시 조회해, Production 변수 14개가 유지되고 삭제 대상 7개가 없으며 `LITELLM_*` 6개가 유지됨을 확인했다. 앞선 직접 관리(REST) API 조회의 403 원인은 확인하지 않았고, 공식 Vercel CLI 재조회는 그와 별개로 성공했다(Codex 기록 `docs/qa/20261013-hanmadi-legacy-cleanup.md`, `feat/common-video-generator` 브랜치 `d05d6a7`).
 
 ## 계획과 달라진 점
 
@@ -164,7 +165,7 @@ D+7(2026-10-20) 이후 계획 §8에 따라 ★ 사용자 승인을 받고 지�
 | Hanmadi 확인 (c): 튜터 `/conversation` 안내 문구 | Codex(튜터 PIN 로그인 필요) | 아무 때 |
 | claude.ai **Settings > Claude Code**에서 2026-09-29 16:25~16:26 KST에 만든 토큰 삭제 | 사용자 | 아무 때. D+7 전이면 좋다 |
 | D+7 ★: `google_compute_disk.data` 블록 삭제 PR·apply, 옛 디스크 자동 스냅샷 삭제, 최종 스냅샷 삭제 | Claude, 사용자 승인 | 2026-10-20 이후 |
-| 저장소 정리 PR: #19(accounts v1), D5(구독 라우트), D6(`services/dify`와 워크플로). 범위는 계획 §8 | shared-ai-host·ai-gateway 쪽은 Claude, Hanmadi 화면·라우트는 Codex | 점검 뒤 |
+| 저장소 정리 PR: #19(accounts v1), D5(구독 라우트), D6(`services/dify`와 워크플로). 범위는 계획 §8. Claude 몫은 #221·#222로 올렸다 | shared-ai-host·ai-gateway 쪽은 Claude, Hanmadi 화면·라우트는 Codex | 점검 뒤 |
 
 - wp-auto-blog의 `DISCOVERY_ENABLED`를 W15 전까지 켜지 않는다는 제약(계획 §5-3)은 풀렸다.
 
