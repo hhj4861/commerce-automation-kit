@@ -52,13 +52,13 @@ const app = spawn(process.execPath, ["node_modules/next/dist/bin/next", "dev", "
   stdio: ["ignore", "pipe", "pipe"],
 });
 const exited = once(app, "exit");
-let logs = "", browser;
+let logs = "", browser, page;
 app.stdout.on("data", b => { logs += b; }); app.stderr.on("data", b => { logs += b; });
 try {
   for (let i = 0; i < 120; i++) { try { if ((await fetch(base + "/study")).ok) break; } catch {} await new Promise(r => setTimeout(r, 500)); }
   browser = await chromium.launch({ ...(process.env.PLAYWRIGHT_CHANNEL ? { channel: process.env.PLAYWRIGHT_CHANNEL } : {}), headless: true });
   const context = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true });
-  const page = await context.newPage(); const errors = [], audioRequests = [];
+  page = await context.newPage(); const errors = [], audioRequests = [];
   page.on("pageerror", e => errors.push(e.message));
   await page.addInitScript(() => { document.addEventListener("DOMContentLoaded", () => { const s = document.createElement("style"); s.textContent = "nextjs-portal{display:none!important}"; document.head.append(s); }); });
   await page.route("**/api/study/audio", r => {
@@ -84,11 +84,13 @@ try {
   });
   await page.goto(base + "/study");
   await page.getByRole("button", { name: "음악", exact: true }).click();
+  await page.getByRole("button", { name: "Pretender · 공식 영상", exact: true }).click();
   await page.getByRole("heading", { name: "현재 가사 학습 이용 불가", exact: true }).waitFor();
   assert.equal(await page.locator(".hm-music-unit").count(), 0);
   for (const reason of ["not-configured", "rights-pending"]) {
     pending = reason;
     await page.reload(); await page.getByRole("button", { name: "음악", exact: true }).click();
+    await page.getByRole("button", { name: "Pretender · 공식 영상", exact: true }).click();
     await page.getByRole("heading", { name: "현재 가사 학습 이용 불가", exact: true }).waitFor();
     assert.equal(await page.getByRole("button", { name: "다시 확인", exact: true }).count(), 0);
     assert.equal(await page.getByText("가사를 한 줄씩 듣고, 뜻을 익히며 따라 불러요.", { exact: true }).count(), 0);
@@ -100,6 +102,7 @@ try {
   assert.match(await page.locator("iframe").getAttribute("src"), /cc_load_policy=1/);
   await page.screenshot({ path: resolve(dir, "music-pending.png") });
   pending = ""; await page.reload(); await page.getByRole("button", { name: "음악", exact: true }).click();
+  await page.getByRole("button", { name: "Pretender · 공식 영상", exact: true }).click();
   await page.getByText("가사 1 / 12", { exact: true }).waitFor();
   assert.equal(await page.locator("iframe").count(), 0, "full song unmounts before pronunciation practice");
   for (const width of [320, 390, 1024]) {
@@ -142,6 +145,7 @@ try {
     if (i === 2) assert.equal(await page.getByRole("button", { name: "원곡에서 이 구간 듣기", exact: true }).count(), 0);
   }
   await page.reload(); await page.getByRole("button", { name: "음악", exact: true }).click();
+  await page.getByRole("button", { name: "Pretender · 공식 영상", exact: true }).click();
   await page.getByText("가사 12 / 12", { exact: true }).waitFor();
   await page.getByRole("button", { name: "이전", exact: true }).click();
   await page.getByText("가사 11 / 12", { exact: true }).waitFor();
@@ -164,6 +168,7 @@ try {
     const raw = await music(); const result = await raw.json();
     assert.equal(result.status, "unavailable"); assert(!JSON.stringify(result).includes("upstream private details"));
     await page.reload(); await page.getByRole("button", { name: "음악", exact: true }).click();
+    await page.getByRole("button", { name: "Pretender · 공식 영상", exact: true }).click();
     await page.getByRole("heading", { name: "지금은 가사를 불러올 수 없어요", exact: true }).waitFor();
     assert.equal(await page.locator(".hm-lyrics-original").count(), 0);
     assert(await page.getByRole("button", { name: "다시 확인", exact: true }).isVisible());
@@ -173,10 +178,72 @@ try {
   await page.getByText("가사 1 / 12", { exact: true }).waitFor();
   await post({ action: "assess", language: "es", answers: [0, 0, 0], confidence: 1, minutes: 5 });
   await page.getByLabel("학습 언어", { exact: true }).selectOption("es");
-  assert.equal(await page.getByRole("button", { name: "음악", exact: true }).count(), 0);
+  // Selecting a language persists settings and hydrates its assessed profile asynchronously.
+  await page.getByRole("button", { name: "음악", exact: true }).waitFor({ state: "visible" });
+  await page.getByRole("button", { name: "음악", exact: true }).click();
+  await page.getByRole("heading", { name: "Paso a paso", exact: true }).waitFor();
+  // Actual original audio files and account API; only pronunciation TTS is mocked above.
+  const originalCatalog = await (await context.request.get(base + "/api/study/practice-music")).json();
+  for (const song of originalCatalog.songs) {
+    await post({ action: "assess", language: song.language, answers: [0, 0, 0], confidence: 1, minutes: 5 });
+    await page.reload();
+    await page.getByLabel("학습 언어", { exact: true }).selectOption(song.language);
+    await page.getByRole("button", { name: "음악", exact: true }).click();
+    await page.getByRole("heading", { name: song.title, exact: true }).waitFor();
+    await page.waitForFunction(() => { const a = document.querySelector(".hm-song-player audio"); return a && Number.isFinite(a.duration) && a.duration > 30 && a.duration < 34; });
+    for (const width of [320, 390, 1024]) {
+      await page.setViewportSize({ width, height: 844 });
+      assert(await page.locator(".hm-original-music").evaluate(el => el.scrollWidth <= el.clientWidth + 1));
+      await page.screenshot({ path: resolve(dir, `original-${song.language}-${width}.png`) });
+    }
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.getByRole("button", { name: "처음부터 노래 전체 듣기", exact: true }).click();
+    await page.waitForFunction(() => { const a = document.querySelector(".hm-song-player audio"); return a && !a.paused && a.currentTime > 0; });
+    await page.getByRole("button", { name: "이 줄 노래 듣기", exact: true }).click();
+    await page.getByRole("button", { name: "발음 듣기", exact: true }).click();
+    await page.getByText("음성 테스트 응답", { exact: true }).waitFor();
+    assert(await page.locator(".hm-song-player audio").evaluate(a => a.paused));
+    await page.getByRole("button", { name: "뜻 가리기", exact: true }).click();
+    assert.equal(await page.locator(".hm-lyrics-meaning").count(), 0);
+    await page.getByRole("button", { name: "뜻 보기", exact: true }).click();
+    await page.locator(".hm-lyrics-line").scrollIntoViewIfNeeded();
+    await page.screenshot({ path: resolve(dir, `original-${song.language}-lyrics.png`) });
+    for (let i = 0; i < 4; i++) {
+      await page.getByText(`연습 ${i + 1} / 4`, { exact: true }).waitFor();
+      await page.getByRole("button", { name: "따라 불렀어요", exact: true }).click();
+      await page.getByRole("button", { name: "이 줄 연습 완료", exact: true }).waitFor();
+      if (i < 3) await page.getByRole("button", { name: "다음 줄", exact: true }).click();
+    }
+    await page.reload(); await page.getByRole("button", { name: "음악", exact: true }).click();
+    await page.getByText("연습 4 / 4", { exact: true }).waitFor();
+    await page.getByRole("button", { name: "뜻 복습 시작", exact: true }).click();
+    await page.getByRole("button", { name: song.lines[1].meaning, exact: true }).click();
+    await page.getByText("한 번 더 생각해 보세요.", { exact: true }).waitFor();
+    await page.getByRole("region", { name: "연습곡 뜻 복습", exact: true }).scrollIntoViewIfNeeded();
+    await page.screenshot({ path: resolve(dir, `original-${song.language}-review.png`) });
+    for (let i = 0; i < 4; i++) {
+      await page.getByText(`복습 ${i + 1} / 4`, { exact: true }).waitFor();
+      await page.getByRole("button", { name: song.lines[i].meaning, exact: true }).click();
+      await page.getByRole("button", { name: i < 3 ? "다음 복습" : "학습 결과 보기", exact: true }).click();
+    }
+    await page.getByRole("heading", { name: "한 곡을 내 한마디로!", exact: true }).waitFor();
+    await page.screenshot({ path: resolve(dir, `original-${song.language}-complete.png`) });
+    await page.reload(); await page.getByRole("button", { name: "음악", exact: true }).click();
+    await page.getByRole("heading", { name: "한 곡을 내 한마디로!", exact: true }).waitFor();
+    if (song.language === "ja") {
+      await page.getByRole("button", { name: "Pretender · 공식 영상", exact: true }).click();
+      await page.getByRole("button", { name: "한마디 연습곡", exact: true }).click();
+      await page.getByRole("heading", { name: "한 곡을 내 한마디로!", exact: true }).waitFor();
+    }
+    await page.getByRole("button", { name: "다시 복습하기", exact: true }).click();
+    await page.getByText("복습 1 / 4", { exact: true }).waitFor();
+  }
   assert.deepEqual(errors, []);
-  await writeFile(resolve(dir, "result.json"), JSON.stringify({ passed: true, supplier: "Hanmadi-contract fixture, no commercial provider connected", lines: 12, calls, videoRequests, audioRequests: audioRequests.length, errors, verified: ["unconfigured/rights-pending states have no retry or learning promise", "transient errors keep retry", "no emotional lessons", "12 ordered lines including repeat", "Korean pronunciation/meaning", "manual segment replay", "speech unmounts video", "cursor persistence and account isolation", "no lyric persistence", "failed save/retry", "auth/origin/index/revision guards", "provider errors/expiry", "no overflow at 320/390/1024"] }, null, 2));
+  await writeFile(resolve(dir, "result.json"), JSON.stringify({ passed: true, supplier: "Hanmadi-contract fixture, no commercial provider connected", lines: 12, calls, videoRequests, audioRequests: audioRequests.length, errors, verified: ["four original songs: actual audio playback, TTS pause, meaning/practice/review, reload/repeat, responsive widths", "unconfigured/rights-pending states have no retry or learning promise", "transient errors keep retry", "no emotional lessons", "12 ordered lines including repeat", "Korean pronunciation/meaning", "manual segment replay", "speech unmounts video", "cursor persistence and account isolation", "no lyric persistence", "failed save/retry", "auth/origin/index/revision guards", "provider errors/expiry", "no overflow at 320/390/1024"] }, null, 2));
   console.log("PASS licensed lyrics fixture journey, 12 lines, progress, playback controls and errors");
+} catch (error) {
+  await page?.screenshot({ path: resolve(dir, "music-failure.png"), fullPage: true }).catch(() => {});
+  throw error;
 } finally {
   await browser?.close(); app.kill("SIGTERM"); await exited;
   await new Promise(r => supplier.close(r)); await unlink(dataFile);

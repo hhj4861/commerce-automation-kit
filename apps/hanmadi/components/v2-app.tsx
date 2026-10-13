@@ -7,7 +7,7 @@ import { studyAudio } from "@/lib/study-audio-client";
 import { Dialog } from "./v2-dialog";
 import { Wordbook } from "./v2-wordbook";
 import { Vocabulary } from "./v2-vocabulary";
-import { MusicStudy } from "./v2-music";
+import { MusicStudy } from "./v2-original-music";
 import { V2Lesson } from "./v2-lesson";
 import { lessonPlan } from "@/lib/v2-lesson";
 import { GoogleLogin } from "./google-login";
@@ -1419,7 +1419,7 @@ export function V2App() {
                       ["today", "오늘 추천"],
                       ["levels", "레벨별"],
                       ["scenes", "상황별"],
-                      ...(language === "ja" ? [["music", "음악"]] : []),
+                      ["music", "음악"],
                     ].map(([id, label]) => (
                       <button
                         key={id}
@@ -1441,8 +1441,8 @@ export function V2App() {
                       </button>
                     </div>
                   )}
-                  {section === "music" && language === "ja" && (
-                    <MusicStudy />
+                  {section === "music" && (
+                    <MusicStudy key={language} language={language} />
                   )}
                   {section === "today" && (
                     <>
