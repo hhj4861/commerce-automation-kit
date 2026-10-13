@@ -82,3 +82,25 @@
 - GitHub run 38367288557 재실행은 403 대신 503으로 종료. 실제 SS_DEPLOY_CLOUDFLARE_API_TOKEN 바인딩 없음, Secrets Store CAK_DEPLOY_CLOUDFLARE_API_TOKEN도 없음(전체 1페이지 목록에서 이름만 비교). 토큰을 사용자에게 채팅으로 요구하지 않았고 CI용 토큰의 안전한 로컬 파일 경로 전달을 안내했다. Wrangler OAuth를 장기 CI 토큰으로 복제하지 않았다.
 - 사용자의 ‘이미 자동배포 중 아닌가’ 질문에 Pages API를 직접 재조회했다. shopshorts-dash source=null, production_branch=deploy/shopshorts. 최근 5개 배포 모두 trigger=ad_hoc/success이며 최신 c053edb0/source b14a000이다. GitHub workflow 존재와 자동배포 성공을 혼동하지 않는다. 현 상태는 수동 운영 배포 성공 / 머지 기반 자동배포 미완료.
 - 남은 작업: 새 대본 수정 PR/운영 승격 승인 후 동일 기획 실생성 검증, CI 전용 토큰 등록 후 GitOps 실행 검증. 이 문서는 보류나 단위 검사 통과를 실생성 완료로 보고하지 않는다.
+
+
+## #215·#216 승인 후 운영 반영
+
+- 사용자 ‘머지해줘’ 승인 후 원본 #215 main merge 9bc265bd0bc1e436c04f6c3d70d7789636b21422, 운영 #216 merge 8b762f69b9a53c77e38e37f186eb5fbb6e06c6b5 완료. 두 PR 필수 CI 통과 확인.
+- 깨끗한 운영 checkout을 #216 exact merge로 갱신. 승격 검사 21개가 통과한 a16e1e1과 전체 tree diff가 0이므로 검사 증거를 재사용했다.
+- 승인된 aggregate account poll 0건/hasNext=false 확인 후 SIGTERM 정상 재시작. 계정 워커 PID 49967 / running / 이전 exit 0. 미디어 워커는 변경하지 않았다.
+- Pages 수동 배포 exit 0. API에서 Production / deploy/shopshorts / exact 8b762f6 / success 확인. deployment 40eeb8f5-8dc5-4888-9c2f-0a7a97d16270, https://40eeb8f5.shopshorts-dash.pages.dev 및 운영 https://shopshorts-dash.pages.dev 반영.
+- 같은 QA 프로젝트에서 대본 생성 다시 시도를 정확히 1회 눌렀다. 최종 결과와 후속 제작 검증은 아래에 이어 기록한다.
+
+- #216 배포 후 첫 요청은 자료 확인 단계에서 ‘연결 시간이 지났거나 실행기가 중단됐습니다’로 종료했고 UI에 일시적 Failed to fetch가 함께 표시됐다. 대본 검증 실패로 분류하지 않는다. 활성 계정 작업 0건과 워커 PID 유지 확인. 로그의 연결 실패 메시지는 당시보다 776초 전 기록이어서 직접 원인으로 사용하지 않았다.
+- 같은 워커 Node20/환경으로 broker poll 성공, 웹/health 200, 서버와 로컬 시계 차이 0~1초 확인. 페이지 새로고침으로 통신 오류가 해소된 뒤 중복 실행 없이 1회 재시도했다.
+- 복구 후 요청은 aggregate running 1건, deadline 잔여 852초/lease 잔여 116초로 실제 실행 확인. UI 자료 확인 → 확인한 자료로 대본 작성 중으로 전환 확인. 최종 결과 대기.
+
+
+## #216 운영 실검증 최종 결과
+
+- 연결 복구 후 요청은 research → scenario → revision → review로 실제 진행. 중간 집계 running 1건 / deadline 잔여 392초 / lease 잔여 117초를 확인했다. 보완 후 review 단계 진입은 장면 형식 검사를 통과했다는 근거다.
+- 최종 SCENARIO_DEPTH_INVALID. UI에 고정 항목 ‘질문과 답의 일치, 필요한 이유, 작동 과정, 구체적 예시, 완결된 답, 설명 호흡, 대사와 화면의 연결’이 모두 표시됐다. 이는 모델 검토의 불합격 판정이며 원문 대본을 직접 검토해 동일한 결론을 확정한 것은 아니다. 실패한 원문/상세 검토 사유는 현재 실패 전송 경로에 보존되지 않는다.
+- 새 유료 미디어·음성·렌더·업로드는 실행되지 않았다. 품질 검토를 우회하거나 재시도 한도를 늘리지 않았다. 머지/수동 운영 배포는 완료, 전체 실생성 E2E는 대본 내용 검토에서 여전히 미완료다.
+- GitHub 자동 배포 run 38376191100은 failure이며 CI 전용 토큰 부재 경계가 남아 있다. 수동 Pages 배포 성공과 구분한다.
+- 다음 개선 필요: 거부된 대본과 상세 검토 근거를 계정 소유자에게만 보존·표시하여 실제 부족한 부분을 확인하고 보완하는 흐름. 해당 기능을 이 기록만으로 구현·운영 완료라고 하지 않는다.
