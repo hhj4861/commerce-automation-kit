@@ -262,10 +262,10 @@ test('a new account recommendation is a fresh job and its own encrypted history 
  await executeAccountJob(record.value,{
   update:async patch=>patches.push(patch),
   openServer:async()=>({call:async()=>({account:{type:'chatgpt'}}),close:async()=>{}}),
-  generator:()=>async prompt=>{
+  generator:options=>{assert.equal(options.timeoutMs,180000);return async prompt=>{
    assert.match(prompt,/이전 계정 소재/);assert.doesNotMatch(prompt,/fixture-refresh/);
    return {searched:true,value:{suggestions:[0,1,2].map(i=>({topic:`새 계정 소재 ${i}`,direction:'연출',reason:'근거'})),sources:[{title:'자료',url:'https://example.org/research'}]}};
-  }
+  };}
  });
  assert.equal(patches.at(-1).job.state,'done');
  assert.equal((await accountAction(env,b,'recommendation',{id:'old-job'})).status,404);
@@ -314,4 +314,39 @@ test('permanent broker authorization failures are not retried',async()=>{
 test('transient broker outage has a bounded retry count',async()=>{
  let calls=0;const worker=startAccountWorker({intervalMs:100000,retryDelayMs:0,log(){},call:async()=>{calls++;throw new DOMException('timeout','TimeoutError');}});
  await waitFor(()=>calls===2);await worker.stop();assert.equal(calls,2);
+});
+
+
+test('slow renewal does not build a backlog ahead of completion', async t => {
+ const {env,db}=fixture(); t.after(()=>db.close());
+ await accountRunner(env,{operation:'poll'});await accountAction(env,a,'connect',{provider:'codex'});
+ let releaseRead,finishWork,entered=false,done=false,reads=0;
+ const gate=new Promise(r=>{releaseRead=r;}),work=new Promise(r=>{finishWork=r;});
+ const worker=startAccountWorker({intervalMs:100000,renewIntervalMs:5,log(){},
+  call:async(_path,input)=>{
+   if(input.operation==='read'){reads++;if(!entered){entered=true;await gate;}}
+   return accountRunner(env,input);
+  },
+  execute:async(_,{update})=>{await work;await update({job:{state:'done'}});done=true;}
+ });
+ try{
+  await waitFor(()=>entered);await new Promise(r=>setTimeout(r,55));
+  finishWork();await Promise.resolve();releaseRead();await waitFor(()=>done);
+  assert.equal(reads,2,'one renewal and one completion, regardless of elapsed ticks');
+  assert.equal((await accountAction(env,a,'status')).job.state,'done');
+ }finally{releaseRead();finishWork();await worker.stop();}
+});
+
+
+test('extended scenario call budget still stops at the persisted whole-job deadline', async t => {
+ const {env,db}=fixture(); t.after(()=>db.close());
+ await accountRunner(env,{operation:'poll'});await accountAction(env,a,'connect',{provider:'codex'});
+ const name=`llm/account/${a}`,record=await readVault(env,name);
+ await writeVault(env,name,{...record.value,job:{...record.value.job,kind:'scenario',deadline:Date.now()+100}},record.revision);
+ let aborted=false;
+ const worker=startAccountWorker({intervalMs:100000,call:(_path,input)=>accountRunner(env,input),log(){},
+  execute:async(_,{signal})=>{await new Promise(resolve=>{if(signal.aborted)resolve();else signal.addEventListener('abort',resolve,{once:true});});aborted=true;}
+ });
+ try{await waitFor(()=>aborted);assert.equal((await accountAction(env,a,'status')).job.state,'failed');}
+ finally{await worker.stop();}
 });
