@@ -8,7 +8,7 @@ test('resume prioritizes most recently saved unfinished videos, keeps finished v
  assert.deepEqual(result.unfinished.map(p=>p.id),['newest',base.id]);assert.equal(result.completed[0].id,'completed');assert.deepEqual(projects,original);
 });
 test('resume links preserve project identity and expose correct review, media, edit, upload or failure state',()=>{
- for(const [patch,step,label] of [[{},2,'시나리오 단계'],[{approved:true},3,'이미지 · 영상 단계'],[{approved:true,assets:{'scene-1':{kind:'image'}}},4,'편집 단계'],[{render:{}},5,'업로드 단계'],[{task:{action:'media',state:'failed'}},3,'장면 생성 확인 필요'],[{task:{action:'render',state:'running'}},4,'영상 렌더 중']]){
+ for(const [patch,step,label] of [[{},2,'시나리오 단계'],[{approved:true},3,'이미지 · 영상 단계'],[{approved:true,assets:{'scene-1':{kind:'image'}}},4,'편집 단계'],[{render:{}},5,'완성 영상 · 검수 대기'],[{task:{action:'media',state:'failed'}},3,'장면 생성 확인 필요'],[{task:{action:'render',state:'running'}},4,'영상 렌더 중']]){
   const summary=projectSummary({...base,...patch});assert.equal(summary.step,step);assert.equal(summary.label,label);assert.equal(summary.href,`/studio?id=${base.id}`);
  }
  assert.equal(projectSummary({...base,upload:{state:'done'}}).action,'완성 영상 보기');
