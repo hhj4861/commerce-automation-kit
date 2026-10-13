@@ -59,11 +59,11 @@ class ReleaseTests(unittest.TestCase):
         self.assertEqual(backup.read_bytes(), b'fixture database dump')
         self.assertIn('pg_dump', self.calls[0][0])
         commands = [args for args, _ in self.calls]
-        starts = [index for index, args in enumerate(commands) if 'up' in args]
-        self.assertEqual(len(starts), 1)
-        self.assertLess(commands.index(list(module.RENDER)), starts[0])
-        self.assertEqual(commands[starts[0]][-1], 'gateway')
-        self.assertIn('--no-deps', commands[starts[0]])
+        self.assertEqual([cwd for args, cwd in self.calls if args == list(module.RENDER)], [destination])
+        self.assertEqual([args for args in commands if 'up' in args], [[
+            'docker', 'compose', '-p', 'shared-ai-gateway', '-f', str(destination / 'compose.yaml'),
+            'up', '-d', '--no-deps', '--wait', '--wait-timeout', '300', 'gateway']])
+        self.assertLess(commands.index(list(module.RENDER)), next(i for i, args in enumerate(commands) if 'up' in args))
         for args in commands:
             self.assertNotIn('down', args)
             self.assertNotIn('init', args)
@@ -76,7 +76,7 @@ class ReleaseTests(unittest.TestCase):
         (self.runtime / 'subscriptions.env').write_text('')
         self.release()
         for args, _ in self.calls:
-            self.assertNotIn(str(overlay), args)
+            self.assertFalse(any('subscriptions' in part for part in args), args)
         starts = [args for args, _ in self.calls if 'up' in args]
         self.assertEqual(starts[0][-1], 'gateway')
         self.assertTrue(overlay.exists())
@@ -91,6 +91,7 @@ class ReleaseTests(unittest.TestCase):
     def test_release_files_exist_in_repository(self):
         for name in module.FILES:
             self.assertTrue((GATEWAY / name).is_file(), name)
+        self.assertRegex((GATEWAY / 'compose.yaml').read_text(), module.PINNED_IMAGE)
 
     def test_release_files_alone_render_the_gateway_config(self):
         destination = self.home / 'render-check'
@@ -112,9 +113,9 @@ class ReleaseTests(unittest.TestCase):
             self.release(failing)
         self.assertEqual((self.runtime / 'litellm.json').read_text(), 'original-config')
         self.assertFalse((self.home / 'gitops/litellm.json').exists())
-        self.assertEqual(self.calls[-1][1], self.old)
-        self.assertIn('up', self.calls[-1][0])
-        self.assertEqual(self.calls[-1][0][-1], 'gateway')
+        self.assertEqual(self.calls[-1], ([
+            'docker', 'compose', '-p', 'shared-ai-gateway', '-f', str(self.old / 'compose.yaml'),
+            'up', '-d', '--no-deps', '--wait', '--wait-timeout', '300', 'gateway'], self.old))
 
     def test_failed_backup_never_renders_or_restarts(self):
         def fail_backup(args, cwd, **kwargs):
