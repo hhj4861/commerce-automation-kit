@@ -13,8 +13,18 @@
 - `/settings`: Codex 연결됨, 제작 워커 연결 대기 표시. 거짓 정상 상태 없음.
 - `/metadata`: 공통 sidebar, 모바일390×844 메뉴10개와 가로 넘침 없음. viewport override 복구.
 
+## 재시작 후 확인
+
+- Pages deployment `4a025c8b-d4e8-49c5-81ac-a9da3c6ebac8`, source `4e26366`, URL https://shopshorts-dash.pages.dev .
+- 사용자가 운영 계정 작업 건수 조회와 안전한 재시작을 승인한 뒤 poll: 0건, 다음 페이지 없음. 계정 워커 재시작 완료(PID 9404, running).
+- 별도 미디어 워커 재시작 질문에 사용자가 ‘계속’으로 승인. 정상 SIGTERM 후 KeepAlive로 재기동(PID 15337, running, 이전 종료 0). 강제 종료하지 않았다.
+- 운영 config 조회: cloud-worker, workerAt 2026-10-13T01:59:54.634Z, 확인 당시 age 5초. image/video/voice/shortsUpload/motion/animation/webtoon/hybrid/metadata capability 확인. 프로세스 존재만이 아니라 서버 heartbeat 복구 확인.
+- 시나리오 재검증은 자료 확인 뒤 `codex scenario UNKNOWN`으로 실패. 이전 CODEX_TIMEOUT과 다르다. 원래 오류의 상세 필드가 남지 않아 원인을 단정할 수 없다.
+- 생성 데이터의 길이/장면 형식 검증 오류가 UNKNOWN으로 축약되는 코드 경로를 확인해 별도 `fix/shopshorts-scenario-validation`에서 보완 중. 운영에는 아직 적용하지 않았다.
+
 ## 남은 경계
 
-- 계정 워커 소스는 갱신됐지만 실행 프로세스 재시작은 아직 안 했다. 안전한 재시작 전 poll 건수 확인이 자동 승인 검토에서 ‘배포 승인만으로 운영 작업 상태 조회의 구체적 승인 확인 불가’로 차단됐다. 사용자에게 집계 조회와 안전한 재시작을 요청했다. 우회 조회하지 않았다.
-- 기존 미디어 워커 오프라인과 자동 최종 렌더 큐 소비 문제는 미해결. 전체 자동 실생성 E2E 완료로 보고하지 않는다.
-- 신규 유료 생성/발행/기존 콘텐츠 변경 없음. 운영 웹 UI 배포와 자동 GitOps·계정 워커 활성화·전체 E2E는 구분한다.
+- 전체 자동 실생성 E2E는 아직 미완료다. 대본 실패를 해결하고 최종 렌더까지 다시 확인해야 한다.
+- GitHub 자동 배포의 Cloudflare credential request 403은 남아 있다. 이번 Pages 수동 배포 성공과 GitOps 복구는 다르다.
+- 이번 재개 시점에는 연결된 브라우저가 없어 UI heartbeat를 다시 볼 수 없었고 공식 운영 config API로 확인했다. 기존 화면 검증 증거는 앞 절과 같다.
+- 신규 유료 미디어 생성/발행 없음. 기존 승인 차단은 사용자 추가 승인으로 해소됐다.
