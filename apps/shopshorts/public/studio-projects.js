@@ -6,10 +6,11 @@ export function projectSummary(project) {
   const step = resumeStep(project), task = project.task;
   const done = project.upload?.state === 'done';
   const busy = ['queued','running'].includes(task?.state);
-  const failed = task?.state === 'failed';
-  const label = done ? '업로드 완료' : failed ? `${tasks[task.action] || '작업'} 확인 필요` : busy ? `${tasks[task.action] || '제작'} ${task.state === 'queued' ? '대기 중' : '중'}` : `${steps[step-1]} 단계`;
+  const failed = task?.state === 'failed' || project.upload?.state === 'failed';
+  const ready = !!project.render;
+  const label = done ? '업로드 완료' : failed ? `${project.upload?.state === 'failed' ? '업로드' : tasks[task?.action] || '작업'} 확인 필요` : busy ? `${tasks[task.action] || '제작'} ${task.state === 'queued' ? '대기 중' : '중'}` : ready ? '완성 영상 · 검수 대기' : `${steps[step-1]} 단계`;
   return {step, done, tone: failed ? 'error' : busy ? 'active' : 'ready', label,
-    action: done ? '완성 영상 보기' : busy ? '진행 상황 보기' : failed ? '확인하고 이어하기' : '이어서 만들기',
+    action: done ? '완성 영상 보기' : busy ? '진행 상황 보기' : failed ? '확인하고 이어하기' : ready ? '영상 검수하기' : '이어서 만들기',
     href: `/studio?id=${encodeURIComponent(project.id)}`};
 }
 export function organizeProjects(projects) {
