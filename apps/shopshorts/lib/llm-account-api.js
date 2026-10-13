@@ -1,3 +1,4 @@
+import {readScenarioRejection} from './scenario-rejection.js';
 import { googleUser, legacyAuthorized, sameOrigin } from './google-auth.js';
 import { recommendationInput } from './studio-recommendations.js';
 
@@ -17,8 +18,18 @@ export async function llmAccountApi(request, env, call) {
     if (!owner) return json({ error: '로그인이 필요합니다.' }, 401);
     if (!sameOrigin(request)) return json({ error: '다른 사이트에서 요청할 수 없습니다.' }, 403);
     const operation = path === '/api/studio/recommendations' ? 'recommend' : path.slice('/api/studio/llm/'.length);
-    if (!['status', 'connect', 'code', 'disconnect', 'cancel', 'recommend', 'notifications', 'notification-read', 'recommendation'].includes(operation)) return json({ error: '잘못된 요청입니다.' }, 404);
-    if (request.method !== (['status','notifications','recommendation'].includes(operation) ? 'GET' : 'POST')) return json({ error: '지원하지 않는 요청입니다.' }, 405);
+    if (!['status', 'connect', 'code', 'disconnect', 'cancel', 'recommend', 'notifications', 'notification-read', 'recommendation', 'scenario-review'].includes(operation)) return json({ error: '잘못된 요청입니다.' }, 404);
+    if (request.method !== (['status','notifications','recommendation','scenario-review'].includes(operation) ? 'GET' : 'POST')) return json({ error: '지원하지 않는 요청입니다.' }, 405);
+    if (operation === 'scenario-review') {
+      const params = new URL(request.url).searchParams;
+      const input = {id:params.get('id'),projectId:params.get('projectId')};
+      if (![input.id,input.projectId].every(v=>/^[a-f0-9-]{36}$/.test(v||''))) return json({error:'검토할 요청을 확인하세요.'},400);
+      const result = await call(owner,'scenario-status',input);
+      if (result.error) return json({error:'검토 자료를 불러오지 못했어요.'},result.status||503);
+      const job = result.job;
+      if (job?.id !== input.id || job.projectId !== input.projectId || job.state !== 'failed') return json({rejection:null});
+      return json({rejection:await readScenarioRejection(job.rejection)});
+    }
     let input = operation === 'recommendation' ? { id: new URL(request.url).searchParams.get('id') } : {};
     if (request.method === 'POST') {
       if (!request.headers.get('content-type')?.startsWith('application/json')) return json({ error: 'JSON 요청이 필요합니다.' }, 415);

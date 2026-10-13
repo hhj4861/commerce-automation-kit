@@ -1,3 +1,4 @@
+import {rejectionMarkup} from './scenario-rejection.js';
 import {hybridPlanMarkup} from './hybrid-plan-ui.js';
 import {SHORTS_DEFAULT_SECONDS} from './shorts-policy.js';
 import {architectureCaseMarkup} from './architecture-case.js';
@@ -108,7 +109,7 @@ export function mountAutomaticCreation(host,{fetcher=fetch,connect=connectLlm,se
       else if(p.render)controls=`<video controls preload="metadata" src="${asset(p)}"></video><form data-publish><label>게시 제목<input name="title" required maxlength="100" value="${esc(p.title)}"></label><label>플랫폼<select name="platform"><option value="youtube">YouTube</option>${p.brief.format==='short'?'<option value="instagram">Instagram</option><option value="tiktok">TikTok</option>':''}</select></label><label>공개 범위<select name="privacy"><option value="private">비공개</option><option value="unlisted">일부 공개</option><option value="public">공개</option></select></label><label class="auto-check"><input name="reviewed" type="checkbox" required>최종 영상과 발행 정보를 확인했습니다.</label><button class="auto-primary">검수 완료 · 업로드</button></form>`;
       else controls=`<button data-auto-action="${p.scenes.every(s=>p.assets[s.id])&&p.edit?'render':'media'}" class="auto-primary">영상 제작 이어하기</button>`;
     }
-    return `<details class="auto-project" data-project="${p.id}" ${selectedProject===p.id?'open':''}><summary><span><small>${esc(p.brief.category)} · ${esc(p.automation.keyword)}</small><strong>${esc(p.title)}</strong></span><b class="${failed?'auto-error':''}">${esc(automaticStatus(p))}</b></summary><div class="auto-project-body">${p.brief.workflow?timeline(p):''}${researchMarkup(p)}${running?`<div class="auto-progress"><progress aria-label="${esc(automaticStatus(p))}"></progress><p>${esc(automaticStatus(p))}<br>창을 닫아도 서버에서 계속 처리합니다.</p></div>`:''}${failed?`<p role="alert" class="auto-error">${esc(p.task.error)}</p>`:''}${p.upload?`<p>${p.upload.state==='done'?'발행을 완료했어요.':'업로드 결과를 제작실에서 확인해 주세요.'}</p>`:''}${p.scenes.length?`<ol class="auto-script">${p.scenes.map(s=>`<li><p>${esc(s.narration)}</p><small>${esc(s.kind==='video'?'영상':'이미지')} · ${esc(s.duration)}초 · ${esc(s.prompt)}</small></li>`).join('')}</ol>`:''}<a href="/studio?id=${p.id}">대본·영상 직접 편집</a><div class="auto-project-controls">${controls}</div></div></details>`;
+    return `<details class="auto-project" data-project="${p.id}" ${selectedProject===p.id?'open':''}><summary><span><small>${esc(p.brief.category)} · ${esc(p.automation.keyword)}</small><strong>${esc(p.title)}</strong></span><b class="${failed?'auto-error':''}">${esc(automaticStatus(p))}</b></summary><div class="auto-project-body">${p.brief.workflow?timeline(p):''}${researchMarkup(p)}${running?`<div class="auto-progress"><progress aria-label="${esc(automaticStatus(p))}"></progress><p>${esc(automaticStatus(p))}<br>창을 닫아도 서버에서 계속 처리합니다.</p></div>`:''}${failed?`<p role="alert" class="auto-error">${esc(p.task.error)}</p>${p.task.action==='scenario'?'<button type="button" data-scenario-review>대본과 보완 이유 보기</button><div data-scenario-review-result aria-live="polite"></div>':''}`:''}${p.upload?`<p>${p.upload.state==='done'?'발행을 완료했어요.':'업로드 결과를 제작실에서 확인해 주세요.'}</p>`:''}${p.scenes.length?`<ol class="auto-script">${p.scenes.map(s=>`<li><p>${esc(s.narration)}</p><small>${esc(s.kind==='video'?'영상':'이미지')} · ${esc(s.duration)}초 · ${esc(s.prompt)}</small></li>`).join('')}</ol>`:''}<a href="/studio?id=${p.id}">대본·영상 직접 편집</a><div class="auto-project-controls">${controls}</div></div></details>`;
   }
   async function refreshProjects(){
     const {projects:items}=await api('');const automatic=items.filter(p=>p.automation);
@@ -143,7 +144,17 @@ export function mountAutomaticCreation(host,{fetcher=fetch,connect=connectLlm,se
     finally{buttons.forEach(({button,disabled})=>{if(button.isConnected)button.disabled=disabled;});}
   }
   q('[data-projects]').onchange=e=>{if(e.target.matches('[data-approve]'))e.target.closest('[data-project]').querySelector('[data-auto-action="media"]').disabled=!e.target.checked;};
-  q('[data-projects]').onclick=e=>{const button=e.target.closest('[data-auto-action]');if(!button||button.disabled)return;const action=button.dataset.autoAction;void act(button.closest('[data-project]'),action,action==='scenario'?{confirm:true}:action==='media'?{approved:true}:{});};
+  q('[data-projects]').onclick=async e=>{
+    const reviewButton=e.target.closest('[data-scenario-review]');
+    if(reviewButton){
+      const card=reviewButton.closest('[data-project]'),p=projects.get(card.dataset.project),output=card.querySelector('[data-scenario-review-result]');
+      reviewButton.disabled=true;output.textContent='검토 자료를 불러오고 있어요…';
+      try {const data=await api(`/llm/scenario-review?id=${encodeURIComponent(p.task.id)}&projectId=${encodeURIComponent(p.id)}`);output.innerHTML=rejectionMarkup(data.rejection);}
+      catch(error){output.textContent=error.message;}
+      finally{reviewButton.disabled=false;}
+      return;
+    }
+    const button=e.target.closest('[data-auto-action]');if(!button||button.disabled)return;const action=button.dataset.autoAction;void act(button.closest('[data-project]'),action,action==='scenario'?{confirm:true}:action==='media'?{approved:true}:{});};
   q('[data-projects]').onsubmit=e=>{if(!e.target.matches('[data-publish]'))return;e.preventDefault();const f=e.target;void act(f.closest('[data-project]'),'publish',{reviewed:f.elements.reviewed.checked,platforms:[f.elements.platform.value],privacy:f.elements.privacy.value,title:f.elements.title.value});};
   async function poll(){
     if(polling)return;polling=true;
