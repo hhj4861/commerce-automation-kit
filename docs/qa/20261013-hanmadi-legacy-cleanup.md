@@ -3,7 +3,7 @@
 - 목표: shared-ai VM 점검 전에 Hanmadi의 Dify/accounts v1 의존을 해제한다.
 - 승인: 사용자가 Codex에서 운영 변수 7개 삭제 → 기존 운영 코드 `2bc7178` 새 배포 → (a)~(d) 검증·Claude 전달을 직접 승인했다.
 - 담당: Codex. 대상은 Vercel `dean-10/hanmadi` Production이다. VM·Festa·음악 학습 PR #209는 변경하지 않는다.
-- 소스: `2bc71787a8417d0cd315b80dab04acded829d9fb`.
+- 이번 설정 정리 당시 소스: `2bc71787a8417d0cd315b80dab04acded829d9fb`. 이후 음악 학습 배포로 변경된 현재 revision은 아래 점검 종료 확인에 별도 기록한다.
 - 완료 조건: 승인한 변수만 제거, 동일 소스의 새 배포 READY/공식 URL 연결, (a) revision, (b) 내 AI 준비 중, (c) 회화 저장 안 함 안내, (d) 퇴역 경로 로그 확인. 화면과 HTTP 검증은 구분한다.
 
 ## 실행 전
@@ -41,7 +41,16 @@
 
 - 최초 인계: Claude `al-cfadbf`에 새 배포 시각/ID와 (a)·(b)·(d) 결과, (c) 미완료를 전송했다. 도구는 연결 큐 접수를 반환했다. 당시에는 done으로 전달하지 않았고 W1 선행 조건을 미충족으로 알렸다.
 - 후속 통지: `to-codex/20261013T182416-claude-w1-start.md`를 읽었다. Claude는 사용자와 (c)를 점검 뒤로 미루기로 결정했으며, Codex done을 기다리지 않고 W1을 시작한다고 통지했다. Claude는 새 배포 READY 시각 이후 퇴역 경로 호출 0건(curl 제외)을 별도로 확인했다고 보고했다. 이는 **Claude 보고**이며 Codex의 추가 로그 조회 결과가 아니다.
-- Codex 대응: 점검 종료 통지 전까지 Hanmadi 운영 E2E와 shared-ai 호출 시험을 진행하지 않는다. W1~W14 동안 예상되는 공개 경로 502를 기능 회귀나 통과 근거로 집계하지 않는다. 이 통지로 VM 변경·PR 머지·토큰 삭제에 대한 새 승인을 추정하지 않는다.
-- 다음: Claude의 점검 종료 통지를 받은 뒤 기존 튜터 로그인이 가능할 때 (c)를 확인한다. PIN을 모르면 대체 확인 범위와 실제 화면 미검증 한계를 정리한다. 기존 프로필이 없으면 개인 진도를 임의 변경하지 않는다. (c)는 통과로 변경하지 않으며, VM 점검 완료 여부는 Claude의 후속 보고와 구분한다.
+- 점검 중 Codex 대응: 종료 통지 전까지 Hanmadi 운영 E2E와 shared-ai 호출 시험을 보류했다. 아래 확정된 중단 구간의 502는 기능 회귀나 통과 근거로 집계하지 않는다. 이 통지로 VM 변경·PR 머지·토큰 삭제에 대한 새 승인을 추정하지 않는다.
+- 다음: 점검 종료 통지는 수신했다. 기존 튜터 로그인이 가능할 때 (c)를 확인한다. PIN을 모르면 대체 확인 범위와 실제 화면 미검증 한계를 정리한다. 기존 프로필이 없으면 개인 진도를 임의 변경하지 않는다. (c)는 통과로 변경하지 않는다.
 - 새 음악 학습·일본어 응답 품질 개선 PR #209는 이번 배포에 포함되지 않았다.
 - 증적: iCloud 작업 루트의 `commerce-automation-kit/hanmadi-legacy-cleanup-20261013/deploy.log`, `deployment-check.json`. 코드·키·인증 쿠키를 그곳에 복사하지 않았다.
+
+## 점검 종료 통지 및 직접 재확인
+
+- `to-codex/20261013T195638-claude-maintenance-done.md` 수신: Claude는 W1~W17 완료와 claim 해제를 보고했다. 중단 구간은 **2026-10-13 09:25:08~10:53:59 UTC (18:25:08~19:53:59 KST)**다. DB 78개 테이블·2,930행, 모델 목록·discovery 보존 및 인증된 Hanmadi 키 조회 200은 Claude 보고이며 이번 Codex 조회 결과와 구분한다.
+- **Codex 직접 확인: 2026-10-13 10:57:46.430 UTC.** 공개 `https://shared-ai-d5cy7m6i7q-uc.a.run.app`에 인증정보 없이 GET했다. `/health` 200, `/llm/v1/models` 401, `/accounts/connections`·`/v1/chat-messages`·`/llm/key/generate` 각각 404였다. 모델·음성 생성은 호출하지 않았다. 인증된 요청의 모델 실행이나 POST 동작 검증으로 확대하지 않는다.
+- 같은 시각 Hanmadi `/api/deployment`는 200, `application=hanmadi`, **revision `f77f853119f99cd20c3f6c3d9204c8663d09900b`**를 반환했다. 기존 `2bc7178` 배포가 여전히 최신이라고 보고하지 않는다.
+- Git 기록상 `f77f853`은 음악 학습 PR #210 머지이며 #209의 머지 `ba50446`을 포함한다. [별도 운영 기록](20261013-hanmadi-music-production.md)은 새 배포 `dpl_2XdKt3bZBbg5qKSLEctfht6GxnJd` 및 퇴역 변수 7개를 제외한 기존 14개 유지 확인을 기록하고 있다. 이 문서의 설정 정리 배포와 후속 음악 배포는 별개다.
+- 이번 Vercel 관리 API의 현재 배포 상세 조회는 HTTP 403으로 실패해 최신 환경변수 목록을 직접 재조회하지 못했다. 공개 revision과 위 별도 운영 기록을 구분해 보존한다. 인증을 변경하거나 접근 제한을 우회하지 않았다.
+- 두 revision 사이 `conversation-provider.ts`, `model-connections.ts`, `app/conversation`, `components/model-conversation.tsx`의 Git 차이는 없었다. 코드 동일성은 (c)의 실제 운영 화면 확인을 대체하지 않으며 **(c)는 계속 미검증**이다.
