@@ -63,7 +63,9 @@ python3 gateway.py provision --app replay --budget-usd 5
 계정별 LiteLLM 구독 워커(`codex-<id>`, `subscriptions.py`)는 마스터 플랜 D5에 따라 폐기했고, 코드도 #222에서 지웠다. 공용 게이트웨이는 `chatgpt/` 모델을 거부한다. 개인 구독 로그인을 중계하던 accounts v1도 같은 날 퇴역했다(`ACCOUNTS.md`).
 
 - 근거: `docs/20261009-shared-ai-serverless-migration-plan.md`의 D4·D5, `docs/qa/20261013-shared-ai-vm-maintenance-result.md`
-- 개인 연결이 다시 필요하면 API 키 전용 accounts v2(`ACCOUNTS-V2.md`, staging)를 쓴다.
+- 개인 연결이 다시 필요하면 accounts v2(`ACCOUNTS-V2.md`, 코드만 있고 미배포)를 VM에 올리는 별도 과제로 한다. BYOK 약관 확인이 먼저다(`docs/plans/20261012-shared-ai-vm-maintenance.md` §4).
+
+### 단위·통합 검사와 이미지 고정
 
 ```sh
 python3 -m unittest -v

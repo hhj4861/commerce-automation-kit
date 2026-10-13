@@ -108,7 +108,7 @@
 - Hanmadi 운영은 W1 전인 15:28~15:38 KST 사이에 `f77f853`(#209/#210 음악 배포, `dpl_2XdKt3bZBbg5qKSLEctfht6GxnJd`)으로 바뀌었다. 남은 일 1의 확인 (a)·(b)·(d)는 그 전 배포 `2bc7178`에서 했다.
   - 그 배포 기록(`feat/common-video-generator` 브랜치의 `docs/qa/20261013-hanmadi-music-production.md`)은 퇴역 변수 7개가 없는 상태를 유지했다고 적었다. W1 직전 확인(04:06:09Z 뒤 퇴역 경로 0건)에는 이 배포 뒤 시간도 들어 있다.
   - 점검 뒤 Codex는 공개 revision이 `f77f853`임을 확인했다. Vercel 관리 API가 403이라 최신 환경 변수는 다시 조회하지 못했다.
-  - 2026-10-13 추가(Codex 회신): 11:53Z에 공식 Vercel CLI로 다시 조회해, Production 변수 14개가 유지되고 삭제 대상 7개가 없으며 `LITELLM_*` 6개가 유지됨을 확인했다. 403은 관리 API 경로의 문제였고 CLI 조회와는 별개다.
+  - 2026-10-13 추가(Codex 회신): 11:53Z에 공식 Vercel CLI로 다시 조회해, Production 변수 14개가 유지되고 삭제 대상 7개가 없으며 `LITELLM_*` 6개가 유지됨을 확인했다. 앞선 직접 관리(REST) API 조회의 403 원인은 확인하지 않았고, 공식 Vercel CLI 재조회는 그와 별개로 성공했다(Codex 기록 `docs/qa/20261013-hanmadi-legacy-cleanup.md`, `feat/common-video-generator` 브랜치 `d05d6a7`).
 - 10-12에 기록한 「10-17 전에 Hanmadi를 운영 배포할 때는 미리 알린다」는 약속은 점검이 끝나 효력이 끝났다.
 
 ## 주의

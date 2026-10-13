@@ -93,7 +93,7 @@ Hanmadi 배포 시점:
   - 그 배포 기록(`feat/common-video-generator` 브랜치의 `docs/qa/20261013-hanmadi-music-production.md`)은 퇴역 변수 7개가 없는 상태를 유지했다고 적었다.
   - W1 직전의 퇴역 경로 호출 0건 확인(04:06:09Z 뒤)에는 이 배포 뒤 시간도 들어 있다.
 - 점검 뒤 Codex는 공개 revision이 `f77f853`임을 확인했다. Vercel 관리 API가 403이라 최신 환경 변수는 다시 조회하지 못했다(Codex 회신 10-13).
-  - 2026-10-13 추가(Codex 회신): 11:53Z에 공식 Vercel CLI로 다시 조회해, Production 변수 14개가 유지되고 삭제 대상 7개가 없으며 `LITELLM_*` 6개가 유지됨을 확인했다. 403은 관리 API 경로의 문제였고 CLI 조회와는 별개다.
+  - 2026-10-13 추가(Codex 회신): 11:53Z에 공식 Vercel CLI로 다시 조회해, Production 변수 14개가 유지되고 삭제 대상 7개가 없으며 `LITELLM_*` 6개가 유지됨을 확인했다. 앞선 직접 관리(REST) API 조회의 403 원인은 확인하지 않았고, 공식 Vercel CLI 재조회는 그와 별개로 성공했다(Codex 기록 `docs/qa/20261013-hanmadi-legacy-cleanup.md`, `feat/common-video-generator` 브랜치 `d05d6a7`).
 
 ## 계획과 달라진 점
 

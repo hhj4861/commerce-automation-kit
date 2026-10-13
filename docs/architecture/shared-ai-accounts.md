@@ -25,7 +25,7 @@ SDK 코드 변경은 패키지 버전과 앱 배포 갱신이 필요하다.
 연결 상태는 authorizing/connected/expired/quota_exceeded/error/disconnected로 통일한다.
 호출마다 사용자·플랫폼·상태를 재검사한다. 실패 시 다른 모델로 자동 전환하지 않는다.
 공개 목록에 키·토큰·서버 라우트를 반환하지 않고 공용 앱 키에 개인 모델을 추가하지 않는다.
-구독 로그인 중계(accounts v1: Codex 기기 로그인, Claude Code 로그인)는 2026-09-28부터 운영하다 2026-10-13에 퇴역했다. 개인 연결은 API 키 전용 accounts v2(`services/ai-gateway/ACCOUNTS-V2.md`, staging)만 남는다. Claude 구독 토큰 중계는 지원하지 않는다.
+구독 로그인 중계(accounts v1: Codex 기기 로그인, Claude Code 로그인)는 2026-09-28부터 운영하다 2026-10-13에 퇴역했다. 남은 개인 연결 경로는 API 키 전용 accounts v2 코드(`services/ai-gateway/ACCOUNTS-V2.md`, 미배포)뿐이다. Claude 구독 토큰 중계는 지원하지 않는다.
 
 ## 실제 적용 범위
 
@@ -37,7 +37,7 @@ SDK 코드 변경은 패키지 버전과 앱 배포 갱신이 필요하다.
 | Replay | 별칭은 존재. 소비 코드 확인/전환은 아직 하지 않음 |
 | Dify | 공식 LiteLLM 호환 API 직접 사용. JS 라이브러리를 주입하지 않음. 2026-10-13 D6로 퇴역, 저장소 코드는 #221에서 삭제 |
 
-**구독 로그인 v1은 2026-10-13에 퇴역했다. API 키 전용 v2는 staging에만 있고, 운영 웹 연결은 아직 적용하지 않았다.**
+**구독 로그인 v1은 2026-10-13에 퇴역했다. API 키 전용 v2는 코드만 있고 배포된 곳이 없다(서버리스 스테이징은 2026-10-12 철거, `docs/PROGRESS.md` §7 #17). 운영 적용은 BYOK 약관 확인 뒤 VM에 올리는 별도 과제다(`docs/plans/20261012-shared-ai-vm-maintenance.md` §4).**
 SDK 테스트 fixture는 실제 사용자 인증 성공 증거가 아니다.
 계정별 구독 워커 관리 CLI(`services/ai-gateway/subscriptions.py`)는 D5로 폐기해 #222에서 지웠다.
 웹 어댑터는 플랫폼 인증/권한, challenge 전달, state/PKCE/CSRF, 암호화 자격 저장,
