@@ -1,3 +1,4 @@
+import {readScenarioRejection} from './lib/scenario-rejection.js';
 import { randomUUID } from 'node:crypto';
 import { isDeepStrictEqual } from 'node:util';
 import { setTimeout as delay } from 'node:timers/promises';
@@ -93,7 +94,8 @@ export function startAccountWorker({ env = process.env, call = accountBroker(env
       catch (error) {
         if (!controller.signal.aborted) {
           log(`[llm-accounts] ${initial.job.provider === 'claude' ? 'claude' : 'codex'} ${['connect', 'recommend', 'scenario'].includes(initial.job.kind) ? initial.job.kind : 'unknown'} ${accountFailureCode(error)}`);
-          await update({ job: { state: 'failed', device: null, manual: null, code: null, error: accountFailureMessage(initial.job.provider, error) } }).catch(() => {});
+          const rejection = initial.job.kind === 'scenario' && error.code === 'SCENARIO_DEPTH_INVALID' ? await readScenarioRejection(error.rejection) : null;
+          await update({ job: { state: 'failed', device: null, manual: null, code: null, rejection, error: accountFailureMessage(initial.job.provider, error) + (error.code === 'SCENARIO_DEPTH_INVALID' && !rejection ? ' 상세 검토 자료를 보관하지 못했습니다.' : '') } }).catch(() => {});
         }
       } finally { clearTimeout(deadline); clearInterval(renew); await serial; tasks.delete(owner); }
     })();
