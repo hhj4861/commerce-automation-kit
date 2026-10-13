@@ -5,11 +5,12 @@
   2. D4·#19에 따라 accounts v1(구독 로그인)을 퇴역시켜 구독 자격을 새 VM에 옮기지 않는다.
   3. 부팅 디스크를 80GiB에서 20GiB로 줄여 월 약 $6을 아낀다.
   - 이 과정에서 "새 VM에 백업을 복원하는 경로"를 실제 데이터로 처음 검증한다.
+- **2026-10-13 실행 완료.** W0~W17을 했고 W16 유료 확인은 하지 않았다. 공개 경로 중단은 약 89분이다(그중 약 75분은 노트북 절전). 결과와 계획과 달라진 점은 `docs/qa/20261013-shared-ai-vm-maintenance-result.md`에 있다.
 - 기준: main `32a1b98`. VM 실측은 2026-10-12에 IAP SSH 읽기 전용으로 했다. 비밀값 파일은 이름·크기만 보고 내용은 열지 않았다.
 - 2026-10-12 밤 사전 확인(읽기 전용): 소비 앱, 요청 기록, 제공사 해지 방법, 그 밖의 소비자를 확인했다. 항목마다 다른 방법으로 반박 검증했고, 결과를 §4·§5-3·§5-4·§6·§8·§9·§10·§11에 반영했다. 사용자 결정 네 가지도 반영했다(10-12~13).
   - Hanmadi 변수 정리는 Codex가 맡는다.
   - codex 토큰은 사본 삭제를 앞당겨 처리한다.
-  - 점검은 2026-10-17(토) 10:05 KST에 한다.
+  - 점검은 2026-10-17(토) 10:05 KST에 한다. 10-13에 사용자가 「오늘 안에 끝내 달라」고 해서 그날 18:25 KST에 W1을 시작했다.
   - Festa 「개인 AI」 중단을 받아들이고 #19를 포함한다.
 - 관련: `docs/PROGRESS.md` §7 #18·#19, `docs/20261009-shared-ai-serverless-migration-plan.md`의 D4·D5·D6과 Phase 2 「게이트 결과와 결정」.
 - 승인 경계: 이 문서를 머지해도 실행 승인이 아니다. ★ 표시 단계는 각각 사용자 승인을 받는다. 대상은 코드 PR 머지, VM 정지, Terraform apply, 디스크·스냅샷 삭제, 유료 호출이다.
@@ -393,6 +394,8 @@ order by 1;
 
 **결정 (2026-10-12, 사용자): 2026-10-17(토) 10:05 KST에 W1을 시작한다.** 근거는 아래 재확인이다.
 
+**변경 (2026-10-13, 사용자): 오늘 안에 끝내기로 하고 2026-10-13(화) 18:25 KST에 W1을 시작했다.** 평일 저녁이지만 Hanmadi 진단 cron(09시대)과는 겹치지 않는다. 중단 중 Cloud Run 요청 기록은 0건이었다(`docs/qa/20261013-shared-ai-vm-maintenance-result.md`).
+
 **재확인 (2026-10-12 밤, Cloud Run 요청 기록 기준):**
 - 최근 14일 주말 10:00~11:59(KST) 요청은 0건이다(토요일 이틀, 일요일 이틀). 주말 요청은 08:32~09:37과 13시 이후에만 있었다.
 - Hanmadi 진단 cron(Vercel, 매일 00:17 UTC 예약)이 09:36 KST 무렵 `/llm`을 12~15번 부른다.
@@ -428,6 +431,8 @@ order by 1;
 
 리허설 결과 DB 덤프·복원은 합계 약 5초다. 예상 시간의 대부분은 VM 재생성, 시작 스크립트, 이미지 로드, 확인 단계다.
 
+> 2026-10-13 실행에서 아래 절차와 달라진 점(W2 이미지 저장 방식, W6 순서, W9 제외 목록, W11 대기·행 수 대조 기준 등)은 `docs/qa/20261013-shared-ai-vm-maintenance-result.md`의 「계획과 달라진 점」에 있다. 이 절차를 다시 쓸 때는 그 내용을 먼저 반영한다.
+
 노트북에서 쓰는 이름:
 
 ```sh
@@ -438,7 +443,7 @@ vm() { gcloud compute ssh shared-ai --zone=$Z --tunnel-through-iap --account=$A 
 | 단계 | 할 일 | 확인·중단 기준 |
 |---|---|---|
 | W0 기록 (중단 전) | 백업 폴더 `B=/opt/shared-ai/backups/maint-<UTC시각>`(0700)을 만든다. 아래를 `$B`에 저장한다: `docker compose ls -a`의 프로젝트 이름과 설정 파일 목록, 컨테이너별 이미지 ID, LiteLLM 행 수(§5-2 SQL), 앱 키 4개(`.runtime/*.env`)의 `/v1/models` 모델 ID 목록, discovery 최근 작업 1건의 ID와 상태 | 파일 5개가 생겼는지 |
-| W1 중단 시작 | 2026-10-17(토) 10:05 KST 이후에 시작한다(§5-3, Hanmadi 진단 cron). `shared-ai-edge`를 먼저 멈춘다(공개 경로가 502를 돌려준다). 이어서 `shared-ai-accounts`, `shared-topic-discovery`, gateway 컨테이너를 멈추고 db는 둔다. 명령은 `docker compose -p <프로젝트> stop` | 실행 중인 컨테이너가 db 하나뿐인지 |
+| W1 중단 시작 | 2026-10-17(토) 10:05 KST 이후에 시작한다(§5-3, Hanmadi 진단 cron). 실제로는 사용자 결정으로 2026-10-13 18:25 KST에 시작했다. `shared-ai-edge`를 먼저 멈춘다(공개 경로가 502를 돌려준다). 이어서 `shared-ai-accounts`, `shared-topic-discovery`, gateway 컨테이너를 멈추고 db는 둔다. 명령은 `docker compose -p <프로젝트> stop` | 실행 중인 컨테이너가 db 하나뿐인지 |
 | W2 백업 | `pg_dump -Fc` → `$B/litellm.dump`. discovery SQLite는 `sqlite3` 백업 API로 `$B`에 복사하고 `integrity_check`가 `ok`인지 본다. accounts 데이터는 `$B`에 복사하지 않는다(새 VM으로 옮겨지기 때문). 이미지 4개(litellm·postgres·caddy·`cak-discovery:7e9d866`)와 discovery 직전 이미지를 `docker save --platform linux/amd64 -o /opt/shared-ai/migration/images.tar`로 저장한다. 마지막으로 `$B`의 `SHA256SUMS`를 만든다 | 덤프가 0바이트가 아니고 `pg_restore --list`가 성공하는지 |
 | W3 정지 | db를 멈춘 뒤 ★ `gcloud compute instances stop shared-ai` | VM이 TERMINATED인지 |
 | W4 최종 스냅샷 | `gcloud compute snapshots create shared-ai-data-final-<날짜> --source-disk=shared-ai-data --source-disk-zone=$Z --storage-location=us-central1` | READY인지 |
@@ -472,8 +477,8 @@ vm() { gcloud compute ssh shared-ai --zone=$Z --tunnel-through-iap --account=$A 
 ## 8. 점검 뒤
 
 - D+0: 결과(소요 시간, 행 수 대조, 디스크·메모리)를 `docs/PROGRESS.md`와 README에 기록한다. Codex 메일함에도 알린다.
-- D+1: 점검 뒤 첫 Hanmadi 진단 cron(다음 날 09시대 KST)이 성공했는지 Cloud Run 기록으로 확인한다. 기준은 UA `node`의 `/llm` 호출이 200인지다. W13·W15는 VM에 있는 키만 확인하고, Vercel에 저장된 `LITELLM_API_KEY`는 확인하지 않기 때문이다.
-- D+7까지 문제가 없으면:
+- D+1(2026-10-14): 점검 뒤 첫 Hanmadi 진단 cron(다음 날 09시대 KST)이 성공했는지 Cloud Run 기록으로 확인한다. 기준은 UA `node`의 `/llm` 호출이 200인지다. W13·W15는 VM에 있는 키만 확인하고, Vercel에 저장된 `LITELLM_API_KEY`는 확인하지 않기 때문이다.
+- D+7(2026-10-20)까지 문제가 없으면:
   - ★ `google_compute_disk.data` 블록을 지우는 PR을 만들어 apply한다(plan 기대값: 삭제 1). 블록을 지우면 `prevent_destroy`도 함께 사라진다.
   - ★ 옛 디스크의 자동 스냅샷을 지운다. `on_source_disk_delete = KEEP_AUTO_SNAPSHOTS`라 원본을 지워도 남는다.
   - ★ 최종 스냅샷도 지운다. 원래 계획은 D+30이었지만, codex 토큰 사본을 줄이려고 앞당겼다(사용자 결정 2026-10-12, §4 선행 조건 1의 (c)).
@@ -509,10 +514,10 @@ vm() { gcloud compute ssh shared-ai --zone=$Z --tunnel-through-iap --account=$A 
 | 옛 디스크 마운트 혼동(같은 레이블) | 장치 경로로 마운트한다. 붙어 있는 동안 재부팅하지 않는다 |
 | 시작 스크립트 실패(apt 미러 장애 등) | 재부팅해 다시 실행한다. 그래도 안 되면 R2 |
 | 운영 앱이 accounts를 쓰고 있었음 | §4 선행 조건 2·3에서 확인한다(Hanmadi는 변수 정리, Festa는 「개인 AI」 중단을 받아들이기로 결정). 새 VM에는 accounts 이미지·데이터·릴리스가 없다. 그래서 Caddyfile만 되돌리면 404가 502로 바뀔 뿐이다. 되돌리려면 옛 디스크(D+7 전)나 최종 스냅샷에서 accounts 릴리스·볼륨·`.env.accounts`·이미지를 복원해야 한다. 제공사 해지까지 했다면 다시 로그인해야 한다. 사실상 되돌리기 어려운 결정으로 본다 |
-| 점검 중 공개 경로 전체 실패 | 2026-10-17(토) 10:05~12시 KST에 한다(§5-3). 알림 장치가 없으므로 W13·W15에서 사람이 확인한다 |
+| 점검 중 공개 경로 전체 실패 | 2026-10-17(토) 10:05~12시 KST에 한다(§5-3). 알림 장치가 없으므로 W13·W15에서 사람이 확인한다. 실제로는 2026-10-13에 했다. 공개 경로 중단은 18:25~19:53 KST였고, 그동안 요청은 0건이었다 |
 | Hanmadi 변수 정리 뒤 이전 배포로 롤백 | 지운 변수가 그 배포와 함께 되살아난다. 롤백·Promote하지 않는다(§4 선행 조건 2) |
 | 놓친 호스트 설정 | 실측상 없다(§1). W13·W15에서 기능으로 확인한다 |
-| 점검 시간 초과 | 90분을 넘기면 그 시점의 단계에 맞춰 R1이나 R2로 돌아간다 |
+| 점검 시간 초과 | 90분을 넘기면 그 시점의 단계에 맞춰 R1이나 R2로 돌아간다. 2026-10-13에는 노트북 절전으로 W1부터 83분이 지나서야 W7 확인을 이어 갔다. 새 VM이 정상이고 R2가 더 오래 걸려 앞으로 진행했다(`docs/qa/20261013-shared-ai-vm-maintenance-result.md`). 점검 동안 노트북을 전원에 연결하고 덮개를 열어 둔다. `caffeinate`는 덮개를 닫을 때의 절전을 막지 못한다 |
 
 ## 11. 완료 조건
 
