@@ -45,3 +45,21 @@
 - 별도 worktree에서 검토 응답 형식 오류의 1회 보완과 별도 분류, 실제 내용 불합격의 고정 항목 안내를 구현했다. 원본 cc0ca99, 운영 승격 dfe4650. 원본 관련 77검사·승격 17검사 통과, 각 작업 upstream push 완료.
 - PR #211(main): https://github.com/hhj4861/commerce-automation-kit/pull/211 / #212(운영 승격): https://github.com/hhj4861/commerce-automation-kit/pull/212 . 사용자 명시 머지 승인 요청 상태이며 아직 운영 적용하지 않았다.
 - 전체 실생성 E2E는 계속 미완료다. 새 변경의 승인·배포 후 실제 실패 항목 확인과 대본/미디어/최종 렌더 검증이 남는다. 자세한 변경·제한은 구현 PR의 `docs/qa/20261013-scenario-review-feedback.md`에 기록했다.
+
+## #211·#212 승인 후 운영 반영
+
+- 사용자 명시 승인 후 #211 main merge `e9af8016f03f875106c8a29da09e4a57383f3448`, #212 deploy/shopshorts merge `ffba7b4d2482e155e73433b1fb8aa5bc8ac94543` 완료.
+- 깨끗한 운영 checkout을 exact #212 merge로 갱신. 머지본 explanation-depth / scenario-review-feedback / studio-scenario-repair 통합 17개 통과. 최초 검사 명령의 파일명 오타는 실행 전에 실패했고 정확한 파일명으로 바로잡았다.
+- 계정 작업 aggregate poll activeCount 0 / hasNext false 확인 후 승인된 안전 재시작 실행. launchctl PID 9838, LastExitStatus 0 확인. 미디어 워커는 불필요하게 재시작하지 않았다.
+- Pages 수동 배포 exit 0. 실제 Production / deploy/shopshorts / source ffba7b4, deployment `29f6610c-cc0f-43bf-a76a-00c18a357e95` 확인. https://29f6610c.shopshorts-dash.pages.dev 및 운영 도메인 적용.
+- GitHub 배포 run 38357074620은 기존 Cloudflare credential request failed (403)로 실패. 자동배포 자격 문제는 여전히 미해결이며 이번 운영 반영은 Wrangler 수동 배포이다.
+- 15:38 KST 같은 QA 프로젝트에서 운영 UI의 ‘대본 생성 다시 시도’를 1회 실행. UI의 생성 중 1건 / 자료 확인 중으로 실제 요청 접수를 확인했다.
+
+## #212 운영 실검증 결과와 후속 범위
+
+- 15:38 KST 재시도에서 research → scenario → review → revision까지 확인한 뒤 CODEX_TIMEOUT으로 종료됐다. 검토 형식 오류나 대본 최종 불합격으로 보고하지 않는다. 실행 중 aggregate 조회에서도 running 1 / queued 0 / live lease 1을 확인해 화면만 남은 작업과 구분했다.
+- 개별 Codex 시나리오 호출 제한은 360초, 전체 작업은 900초다. 새 음성·미디어·렌더·발행은 시작하지 않았다. 전체 자동 실생성 E2E는 미완료다.
+- 작성·보완·검토 단계까지 웹 검색이 활성화돼 있던 것을 코드로 확인했다. 이번 시간 초과의 직접 원인인지는 실제 CLI 출력이 보존되지 않아 확정하지 못했다. 고정된 조사 근거로 작성·검토하도록 draftOnly 경계를 적용한 후속 변경을 별도 브랜치로 준비했다. 모델·추론·시간 제한·검토 기준·예산은 변경하지 않았다.
+- 후속 원본 a484253, 운영 승격 914a066, 각각 작업 upstream 정상 push. 원본 관련 45개 검사와 승격 통합 18개 통과.
+- PR #213: https://github.com/hhj4861/commerce-automation-kit/pull/213 / PR #214: https://github.com/hhj4861/commerce-automation-kit/pull/214 . 이 두 PR은 새 승인 대상이며 아직 머지·운영 적용하지 않았다.
+- 다음 확인은 승인 후 후속 배포에서 같은 기획의 실제 생성 결과를 확인하는 것이다. CI의 Cloudflare credential 403도 별도 미해결이다.
