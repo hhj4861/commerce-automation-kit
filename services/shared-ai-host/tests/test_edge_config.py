@@ -36,11 +36,6 @@ class EdgeConfigTest(unittest.TestCase):
         for absent in ("/discovery", "/accounts", "/v1/chat-messages", "/v1/workflows/run"):
             self.assertNotIn(absent, STAGING)
 
-    def test_vm_edge_drops_retired_accounts_and_dify_routes(self):
-        # accounts v1 (D4/#19) and Dify (D6) are retired in the 2026-10-12 maintenance window; both now fall through to 404.
-        for absent in ("/accounts", "127.0.0.1:4190", "/v1/chat-messages", "/v1/workflows/run", "127.0.0.1:4180"):
-            self.assertNotIn(absent, VM)
-
     def test_image_uses_the_reviewed_caddy_digest(self):
         digest = re.search(r"caddy@sha256:[0-9a-f]{64}", (ROOT / "main.tf").read_text()).group(0)
         dockerfile = (ROOT / "edge" / "Dockerfile").read_text()

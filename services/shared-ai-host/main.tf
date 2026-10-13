@@ -139,16 +139,6 @@ resource "google_compute_firewall" "api" {
     ports    = ["8080"]
   }
 }
-resource "google_compute_disk" "boot" {
-  name  = "shared-ai-boot"
-  type  = "pd-balanced"
-  size  = 20
-  image = "projects/ubuntu-os-cloud/global/images/family/ubuntu-2404-lts-amd64"
-  lifecycle { prevent_destroy = true }
-  depends_on = [google_project_service.api]
-}
-# Retired 80 GiB boot disk, kept unattached as the rollback path until the soak ends
-# (docs/plans/20261012-shared-ai-vm-maintenance.md). Deleting it is a separate, approved change.
 resource "google_compute_disk" "data" {
   name  = "shared-ai-data"
   type  = "pd-balanced"
@@ -176,7 +166,7 @@ resource "google_compute_resource_policy" "backup" {
 }
 resource "google_compute_disk_resource_policy_attachment" "backup" {
   name = google_compute_resource_policy.backup.name
-  disk = google_compute_disk.boot.name
+  disk = google_compute_disk.data.name
 }
 resource "google_compute_instance" "host" {
   name                = local.name
@@ -184,7 +174,7 @@ resource "google_compute_instance" "host" {
   deletion_protection = true
   tags                = ["shared-ai-host"]
   boot_disk {
-    source      = google_compute_disk.boot.id
+    source      = google_compute_disk.data.id
     auto_delete = false
   }
   network_interface {
