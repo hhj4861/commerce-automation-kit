@@ -47,6 +47,6 @@ ElevenLabs 공식 Music v2 API의 기존 플랜 크레딧으로 총 5회 생성(
 - 실제 로컬 Next API의 네 언어 학습/음악/잘못된 정답/완료/재시도/계정 격리 및 음원 Range 요청 통과.
 - 로컬 기본 Turbopack 빌드는 다른 worktree의 의존성 심볼릭 링크를 거부했다. 같은 의존성과 소스의 `--webpack` 빌드와 타입 검사는 통과했다. CI는 `npm ci` 후 기본 빌드를 수행한다.
 - 기존 음악 브라우저 CI에 네 언어 원곡 실제 재생, 발음 전환 시 정지, 연습→복습→완료→새로고침→반복, 320/390/1024px 확인을 추가했다. 이 테스트의 발음 응답·기존 상용곡 공급자는 fixture이며 원곡 MP3/진도 API는 실제 파일·로컬 저장소를 쓴다.
-- CI 결과는 후속 기록한다. 사용자 Chrome은 확장 UI 차단 후 연결 불가 상태라 직접 화면 E2E는 완료하지 못했다. API 통과를 운영 브라우저 E2E 통과로 취급하지 않는다.
+- 첫 CI(`38337540825`, `f6d9211`)는 기본 빌드·단위·기존 학습/대화/단어장 검사를 통과했지만 음악 시험의 언어 전환 직후 동기식 개수 검사가 실패했다. 설정 저장·프로필 반영 전에 메뉴를 세던 시험을 화면 표시 대기로 수정했다. 최종 실행과 캡처 검토 결과는 [PR #209](https://github.com/hhj4861/commerce-automation-kit/pull/209)의 본문·Checks에 기록한다. 사용자 Chrome은 확장 UI 차단 후 연결 불가 상태라 직접 화면 E2E는 완료하지 못했다. API 통과를 운영 브라우저 E2E 통과로 취급하지 않는다.
 
 증적: 지정 iCloud 작업 루트 `gpt 작업/commerce-automation-kit/hanmadi-language-music-20261013/`의 `language-live.json`, `audio-live.json`, `music-th-take2/audio-live.json`, 단위·lint·build 로그. 로그인 쿠키·검증 비밀번호·공급자 키는 증적에 저장하지 않았다. 테스트 계정은 로그아웃했으며 합성 진도는 해당 별도 계정에만 남는다.

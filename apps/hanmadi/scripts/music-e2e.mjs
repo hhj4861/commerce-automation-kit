@@ -52,13 +52,13 @@ const app = spawn(process.execPath, ["node_modules/next/dist/bin/next", "dev", "
   stdio: ["ignore", "pipe", "pipe"],
 });
 const exited = once(app, "exit");
-let logs = "", browser;
+let logs = "", browser, page;
 app.stdout.on("data", b => { logs += b; }); app.stderr.on("data", b => { logs += b; });
 try {
   for (let i = 0; i < 120; i++) { try { if ((await fetch(base + "/study")).ok) break; } catch {} await new Promise(r => setTimeout(r, 500)); }
   browser = await chromium.launch({ ...(process.env.PLAYWRIGHT_CHANNEL ? { channel: process.env.PLAYWRIGHT_CHANNEL } : {}), headless: true });
   const context = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true });
-  const page = await context.newPage(); const errors = [], audioRequests = [];
+  page = await context.newPage(); const errors = [], audioRequests = [];
   page.on("pageerror", e => errors.push(e.message));
   await page.addInitScript(() => { document.addEventListener("DOMContentLoaded", () => { const s = document.createElement("style"); s.textContent = "nextjs-portal{display:none!important}"; document.head.append(s); }); });
   await page.route("**/api/study/audio", r => {
@@ -178,7 +178,8 @@ try {
   await page.getByText("가사 1 / 12", { exact: true }).waitFor();
   await post({ action: "assess", language: "es", answers: [0, 0, 0], confidence: 1, minutes: 5 });
   await page.getByLabel("학습 언어", { exact: true }).selectOption("es");
-  assert.equal(await page.getByRole("button", { name: "음악", exact: true }).count(), 1);
+  // Selecting a language persists settings and hydrates its assessed profile asynchronously.
+  await page.getByRole("button", { name: "음악", exact: true }).waitFor({ state: "visible" });
   await page.getByRole("button", { name: "음악", exact: true }).click();
   await page.getByRole("heading", { name: "Paso a paso", exact: true }).waitFor();
   // Actual original audio files and account API; only pronunciation TTS is mocked above.
@@ -235,6 +236,9 @@ try {
   assert.deepEqual(errors, []);
   await writeFile(resolve(dir, "result.json"), JSON.stringify({ passed: true, supplier: "Hanmadi-contract fixture, no commercial provider connected", lines: 12, calls, videoRequests, audioRequests: audioRequests.length, errors, verified: ["four original songs: actual audio playback, TTS pause, meaning/practice/review, reload/repeat, responsive widths", "unconfigured/rights-pending states have no retry or learning promise", "transient errors keep retry", "no emotional lessons", "12 ordered lines including repeat", "Korean pronunciation/meaning", "manual segment replay", "speech unmounts video", "cursor persistence and account isolation", "no lyric persistence", "failed save/retry", "auth/origin/index/revision guards", "provider errors/expiry", "no overflow at 320/390/1024"] }, null, 2));
   console.log("PASS licensed lyrics fixture journey, 12 lines, progress, playback controls and errors");
+} catch (error) {
+  await page?.screenshot({ path: resolve(dir, "music-failure.png"), fullPage: true }).catch(() => {});
+  throw error;
 } finally {
   await browser?.close(); app.kill("SIGTERM"); await exited;
   await new Promise(r => supplier.close(r)); await unlink(dataFile);
