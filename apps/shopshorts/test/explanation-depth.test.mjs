@@ -14,7 +14,7 @@ const verdict=async(d=draft,b=brief,failed=[])=>mockReview(await reviewPrompt(b,
 
 test('old arc-valid shallow draft is rejected after two failed editorial reviews, never returned for media',async()=>{
  let calls=0;
- await assert.rejects(scenarioBrief(brief,{}, {generate:async prompt=>{calls++;return mockReview(prompt,['mechanism','example','focus'])||{value:draft};}}),{code:'SCENARIO_DEPTH_INVALID'});
+ await assert.rejects(scenarioBrief(brief,{}, {generate:async prompt=>{calls++;return mockReview(prompt,['mechanism','example','focus'])||{value:draft};}}),error=>{assert.equal(error.code,'SCENARIO_DEPTH_INVALID');assert.deepEqual(error.failedChecks,['focus','mechanism','example']);return true;});
  assert.equal(calls,4);
  assert.doesNotThrow(()=>scenarioResult(draft,brief),'saved drafts stay readable without a review');
 });
@@ -37,9 +37,9 @@ test('missing, forged, prompt-only and stale evidence cannot pass',async()=>{
  await assert.rejects(validateDepthReview(valid,{...brief,duration:45},draft));
  const reordered={scenes:draft.scenes,title:draft.title};assert.equal((await reviewInput(brief,draft)).digest,(await reviewInput(brief,reordered)).digest);
 });
-test('malformed review fails closed without retrying blindly or accepting writer self-approval',async()=>{
+test('malformed review stops after one report correction without accepting writer self-approval',async()=>{
  let calls=0;
- await assert.rejects(scenarioBrief(brief,{}, {generate:async()=>{calls++;return {value:{...draft,passed:true}};}}),{code:'SCENARIO_DEPTH_INVALID'});assert.equal(calls,2);
+ await assert.rejects(scenarioBrief(brief,{}, {generate:async()=>{calls++;return {value:{...draft,passed:true}};}}),{code:'SCENARIO_REVIEW_INVALID'});assert.equal(calls,3);
  const controller=new AbortController();controller.abort();
  await assert.rejects(scenarioBrief(brief,{}, {signal:controller.signal,generate:async()=>assert.fail('aborted')}),{name:'AbortError'});
 });

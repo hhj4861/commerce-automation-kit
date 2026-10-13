@@ -18,6 +18,7 @@ const messages = Object.freeze({
   RECOMMENDATION_REPEATED: '이전 추천과 다른 기획을 완성하지 못했어요. 관심사를 구체화한 뒤 다시 추천받으세요.',
   SCENARIO_RESEARCH_INVALID: '주제를 뒷받침할 검색 근거를 확인하지 못했어요. 주제를 구체화해 다시 시도해 주세요.',
   SCENARIO_FORMAT_INVALID: '대본의 장면 형식 또는 목표 길이를 맞추지 못했어요. 다시 생성해 주세요.',
+  SCENARIO_REVIEW_INVALID: '대본 검토 결과의 인용·형식을 확인하지 못했어요. 대본 내용 부족 판정과는 다른 오류입니다. 다시 검토해 주세요.',
   SCENARIO_DEPTH_INVALID: '대본의 이유·작동 과정·예시 또는 마무리 설명이 부족해 제작을 멈췄어요. 주제 범위를 좁혀 시나리오를 다시 생성해 주세요.',
   SCENARIO_ARC_INVALID: '도입·킬링파트·마무리가 연결된 대본을 완성하지 못했습니다. 시나리오를 다시 생성해 주세요.',
   SCENARIO_DIRECTION_INVALID: '영상의 공통 연출과 장면별 구도를 완성하지 못했어요. 대본을 다시 생성해 주세요.',
@@ -38,8 +39,13 @@ export const codexFailure = (code = 'CODEX_REQUEST_FAILED', status = 502) => Obj
 export const accountFailureCode = error => Object.hasOwn(messages, error?.code) ? error.code : 'UNKNOWN';
 export function accountFailureMessage(provider, error) {
   const code = accountFailureCode(error);
+  if(code==='SCENARIO_DEPTH_INVALID' && Array.isArray(error?.failedChecks)){
+    const labels={focus:'질문과 답의 일치',why:'필요한 이유',mechanism:'작동 과정',example:'구체적 예시',payoff:'완결된 답',pacing:'설명 호흡',visuals:'대사와 화면의 연결'};
+    const missing=Object.keys(labels).filter(key=>error.failedChecks.includes(key)).map(key=>labels[key]);
+    if(missing.length)return `대본 검토에서 보완이 필요해 제작을 멈췄어요. 확인할 항목: ${missing.join(', ')}. 이 부분을 구체화해 다시 생성해 주세요.`;
+  }
   if (code.startsWith('DISCOVERY_')) return messages[code];
-  if (['SCENARIO_FORMAT_INVALID', 'SCENARIO_DEPTH_INVALID', 'SCENARIO_RESEARCH_INVALID', 'SCENARIO_ARC_INVALID', 'SCENARIO_DIRECTION_INVALID', 'RECOMMENDATION_REPEATED', 'RECOMMENDATION_CASE_INVALID'].includes(code)) return messages[code];
+  if (['SCENARIO_REVIEW_INVALID', 'SCENARIO_FORMAT_INVALID', 'SCENARIO_DEPTH_INVALID', 'SCENARIO_RESEARCH_INVALID', 'SCENARIO_ARC_INVALID', 'SCENARIO_DIRECTION_INVALID', 'RECOMMENDATION_REPEATED', 'RECOMMENDATION_CASE_INVALID'].includes(code)) return messages[code];
   return provider === 'claude' ? messages[code] || messages.CLAUDE_REQUEST_FAILED
     : code.startsWith('CODEX_') ? messages[code] : messages.CODEX_REQUEST_FAILED;
 }
