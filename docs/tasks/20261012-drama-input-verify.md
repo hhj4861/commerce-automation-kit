@@ -56,14 +56,15 @@
     - 기존 `verify-inputs` CLI 시험의 경로 검사에 홈 폴더 검사를 더했다.
   - 검증: drama-runner 33/33 통과, 건너뜀 0. typecheck·preflight 통과.
   - 남은 경계는 아래 「한계」에 적었다(모듈 적재 실패).
+- 재리뷰(Codex, 2026-10-13, 고정 `60e8bb0`): **pass**. R1 지적이 해소됐고 33/33·typecheck·preflight를 Codex가 직접 다시 돌렸다.
 - 환경:
   - Node 22.23.3, Claude worktree는 sparse checkout이다.
   - 디스크 여유가 1.1GiB(사용률 100%)라 필요한 폴더만 꺼냈다: `apps/drama-runner`, `packages/drama-series`, `packages/contracts`, `docs/tasks`, `docs/videos/20261006-regression-pilot`.
   - node_modules는 같은 lock의 `drama-ci` worktree에서 APFS 복제(`cp -ac`)했다. runtime node_modules(고정 pin 링크)는 `drama-atomworks-adapter`에서 복사했다.
   - `DRAMA_TEST_STATE`는 세션 스크래치패드 아래(비동기화 로컬)이고, `DRAMA_TEST_ARTIFACTS`는 iCloud `claude 작업/tmp/20261012-drama-input-verify/artifacts`다.
   - 유료 호출·새 패키지 설치는 없었다.
-- 현재 결과: draft PR #199(→ `feat/drama-regression-pilot`). R1 지적 반영과 로컬 시험(33/33)을 마쳤다. Codex 재리뷰 대기.
-- 다음: Codex 재리뷰 pass 후 PR #199를 ready로 바꾼다. 머지는 사용자 승인 후.
+- 현재 결과: PR #199(→ `feat/drama-regression-pilot`). R1 지적 반영 후 Codex 재리뷰 pass(`60e8bb0`).
+- 다음: 사용자 머지 승인 대기. #187과 같은 README를 고치므로 두 번째로 머지되는 쪽이 runner 전체 시험을 다시 돌린다.
 - 한계:
   - 대조는 그 시점의 확인이며 이후 변경을 막지 못한다(유료 실행 단계가 생기면 실행 직전 재대조 필요). 결과는 저장 DTO에 기록하지 않는다.
   - 링크 거부는 마지막 경로 요소만 대상이다.

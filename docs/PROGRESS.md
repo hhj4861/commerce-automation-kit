@@ -44,7 +44,7 @@ cd packages/keyword-intel && npm test     # 128개 통과하면 정상(2026-09-0
 
 **drama-series 폰트 보존 (2026-10-12, 작업 H)**: 재사용 폰트·라이선스를 `packages/drama-series/assets/fonts/`에 반입하고 파일럿 style을 저장소 상대경로로 전환했다. CLI는 style 폴더 기준으로 fontFile을 해석하며 어댑터는 외부 실행·쓰기 전에 폰트를 검사한다. drama-series 320/320·typecheck·4역할 drawtext 스모크 통과. drama-runner 22/22 통과(오케스트레이터 재시험 — `apps/drama-runner/runtime/node_modules` 준비, `DRAMA_TEST_STATE`·`DRAMA_TEST_ARTIFACTS` 지정). PR → `feat/drama-regression-pilot`. 상세: `docs/tasks/20261012-drama-fonts-in-repo.md`.
 
-**drama-runner 입력 원본 대조 (2026-10-12, 작업 T2)**: `verify-inputs`와 `preview --files`가 series·episode·모든 gate 파일을 원본 바이트로 다시 해시해 bundle SHA와 대조한다. 해시는 atomworks kernel `verifyArtifact`(고정 `ad94eae`)를 재사용한다. 링크·FIFO·디렉터리는 거부하고, 경로는 출력하지 않으며, 실패 시 DB를 쓰지 않는다. 저장 DTO와 `--files` 없는 preview는 그대로다. Codex R1 지적(bundle 읽기 실패의 경로 노출)을 반영해 bundle·의존성 점검 실패도 고정 문구로 낸다. drama-runner 33/33·typecheck·preflight 통과. draft PR #199 → `feat/drama-regression-pilot`, Codex 재리뷰 대기. 상세: `docs/tasks/20261012-drama-input-verify.md`.
+**drama-runner 입력 원본 대조 (2026-10-12, 작업 T2)**: `verify-inputs`와 `preview --files`가 series·episode·모든 gate 파일을 원본 바이트로 다시 해시해 bundle SHA와 대조한다. 해시는 atomworks kernel `verifyArtifact`(고정 `ad94eae`)를 재사용한다. 링크·FIFO·디렉터리는 거부하고, 경로는 출력하지 않으며, 실패 시 DB를 쓰지 않는다. 저장 DTO와 `--files` 없는 preview는 그대로다. Codex R1 지적(bundle 읽기 실패의 경로 노출)을 반영해 bundle·의존성 점검 실패도 고정 문구로 낸다. drama-runner 33/33·typecheck·preflight 통과. PR #199 → `feat/drama-regression-pilot`, Codex 교차 리뷰 pass(`60e8bb0`). 상세: `docs/tasks/20261012-drama-input-verify.md`.
 
 **keyword-intel 게이트 현황**
 
