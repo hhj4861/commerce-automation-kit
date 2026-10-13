@@ -6,7 +6,10 @@
   3. 부팅 디스크를 80GiB에서 20GiB로 줄여 월 약 $6을 아낀다.
   - 이 과정에서 "새 VM에 백업을 복원하는 경로"를 실제 데이터로 처음 검증한다.
 - 기준: main `32a1b98`. VM 실측은 2026-10-12에 IAP SSH 읽기 전용으로 했다. 비밀값 파일은 이름·크기만 보고 내용은 열지 않았다.
-- 2026-10-12 밤 사전 확인(읽기 전용): 소비 앱, 요청 기록, 제공사 해지 방법, 그 밖의 소비자를 확인했다. 항목마다 다른 방법으로 반박 검증했고, 결과를 §4·§5-3·§5-4·§8·§10에 반영했다.
+- 2026-10-12 밤 사전 확인(읽기 전용): 소비 앱, 요청 기록, 제공사 해지 방법, 그 밖의 소비자를 확인했다. 항목마다 다른 방법으로 반박 검증했고, 결과를 §4·§5-3·§5-4·§6·§8·§9·§10·§11에 반영했다. 같은 날 사용자 결정 세 가지도 반영했다.
+  - Hanmadi 변수 정리는 Codex가 맡는다.
+  - codex 토큰은 사본 삭제를 앞당겨 처리한다.
+  - 점검은 2026-10-17(토) 10:05 KST에 한다.
 - 관련: `docs/PROGRESS.md` §7 #18·#19, `docs/20261009-shared-ai-serverless-migration-plan.md`의 D4·D5·D6과 Phase 2 「게이트 결과와 결정」.
 - 승인 경계: 이 문서를 머지해도 실행 승인이 아니다. ★ 표시 단계는 각각 사용자 승인을 받는다. 대상은 코드 PR 머지, VM 정지, Terraform apply, 디스크·스냅샷 삭제, 유료 호출이다.
 - 범위 밖:
@@ -94,7 +97,7 @@
 조사 근거는 코드 정적 분석과 VM 읽기 전용 확인이다.
 
 - **v1이 받는 방식**: `codex`(ChatGPT 기기 로그인), `claude-code`(공식 CLI 로그인), Claude API 키의 세 가지다. `openai` provider는 없다(`services/ai-gateway/account_service.py` 166, 307-315행).
-- **VM의 15행**: 모두 2026-09-29 시험 기록이다.
+- **VM의 15행**: 2026-09-28~29 시험 기록이다. Cloud Run 기록의 등록·해제 건수로 보면 9-28분 2행은 Hanmadi 행이다. VM DB의 생성 시각은 확인하지 않았다(`TODO(D1)`).
 
   | 앱 | provider | 상태 | 행 수 |
   |---|---|---|---|
@@ -115,20 +118,27 @@
     - 두 기록은 아직 main에 없고 `origin/fix/hanmadi-hook-interruption` 등 브랜치에만 있다.
     - 9-30까지 남은 CLI 변수 이름 목록에도 7개가 모두 있다.
     - 10-04의 `GET /accounts/connections` 3건은 200이었다. 키 없이 부르면 401이므로, 그 배포에는 유효한 `AI_ACCOUNTS_*`가 있었다.
-    - 이전 판의 "주입되지 않았다는 기록"(Phase 0)은 틀렸다. Phase 0은 일일 진단 cron에 Dify 호출이 없다는 점으로 판단했지만, 그 cron은 LiteLLM만 부른다.
+    - 이전 판의 "주입되지 않았다는 기록"은 틀렸다.
+      - 이 서술은 Phase 0보다 먼저 쓴 마스터 플랜의 "미주입"(24·34행)에서 왔다.
+      - Phase 0은 변수 이름을 직접 확인하지 못해 남은 확인으로 적었다.
+      - Phase 0의 Dify 미사용 판단은 일일 진단 cron에 Dify 호출이 없다는 점에 기댔다. 하지만 그 cron은 LiteLLM만 부른다.
+    - **2026-10-12 Codex 스레드가 읽기 전용으로 확인했다.**
+      - Production에 7개가 모두 있다. 생성·수정 시각은 9-27~28 그대로다.
+      - Preview와 팀 공용 변수에는 없다.
+      - 운영 배포는 `2bc7178`이다.
   - 운영 Festa: venture-studio(비공개 저장소)의 앱이고, Cloudflare Pages `festacheck`와 Worker `festa-ranking`으로 배포된다.
     - 운영 코드(739ed78)의 「개인 AI」 기능이 accounts v1을 부른다(`@cak/litellm-client` 0.4.0 `createAccountClient`).
     - Production·Preview 모두에 `AI_ACCOUNTS_*` secret 3개가 있다. Dify는 쓰지 않는다.
     - 실제 호출은 9-29~30 시험 기간뿐이고, 9-30 05:57 UTC 뒤로는 0건이다.
     - 다만 10-01 06:29 UTC 뒤로는 Cloudflare에서 온 요청 자체가 없다. 그래서 0건은 미사용의 근거로 약하다.
   - 그 밖의 소비자는 없다.
-    - 확인 범위: 워크스페이스 저장소 35개, GitHub Actions 워크플로 16개, Cloud Scheduler(0개), 로컬 launchd
+    - 확인 범위: 워크스페이스 저장소 34개와 그 밖의 클론 1개(`~/Developer/commerce-automation-kit`), GitHub Actions 워크플로 16개, Cloud Scheduler(0개), 로컬 launchd
     - shopshorts 계정 작업과 `cak-credential-broker`는 퇴역 경로를 쓰지 않는다.
 - **퇴역 뒤 각 앱의 동작** (코드 기준)
   - Hanmadi에 `DIFY_*`가 남아 있으면 레거시 `/conversation`의 모든 전송이 실패한다. 영향 범위는 튜터·학생 포털의 AI 회화와 레벨 체크 2단계다. 대체 공급자는 없다(`apps/hanmadi/lib/conversation-provider.ts` 18-37, 95-100행).
-    - Dify를 10-09에 멈췄으므로 지금도 502('AI 연결에 문제가 있어요')로 실패하고 있을 것이다.
+    - Dify를 10-09에 멈췄으므로 지금도 502('AI 연결에 문제가 있어요')로 실패하고 있을 것이다. 다만 실제로 재현하지는 않았다.
     - 점검 뒤에는 409('대화를 찾을 수 없어요')로 바뀐다.
-    - 9-28 뒤 Dify 경로 호출은 0건이라 실제 피해는 관측되지 않았다.
+    - 9-28 뒤 Dify 경로 호출은 0건이라(2026-10-12 운영자 확인 1건 제외) 실제 피해는 관측되지 않았다.
   - Hanmadi에 `AI_ACCOUNTS_*`가 남아 있으면 v2 「내 AI」 패널이 숨지 않는다.
     - 대신 '계정 연결에 실패했어요' 경고를 띄우고, 패널이 열린 동안 3초마다 다시 부른다.
     - 기본 Gemini 대화·수업·번역·음성은 영향이 없다.
@@ -156,26 +166,28 @@
 1. ★ 사용자: 시험 때 연결한 자격을 제공사 쪽에서 해지한다.
    - 서비스의 DELETE는 제공사 승인을 취소하지 않는다.
    - 대상: Festa codex 연결 1건, Hanmadi codex 오류 1건, Festa claude 연결 1건.
-     - 끊김 행은 DELETE 때 사본(`secret` 열, 프로필 폴더)이 지워졌다.
-     - 끊김 행을 지운 DELETE 11건 가운데 9건은 등록 5~12초 뒤에 왔다. 사람이 그 사이에 승인을 끝낼 수 없는 간격이다.
+     - 끊김 행은 DELETE 때 사본(`secret` 열, 프로필 폴더)이 지워졌다. 행을 끊김으로 바꾸는 곳은 DELETE 처리(`disconnect()`)뿐이다.
+     - Cloud Run 기록의 DELETE(200)는 11건(9-28 2건, 9-29 9건)이다. 그 가운데 9건은 등록 5~12초 뒤에 왔다. 사람이 그 사이에 승인을 끝낼 수 없는 간격이다.
+     - 끊김 12행과 DELETE 건수가 맞지 않는 이유는 확인하지 않았다(`TODO(D1)`).
    - Festa claude 연결은 Claude API 키가 아니라 claude.ai 구독 로그인일 가능성이 크다. accounts v1을 거친 Claude 로그인 완료는 2026-09-29 07:25~07:26 UTC(16:25~16:26 KST)의 1건뿐이다.
    - Claude: claude.ai **Settings > Claude Code**에서 토큰마다 휴지통 아이콘으로 지울 수 있다([공식 도움말](https://support.claude.com/en/articles/10310342)).
      - 위 시각에 만든 토큰 하나만 지운다. 목록에 만든 시각이 보이는지는 `TODO(D1)`이다.
      - 전역 로그아웃은 쓰지 않는다. Claude Code 토큰까지 해지하는지 공식 문서로 확인되지 않았고, 이 노트북의 Claude Code 세션을 끊을 수도 있다.
-     - 목록에서 구분할 수 없을 때의 대안: 옛 VM이 살아 있는 동안(W6 전) 별도 승인을 받아, accounts 컨테이너 안에서 해당 프로필로 `claude auth logout`을 실행한다.
-       - VM의 Claude Code 2.1.284는 로그아웃할 때 refresh token을 해지한다.
+     - 목록에서 구분할 수 없을 때의 대안: 점검 전에 별도 승인을 받아, 옛 VM의 accounts 컨테이너 안에서 해당 프로필로 `claude auth logout`을 실행한다. accounts 컨테이너는 W1에서 멈추므로 늦어도 W1 전에 한다.
+       - VM과 같은 버전인 npm Claude Code 2.1.284 빌드에는 로그아웃할 때 refresh token을 해지하는 코드가 있다. claude.ai 로그인에 대한 공식 문서는 없고, VM 바이너리와 같은지도 확인하지 않았다(`TODO(D1)`).
        - 해지는 best-effort라 실패해도 성공 메시지가 나올 수 있다. 결과는 위 목록에서 확인한다.
    - Codex(ChatGPT): 사용자가 토큰 하나만 골라 해지할 공식 메뉴가 없다.
-     - VM 토큰은 LiteLLM이 공식 Codex CLI와 같은 client_id로 기기 코드 로그인을 해서 받았다. 그래서 OpenAI 쪽에서는 사용자 본인의 Codex CLI 로그인과 구분되지 않는다.
+     - VM 토큰은 LiteLLM이 공식 Codex CLI와 같은 client_id로 기기 코드 로그인을 해서 받았다. 그래서 OpenAI 쪽에서는 client_id만으로 사용자 본인의 Codex CLI 로그인과 구분되지 않는다. 구분할 단서는 발급 시각(2026-09-29)과 위치(GCP us-central1)뿐이다.
      - ChatGPT의 Active sessions는 Codex CLI 세션을 보여 주지도, 관리하지도 않는다(OpenAI 도움말 「Managing active sessions in ChatGPT」, 2026-10-08 보관본).
      - 'Log out of all devices'가 Codex CLI 토큰을 끊는다는 공식 근거는 없다.
      - 이 노트북에서 `codex logout`을 해도 VM 토큰은 해지되지 않고, 사용자의 Codex 세션만 끊긴다.
-     - 대안 가운데 하나를 사용자가 정한다.
+     - 대안은 셋이었다.
        - (a) OpenAI 지원에 해지를 요청한다.
-       - (b) 옛 VM이 살아 있는 동안 VM 안에서 토큰 단위로 해지한다. 공개 문서가 없는 방법이라 `TODO(D1)`이고, 별도 승인이 필요하다.
+       - (b) 점검 전(W1 전)에 옛 VM 안에서 토큰 단위로 해지한다. 공개 문서가 없는 방법이라 `TODO(D1)`이고, 별도 승인이 필요하다.
        - (c) 살아 있는 토큰으로 보고 §8의 사본 삭제를 앞당긴다.
-   - Phase 0에서 이미 「accounts QA 연결의 제공사 쪽 세션·키 폐기」를 후속 과제로 적어 두었다(`docs/qa/20261009-serverless-phase0.md` 61행).
-2. 운영 Hanmadi(Vercel `dean-10/hanmadi`)의 환경 변수 이름을 확인하고, 있으면 퇴역 전에 뺀다. 값은 보지 않는다. 위 기록상 **있을 가능성이 높다.**
+     - **사용자 결정(2026-10-12): (c).** 최종 스냅샷을 D+30이 아니라 D+7에 지운다(§8). 사본은 이 GCP 프로젝트의 옛 디스크와 스냅샷에만 있다.
+   - Phase 0에서 이미 「accounts QA 연결의 제공사 쪽 세션·키 폐기」를 후속 과제로 적어 두었다(`docs/qa/20261009-serverless-phase0.md` 67행).
+2. 운영 Hanmadi(Vercel `dean-10/hanmadi`)의 환경 변수 이름을 확인하고, 있으면 퇴역 전에 뺀다. 값은 보지 않는다. **2026-10-12 확인 결과 Production에 7개가 모두 있다**(위 「소비 앱」, Codex 스레드 확인).
    - 볼 이름: `AI_ACCOUNTS_URL`, `AI_ACCOUNTS_KEY`, `AI_ACCOUNTS_SUBJECT_SECRET`, `DIFY_BASE_URL`, `DIFY_API_KEY`, `DIFY_USER_SECRET`, `CONVERSATION_PROVIDER`
    - 볼 곳:
      - 프로젝트 Settings → Environment Variables의 Production과 Preview
@@ -195,19 +207,31 @@
      - (c) 튜터 `/conversation`의 안내에 '이 앱은 대화 내용을 서버에 저장하지 않아요'가 보이는지. 한 번 보내 답을 받는 확인은 유료 호출 1회이므로 먼저 보고한다.
      - (d) 재배포 뒤 Cloud Run 기록에 UA `node`의 `/accounts`·`/v1/chat-messages` 호출이 없는지
      - (d)는 아무도 화면을 열지 않아도 0건이므로 보조 확인이다. 본 확인은 (b)·(c)다. (b)·(c) 화면은 AI 호출이나 사용량 차감 없이 지금 배포가 실제로 쓰는 설정을 보여 준다.
-   - 이 머신에는 Vercel CLI가 설치돼 있지 않다. 다만 이전 세션의 CLI 로그인과 프로젝트 링크(`commerce-automation-kit-worktrees/hanmadi-pr10*-release/.vercel`)가 남아 있다. 그래서 사용자 승인을 받으면 `npx vercel env ls`로 이름만 볼 수도 있다. 이전 판의 "CLI와 프로젝트 연결이 없다"는 정정한다.
-   - 담당: Hanmadi 운영 설정과 CLI 배포를 해 온 Codex 스레드가 사용자 승인을 받은 뒤 한다(메일함 `shared-ai-serverless`, 2026-10-12).
-3. Festa의 `/accounts` 사용 여부: **2026-10-12 확인 결과, 운영에서 실제로 쓰지 않는다**(위 「소비 앱」). 따라서 #19를 이번 점검에 포함한다.
+   - 이 머신에는 Vercel CLI가 전역 설치돼 있지 않다. `ops/deploy/deploy.mjs`가 고정한 `vercel@60.1.3`만 npx 캐시에 있다.
+     - 이전 세션의 CLI 로그인과 프로젝트 링크(`commerce-automation-kit-worktrees/hanmadi-pr10*-release/.vercel`)도 남아 있다.
+     - 그래서 사용자 승인을 받으면, 링크된 폴더에서 `npx vercel@60.1.3 env ls production`과 `npx vercel@60.1.3 env ls preview`로 이름만 볼 수도 있다. 버전을 빼면 최신판을 새로 내려받는다.
+     - 이전 판의 "CLI와 프로젝트 연결이 없다"는 정정한다.
+   - 담당: **사용자 결정(2026-10-12)으로 Codex 스레드가 맡는다.** Hanmadi 운영 설정과 CLI 배포를 해 온 쪽이다. 승인은 사용자가 Codex 세션에서 직접 한다. Claude가 전하는 말은 승인이 아니다(메일함 `shared-ai-serverless`).
+3. Festa의 `/accounts` 사용 여부: 2026-10-12 확인 결과, **운영 Festa는 v1을 쓰도록 설정돼 있지만**(「개인 AI」 코드, Production·Preview secret 3개), 9-30 05:57 UTC 뒤 실제 호출은 0건이다(위 「소비 앱」).
+   - 0건은 약한 근거다. 그래서 #19를 포함하는 것은, 점검 뒤 Festa 「개인 AI」가 404 안내로 실패하는 것을 받아들이는 결정이다.
+   - **포함을 권하며, 사용자 확인을 기다린다.**
    - 점검 전에 반드시 바꿀 것은 없다. 점검 뒤 「개인 AI」 버튼을 누르면 404 안내가 뜬다.
    - 이 버튼을 '준비 중' 상태로 바꾸려면 festacheck Production·Preview에서 `AI_ACCOUNTS_*` 3개를 지우고 재배포한다(★ 운영 배포). 이번 점검의 범위에는 넣지 않는다.
      - 저장소 설정 그대로(`npm run deploy:pages`) 배포하면 `RANKING_SERVICE` 바인딩이 빠져 순위 기능이 꺼진다.
      - 10-01 운영 배포는 저장소 밖의 배포용 설정으로 했으므로, 그 설정을 다시 써야 한다.
-   - 공개된 옛 배포 URL(해시·브랜치 별칭)은 재배포해도 옛 설정을 유지한다. 공식 주소가 아니고 요청도 없어 그대로 둔다.
+   - 공개된 옛 배포 URL(해시·브랜치 별칭)은 재배포해도 옛 설정을 유지할 것으로 본다. 바인딩이 배포 시점에 고정되는 것은 확인했고, secret도 같은지는 `TODO(D1)`이다. 공식 주소가 아니고 요청도 없어 그대로 둔다.
+- **대체안(#19를 빼고 진행)**: 선행 조건이 끝나지 않았거나 사용자가 #19를 빼기로 하면 이 안을 따른다.
+  - v1을 그대로 옮긴다. §3의 accounts 행을 "복사"로 바꾼다.
+  - W2 이미지 저장, W9 제외 목록, W12 기동, W13 확인에 accounts를 다시 넣는다.
+  - accounts 경로를 Caddyfile에 남기고, §5-1 PR(#195)도 그에 맞춰 고친다.
+  - #19는 열린 과제로 남는다.
 - 근거(Cloud Run `shared-ai` 요청 기록, 읽기 전용. 기록은 2026-09-27 09:20 UTC부터만 있다):
-  - 퇴역 경로 호출은 모두 669건이다.
+  - 퇴역 경로 호출은 모두 669건이다(아래 2026-10-12 운영자 확인 2건 제외).
     - `/accounts`: 620건(9-28 36, 9-29 579, 9-30 2, 10-04 3)
     - Dify 경로: 49건(9-27 16, 9-28 33)
-  - 10-04 16:49 UTC 뒤로는 0건이다. 다만 10-05 뒤 요청은 대부분 Hanmadi 진단 cron(LiteLLM만 호출)과 운영자 시험이다. 그래서 0건은 미사용의 약한 근거이고, 선행 조건 2·3은 기록이 아니라 설정 확인으로 닫는다.
+  - 10-04 16:49 UTC 뒤로는 0건이다(운영자 확인 2건 제외).
+    - 다만 10-05 뒤 요청은 대부분 Hanmadi 진단 cron(LiteLLM만 호출)과 운영자 시험이다. 그래서 0건은 미사용의 약한 근거다.
+    - 따라서 선행 조건 2는 설정 확인으로 닫는다. 3은 설정이 남아 있으므로 사용자 판단으로 닫는다.
   - 9-30의 2건은 Cloudflare 대역(172.71.x.x)에서 왔고, Festa 시험의 마지막 호출이다.
   - 10-04 16:48 UTC의 3건(`GET /accounts/connections`, 200)은 AWS us-east-1 대역(54.82.x.x)의 node 클라이언트다. 직전의 Hanmadi 대화·음성 호출에 이어서 왔고, v2 「내 AI」 패널을 연 패턴과 맞는다.
   - 2026-10-12 13:25 UTC의 퇴역 경로 2건은 사전 확인 중 운영자 노트북에서 보낸 무인증 GET(UA `curl/`)이다.
@@ -215,13 +239,10 @@
     - 점검 직전 재확인(§5-4)에서는 이 2건을 제외한다.
   - `docs/HANMADI-V2-IMPLEMENTATION.md`는 `AI_ACCOUNTS_*`를 v2 「개인 AI」 기능용으로 적고 있다.
 
-- **남는 사본**: 아래 셋은 순서대로 지운다(§8).
+- **남는 사본**: 옛 디스크, 원본을 지워도 남는 일일 자동 스냅샷, 최종 스냅샷의 셋이다. 이 순서로 지운다(§8).
+  - 자동 스냅샷은 7일 보존이라 2026-10-12 기준 7개다. 정책 연결이 새 디스크로 바뀌는 W6까지 매일 하나가 새로 생기고 가장 오래된 하나가 지워진다.
   - Claude 토큰은 선행 조건 1에서 해지할 수 있다.
-  - codex 토큰은 1의 (a)나 (b)가 끝나기 전까지 살아 있는 토큰으로 본다. 그 경우 이 삭제가 유일한 완화책이다.
-  - 삭제 대상:
-    - 옛 디스크
-    - 원본을 지워도 남는 일일 자동 스냅샷(2026-10-12 기준 7개이고, W3까지 매일 하나씩 는다)
-    - 최종 스냅샷
+  - codex 토큰은 살아 있는 토큰으로 본다(선행 조건 1의 결정 (c)). 그래서 이 삭제가 유일한 완화책이고, 최종 스냅샷도 D+7에 지운다.
 
 ## 5. 사전 작업 (중단 없음)
 
@@ -369,12 +390,14 @@ order by 1;
 
 최근 14일 LiteLLM 사용 기록에서 시간대별 호출 수를 세어 가장 한산한 1시간을 고른다. 날짜·시각은 사용자와 확정한다.
 
+**결정 (2026-10-12, 사용자): 2026-10-17(토) 10:05 KST에 W1을 시작한다.** 근거는 아래 재확인이다.
+
 **재확인 (2026-10-12 밤, Cloud Run 요청 기록 기준):**
 - 최근 14일 주말 10:00~11:59(KST) 요청은 0건이다(토요일 이틀, 일요일 이틀). 주말 요청은 08:32~09:37과 13시 이후에만 있었다.
 - Hanmadi 진단 cron(Vercel, 매일 00:17 UTC 예약)이 09:36 KST 무렵 `/llm`을 12~15번 부른다.
   - Vercel cron은 예약한 시간대(09시대) 안 어디서든 시작할 수 있고, 최대 300초 동안 돈다.
   - 따라서 **W1은 10:05 KST 이후에 시작**한다. 더 일찍 시작하려면 그날 cron 호출이 끝났는지 기록으로 확인한다.
-- 점검 중(W1~W15)에는 퇴역 경로만이 아니라 모든 공개 경로가 502를 돌려준다.
+- 점검 중(W1부터 W14에서 edge를 다시 띄울 때까지)에는 퇴역 경로만이 아니라 모든 공개 경로가 502를 돌려준다.
   - Hanmadi의 v2 AI 기능(대화·번역·음성·영상 분석·JEV)이 실패한다.
   - Festa 기본 AI도 LiteLLM을 쓰고 있다면 실패한다. Festa JEV 인터뷰는 3초 제한 뒤 건너뛴다.
   - 모두 점검이 끝나면 저절로 회복된다.
@@ -387,12 +410,14 @@ order by 1;
 
 ### 5-4. 선행 조건 확인
 
-§4의 선행 조건 세 가지를 2 → 3 → 1 순서로 끝낸다: Hanmadi 환경 변수, Festa 사용 여부, 제공사 해지. 하나라도 남으면 점검을 미루거나, §4의 대체안대로 #19를 빼고 진행한다.
+§4의 선행 조건 세 가지를 2 → 3 → 1 순서로 끝낸다: Hanmadi 환경 변수, Festa 사용 여부, 제공사 해지. 하나라도 남으면 점검을 미루거나, §4의 「대체안」대로 #19를 빼고 진행한다.
 
 - 2026-10-12 상태:
-  - 2(Hanmadi 변수): 1차 기록상 7개가 있을 가능성이 높다. 이름 확인과 삭제·재배포를 기다린다.
-  - 3(Festa): 운영 미사용으로 확인했다. #19를 포함한다.
-  - 1(제공사 해지): Claude는 토큰 단위로 해지할 수 있다. codex는 대안 (a)·(b)·(c) 가운데 사용자 결정을 기다린다.
+  - 2(Hanmadi 변수): Production에 7개가 모두 있다(Codex 확인). 삭제·재배포를 기다린다. 사용자 결정으로 Codex가 맡고, 승인은 사용자가 Codex 세션에서 한다.
+  - 3(Festa): 설정상 v1을 쓰지만 9-30 뒤 호출은 0건이다. #19 포함을 권하며, 「개인 AI」 중단을 받아들일지 사용자 확인을 기다린다.
+  - 1(제공사 해지)
+    - Claude: 사용자가 claude.ai에서 9-29 16:25~16:26 KST에 만든 토큰 하나를 지운다.
+    - codex: (c)로 정했다(사본 삭제 앞당김, §8).
 - 점검 직전(W0 전)에 Cloud Run 기록을 다시 본다.
   - 10-04 16:49 UTC 뒤로 퇴역 경로 호출이 없어야 한다.
   - 운영자 확인 요청은 제외한다: UA `curl/`, 운영자 공인 IP(예: 2026-10-12 13:25 UTC의 2건).
@@ -412,7 +437,7 @@ vm() { gcloud compute ssh shared-ai --zone=$Z --tunnel-through-iap --account=$A 
 | 단계 | 할 일 | 확인·중단 기준 |
 |---|---|---|
 | W0 기록 (중단 전) | 백업 폴더 `B=/opt/shared-ai/backups/maint-<UTC시각>`(0700)을 만든다. 아래를 `$B`에 저장한다: `docker compose ls -a`의 프로젝트 이름과 설정 파일 목록, 컨테이너별 이미지 ID, LiteLLM 행 수(§5-2 SQL), 앱 키 4개(`.runtime/*.env`)의 `/v1/models` 모델 ID 목록, discovery 최근 작업 1건의 ID와 상태 | 파일 5개가 생겼는지 |
-| W1 중단 시작 | 10:05 KST 이후에 시작한다(§5-3, Hanmadi 진단 cron). `shared-ai-edge`를 먼저 멈춘다(공개 경로가 502를 돌려준다). 이어서 `shared-ai-accounts`, `shared-topic-discovery`, gateway 컨테이너를 멈추고 db는 둔다. 명령은 `docker compose -p <프로젝트> stop` | 실행 중인 컨테이너가 db 하나뿐인지 |
+| W1 중단 시작 | 2026-10-17(토) 10:05 KST 이후에 시작한다(§5-3, Hanmadi 진단 cron). `shared-ai-edge`를 먼저 멈춘다(공개 경로가 502를 돌려준다). 이어서 `shared-ai-accounts`, `shared-topic-discovery`, gateway 컨테이너를 멈추고 db는 둔다. 명령은 `docker compose -p <프로젝트> stop` | 실행 중인 컨테이너가 db 하나뿐인지 |
 | W2 백업 | `pg_dump -Fc` → `$B/litellm.dump`. discovery SQLite는 `sqlite3` 백업 API로 `$B`에 복사하고 `integrity_check`가 `ok`인지 본다. accounts 데이터는 `$B`에 복사하지 않는다(새 VM으로 옮겨지기 때문). 이미지 4개(litellm·postgres·caddy·`cak-discovery:7e9d866`)와 discovery 직전 이미지를 `docker save --platform linux/amd64 -o /opt/shared-ai/migration/images.tar`로 저장한다. 마지막으로 `$B`의 `SHA256SUMS`를 만든다 | 덤프가 0바이트가 아니고 `pg_restore --list`가 성공하는지 |
 | W3 정지 | db를 멈춘 뒤 ★ `gcloud compute instances stop shared-ai` | VM이 TERMINATED인지 |
 | W4 최종 스냅샷 | `gcloud compute snapshots create shared-ai-data-final-<날짜> --source-disk=shared-ai-data --source-disk-zone=$Z --storage-location=us-central1` | READY인지 |
@@ -450,8 +475,8 @@ vm() { gcloud compute ssh shared-ai --zone=$Z --tunnel-through-iap --account=$A 
 - D+7까지 문제가 없으면:
   - ★ `google_compute_disk.data` 블록을 지우는 PR을 만들어 apply한다(plan 기대값: 삭제 1). 블록을 지우면 `prevent_destroy`도 함께 사라진다.
   - ★ 옛 디스크의 자동 스냅샷을 지운다. `on_source_disk_delete = KEEP_AUTO_SNAPSHOTS`라 원본을 지워도 남는다.
-- D+30: ★ 최종 스냅샷을 지운다. Dify 데이터가 다시 필요할 가능성이 있으면 더 둔다.
-- codex 토큰 해지를 확인하지 못했다면(§4 선행 조건 1의 (c)), D+7·D+30 일정을 줄일지 사용자와 정한다. 옛 디스크와 모든 자동·최종 스냅샷이 남은 사본의 전부다.
+  - ★ 최종 스냅샷도 지운다. 원래 계획은 D+30이었지만, codex 토큰 사본을 줄이려고 앞당겼다(사용자 결정 2026-10-12, §4 선행 조건 1의 (c)).
+  - 이 셋이 남은 사본의 전부다. 지운 뒤에는 R2·R3도 쓸 수 없고, Dify 데이터도 되살릴 수 없다.
 - 저장소 코드 정리는 점검과 독립된 별도 PR로 한다. 점검으로 바뀐 실행 상태를 코드에 맞추는 작업이다.
   - #19: 아래 파일과 관련 테스트를 지우고, Hanmadi의 codex·claude-code 화면과 라우트를 정리한다. Hanmadi API 키 흐름(v2와 새 클라이언트 버전)은 BYOK 약관 확인 뒤 별도 과제다.
     - accounts v1: `account_service.py`, `account_worker.py`, `claude_code.py`, `subscription_runtime.py`, `Dockerfile.accounts`, `compose.accounts.yaml`
@@ -471,7 +496,7 @@ vm() { gcloud compute ssh shared-ai --zone=$Z --tunnel-through-iap --account=$A 
 - 일일 스냅샷 비용은 디스크에 저장된 양에 비례해 줄어든다(사용량이 21G에서 약 6G로 준다). 스냅샷 단가는 `TODO(D1)`이다.
 - 일회성 비용:
   - 옛 디스크를 7일 보관: 약 $1.9
-  - 최종 스냅샷을 30일 보관: 약 21GB 분량 × 스냅샷 단가(`TODO(D1)`)
+  - 최종 스냅샷을 7일 보관: 약 21GB 분량 × 스냅샷 단가(`TODO(D1)`). 2026-10-12 결정으로 30일에서 줄였다.
   - W16 유료 확인: 실행 전에 계산
 
 ## 10. 위험과 대응
@@ -482,8 +507,8 @@ vm() { gcloud compute ssh shared-ai --zone=$Z --tunnel-through-iap --account=$A 
 | 이미지가 다르게 로드됨 | 공개 이미지 3개는 digest로 pull한다. discovery 이미지는 릴리스 폴더에서 다시 빌드하고, 시간이 넘치면 R2 |
 | 옛 디스크 마운트 혼동(같은 레이블) | 장치 경로로 마운트한다. 붙어 있는 동안 재부팅하지 않는다 |
 | 시작 스크립트 실패(apt 미러 장애 등) | 재부팅해 다시 실행한다. 그래도 안 되면 R2 |
-| 운영 앱이 accounts를 쓰고 있었음 | §4 선행 조건 2·3에서 확인한다(Hanmadi는 변수 정리, Festa는 운영 미사용). 새 VM에는 accounts 이미지·데이터·릴리스가 없다. 그래서 Caddyfile만 되돌리면 404가 502로 바뀔 뿐이다. 되돌리려면 옛 디스크(D+7 전)나 최종 스냅샷에서 accounts 릴리스·볼륨·`.env.accounts`·이미지를 복원해야 한다. 제공사 해지까지 했다면 다시 로그인해야 한다. 사실상 되돌리기 어려운 결정으로 본다 |
-| 점검 중 공개 경로 전체 실패 | 주말 10:05~12시 KST에 한다(§5-3). 알림 장치가 없으므로 W13·W15에서 사람이 확인한다 |
+| 운영 앱이 accounts를 쓰고 있었음 | §4 선행 조건 2·3에서 확인한다(Hanmadi는 변수 정리, Festa는 「개인 AI」 중단을 받아들일지 사용자 확인). 새 VM에는 accounts 이미지·데이터·릴리스가 없다. 그래서 Caddyfile만 되돌리면 404가 502로 바뀔 뿐이다. 되돌리려면 옛 디스크(D+7 전)나 최종 스냅샷에서 accounts 릴리스·볼륨·`.env.accounts`·이미지를 복원해야 한다. 제공사 해지까지 했다면 다시 로그인해야 한다. 사실상 되돌리기 어려운 결정으로 본다 |
+| 점검 중 공개 경로 전체 실패 | 2026-10-17(토) 10:05~12시 KST에 한다(§5-3). 알림 장치가 없으므로 W13·W15에서 사람이 확인한다 |
 | Hanmadi 변수 정리 뒤 이전 배포로 롤백 | 지운 변수가 그 배포와 함께 되살아난다. 롤백·Promote하지 않는다(§4 선행 조건 2) |
 | 놓친 호스트 설정 | 실측상 없다(§1). W13·W15에서 기능으로 확인한다 |
 | 점검 시간 초과 | 90분을 넘기면 그 시점의 단계에 맞춰 R1이나 R2로 돌아간다 |
@@ -495,4 +520,4 @@ vm() { gcloud compute ssh shared-ai --zone=$Z --tunnel-through-iap --account=$A 
 - 새 VM에 Dify 자산과 accounts v1 데이터(구독 자격 포함)가 없다. `/accounts`와 Dify 경로는 404다.
 - 운영 Hanmadi에 퇴역 경로용 변수가 없다(§4 선행 조건 2의 확인 (b)·(c)).
 - 결과가 PROGRESS·README에 기록돼 있다.
-- 옛 디스크와 스냅샷 삭제는 D+7·D+30 이후 별도 승인으로 한다.
+- 옛 디스크와 스냅샷(최종 스냅샷 포함) 삭제는 D+7 이후 별도 승인으로 한다.
