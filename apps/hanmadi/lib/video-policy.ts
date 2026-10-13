@@ -164,6 +164,12 @@ export function applyContextReview(j: VideoJudgment, review: ContextReview): Vid
   if (review.claimedReference || review.outcome !== "pass" || VIDEO_CHECKS.some((k) => review.checks![k].verdict !== "pass")) return result;
   return { ...result, accepted: true, disposition: "accepted", choice: "useful", reason: "context_review", decidingCheck: undefined };
 }
+// Accepted only because a secondary LLM resolved JEV uncertainty. Kept as accepted
+// (so duplicate references stay intact) but surfaced for priority human checking.
+export function crossReviewedOnly(judgments: VideoJudgment[]) {
+  return judgments.filter((j) => videoDisposition(j) === "accepted" &&
+    (j.reason === "context_review" || j.reason === "language_review")).length;
+}
 export function videoDisposition(j: VideoJudgment): VideoDisposition {
   return j.disposition ?? (j.accepted ? "accepted" : j.choice === "useful" ? "review" : "excluded");
 }

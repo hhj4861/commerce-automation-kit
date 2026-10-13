@@ -18,7 +18,7 @@ import {
   type Phrase,
 } from "@/lib/v2";
 import type { ContentDraft } from "@/lib/v2-store";
-import { videoJudgmentLabel, videoJudgmentReason } from "@/lib/video-policy";
+import { crossReviewedOnly, videoJudgmentLabel, videoJudgmentReason } from "@/lib/video-policy";
 import type {
   Contribution,
   KnowledgeEvent,
@@ -590,6 +590,12 @@ export function V2Admin({ appHref = "/study" }: { appHref?: string }) {
                       <p className="hm-muted" role="status">
                         자동 검수로 확정하지 못한 표현이 있어 검토 대기 중이에요. 영상 구간·뜻·발음·새로운 학습 가치를 직접 확인하고,
                         적합하지 않은 표현은 제외해 주세요. 검수·게시 전에는 학습에 사용하지 않아요.
+                      </p>
+                    )}
+                    {current?.status === "draft" && current.videoReview && crossReviewedOnly(current.videoReview.judgments) > 0 && (
+                      <p className="hm-muted" role="status">
+                        JEV가 확정하지 못하고 교차 검수(LLM)로만 통과한 표현이 {crossReviewedOnly(current.videoReview.judgments)}개 있어요.
+                        게시 전에 이 표현들의 뜻·발음·근거를 먼저 확인해 주세요.
                       </p>
                     )}
                     {current?.videoReview && (
