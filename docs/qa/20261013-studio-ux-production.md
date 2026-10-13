@@ -32,3 +32,16 @@
 - GitHub 자동 배포의 Cloudflare credential request 403은 남아 있다. 이번 Pages 수동 배포 성공과 GitOps 복구는 다르다.
 - 재검증 시 CUA 브라우저 목록이 비었고 Chrome native 제어도 `Sky Computer Use native pipe startup failed`. 사용자 요청에 따라 제어 커널 초기화 후 getState를 재실행했지만 apps/browsers 모두 비었고 같은 오류였다. #208 배포 후 UI를 통한 새 대본 생성 요청은 아직 시작하지 못했다. 기존 화면 검증 증거와 API heartbeat 확인은 앞 절과 같다.
 - 신규 유료 미디어 생성/발행 없음. 기존 승인 차단은 사용자 추가 승인으로 해소됐다.
+
+## 브라우저 복구 후 실검증 재개
+
+- 2026-10-13 13시대 CUA native/Chrome 연결 복구 확인. 기존 로그인 유지, 제작 워커 온라인. 브라우저 장애가 계속된다는 이전 상태는 해소됐다.
+- QA 프로젝트 `7e88650a-54f0-6eb6-3dac-c4744f24afa4`는 재개 시 SCENARIO_FORMAT_INVALID 상태였다. 이전 실제 출력이 보존되지 않아 실패한 세부 필드는 확정하지 못했다.
+- 13:08 KST 운영 UI에서 대본 재생성을 한 차례 요청했다. 자료 확인 → 대본 작성 → 설명·결말 검토 → 자동 보완 단계까지 실제 진행 확인. 이번 생성은 첫 장면 형식 검사를 통과했다.
+- 검증 탭이 사라진 뒤 새 탭에서 같은 프로젝트를 열어 서버 작업이 계속 진행되는 것을 확인했다. 원인 미상의 탭 종료를 Shopshorts 서버 실패로 처리하지 않았다.
+- 제작 기획은 45초/건축학/자동 혼합, Higgsfield 상한 54크레딧. 미디어 워커의 SHOPSHORTS_MOTION_NODE는 설치된 Node 22.23.3을 가리킨다. 아직 이 요청의 유료 미디어 생성은 시작하지 않았다.
+- 수정 대본은 형식 검사를 통과해 다시 내용 검토로 진행했지만 최종 SCENARIO_DEPTH_INVALID로 중단됐다. 신규 영상/음성 생성·렌더·발행 없음.
+- 코드 확인 결과 검토 JSON의 형식/인용 오류도 같은 DEPTH 오류로 표시되고 있어 이번 최종 실패의 세부 원인을 소급 확정할 수 없다. 첫 검토 후 보완 단계 진입은 실제 불합격 항목이 존재했다는 증거다.
+- 별도 worktree에서 검토 응답 형식 오류의 1회 보완과 별도 분류, 실제 내용 불합격의 고정 항목 안내를 구현했다. 원본 cc0ca99, 운영 승격 dfe4650. 원본 관련 77검사·승격 17검사 통과, 각 작업 upstream push 완료.
+- PR #211(main): https://github.com/hhj4861/commerce-automation-kit/pull/211 / #212(운영 승격): https://github.com/hhj4861/commerce-automation-kit/pull/212 . 사용자 명시 머지 승인 요청 상태이며 아직 운영 적용하지 않았다.
+- 전체 실생성 E2E는 계속 미완료다. 새 변경의 승인·배포 후 실제 실패 항목 확인과 대본/미디어/최종 렌더 검증이 남는다. 자세한 변경·제한은 구현 PR의 `docs/qa/20261013-scenario-review-feedback.md`에 기록했다.
