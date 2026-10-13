@@ -104,3 +104,25 @@
 - 새 유료 미디어·음성·렌더·업로드는 실행되지 않았다. 품질 검토를 우회하거나 재시도 한도를 늘리지 않았다. 머지/수동 운영 배포는 완료, 전체 실생성 E2E는 대본 내용 검토에서 여전히 미완료다.
 - GitHub 자동 배포 run 38376191100은 failure이며 CI 전용 토큰 부재 경계가 남아 있다. 수동 Pages 배포 성공과 구분한다.
 - 다음 개선 필요: 거부된 대본과 상세 검토 근거를 계정 소유자에게만 보존·표시하여 실제 부족한 부분을 확인하고 보완하는 흐름. 해당 기능을 이 기록만으로 구현·운영 완료라고 하지 않는다.
+
+
+## #219·#220 승인 후 운영 반영
+
+- 사용자 ‘응 진행해줘’ 승인 후 #219 main merge `096232aad7c24bc997c8421d69c25d66c555e7e2`, #220 deploy/shopshorts merge `d0b128d12b230238c44da77ef6b45c0af81e9420` 완료. 두 PR CI 성공 및 승인된 head 일치 확인.
+- 운영 checkout clean 확인 후 exact #220 merge로 갱신. 67개 검사가 통과한 승격 커밋 ee5413a와 머지본의 tree diff 0 확인.
+- Pages 수동 배포 exit 0. API에서 production / deploy/shopshorts / exact d0b128d / success 확인. deployment `f5f3ae5d-aec6-48a4-bff4-02c5de007261`, https://f5f3ae5d.shopshorts-dash.pages.dev 및 운영 도메인 반영. 비인증 /api/health는 403이므로 인증된 UI와 구분했다.
+- 계정 aggregate activeCount 0 / hasNext false 확인 후 SIGTERM 정상 재시작. 새 PID 61759, running / 이전 exit 0 확인.
+- 공용 credential-broker는 운영 소스와 이전 커밋을 동일 esbuild 옵션으로 인메모리 비교해 일치 확인. 승인된 llm-accounts 변경 외의 소스 변경 없음. 공식 Worker API 배포 시 기존 바인딩 35개 모두 inherit했고 사후 전체 바인딩 값 동일·배포 코드 일치 확인. GITHUB_DEPLOY_ALLOWED_REFS의 Shopshorts/기존 플랫폼 허용도 보존.
+- broker deployment `8b64e8ed-4db0-44fa-b61d-a0d0bf744099`, version `bdd47446-e19d-4a0f-b79e-286ef390a0b1` 100% 반영. 로그인 토큰은 정상 Wrangler 갱신만 사용했으며 출력/복제하지 않았다.
+- 승인된 개인 Google 계정으로 로그인 후 동일 QA 프로젝트에서 재생성 1회 요청. 22:05 KST 자료 확인 → 22:06 대본 작성 단계 확인. 제작 워커는 화면 초기 로딩 시 오프라인/이후 온라인이 번갈아 표시됐지만 온라인 상태를 확인했고, 미디어 워커 재시작은 하지 않았다. 최종 생성 결과는 아래 추가 기록한다.
+- 현 단계에서 새 유료 미디어/TTS/렌더/업로드 없음. 전체 E2E 완료가 아니라 운영 반영 완료와 대본 실검증 진행 상태다.
+
+## #220 실제 검증 결과 및 후속 조치
+
+- 22:15 KST 최종 SCENARIO_DEPTH_INVALID로 종료. 생성 중 0건으로 돌아왔으며 이번 요청은 시간 초과/형식 오류가 아니다.
+- 새 ‘대본과 보완 이유 보기’에서 7개 항목의 실제 판정 이유와 대사/화면 인용 확인. ‘검토받은 대본 전체 · 6장면’을 펼쳐 원문 확인. 페이지 새로고침 후 다시 같은 검토 자료를 조회해 서버 보존/ACK 이후 조회까지 검증했다. CUA 화면 캡처로 읽을 수 있는 패널 확인(별도 캡처 파일은 저장하지 않음).
+- 실제 내용: “왜 성벽 밖으로 나와 있을까요?”라는 질문 뒤 “방어 공간 자체를 성벽 바깥에 둔 겁니다”로 형태를 반복했다. 출처에 확인된 화포 사용 기능을 구체적 행위로 풀지 않고 연도와 설명하지 않는 구멍 종류를 나열했다. 같은 건축물/장면을 유지한 장점과 별개로 원인→작동→결과가 부족하다는 지적을 원문에서 확인했다.
+- 신규 유료 미디어/TTS/렌더/업로드 없음. 전체 자동 실생성 E2E는 미완료이며 실패 대본의 강제 승인이나 품질 검토 완화는 하지 않았다.
+- 후속으로 조사 단계의 질문 중심 인과 검색과 작성 단계의 구체적 행동/결과 지침을 보강했다. 원본 4ade2cb, 운영 승격 1e46b90, 각 upstream push 완료. 각 브랜치에서 기존 67검사 + 조사/옵션 2검사 통과(비관련 렌더 등 5개는 필터 제외). 프롬프트 개선의 의미 품질은 아직 실 LLM으로 검증하지 않았다.
+- PR #223(main): https://github.com/hhj4861/commerce-automation-kit/pull/223 / PR #224(deploy/shopshorts): https://github.com/hhj4861/commerce-automation-kit/pull/224 . 두 새 PR은 아직 사용자 머지 승인 전이며 운영 미반영.
+- GitHub 자동배포 run 38400297168은 Cloudflare credential request failed (503). 기존 CI 전용 토큰 미등록 문제가 남아 있으며 수동 운영 배포 성공과 구분한다.
