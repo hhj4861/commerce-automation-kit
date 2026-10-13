@@ -39,6 +39,15 @@ export const codexFailure = (code = 'CODEX_REQUEST_FAILED', status = 502) => Obj
 export const accountFailureCode = error => Object.hasOwn(messages, error?.code) ? error.code : 'UNKNOWN';
 export function accountFailureMessage(provider, error) {
   const code = accountFailureCode(error);
+  if(code==='SCENARIO_FORMAT_INVALID' && typeof error?.validationIssue?.path==='string'){
+    // Persist a useful diagnosis through the existing safe message transport.
+    // Only fixed field names become labels; input values and rule text stay private.
+    const path=error.validationIssue.path;
+    const match=/^scenes\[(\d{1,2})\]\.(.+)$/.exec(path);
+    const key=(match?match[2]:path).replace(/\[\d{1,2}\]/g,'');
+    const labels={'scenes':'장면 목록','scenes[].duration':'전체 길이','duration':'도입 장면 길이','kind':'장면 유형','title':'제목','webtoon':'웹툰 구성','webtoon.artPrompt':'웹툰 원화 설명','webtoon.answer':'장면의 설명 목적','webtoon.layers':'움직이는 대상 구성','webtoon.layers.id':'대상 구분','webtoon.layers.label':'대상 이름','webtoon.layers.meaning':'대상과 대사의 연결','webtoon.layers.shape':'도형 종류','webtoon.layers.color':'대상 색상','webtoon.layers.from':'동작 시작 위치','webtoon.layers.to':'동작 종료 위치','webtoon.layers.size':'대상 크기','webtoon.layers.start':'동작 시작 시점','webtoon.layers.end':'동작 종료 시점','webtoon.layers.motion':'동작 종류','webtoon.layers.points':'도형 좌표'};
+    if(Object.hasOwn(labels,key))return `${messages[code]} 확인 항목: ${match?`${Number(match[1])+1}번 장면의 `:''}${labels[key]}.`;
+  }
   if(code==='SCENARIO_DEPTH_INVALID' && Array.isArray(error?.failedChecks)){
     const labels={focus:'질문과 답의 일치',why:'필요한 이유',mechanism:'작동 과정',example:'구체적 예시',payoff:'완결된 답',pacing:'설명 호흡',visuals:'대사와 화면의 연결'};
     const missing=Object.keys(labels).filter(key=>error.failedChecks.includes(key)).map(key=>labels[key]);
