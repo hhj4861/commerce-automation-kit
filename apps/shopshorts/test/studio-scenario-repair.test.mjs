@@ -57,3 +57,20 @@ test('provider and progress failures are not mislabeled or retried as content er
  await assert.rejects(scenarioBrief(brief,{}, {onProgress:async()=>{throw failure;},generate:async()=>{calls++;return {value:good};}}),e=>e===failure);
  assert.equal(calls,0);
 });
+
+
+test('research searches once; drafting, repair and review use that fixed evidence',async()=>{
+ const research={sources:[{id:'source-1',title:'제공 근거',url:'https://example.com/research'}],facts:[{claim:'지친 상태에서 대화 반응을 먼저 알아차린다.',sourceIds:['source-1']}],limitations:['진단이나 치료 효과로 단정하지 않는다.']};
+ const signal=new AbortController().signal,model='fixture-model';
+ let calls=0,drafts=0,reviews=0;
+ const result=await scenarioBrief({...brief,workflow:'explainer-v1'},{SHOPSHORTS_CODEX_MODEL:model},{signal,generate:async(prompt,options)=>{
+  calls++;assert.equal(options.signal,signal);assert.equal(options.model,model);
+  if(calls===1){assert.notEqual(options.draftOnly,true);return {searched:true,value:research};}
+  assert.equal(options.draftOnly,true);
+  const review=mockReview(prompt);if(review){reviews++;return review;}
+  assert.match(prompt,/자료 조사는 이미 완료/);assert.match(prompt,/source-1/);
+  drafts++;return {value:drafts===1?badLength:good};
+ }});
+ assert.equal(calls,4);assert.equal(drafts,2);assert.equal(reviews,1);
+ assert.deepEqual(result.research.facts,research.facts);
+});
