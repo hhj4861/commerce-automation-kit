@@ -2,7 +2,7 @@
 
 기존 drama-series의 `PlanResult`를 atomworks `SubjectRef`와 전용 SQLite 문서로 변환하는 **데이터 전용 기반**이다. 저장되는 값은 항상 `status: unverified-preview`, `authorized: false`다. `ok: true`는 변환/저장 성공이며 생성·출시 승인이 아니다. 실제 제공자 호출, 예산 예약, 리뷰 승인, 기존 상태 마이그레이션 명령은 없다.
 
-실제 소비 채택 완료가 아니다. shot-v1·앞 회차 연결(F10)·현재 입력과 legacy 결과의 재검증·승인/원장 통합은 다음 단위다. `inputs`의 SHA는 **호출자가 제공한 관측값**이며 원본 바이트를 읽어 인증한 증거가 아니다. 이 초안을 유료 실행의 입력으로 사용하지 않는다.
+실제 소비 채택 완료가 아니다. shot-v1·앞 회차 연결(F10)·legacy 결과의 재검증·승인/원장 통합은 다음 단위다. `inputs`의 SHA는 **호출자가 제공한 관측값**이다. `verify-inputs` 또는 `preview --files`로 현재 파일의 원본 바이트와 대조할 수 있다(아래 「입력 원본 대조」). 대조 결과는 저장 DTO에 기록하지 않으며 `status`는 계속 `unverified-preview`다. 이 초안을 유료 실행의 입력으로 사용하지 않는다. 유료 실행 단계가 생기면 실행 직전에 다시 대조해야 한다.
 
 ## 설치 경계
 
@@ -20,7 +20,7 @@ commerce의 일반 `npm ci`는 종전과 같이 실행한다. SDK는 `runtime/`�
 - atomworks lock SHA-256: `7bd79fdfbc938f6e4927bb5e371c9b1df9c1689f955caa2e53316f5ad039c446`.
 - 설치 순서: 고정 checkout에서 `npm ci --ignore-scripts` → `npm run build -w @atomworks/contracts` → kernel → state-store.
 - commerce root에서 `npm ci --ignore-scripts`, 이어 `npm ci --prefix apps/drama-runner/runtime --workspaces=false --ignore-scripts`.
-- `npm run preflight -w @cak/drama-runner`: commit·tracked/untracked clean·lock SHA·실제 SDK resolved 경로 확인.
+- `npm run preflight -w @cak/drama-runner`: commit·tracked/untracked clean·lock SHA·실제 SDK resolved 경로(contracts/node, kernel/pure, kernel/node, state-store/node) 확인.
 
 빌드된 dist/node_modules는 로컬 신뢰 영역이다. preflight는 서명 검증·악성 로컬 코드의 실행 격리가 아니다. 설치 전 고정 소스를 확인하고 lockfile로 설치/재빌드해야 한다. CI는 아래의 고정 상대 배치를 사용하며, 배포용 휴대 설치는 미구현이다. 다른 앱 설치에 이 checkout을 요구하지 않는다.
 
@@ -43,6 +43,11 @@ secret이 없거나 fork/Dependabot PR처럼 secret이 전달되지 않는 경�
 - `parseBundle(text)`: 중복 JSON 키 등을 거부하는 엄격 파서.
 - `makeDraft(bundle)`: 순수 변환. legacy 실패·관문 누락/모순·중복 컷·견적 불일치·NFD 의미 문자열을 거부한다.
 - `saveDraft(dbPath, draft)`: 전용 로컬 DB에 내용을 주소로 쓰는 불변 초안 저장. 같은 본문은 같은 opId/key로 재전달되어 revision 1을 유지한다.
+
+`src/inputs.mjs`의 공개 함수:
+
+- `loadInputFiles(path)`: 파일 목록(files.json)을 엄격 JSON·닫힌 스키마로 읽고 상대 경로를 그 파일의 위치 기준 절대 경로로 바꾼다.
+- `verifyInputs(inputs, files)`: bundle의 `inputs` 형식을 먼저 검사한 뒤 series·episode·모든 gate 파일을 원본 바이트로 다시 해시해 대조한다. 성공하면 `{method:'sha256-raw-bytes', series:true, episode:true, gates:N}`을 돌려준다.
 
 bundle 구조:
 
@@ -68,9 +73,32 @@ npm run --silent cli -w @cak/drama-runner -- preview --input bundle.json
 npm run --silent cli -w @cak/drama-runner -- preview --input bundle.json --db /local/existing-directory/preview.db
 ```
 
+## 입력 원본 대조
+
+```
+npm run --silent cli -w @cak/drama-runner -- verify-inputs --input bundle.json --files files.json
+npm run --silent cli -w @cak/drama-runner -- preview --input bundle.json --files files.json [--db /local/existing-directory/preview.db]
+```
+
+files.json은 `inputs`와 같은 모양에 SHA 대신 경로를 넣는다. 상대 경로는 files.json이 있는 폴더 기준이다.
+
+```json
+{"series": "series.json", "episode": "ep01-9min.json", "gates": {"props.json": "gates-9min/props.json"}}
+```
+
+- 순서: bundle 전체(모든 SHA 형식 포함)를 먼저 검사하고, 통과한 뒤에만 files.json과 입력 파일을 연다. gate 이름 집합은 bundle과 정확히 같아야 한다(누락·추가 거부).
+- 해시: atomworks kernel `verifyArtifact`가 파일 하나를 descriptor 하나로 연다(`O_NOFOLLOW|O_NONBLOCK`). 읽기 전후 stat(크기·mtime·ctime)과 경로의 dev/ino를 대조하고 SHA-256을 계산한다. BOM·CRLF·NFD를 포함한 바이트를 그대로 해시하며 디코딩·정규화는 없다.
+- 거부: 정규 파일이 아닌 입력(심볼릭 링크·디렉터리·FIFO 등)과 없는 파일. 링크 검사는 **마지막 경로 요소만** 대상이다. 상위 디렉터리의 링크는 따라간다.
+- 출력: 실패는 입력 이름과 사유만 담는다(`failures:[{name, reason}]`). 경로는 출력하지 않는다.
+  - `--input`(bundle)이나 `--files`를 읽지 못하면 고정 문구의 `input-unreadable`을 낸다. `preview`도 같다.
+  - 의존성 점검(preflight와 같은 검사) 실패도 고정 문구만 낸다. git 자체 오류 출력은 가둔다.
+  - 단, 설치가 깨져 모듈을 적재하지 못하면 CLI 코드가 돌기 전에 Node가 경로가 담긴 오류를 직접 출력한다. 먼저 preflight를 통과시킨다.
+- `preview --files`는 대조를 통과한 뒤에만 변환·저장한다. 결과에 `inputsVerified`가 붙고 미리보기 본문은 `--files`가 없을 때와 같다. `--files`가 없으면 기존 동작 그대로이며 `inputsVerified`는 나오지 않는다.
+- 한계: 대조는 그 순간의 확인이다. 대조 뒤의 파일 변경은 막지 못한다.
+
 `--db` 생략 시 stdout 변환만 한다. DB 부모 디렉터리는 먼저 만들어야 한다. iCloud/Dropbox 등 동기화 폴더는 거부한다. 기존 파일은 전용 SQLite `application_id`가 있어야 열고, 외부/legacy DB는 읽기 전용으로 확인한 뒤 거부한다. 초기화 중 강제 종료돼 표시 없는 DB가 남아도 자동으로 덮어쓰지 않는다. SQLite 위치 검사는 알려진 동기화/네트워크 경로 제한이지 모든 파일시스템에 대한 보증이 아니다.
 
-종료코드: 0=초안 변환/저장 성공, 2=사용법·입력·위치/외부 DB 거부, 1=저장 무결성/충돌 등, 75=SQLite busy(재시도). JSON `ok`, `code`, `detail`을 확인한다. 영구 오류를 재시도로 숨기지 않는다.
+종료코드: 0=초안 변환/저장·입력 대조 성공, 2=사용법·입력·위치/외부 DB 거부와 입력 대조 실패(`input-mismatch`·`input-unreadable`·`input-manifest-mismatch`), 1=저장 무결성/충돌 등, 75=SQLite busy 또는 해시 중 입력 변경(`input-changed`, 재시도). JSON `ok`, `code`, `detail`을 확인한다. 영구 오류를 재시도로 숨기지 않는다.
 
 ## 검증
 
