@@ -50,7 +50,7 @@
       "project": "replay-live-508202",
       "instance": "shared-ai",
       "zone": "us-central1-a",
-      "paths": ["services/ai-gateway/gateway.py", "services/ai-gateway/subscriptions.py", "services/ai-gateway/subscription_runtime.py", "services/ai-gateway/compose.yaml", "services/ai-gateway/.env.example"]
+      "paths": ["services/ai-gateway/gateway.py", "services/ai-gateway/compose.yaml", "services/ai-gateway/.env.example"]
     }
   },
   "external": {
@@ -73,7 +73,6 @@
     }
   },
   "unconfigured": {
-    "ai-accounts": "Independent server release; not restarted by a LiteLLM release.",
     "shopshorts-workers": "Local production workers are not replaced by the Pages deployment.",
     "credential-broker": "Bootstrap trust service; deploy its reviewed policy separately before enabling web release branches."
   }

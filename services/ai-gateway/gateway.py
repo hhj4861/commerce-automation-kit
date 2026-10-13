@@ -55,8 +55,6 @@ def render(root=ROOT):
     if any(c not in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_" for c in env["POSTGRES_PASSWORD"]):
         raise ValueError("POSTGRES_PASSWORD must be URL-safe (letters/digits/-/_).")
     models = model_list(env)
-    from subscriptions import routes
-    models.extend(routes(root))
     private_write(root / ".runtime/litellm.json", json.dumps(config_for(models), indent=2) + "\n")
     return [m["model_name"] for m in models]
 
@@ -68,7 +66,8 @@ def model_list(env):
         if not model:
             continue
         if model.startswith("chatgpt/"):
-            raise ValueError("ChatGPT subscriptions require an isolated account; use subscriptions.py create.")
+            raise ValueError("ChatGPT subscription models are not served by the shared gateway; "
+                             "per-account subscription workers were retired (D5).")
         local = model.startswith(("ollama/", "ollama_chat/"))
         if not local and not env.get(f"{app}_CHAT_API_KEY"):
             raise ValueError(f"{app}_CHAT_API_KEY is required for this provider.")
@@ -189,7 +188,7 @@ def provision_scope(app, model_scope, budget, base, root=ROOT, client=None):
                                            "models": allowed, "max_budget": budget,
                                            "budget_duration": "30d", "rpm_limit": 30})
     values = {"LITELLM_BASE_URL": base.rstrip("/") + "/v1", "LITELLM_API_KEY": response["key"],
-              "LITELLM_MODEL": "hanmadi-chat" if "hanmadi-chat" in allowed else "replay-video-planner" if "replay-video-planner" in allowed else "festa-travel" if "festa-travel" in allowed else allowed[0] if app.startswith("codex-") else ""}
+              "LITELLM_MODEL": "hanmadi-chat" if "hanmadi-chat" in allowed else "replay-video-planner" if "replay-video-planner" in allowed else "festa-travel" if "festa-travel" in allowed else ""}
     if app == "hanmadi":
         values.update(LITELLM_STT_MODEL="hanmadi-stt" if "hanmadi-stt" in allowed else "",
                       LITELLM_TTS_MODEL="hanmadi-tts" if "hanmadi-tts" in allowed else "",
