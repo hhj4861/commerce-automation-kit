@@ -87,10 +87,13 @@ try:
             time.sleep(1)
         else:
             raise RuntimeError("Caddy did not start")
-    for edge, path, target, forwarded in ((8080, "/accounts/connections", 4190, "/connections"), (8080, "/accounts/v1/chat/completions", 4190, "/v1/chat/completions"), (8080, "/llm/v1/responses", 4100, "/v1/responses"), (8080, "/llm/v1/chat/completions", 4100, "/v1/chat/completions"), (8080, "/llm/v1/audio/transcriptions", 4100, "/v1/audio/transcriptions"), (8080, "/v1/chat-messages", 4180, "/v1/chat-messages"), (8080, "/v1/workflows/run", 4180, "/v1/workflows/run"), (8081, "/v1/responses", 4000, "/v1/responses")):
+    for edge, path, target, forwarded in ((8080, "/llm/v1/responses", 4100, "/v1/responses"), (8080, "/llm/v1/chat/completions", 4100, "/v1/chat/completions"), (8080, "/llm/v1/audio/transcriptions", 4100, "/v1/audio/transcriptions"), (8081, "/v1/responses", 4000, "/v1/responses")):
         assert request(edge, path)[0] == 401, path
         code, body = request(edge, path, KEY)
         assert code == 200 and json.loads(body) == {"port": target, "path": forwarded}, path
+    # accounts v1 and Dify are retired (2026-10-12 maintenance plan): their former routes fall through to 404.
+    for path in ("/accounts/connections", "/accounts/v1/chat/completions", "/v1/chat-messages", "/v1/workflows/run"):
+        assert request(8080, path, KEY)[0] == 404, path
     assert request(8080, "/health") == (200, b"edge alive")
     assert request(8080, "/healthz")[0] == 404
     for edge, path, target in ((8080, "/llm/typesafe/v1/systemone", 4100), (8081, "/typesafe/v1/systemone", 4000)):

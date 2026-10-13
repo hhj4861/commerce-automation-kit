@@ -4,6 +4,7 @@ import unittest
 from pathlib import Path
 
 TF = (Path(__file__).resolve().parents[1] / "main.tf").read_text()
+STARTUP = (Path(__file__).resolve().parents[1] / "startup.sh").read_text()
 
 
 def block(header):
@@ -30,6 +31,33 @@ class ComputePolicy(unittest.TestCase):
         self.assertRegex(variable, r'default\s*=\s*"e2-small"')
         self.assertIn('contains(["e2-small", "e2-standard-2", "e2-standard-4"], var.machine_type)', variable)
 
+
+class BootDiskPolicy(unittest.TestCase):
+    """The 2026-10-12 maintenance plan rebuilds the VM on a 20 GiB boot disk and keeps the old one for rollback."""
+
+    def test_vm_boots_from_the_20gib_disk(self):
+        disk = block('resource "google_compute_disk" "boot"')
+        self.assertRegex(disk, r'size\s*=\s*20\b')
+        self.assertRegex(disk, r'type\s*=\s*"pd-balanced"')
+        self.assertIn("prevent_destroy = true", disk)
+        host = block('resource "google_compute_instance" "host"')
+        self.assertRegex(host, r'source\s*=\s*google_compute_disk\.boot\.id')
+        self.assertRegex(host, r'deletion_protection\s*=\s*true')
+
+    def test_daily_snapshots_follow_the_boot_disk(self):
+        attachment = block('resource "google_compute_disk_resource_policy_attachment" "backup"')
+        self.assertRegex(attachment, r'disk\s*=\s*google_compute_disk\.boot\.name')
+
+    def test_retired_disk_is_kept_but_not_booted(self):
+        self.assertIn("prevent_destroy = true", block('resource "google_compute_disk" "data"'))
+        self.assertNotIn("google_compute_disk.data", block('resource "google_compute_instance" "host"'))
+
+
+class StartupPolicy(unittest.TestCase):
+    def test_container_logs_are_capped_before_docker_starts(self):
+        self.assertIn('"max-size": "10m"', STARTUP)
+        self.assertIn('"max-file": "3"', STARTUP)
+        self.assertLess(STARTUP.index("/etc/docker/daemon.json"), STARTUP.index("apt-get install"))
 
 class RegistryPolicy(unittest.TestCase):
     def test_registry_and_secret_apis_are_enabled(self):
