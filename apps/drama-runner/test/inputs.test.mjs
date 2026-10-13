@@ -2,6 +2,7 @@ import {test,after} from 'node:test';
 import assert from 'node:assert/strict';
 import {mkdtempSync,mkdirSync,writeFileSync,readFileSync,symlinkSync,existsSync,rmSync} from 'node:fs';
 import {join} from 'node:path';
+import {homedir} from 'node:os';
 import {spawnSync,execFileSync} from 'node:child_process';
 import {createHash} from 'node:crypto';
 import {loadInputFiles,verifyInputs} from '../src/inputs.mjs';
@@ -23,6 +24,8 @@ function fixture() {
   return {d,inputs,manifest:join(d,'files.json'),bundle:join(d,'bundle.json')};
 }
 const cli=(...args)=>{const r=spawnSync(process.execPath,['src/cli.mjs',...args],{cwd:new URL('../',import.meta.url),encoding:'utf8',timeout:30_000});assert.equal(r.error,undefined);return {status:r.status,body:JSON.parse(r.stdout),stdout:r.stdout,stderr:r.stderr};};
+// Handled output never carries a path: neither the case folder nor the home folder (repo, pin and SDK live under it).
+const pathFree=(r,...paths)=>{for (const s of [r.stdout,r.stderr]) for (const p of [...paths,homedir()]) assert.equal(s.includes(p),false);};
 const rejects=(promise,code,failures)=>assert.rejects(promise,e=>{assert.equal(e.code,code);if(failures)assert.deepEqual(e.extra.failures,failures);return true;});
 const VERIFIED={method:'sha256-raw-bytes',series:true,episode:true,gates:2};
 test('real episode-1 inputs match the raw SHA-256 values recorded before the runner existed',async()=>{
@@ -79,7 +82,19 @@ test('CLI verify-inputs: exit 0 on a match, exit 2 naming inputs but never paths
   rmSync(f.manifest);
   const noManifest=cli('verify-inputs','--input',f.bundle,'--files',f.manifest);
   assert.equal(noManifest.status,2);assert.equal(noManifest.body.code,'input-unreadable');
-  for (const r of [bad,gone,noManifest]) {assert.equal(r.stdout.includes(f.d),false);assert.equal(r.stderr.includes(f.d),false);}
+  for (const r of [bad,gone,noManifest]) pathFree(r,f.d);
+});
+test('CLI: an unreadable bundle gets a fixed message and no path in either command',()=>{
+  const f=fixture(),absent=join(f.d,'absent-bundle.json');
+  for (const args of [['verify-inputs','--input',absent,'--files',f.manifest],['verify-inputs','--input',f.d,'--files',f.manifest],['preview','--input',absent],['preview','--input',f.d,'--files',f.manifest]]) {
+    const r=cli(...args);
+    assert.equal(r.status,2);assert.deepEqual(r.body,{ok:false,code:'input-unreadable',detail:'Cannot read input bundle'});pathFree(r,f.d);
+  }
+});
+test('dependency check failures carry fixed messages and print nothing themselves',()=>{
+  const fake=join(dir,'no-such-pin');
+  const r=spawnSync(process.execPath,['--input-type=module','-e',`import {checkDependency} from './tools/check-dependency.mjs';try{checkDependency(${JSON.stringify(fake)});}catch(e){console.log(JSON.stringify(e.message));}`],{cwd:new URL('../',import.meta.url),encoding:'utf8',timeout:30_000});
+  assert.equal(r.error,undefined);assert.equal(r.status,0);assert.equal(JSON.parse(r.stdout),'atomworks pin checkout unavailable');pathFree(r,fake);
 });
 test('CLI preview --files verifies before any DB write; without --files the preview output is unchanged',()=>{
   const f=fixture(),plain=cli('preview','--input',f.bundle),checked=cli('preview','--input',f.bundle,'--files',f.manifest);

@@ -78,6 +78,9 @@ files.json은 `inputs`와 같은 모양에 SHA 대신 경로를 넣는다. 상�
 - 해시: atomworks kernel `verifyArtifact`가 파일 하나를 descriptor 하나로 연다(`O_NOFOLLOW|O_NONBLOCK`). 읽기 전후 stat(크기·mtime·ctime)과 경로의 dev/ino를 대조하고 SHA-256을 계산한다. BOM·CRLF·NFD를 포함한 바이트를 그대로 해시하며 디코딩·정규화는 없다.
 - 거부: 정규 파일이 아닌 입력(심볼릭 링크·디렉터리·FIFO 등)과 없는 파일. 링크 검사는 **마지막 경로 요소만** 대상이다. 상위 디렉터리의 링크는 따라간다.
 - 출력: 실패는 입력 이름과 사유만 담는다(`failures:[{name, reason}]`). 경로는 출력하지 않는다.
+  - `--input`(bundle)이나 `--files`를 읽지 못하면 고정 문구의 `input-unreadable`을 낸다. `preview`도 같다.
+  - 의존성 점검(preflight와 같은 검사) 실패도 고정 문구만 낸다. git 자체 오류 출력은 가둔다.
+  - 단, 설치가 깨져 모듈을 적재하지 못하면 CLI 코드가 돌기 전에 Node가 경로가 담긴 오류를 직접 출력한다. 먼저 preflight를 통과시킨다.
 - `preview --files`는 대조를 통과한 뒤에만 변환·저장한다. 결과에 `inputsVerified`가 붙고 미리보기 본문은 `--files`가 없을 때와 같다. `--files`가 없으면 기존 동작 그대로이며 `inputsVerified`는 나오지 않는다.
 - 한계: 대조는 그 순간의 확인이다. 대조 뒤의 파일 변경은 막지 못한다.
 

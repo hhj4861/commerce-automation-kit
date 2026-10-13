@@ -39,16 +39,34 @@
     - **CLI verify-inputs**: 종료 0과 2를 확인했다. stdout·stderr 어디에도 경로가 나오지 않는다.
     - **CLI preview --files**: 미리보기 본문이 `--files` 없을 때와 같다. 실패하면 기존 DB 바이트가 그대로이고 새 DB가 생기지 않는다.
     - **CLI 사용법**: `verify-inputs`는 `--files`가 필요하고 `--db`를 거부한다. bundle SHA 오류는 어떤 파일도 열기 전에 실패한다.
+- 리뷰 R1(Codex, 2026-10-13, 고정 `2b53267`): **changes** 1건(P2). 나머지 확인 항목은 통과했다.
+  - 지적: `--input` bundle 읽기 실패가 일반 Error 문구 그대로 나가서 `verify-inputs` 출력에 경로가 담긴다(ENOENT의 `open '<경로>'`). 두 명령이 같은 진입점을 쓰므로 새 명령만 예외로 둘 근거가 없다.
+  - 반영:
+    - `src/cli.mjs`: bundle 읽기 실패를 `RunnerError('input-unreadable', 2, 'Cannot read input bundle')`로 감쌌다.
+      - 그래서 `preview`의 bundle 읽기 실패도 code가 `invalid-input`(원 오류 문구)에서 `input-unreadable`(고정 문구)로 바뀐다.
+      - 종료 코드 2는 같다. 저장소 안에 이 code에 기대는 호출자는 없다(`git grep`).
+    - 같은 종류 추가 처리 — `tools/check-dependency.mjs`:
+      - 실패를 모두 고정 문구로 바꿨다. git 실패 문구에는 `-C <경로>`가 들어간다.
+      - 기본 stdio에서는 git 자체 stderr(경로 포함)가 부모 stderr로 그대로 나갔다. 이제 stdio를 명시해 가둔다.
+      - 시험을 위해 `checkDependency(root)`가 선택 인자를 받는다. 기본값은 기존 고정 위치다.
+    - 시험 2개 추가(31 → 33):
+      - 없는 파일·디렉터리를 bundle로 두 명령에 넣는다. 출력이 고정 JSON인지, stdout·stderr에 시험 폴더·홈 폴더 경로가 없는지 확인한다.
+      - 없는 pin 위치로 의존성 점검을 돌린다. 고정 문구인지, stdout·stderr에 경로가 없는지 확인한다.
+      - 두 시험 모두 수정 전 코드에서는 실패했다.
+    - 기존 `verify-inputs` CLI 시험의 경로 검사에 홈 폴더 검사를 더했다.
+  - 검증: drama-runner 33/33 통과, 건너뜀 0. typecheck·preflight 통과.
+  - 남은 경계는 아래 「한계」에 적었다(모듈 적재 실패).
 - 환경:
   - Node 22.23.3, Claude worktree는 sparse checkout이다.
   - 디스크 여유가 1.1GiB(사용률 100%)라 필요한 폴더만 꺼냈다: `apps/drama-runner`, `packages/drama-series`, `packages/contracts`, `docs/tasks`, `docs/videos/20261006-regression-pilot`.
   - node_modules는 같은 lock의 `drama-ci` worktree에서 APFS 복제(`cp -ac`)했다. runtime node_modules(고정 pin 링크)는 `drama-atomworks-adapter`에서 복사했다.
   - `DRAMA_TEST_STATE`는 세션 스크래치패드 아래(비동기화 로컬)이고, `DRAMA_TEST_ARTIFACTS`는 iCloud `claude 작업/tmp/20261012-drama-input-verify/artifacts`다.
   - 유료 호출·새 패키지 설치는 없었다.
-- 현재 결과: 구현과 로컬 시험 완료. Codex 교차 리뷰 대기.
-- 다음: Codex 리뷰 pass 후 `feat/drama-input-verify` → `feat/drama-regression-pilot` PR. 머지는 사용자 승인 후.
+- 현재 결과: draft PR #199(→ `feat/drama-regression-pilot`). R1 지적 반영과 로컬 시험(33/33)을 마쳤다. Codex 재리뷰 대기.
+- 다음: Codex 재리뷰 pass 후 PR #199를 ready로 바꾼다. 머지는 사용자 승인 후.
 - 한계:
   - 대조는 그 시점의 확인이며 이후 변경을 막지 못한다(유료 실행 단계가 생기면 실행 직전 재대조 필요). 결과는 저장 DTO에 기록하지 않는다.
   - 링크 거부는 마지막 경로 요소만 대상이다.
+  - 경로 비노출은 CLI 코드가 처리하는 오류에 한한다. 설치가 깨져 모듈을 적재하지 못하면 CLI 코드가 돌기 전에 Node가 경로가 담긴 오류를 출력한다. preflight를 먼저 통과시키는 것으로 다룬다.
   - 해시 중 변경(`input-changed`)의 실제 경합은 시험으로 재현하지 않았다. 이 경로는 kernel `verifyArtifact`의 동작과 위 분류 표에 기댄다.
   - legacy plan 결과와 현재 입력의 의미 대조(fingerprint 재계산)는 범위 밖이다.

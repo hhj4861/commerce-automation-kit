@@ -9,7 +9,10 @@ try {
   const [command]=positionals;
   if (positionals.length!==1 || !['preview','verify-inputs'].includes(command) || !values.input || (command==='verify-inputs' && (!values.files || values.db!==undefined))) throw new RunnerError('usage',2,USAGE);
   checkDependency();
-  const bundle=parseBundle(readFileSync(values.input,'utf8'));
+  // Node's ENOENT/EACCES messages embed the path, so a read failure gets a fixed message for both commands.
+  let text;
+  try { text=readFileSync(values.input,'utf8'); } catch { throw new RunnerError('input-unreadable',2,'Cannot read input bundle'); }
+  const bundle=parseBundle(text);
   const body=makeDraft(bundle);
   // Input files are opened only after the whole bundle, including every SHA, passed validation.
   const verified=values.files===undefined ? undefined : await verifyInputs(bundle.inputs,loadInputFiles(values.files));
