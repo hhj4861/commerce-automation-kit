@@ -1,6 +1,7 @@
 // Real local Next routes and storage, no browser or model mocking. Never targets production.
 import assert from 'node:assert/strict';
 import { practiceSongs } from '../lib/original-music.ts';
+import { musicLanguageLessons } from '../lib/music-language.ts';
 import { starterUnits } from '../lib/v2.ts';
 const base = process.env.HANMADI_TEST_BASE ?? 'http://127.0.0.1:3213';
 assert(['127.0.0.1','localhost'].includes(new URL(base).hostname), 'Local synthetic accounts only');
@@ -46,7 +47,28 @@ for(const song of practiceSongs){
   await send('review');
   assert.equal((await request(path)).progress[song.id].reviewed.length,0);
   for(let i=0;i<4;i++) await send('answer',i,`line-${i+1}`);
+  const lesson=musicLanguageLessons[language][0];
+  assert.equal((await send('word-answer',0,'line-2')).correct,false);
+  assert.equal((await send('word-answer',0,'line-1')).correct,true);
+  await send('word-answer',0,'line-1');
+  await request(path,{trackId:song.id,revision:song.revision,action:'conversation',index:0,confidence:'alone'});
+  await request(path,{trackId:song.id,revision:song.revision,action:'conversation',index:0,confidence:'invalid'},400);
+  const originalProgress=(await request(path)).progress[song.id];
+  assert.deepEqual(originalProgress.wordsReviewed,['line-1']); assert.equal(originalProgress.conversations['line-1'],'alone');
+  assert.equal(originalProgress.reviewed.length,4);
+  for(const action of ['save-word','save-expression']) {
+    const saved=await request(path,{trackId:song.id,revision:song.revision,action,index:0,phrase:{text:'forged',reading:'가짜',meaning:'가짜'}});
+    assert.equal(saved.saved,true);
+    await send(action);
+  }
   const state=(await request('/api/study')).state;
+  const words=state.expressions.filter(x=>x.language===language);
+  assert.equal(words.length,2,'explicit saves and retries deduplicate');
+  assert(words.every(x=>x.source==='music'));
+  assert(words.find(x=>x.text===lesson.word.text)?.inVocabulary);
+  assert(words.some(x=>x.text===lesson.answer.text));
+  assert(!words.some(x=>x.text==='forged'));
+
   assert(state.profiles[language].completedLessons[unit.id]);
   assert(state.profiles[language].practiced[unit.id]);
   console.log('PASS',language,'assessment → authored lesson → practice/complete → original song → wrong/correct recall → reload/replay');
@@ -54,6 +76,7 @@ for(const song of practiceSongs){
 const before=(await request(path)).progress;
 cookie='';
 await request('/api/study/account',{action:'signup',name:'music_other_'+Date.now(),password:'synthetic-http-password-only'});
+assert.deepEqual((await request('/api/study')).state.expressions,[]);
 for(const progress of Object.values((await request(path)).progress)) assert.equal(progress.practiced.length,0);
 cookie=firstCookie;
 assert.deepEqual((await request(path)).progress,before);

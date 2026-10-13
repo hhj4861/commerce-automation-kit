@@ -23,7 +23,7 @@ export type Unit = {
 export type Expression = Phrase & {
   id: string;
   language: StudyLanguage;
-  source: "translation" | "chat" | "vocabulary";
+  source: "translation" | "chat" | "vocabulary" | "music";
   inVocabulary?: boolean;
   createdAt: number;
   dueAt: number;
