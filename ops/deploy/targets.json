@@ -74,7 +74,6 @@
   },
   "unconfigured": {
     "ai-accounts": "Independent server release; not restarted by a LiteLLM release.",
-    "dify": "Independent server release with database migrations; retain its current deployment process.",
     "shopshorts-workers": "Local production workers are not replaced by the Pages deployment.",
     "credential-broker": "Bootstrap trust service; deploy its reviewed policy separately before enabling web release branches."
   }

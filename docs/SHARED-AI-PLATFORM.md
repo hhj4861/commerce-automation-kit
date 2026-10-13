@@ -4,9 +4,11 @@
 
 ## Dify 채택 후 구현
 
+> 2026-10-13: Dify는 D6로 폐기했다. 운영 VM에서는 같은 날 점검으로 퇴역했고(`docs/qa/20261013-shared-ai-vm-maintenance-result.md`), 저장소의 `services/dify`와 Dify 워크플로도 지웠다. 아래 링크는 삭제 직전 커밋을 가리킨다. 이 문서는 2026-09-26 조사·설계 기록이다.
+
 사용자 선택에 따라 [Dify 포크](https://github.com/socar-hyunz/dify)를 만들고,
 1.17.1 고정 소스에 별도 배포 overlay를 적용하는 구성을 추가했다.
-[실행 안내와 앱 템플릿](../services/dify/README.md): 한 내부 워크스페이스에 hanmadi 회화 chatflow와 replay 영상 기획 workflow를 둔다.
+[실행 안내와 앱 템플릿](https://github.com/hhj4861/commerce-automation-kit/blob/33fac8c8fac6ac3a633ef1f1eff6d9724f15caa7/services/dify/README.md): 한 내부 워크스페이스에 hanmadi 회화 chatflow와 replay 영상 기획 workflow를 둔다.
 두 모델은 기존 LiteLLM의 서로 다른 가상 키/모델 별칭을 사용한다. 원본 Dify 코드는 변경하지 않는다.
 아래 개선 루프는 여전히 후속 설계이며, Dify 도입 자체가 자동 학습을 구현한 것은 아니다.
 Dify는 실행/대화 기록을 저장하므로 기존 앱의 비저장 정책을 그대로 충족한다고 가정할 수 없다.
@@ -127,7 +129,7 @@ hanmadi 평가는 문법/의미 정확성, 한국어 설명 정확성, 학습자
 
 ## 이번에 준비한 것과 남은 것
 
-구현: [독립 서버 디렉터리](../services/ai-gateway/README.md)에 LiteLLM/Postgres Compose, 선택적 공개 HTTPS, 고정 이미지 digest, 비밀 초기화, 모델 설정 렌더, 팀/키 발급, 권한/재시작 CI 검사. [Dify 디렉터리](../services/dify/README.md)에 공식 포크의 버전 고정, 배포 overlay, 두 앱 DSL, 실제 컨테이너 E2E 검사를 추가했다. 기존 hanmadi 내부의 로컬 PoC와 독립적이며 서비스 서버용 가상 키를 사용한다.
+구현: [독립 서버 디렉터리](../services/ai-gateway/README.md)에 LiteLLM/Postgres Compose, 선택적 공개 HTTPS, 고정 이미지 digest, 비밀 초기화, 모델 설정 렌더, 팀/키 발급, 권한/재시작 CI 검사. [Dify 디렉터리](https://github.com/hhj4861/commerce-automation-kit/blob/33fac8c8fac6ac3a633ef1f1eff6d9724f15caa7/services/dify/README.md)에 공식 포크의 버전 고정, 배포 overlay, 두 앱 DSL, 실제 컨테이너 E2E 검사를 추가했다. 기존 hanmadi 내부의 로컬 PoC와 독립적이며 서비스 서버용 가상 키를 사용한다.
 
 검증: 로컬 단위 검사 7개 통과. [GitHub Actions 실행](https://github.com/hhj4861/commerce-automation-kit/actions/runs/36246648997)에서 실제 LiteLLM/PostgreSQL 컨테이너 기동, 서비스별 모델 조회/호출 허용, 다른 서비스 모델/관리 API 거부, 잘못된 키 거부, 키 중복 발급 방지, 재시작 후 키 유지, Caddy 설정 검증을 통과했다. 모델 공급자는 테스트 전용 모의 서버다. 실제 공급자 품질·청구 예산 초과 차단·공개 인증서 발급·백업 복구를 검증한 것은 아니다.
 
