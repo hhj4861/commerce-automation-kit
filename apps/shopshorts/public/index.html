@@ -466,8 +466,8 @@
   @media(max-width:1100px) { .creation-entry { align-items:flex-start; flex-direction:column; } }
   @media(max-width:520px) { .hero { align-items:flex-start; flex-direction:column; } .creation-links { width:100%; flex-direction:column; } .creation-links a { text-align:center; } }
 </style>
-</head>
-<body>
+<link rel="stylesheet" href="/studio-ux.css"><script type="module" src="/studio-navigation.js"></script></head>
+<body class="studio-workspace"><a class="skip-link" href="#main-content">본문으로 건너뛰기</a>
 <div class="mobile-head">
   <a class="brand" href="/" aria-label="Shopshorts 홈">
     <div class="brand-mark" data-icon="spark"></div>
@@ -514,7 +514,7 @@
     </div>
   </aside>
 
-  <main>
+  <main id="main-content" tabindex="-1">
     <div class="topbar">
       <div class="breadcrumb">워크스페이스&nbsp; / &nbsp;<strong>쇼핑쇼츠 운영</strong></div>
       <div class="top-actions"><button type="button" class="account ai-account-trigger" data-ai-account disabled>AI 확인 중…</button>
@@ -1223,13 +1223,17 @@ async function updateStudioWorkerStatus() {
   try {
     const config=await api('/api/studio/config');
     const age=Date.now()-Date.parse(config?.capabilities?.workerAt);
+    state.studioConfig=config;state.studioConnectionError=false;
     const online=config.execution==='local' || (config.execution==='cloud-worker' && Number.isFinite(age) && age>=0 && age<90000);
+    state.studioOnline=online;
     status.innerHTML=`<span class="online" style="${online?'':'background:#8d9189;box-shadow:none'}"></span> 제작 워커 ${online?'온라인':'오프라인'}`;
     note.textContent=online?'새 영상 제작 요청을 처리할 수 있어요':'새 영상 제작은 워커 연결까지 대기합니다';
   } catch {
+    state.studioConnectionError=true;state.studioOnline=null;
     status.innerHTML='<span class="online" style="background:#8d9189;box-shadow:none"></span> 제작 워커 확인 필요';
     note.textContent='연결 상태를 불러오지 못했어요. 잠시 후 다시 확인합니다';
   }
+  const target=document.getElementById('settingsWorkerState');if(target){target.textContent=state.studioConnectionError?'확인 필요':state.studioOnline?'연결됨':'연결 대기';target.dataset.tone=state.studioConnectionError?'error':state.studioOnline?'ready':'waiting';}
 }
 async function load(keepSelection=false) {
   try {
@@ -1308,7 +1312,7 @@ function applyRequestedDraft() {
   if(request)state.requestFocus=slug;
 }
 function activateNav(name) {
-  document.querySelectorAll('[data-nav]').forEach(b => b.classList.toggle('active', b.dataset.nav === name));
+  document.querySelectorAll('[data-nav]').forEach(b => {const active=b.dataset.nav===name;b.classList.toggle('active',active);if(active)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');});
 }
 const ROUTES = {
   dashboard:'/', automatic:'/studio/dashboard', content:'/contents', trends:'/trends', performance:'/performance',
@@ -1324,6 +1328,7 @@ function navigate(name, push=true) {
   window.notificationInbox?.unmount();
   if (push && (location.pathname !== ROUTES[name] || name==='automatic'&&new URLSearchParams(location.search).get('mode')==='manual')) history.pushState({page:name}, '', ROUTES[name]);
   activateNav(name);
+  window.dispatchEvent?.(new Event('studio-route-change'));
   document.querySelectorAll('[data-studio-nav]').forEach(link=>{
     link.classList.toggle('active',name==='automatic');
     if(name==='automatic')link.setAttribute('aria-current','page');else link.removeAttribute('aria-current');
@@ -1351,9 +1356,9 @@ function renderPage(name) {
   const title = {content:'콘텐츠',trends:'트렌드 탐색',blog:'블로그 POC',performance:'성과',links:'제휴 링크',settings:'설정'}[name];
   const copy = {
     content:'자동·수동으로 만든 모든 영상을 확인하고, 멈춘 단계부터 이어서 만드세요.',
-    trends:'기회 점수가 높은 소재를 발견하고 바로 초안을 요청하세요.',
-    blog:'직접 키워드를 선택해 WordPress 초안 생성 흐름을 검증하세요.',
-    performance:'현재 파이프라인의 제작 및 발행 현황입니다.',
+    trends:'검색 데이터를 살펴보고 제작할 소재를 선택하세요. 점수는 참고용입니다.',
+    blog:'선택한 주제로 WordPress 초안을 만듭니다. 공개 발행 전 직접 확인하세요.',
+    performance:'자동·수동 전체 콘텐츠의 제작 현황입니다. 조회수와 시청 지표는 포함하지 않습니다.',
     links:'발행에 필요한 제휴 링크를 확인하고 관리하세요.',
     settings:'작업 환경과 알림 방식을 관리하세요.'
   }[name];
@@ -1366,7 +1371,7 @@ function renderPage(name) {
     const blogs = (state.trendDate ? state.archiveBlog : state.blogKeywords) || [];
     const pending = state.requests.filter(r => r.status === 'pending' && !state.jobs.some(job=>job.brief.id===r.slug));
     body = `<div class="library-meta">
-      <span>${state.trendDate ? `${state.trendDate} 아카이브` : '최신 30분 동기화 데이터'}</span>
+      <span>${state.trendDate ? `${state.trendDate} 아카이브` : '최근 수집 데이터'}</span>
       <div class="archive-picker">
         <label for="trendArchiveDate">관측일</label>
         <select id="trendArchiveDate" data-trend-date>
@@ -1392,10 +1397,10 @@ function renderPage(name) {
     ${pending.length ? `<div class="section-head"><h2>요청한 초안</h2><span class="section-note">${pending.length}개 작성 대기 중</span></div>
     <div class="page-grid" style="margin-bottom:32px">${pending.map(r => `<article class="page-card" style="background:var(--yellow-soft);border-color:#edd9a7">
       <span class="status-pill">요청됨</span><h3 style="margin-top:13px">${escapeHtml(r.topic)}</h3>
-      <p>콘텐츠 큐의 기획 대기 단계에서 대본을 자동으로 작성 중입니다.</p>
+      <p>초안 작성을 요청했어요. 제작 관리에서 시작 여부와 진행 상태를 확인하세요.</p>
       ${r.memo ? `<p style="color:var(--mint)">👁 관찰 메모: ${escapeHtml(r.memo)}</p>` : ''}
     </article>`).join('')}</div>` : ''}
-    <div class="section-head"><h2>쇼츠·트렌드 키워드</h2><span class="section-note">opportunity 기준</span></div>
+    <div class="section-head"><h2>쇼츠·트렌드 키워드</h2><span class="section-note">검색 수요·경쟁도 참고 점수</span></div>
     <div class="page-grid">${items.length ? items.map((it,i) => `<article class="page-card">
       <div class="topic-rank">${i+1}</div><h3 style="margin-top:13px">${escapeHtml(it.topic)}</h3>
       <p>기회 점수 ${it.opportunity ?? '-'} · 검색 수요와 경쟁도를 종합한 추천입니다.</p>
@@ -1441,9 +1446,9 @@ function renderPage(name) {
       <span class="status-pill">POC · 초안 전용</span>
       <h3 style="margin-top:13px">WordPress 초안 만들기</h3>
       <p>공개 발행 없이 wp-auto-blog GitHub Actions를 실행합니다.</p>
-      <div style="display:grid;grid-template-columns:minmax(180px,1fr) 130px auto;gap:8px;margin-top:16px">
-        <input data-blog-topic placeholder="블로그 주제 입력" style="border:1px solid var(--line);border-radius:8px;padding:10px">
-        <select data-blog-category style="border:1px solid var(--line);border-radius:8px;padding:10px;background:#fff">
+      <div class="blog-create-form">
+        <input data-blog-topic aria-label="블로그 주제" placeholder="블로그 주제 입력" style="border:1px solid var(--line);border-radius:8px;padding:10px">
+        <select data-blog-category aria-label="블로그 카테고리" style="border:1px solid var(--line);border-radius:8px;padding:10px;background:#fff">
           <option>생활정보</option><option>취업</option><option>건강</option>
         </select>
         <button class="detail-cta" data-blog-create style="width:auto;margin:0">초안 만들기</button>
@@ -1467,14 +1472,7 @@ function renderPage(name) {
     </div>`;
   }
   if (name === 'performance') {
-    const needs = state.jobs.filter(j => ['draft','generated','assembled','review','rejected'].includes(j.status)).length;
-    const generating = state.jobs.filter(j => j.status === 'script-approved' || j.finalize?.state === 'running').length;
-    const published = state.jobs.filter(j => j.status === 'published').length;
-    body = `<div class="page-grid">
-      <article class="page-card"><h3>확인 필요</h3><div class="metric-large">${needs}</div><p>승인 또는 검수를 기다리는 콘텐츠</p></article>
-      <article class="page-card"><h3>자동 제작 중</h3><div class="metric-large">${generating}</div><p>클립·내레이션 생성 작업</p></article>
-      <article class="page-card"><h3>발행 완료</h3><div class="metric-large">${published}</div><p>현재까지 발행 처리된 콘텐츠</p></article>
-    </div>`;
+    body = `<section data-production-overview aria-label="전체 제작 현황"><p role="status">콘텐츠 현황을 확인하고 있어요.</p></section><aside class="workspace-guidance"><h2>다음 영상에 반영할 지표</h2><p>조회수만 비교하기보다 같은 게시 기간의 첫 이탈과 평균 시청 시간을 함께 확인하세요.</p><a class="workspace-link" href="https://studio.youtube.com/" target="_blank" rel="noopener">YouTube Studio 열기</a></aside>`;
   }
   if (name === 'links') {
     const linkedIds = new Set();
@@ -1517,15 +1515,17 @@ function renderPage(name) {
   }
   if (name === 'settings') {
     const autoRefresh = localStorage.getItem('shopshorts:autoRefresh') !== 'off';
-    body = `<article class="page-card">
+    body = `<article class="page-card settings-panel">
+      <h2>계정과 제작 연결</h2><div class="setting-row"><div><strong>AI 계정</strong><small>아이디어 추천과 시나리오 생성에 사용하는 계정입니다.</small></div><button type="button" class="workspace-link" data-open-ai>연결 관리</button></div>
       <div class="setting-row"><div><strong>Google 로그인</strong><small>계정 등록과 OAuth 설정 상태를 확인합니다.</small></div><a class="tool-btn" href="/login">계정 관리</a></div>
-      <div class="setting-row"><div><strong>자동 새로고침</strong><small>12초마다 작업 상태를 확인합니다.</small></div><button class="toggle ${autoRefresh ? 'on' : ''}" data-setting="autoRefresh" aria-label="자동 새로고침"></button></div>
+      <div class="setting-row"><div><strong>자동 새로고침</strong><small>12초마다 작업 상태를 확인합니다.</small></div><button class="toggle ${autoRefresh ? 'on' : ''}" data-setting="autoRefresh" role="switch" aria-checked="${autoRefresh}" aria-label="자동 새로고침"></button></div>
       <div class="setting-row"><div><strong>새 알림 숫자 표시</strong><small>메뉴와 종 버튼에 안 읽은 알림 수를 표시합니다. 꺼도 알림함에 기록은 남습니다.</small></div><button class="toggle" data-notification-preference role="switch" aria-checked="false" aria-label="새 알림 숫자 표시" disabled></button></div>
-      <div class="setting-row"><div><strong>운영 서버</strong><small>${state.isCloud ? 'Cloudflare Pages · D1 · R2' : '로컬 전용 · 127.0.0.1:5178'}</small></div><span class="status-pill">정상</span></div>
+      <div class="setting-row"><div><strong>운영 서버</strong><small>${state.isCloud ? '클라우드에 작업을 저장합니다.' : '현재 기기의 제작 서버에 연결합니다.'}</small></div><span class="status-pill">저장 환경</span></div><div class="setting-row"><div><strong>영상 제작 서버</strong><small>연결 대기 중에는 생성·합성 요청이 시작되지 않습니다. 저장과 편집은 가능합니다.</small></div><div class="setting-actions"><span id="settingsWorkerState" class="connection-state" data-tone="${state.studioConnectionError?'error':state.studioOnline?'ready':'waiting'}">${state.studioConnectionError?'확인 필요':state.studioOnline?'연결됨':state.studioOnline===false?'연결 대기':'확인 중'}</span><button class="workspace-link" data-check-worker>다시 확인</button></div></div>
     </article>`;
   }
   view.innerHTML = `<div class="page-head"><div><h1>${title}</h1><p>${copy}</p></div>${name==='content'?'<a class="workspace-page-action" href="/studio">새 영상 만들기</a>':''}</div>${body}`;
   if (name === 'content') window.workspaceContent?.mount(document.getElementById('contentLibrary'));
+  if(name==='performance')window.renderProductionOverview?.();
   bindPageActions(name);
   window.notificationInbox?.bindPreference();
 }
@@ -1765,6 +1765,8 @@ async function requestShortsDraft(topic, opportunity, button, memo) {
   }
 }
 function bindPageActions(name) {
+  document.querySelector('[data-open-ai]')?.addEventListener('click',()=>document.querySelector('.topbar [data-ai-account]')?.click());
+  document.querySelector('[data-check-worker]')?.addEventListener('click',async event=>{event.currentTarget.disabled=true;await updateStudioWorkerStatus();document.querySelector('[data-check-worker]')?.removeAttribute('disabled');});
   const customTopicInput = document.querySelector('[data-custom-topic]');
   const customTopicButton = document.querySelector('[data-custom-topic-create]');
   const submitCustomTopic = () => requestShortsDraft(customTopicInput?.value, undefined, customTopicButton);
@@ -1856,7 +1858,7 @@ function bindPageActions(name) {
     document.querySelector('[data-section="content"]')?.scrollIntoView({behavior:'smooth',block:'start'});
   });
   document.querySelectorAll('[data-setting]').forEach(b => b.onclick = () => {
-    b.classList.toggle('on');
+    b.classList.toggle('on');b.setAttribute('aria-checked',String(b.classList.contains('on')));
     localStorage.setItem(`shopshorts:${b.dataset.setting}`, b.classList.contains('on') ? 'on' : 'off');
     showToast('설정을 저장했어요.');
   });
@@ -1971,7 +1973,7 @@ setInterval(() => {
 </script>
 <script type="module">
 import { createNotificationInbox } from '/notifications.js';
-import {createContentLibrary} from '/content-library.js';
+import {createContentLibrary,collectContent} from '/content-library.js';
 import {mountAutomaticCreation} from '/automatic-creation.js';
 import {createProductionDashboard} from '/manual-dashboard.js';
 const productionDashboards=new Map(),modeLocations=new Map();
@@ -2009,7 +2011,15 @@ document.querySelectorAll('[data-production-mode]').forEach(button=>button.addEv
   window.syncProductionMode();
 }));
 if(currentRoute()==='automatic')window.syncProductionMode();
+let overviewData=null,overviewErrors=[];
+window.renderProductionOverview=()=>{
+  const host=document.querySelector('[data-production-overview]');if(!host||!overviewData)return;
+  const items=collectContent(overviewData);
+  const groups=[['working','제작·검수 대기',items.filter(x=>!x.published).length],['ready','완성 영상',items.filter(x=>x.ready).length],['attention','확인 필요',items.filter(x=>x.attention).length],['published','업로드 완료',items.filter(x=>x.published).length]];
+  host.innerHTML=`${overviewErrors.length?'<p class="content-error" role="alert">일부 목록을 불러오지 못해 조회된 콘텐츠만 집계했습니다.</p>':''}<div class="overview-grid">${groups.map(([status,label,count])=>`<a class="overview-stat" href="/contents?status=${status}"><span>${label}</span><strong>${count}<small>개</small></strong><span>콘텐츠 확인</span></a>`).join('')}</div><p class="content-count">${items.length}개 콘텐츠 기준 · 완성 영상과 업로드 완료는 중복 집계될 수 있습니다.</p>`;
+};
 window.workspaceContent=createContentLibrary({
+  onData:(data,errors)=>{overviewData=data;overviewErrors=errors;window.renderProductionOverview();},
   onDelete:async id=>{
     try {
       const data=await api('/api/jobs');

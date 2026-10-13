@@ -33,7 +33,7 @@ export function filterContent(items,{search='',mode='all',status='all',sort='rec
   return sort==='oldest' ? result.reverse() : result;
 }
 
-const sources=[['projects','수동 제작 영상','/api/studio'],['jobs','자동 제작 영상','/api/jobs'],['requests','작성 대기 요청','/api/hot-keywords']];
+const sources=[['projects','제작실 영상','/api/studio'],['jobs','자동 제작 영상','/api/jobs'],['requests','작성 대기 요청','/api/hot-keywords']];
 export async function fetchContent(fetcher=fetch) {
   const settled=await Promise.allSettled(sources.map(async([key,,url]) => {
     const response=await fetcher(url,{cache:'no-store',signal:AbortSignal.timeout(15000)});
@@ -56,7 +56,7 @@ function dateLabel(value) {
   return Number.isNaN(date.getTime())?'저장 시각 없음':date.toLocaleString('ko-KR',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});
 }
 function row(item,{allowDelete=false}={}) {
-  return `<article class="content-row" data-content-key="${esc(item.key)}"><a class="content-open" href="${esc(item.href)}"><span class="content-poster" aria-hidden="true">${item.poster?`<img src="${esc(item.poster)}" alt="" loading="lazy">`:'<svg viewBox="0 0 40 50" fill="none"><rect x="7" y="2" width="26" height="46" rx="4" stroke="currentColor"/><path d="m16 17 12 8-12 8Z" fill="currentColor"/></svg>'}</span><span class="content-copy"><strong>${esc(item.title)}</strong><span class="content-meta">${item.mode==='auto'?'자동 생성':'수동 생성'} · ${esc(item.category)} · ${item.format}<time>${esc(dateLabel(item.updatedAt))}</time></span></span><span class="content-state" data-attention="${item.attention}">${esc(item.label)}</span><span class="content-action">${item.action}</span></a>${allowDelete && item.source==='job'?`<button class="content-delete" data-delete-content="${esc(item.id)}" aria-label="${esc(item.title)} 삭제">삭제</button>`:''}</article>`;
+  return `<article class="content-row" data-content-key="${esc(item.key)}"><a class="content-open" href="${esc(item.href)}"><span class="content-poster" aria-hidden="true">${item.poster?`<img src="${esc(item.poster)}" alt="" loading="lazy">`:'<svg viewBox="0 0 40 50" fill="none"><rect x="7" y="2" width="26" height="46" rx="4" stroke="currentColor"/><path d="m16 17 12 8-12 8Z" fill="currentColor"/></svg>'}</span><span class="content-copy"><strong>${esc(item.title)}</strong><span class="content-meta">${item.mode==='auto'?'자동 생성':'수동 생성'} · ${esc(item.category)} · ${item.format}<time>${esc(dateLabel(item.updatedAt))}</time></span></span><span class="content-state" data-attention="${item.attention}" data-ready="${item.ready}" data-published="${item.published}">${esc(item.label)}</span><span class="content-action">${item.action}</span></a>${allowDelete && item.source==='job'?`<button class="content-delete" data-delete-content="${esc(item.id)}" aria-label="${esc(item.title)} 삭제">삭제</button>`:''}</article>`;
 }
 export function renderContentRows(items,options={}) {
   return items.length?items.map(item=>row(item,options)).join(''):'<div class="content-empty"><h2>표시할 콘텐츠가 없어요</h2><p>검색어나 필터를 바꾸거나 새 영상을 시작하세요.</p><a class="workspace-link" href="/studio">새 영상 만들기</a></div>';
@@ -65,7 +65,7 @@ export function renderContentRows(items,options={}) {
 export function createContentLibrary({fetcher=fetch,onData=()=>{},onDelete}={}) {
   let host=null,home=null,result=null,pending=null;
   const initial=new URLSearchParams(globalThis.location?.search || '');
-  const filters={search:'',mode:'all',status:['working','ready','published','attention'].includes(initial.get('status'))?initial.get('status'):'all',sort:'recent'};
+  const filters={search:initial.get('q') || '',mode:['auto','manual'].includes(initial.get('mode'))?initial.get('mode'):'all',status:['working','ready','published','attention'].includes(initial.get('status'))?initial.get('status'):'all',sort:initial.get('sort')==='oldest'?'oldest':'recent'};
   const errorMarkup=()=>result.errors.length?`<div class="content-error" role="alert"><strong>일부 콘텐츠를 불러오지 못했어요.</strong><p>${result.errors.map(esc).join('<br>')}</p><button data-content-retry>다시 불러오기</button></div>`:'';
   function paint() {
     if(!result)return;
@@ -87,17 +87,24 @@ export function createContentLibrary({fetcher=fetch,onData=()=>{},onDelete}={}) 
     if(pending)return pending;
     const containers=[host,home].filter(node=>node?.isConnected);
     containers.forEach(node=>node.setAttribute('aria-busy','true'));
-    pending=fetchContent(fetcher).then(next=>{result=next;onData(next.data);paint();}).finally(()=>{containers.forEach(node=>node.setAttribute('aria-busy','false'));pending=null;});
+    pending=fetchContent(fetcher).then(next=>{result=next;onData(next.data,next.errors);paint();}).finally(()=>{containers.forEach(node=>node.setAttribute('aria-busy','false'));pending=null;});
     return pending;
   }
   function mount(container) {
     host=container;
-    host.innerHTML=`<div class="content-toolbar"><label class="content-search">검색<input type="search" data-content-search placeholder="제목 또는 카테고리 검색" value="${esc(filters.search)}"></label><label>제작 방식<select data-content-mode><option value="all">자동 + 수동</option><option value="auto">자동 생성</option><option value="manual">수동 생성</option></select></label><label>상태<select data-content-status><option value="all">전체 상태</option><option value="working">이어 만들기</option><option value="ready">완성 영상 있음</option><option value="published">업로드 완료</option><option value="attention">확인 필요</option></select></label><label>정렬<select data-content-sort><option value="recent">최근 저장순</option><option value="oldest">오래된순</option></select></label></div><div data-content-errors></div><p class="content-count" data-content-count role="status">콘텐츠를 불러오는 중이에요.</p><div class="content-list" data-content-rows></div>`;
+    host.innerHTML=`<div class="content-toolbar"><label class="content-search">검색<input type="search" data-content-search placeholder="제목 또는 카테고리 검색" value="${esc(filters.search)}"></label><label>제작 방식<select data-content-mode><option value="all">자동 + 수동</option><option value="auto">자동 생성</option><option value="manual">수동 생성</option></select></label><label>상태<select data-content-status><option value="all">전체 상태</option><option value="working">이어 만들기</option><option value="ready">완성 영상 있음</option><option value="published">업로드 완료</option><option value="attention">확인 필요</option></select></label><label>정렬<select data-content-sort><option value="recent">최근 저장순</option><option value="oldest">오래된순</option></select></label></div><div data-content-errors></div><div class="content-results-head"><p class="content-count" data-content-count role="status">콘텐츠를 불러오는 중이에요.</p><button type="button" class="workspace-link" data-content-reset>필터 초기화</button></div><div class="content-list" data-content-rows></div>`;
     for(const key of ['search','mode','status','sort']) {
       const input=host.querySelector(`[data-content-${key}]`);input.value=filters[key];
-      input.addEventListener(key==='search'?'input':'change',()=>{filters[key]=input.value;paint();});
+      input.addEventListener(key==='search'?'input':'change',()=>{filters[key]=input.value;syncFilters();paint();});
     }
+    host.querySelector('[data-content-reset]').addEventListener('click',()=>{Object.assign(filters,{search:'',mode:'all',status:'all',sort:'recent'});for(const key of ['search','mode','status','sort'])host.querySelector(`[data-content-${key}]`).value=filters[key];syncFilters();paint();});
     paint();return refresh();
+  }
+  function syncFilters() {
+    if(globalThis.location?.pathname!=='/contents')return;
+    const url=new URL(globalThis.location.href);
+    for(const [key,value] of Object.entries(filters)){const param=key==='search'?'q':key;if(value&&value!=='all'&&value!=='recent')url.searchParams.set(param,value);else url.searchParams.delete(param);}
+    globalThis.history.replaceState(null,'',url.pathname+url.search);
   }
   return {mount,refresh,mountHome(container){home=container;paint();return refresh();}};
 }
