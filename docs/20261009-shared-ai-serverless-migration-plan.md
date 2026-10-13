@@ -97,8 +97,8 @@ GitHub Actions(WIF)             — 이미지 빌드·푸시(로컬 Docker 없�
 | D2 | Postgres | **운영은 Neon Launch, PG 16, direct 연결.** litellm DB는 Phase 2에서 잰 활성 시간이 하루 약 12시간 이상이면 Cloud SQL db-f1-micro(Cloud Run 기본 소켓 연결). Neon Free는 스테이징 PoC에만 쓴다 | Free는 월 100 CU-시간을 다 쓰면 다음 주기까지 compute가 정지돼 게이트웨이 전체가 멈춘다. 상업적 사용 허용 여부도 미확인이다. Launch는 기본료 없는 사용량 과금이다. 하루 12시간이면 0.25 CU × 365시간 × $0.106 ≈ $9.7로 Cloud SQL($9.4)과 비슷하다 |
 | D3 | edge | **기존 서비스를 Caddyfile 내장 이미지로 바꿔 경로별 라우터로 유지** | URL이 바뀌지 않고 관리 경로 차단도 유지된다. `tests/edge.py`를 재사용한다. 이미지 digest가 라우팅을 고정하므로 리비전을 되돌리면 설정도 되돌아간다 |
 | **D4** | **accounts** | **API 키 연결 전용으로 재설계하고 VM 폐기와 분리.** 폐기 때 `/accounts`는 404로 바꾸고, v2는 크리티컬 패스 밖의 Phase 7에서 만든다. `openai` provider를 추가하고, `codex`는 구독 로그인 값으로 남겨 400으로 거부한다 | 제공사 원문(§8.2): Anthropic은 사용자 대신 구독 자격으로 요청하거나 Claude.ai 자격·세션 토큰을 수집·저장·중개하는 것을 허용하지 않는다. OpenAI가 제3자 앱에 ChatGPT 플랜 사용을 여는 것은 일부 상업 파트너 대상 제한 시험이다. 실사용자가 없다. 기존 `codex` 값의 의미를 바꾸면 append-only 규칙에 어긋난다 |
-| D5 | LiteLLM `codex-<id>` 구독 워커 라우트 | **폐기** | 실행 중인 컨테이너가 없고 관리자 CLI 전용이다. D4와 같은 약관 쟁점이 있다 |
-| D6 | Dify | **폐기**(최종 스냅샷 보관 후 삭제). 2026-10-13 점검에서 새 VM으로 옮기지 않고 최종 스냅샷(`shared-ai-data-final-20261013`)을 만들었다. 옛 디스크·스냅샷 삭제(D+7, 2026-10-20 이후, 별도 승인)와 저장소 정리(`services/dify`와 워크플로)는 남았다(`docs/qa/20261013-shared-ai-vm-maintenance-result.md`) | 운영 미사용(9/28 뒤 Dify 경로 호출 0건, 10/12 운영자 확인 제외). 2026-10-12 정정: 이 칸의 이전 근거 "Phase 0에서 Hanmadi `DIFY_*` 변수 부재 확인"은 틀렸다. Phase 0은 변수 이름을 직접 확인하지 못했고 Dify 호출 기록으로 간접 판단했다. Production에 `DIFY_*`가 남아 있으므로(9/27 등록, 10/12 확인) 점검 전에 뺀다(점검 계획 §4) |
+| D5 | LiteLLM `codex-<id>` 구독 워커 라우트 | **폐기**. 저장소 정리는 #222(2026-10-13, #19와 함께) | 실행 중인 컨테이너가 없고 관리자 CLI 전용이다. D4와 같은 약관 쟁점이 있다 |
+| D6 | Dify | **폐기**(최종 스냅샷 보관 후 삭제). 2026-10-13 점검에서 새 VM으로 옮기지 않고 최종 스냅샷(`shared-ai-data-final-20261013`)을 만들었다. 저장소 정리(`services/dify`와 워크플로)는 #221에서 했다. 옛 디스크·스냅샷 삭제(D+7, 2026-10-20 이후, 별도 승인)와 Hanmadi Dify 선택 로직 정리(Codex)는 남았다(`docs/qa/20261013-shared-ai-vm-maintenance-result.md`) | 운영 미사용(9/28 뒤 Dify 경로 호출 0건, 10/12 운영자 확인 제외). 2026-10-12 정정: 이 칸의 이전 근거 "Phase 0에서 Hanmadi `DIFY_*` 변수 부재 확인"은 틀렸다. Phase 0은 변수 이름을 직접 확인하지 못했고 Dify 호출 기록으로 간접 판단했다. Production에 `DIFY_*`가 남아 있으므로(9/27 등록, 10/12 확인) 점검 전에 뺀다(점검 계획 §4) |
 | **D7** | discovery 앱 버전 | **인프라 이전 전에 VM에서 운영 `7e9d866`(v1.2) → main(+#161) 릴리스를 먼저 한다. 인프라는 같은 앱 버전에 저장소 계층만 바꿔 옮긴다** | 앱 변화와 인프라 회귀를 한 번에 섞으면 원인을 구분할 수 없다. 대기 중인 v2.7 실검증도 이 릴리스에서 한다. 대안은 `7e9d866`에 `PostgresStore`만 백포트하는 것이다(저장소 코드를 두 번 작성) |
 
 ## 4. Global Constraints
@@ -257,7 +257,7 @@ GitHub Actions(WIF)             — 이미지 빌드·푸시(로컬 Docker 없�
   - 순서: 이미지 빌드 → (litellm만) `litellm-migrate` Job → `gcloud run deploy --image <digest>` → startup probe 통과 → edge 경유 공개 경로 스모크 → 실패 시 이전 리비전으로 traffic.
   - GitHub runner는 internal 서비스에 직접 닿지 않는다. 그래서 헬스는 startup probe와 edge 경유 스모크로 판단한다.
 - `.github/workflows/platform-deploy.yml`의 브랜치·dispatch 목록과 `driver == 'gcp'` 조건을 새 드라이버에 맞춘다. `targets.json`에서 litellm 드라이버를 바꾸고 discovery·edge를 추가하며 dify를 뺀다. `deploy/litellm` 동결을 푼다.
-- D5 정리: `gateway.py`의 구독 라우트 import, `subscriptions.py`, `litellm-release.py`의 `write_configs`, `ai-gateway.yml`의 구독 통합 단계와 관련 테스트. `subscription_runtime.py`는 accounts v1이 쓰므로 Phase 6에서 지운다.
+- D5 정리: `gateway.py`의 구독 라우트 import, `subscriptions.py`, `litellm-release.py`의 `write_configs`, `ai-gateway.yml`의 구독 통합 단계와 관련 테스트. `subscription_runtime.py`는 accounts v1이 쓰므로 Phase 6에서 지운다. (2026-10-13 정정: D5와 v1이 함께 쓰므로 #222에서 함께 지웠다. `write_configs`는 `gateway.py render`로 바꿨다.)
 - D6 정리: `services/dify`, `dify.yml`, `hanmadi-dify.yml`, Hanmadi의 Dify 선택 로직(Phase 0 확인 결과에 따라).
 - LiteLLM spend log 보존 기간을 설정한다(지원 여부와 설정 이름 `TODO(D1)`). DB 크기는 maintenance 매니페스트로 추적한다.
 - 문서: `services/shared-ai-host/README.md`, `services/ai-gateway/ACCOUNTS.md`(구독 경로 폐기 근거), `docs/deployment/platform-gitops.md`, `docs/PROGRESS.md`, `CLAUDE.md` 상태표, 런북(전환, 경로별 롤백, 예산 보정, DB 정지 대응).

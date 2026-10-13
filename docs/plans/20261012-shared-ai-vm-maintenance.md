@@ -490,6 +490,12 @@ vm() { gcloud compute ssh shared-ai --zone=$Z --tunnel-through-iap --account=$A 
   - D5: 구독 라우트 import(`gateway.py`), `subscriptions.py`, `litellm-release.py`의 `write_configs`, `ai-gateway.yml` 구독 단계와 관련 테스트를 지운다. VM에는 남은 것이 없다(§1).
   - D6: `services/dify`, `dify.yml`, `hanmadi-dify.yml`, Hanmadi Dify 선택 로직을 지운다. `hanmadi-dify.yml`은 litellm-client가 바뀔 때 Hanmadi `npm test`·`tsc`를 돌리는 유일한 워크플로라, 그 검사를 다른 워크플로로 먼저 옮긴다.
     - 두 워크플로는 예약 실행이 없고, 러너 안 Docker의 일회용 Dify만 부른다. 그래서 점검 뒤에도 실패하지 않는다. 실패할 수 있는 시점은 `services/dify`를 지우는 이 PR뿐이다.
+  - 2026-10-13 정정(정리 PR을 만들며 의존 관계를 조사한 결과):
+    - D6는 #221에서 했다. `hanmadi-dify.yml`의 typegen·`tsc --noEmit`·`test:language-flow`와 litellm-client 경로 필터는 `hanmadi-v2.yml`로 옮겼다.
+    - `subscription_runtime.py`는 #19(v1)와 D5가 함께 쓴다. 그래서 #19와 D5를 #222 하나로 묶어 함께 지웠다.
+    - D5의 `write_configs`는 지우지 않고 `gateway.py render`로 바꿨다. 릴리스 안에서 `litellm.json`을 다시 만드는 유일한 단계이기 때문이다. `litellm-release.py`의 FILES·overlay·계정 lock, `targets.json`, `test_litellm_release.py`도 함께 고쳤다.
+    - 「VM에는 남은 것이 없다」는 정정한다. `.runtime/subscriptions/.lock`이 남아 있고, `subscriptions.compose.json`·`subscriptions.env`도 남아 있을 수 있다(`TODO(D1)`: 파일 이름 확인). 지금 gateway는 W12에서 `compose.yaml`만으로 만들었으므로 쓰이지 않는다. 지우는 일은 별도 승인을 받는 VM 작업이다.
+    - Hanmadi 앱 쪽(codex·claude-code 화면과 라우트, Dify 선택 로직, `language-flow-smoke.mjs`)은 #221·#222 뒤 Codex PR로 한다.
 
 ## 9. 비용
 
