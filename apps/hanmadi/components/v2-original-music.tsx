@@ -1,12 +1,13 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { studyLanguages, type StudyLanguage } from "@/lib/v2";
+import { studyLanguages, type StudyLanguage, type StudyState, type Expression } from "@/lib/v2";
 import type { PracticeSong, SongProgress, SongAction } from "@/lib/original-music";
+import { MusicLanguagePractice } from "./v2-music-language";
 import { Speaker } from "./v2-speaker";
 import { LicensedMusicStudy } from "./v2-music";
 
 type Catalog = { songs: PracticeSong[]; progress: Record<string, SongProgress> };
-export function MusicStudy({ language }: { language: StudyLanguage }) {
+export function MusicStudy({ language, expressions, onSaved, onConversation }: { language: StudyLanguage; expressions: Expression[]; onSaved: (state: StudyState) => void; onConversation: (prompt: string) => void }) {
   const [catalog, setCatalog] = useState<Catalog | null>(null);
   const [error, setError] = useState("");
   const [attempt, setAttempt] = useState(0);
@@ -30,12 +31,12 @@ export function MusicStudy({ language }: { language: StudyLanguage }) {
     {commercial ? <LicensedMusicStudy /> : <>
       {!catalog && !error && <p role="status">연습곡을 불러오고 있어요…</p>}
       {error && <div role="alert"><p>{error}</p><button onClick={() => { setError(""); setAttempt(attempt + 1); }}>다시 불러오기</button></div>}
-      {song && catalog && <SongPractice key={song.id} song={song} initial={catalog.progress[song.id]} onProgress={progress =>
+      {song && catalog && <SongPractice key={song.id} song={song} initial={catalog.progress[song.id]} expressions={expressions} onConversation={onConversation} onSaved={onSaved} onProgress={progress =>
         setCatalog(previous => previous ? { ...previous, progress: { ...previous.progress, [song.id]: progress } } : previous)} />}
     </>}
   </section>;
 }
-function SongPractice({ song, initial, onProgress }: { song: PracticeSong; initial: SongProgress; onProgress: (progress: SongProgress) => void }) {
+function SongPractice({ song, initial, onProgress, expressions, onSaved, onConversation }: { song: PracticeSong; initial: SongProgress; onProgress: (progress: SongProgress) => void; expressions: Expression[]; onSaved: (state: StudyState) => void; onConversation: (prompt: string) => void }) {
   const [progress, setProgress] = useState(initial);
   const [now] = useState(() => Date.now());
   const [stage, setStage] = useState<"practice" | "review" | "complete">(
@@ -50,6 +51,7 @@ function SongPractice({ song, initial, onProgress }: { song: PracticeSong; initi
   const [audioAttempt, setAudioAttempt] = useState(0);
   const [audioEpoch, setAudioEpoch] = useState(0);
   const player = useRef<HTMLAudioElement>(null);
+  const pending = useRef(false);
   const index = progress.index, line = song.lines[index];
   const total = song.lines.length;
   // Stop the current song when leaving music, switching language/source or starting pronunciation.
@@ -71,19 +73,19 @@ function SongPractice({ song, initial, onProgress }: { song: PracticeSong; initi
       else audio.pause();
     }
   }
-  async function save(action: SongAction["action"], target = index, answer?: string) {
-    if (busy) return false;
-    setBusy(true); setError("");
+  async function save(action: SongAction["action"], target = index, answer?: string, confidence?: "help" | "alone"): Promise<{ progress: SongProgress; correct?: boolean } | null> {
+    if (pending.current) return null;
+    pending.current = true; setBusy(true); setError("");
     try {
       const response = await fetch("/api/study/practice-music", { method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action, trackId: song.id, revision: song.revision, index: target, answer }), signal: AbortSignal.timeout(15000) });
+        body: JSON.stringify({ action, trackId: song.id, revision: song.revision, index: target, answer, confidence }), signal: AbortSignal.timeout(15000) });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error ?? "진도를 저장하지 못했어요. 다시 눌러 주세요.");
       setProgress(data.progress); onProgress(data.progress);
       if (action === "answer") setFeedback(data.correct ? "correct" : "wrong");
-      return true;
-    } catch (e) { setError(e instanceof Error ? e.message : "저장하지 못했어요."); return false; }
-    finally { setBusy(false); }
+      return data;
+    } catch (e) { setError(e instanceof Error ? e.message : "저장하지 못했어요."); return null; }
+    finally { pending.current = false; setBusy(false); }
   }
   async function move(target: number) {
     player.current?.pause(); setSegment(null); setAudioEpoch(v => v + 1);
@@ -101,8 +103,8 @@ function SongPractice({ song, initial, onProgress }: { song: PracticeSong; initi
       <span className="hm-music-record" aria-hidden="true">♪</span>
       <div><p className="hm-song-eyebrow">한마디 오리지널 · {studyLanguages[song.language].name}</p><h1 lang={song.language}>{song.title}</h1><p>{song.subtitle}</p></div>
     </header>
-    <p>짧은 노래 한 곡으로 듣고, 뜻을 익히고, 직접 따라 불러요.</p>
-    <ol className="hm-song-steps" aria-label="음악 학습 순서"><li>노래 듣기</li><li>한 줄씩 따라 부르기</li><li>뜻 떠올리기</li></ol>
+    <p>짧은 노래 한 곡으로 듣고, 뜻을 익히고, 단어와 회화로 연습해요.</p>
+    <ol className="hm-song-steps" aria-label="음악 학습 순서"><li>노래 듣기</li><li>한 줄씩 따라 부르기</li><li>단어·회화에 활용하기</li><li>뜻 떠올리기</li></ol>
     {stage !== "complete" && <section className="hm-song-player" aria-label="연습곡 듣기">
       <label htmlFor={`audio-${song.id}`}>노래 전체 듣기 · 반복 재생 가능</label>
       <audio key={audioAttempt} id={`audio-${song.id}`} ref={player} controls preload="metadata" loop={loop && segment === null} src={song.audio} onTimeUpdate={timeUpdate}
@@ -129,6 +131,8 @@ function SongPractice({ song, initial, onProgress }: { song: PracticeSong; initi
       <button className="hm-primary" disabled={busy || progress.practiced.includes(line.id)} onClick={() => void save("practice")}>
         {progress.practiced.includes(line.id) ? "이 줄 연습 완료" : "따라 불렀어요"}
       </button>
+      <MusicLanguagePractice key={line.id} song={song} index={index} progress={progress} expressions={expressions}
+        busy={busy} audioEpoch={audioEpoch} onAction={save} onSaved={onSaved} onConversation={onConversation} onPause={() => player.current?.pause()} />
       <div className="hm-lesson-navigation">
         <button disabled={busy || index === 0} onClick={() => void move(index - 1)}>이전 줄</button>
         {index + 1 < total ? <button disabled={busy} onClick={() => void move(index + 1)}>다음 줄</button> :
@@ -151,9 +155,10 @@ function SongPractice({ song, initial, onProgress }: { song: PracticeSong; initi
     {stage === "complete" && <section className="hm-song-complete" aria-label="음악 학습 완료">
       <span aria-hidden="true">✓</span><h2>한 곡을 내 한마디로!</h2>
       <p>네 줄을 따라 부르고 뜻까지 복습했어요.</p>
+      <p>단어 {progress.wordsReviewed?.length ?? 0} / 4개 · 회화 {Object.keys(progress.conversations ?? {}).length} / 4개 연습</p>
       <p>{progress.dueAt && progress.dueAt <= now ? "오늘 다시 복습할 시간이에요." : "내일 다시 떠올려 보세요. 지금 한 번 더 연습해도 좋아요."}</p>
       <button className="hm-primary" disabled={busy} onClick={() => void review()}>다시 복습하기</button>
-      <button disabled={busy} onClick={() => { void save("practice", 0).then(ok => { if (ok) { setStage("practice"); setFeedback(null); } }); }}>노래 다시 연습하기</button>
+      <button disabled={busy} onClick={() => { void save("practice", 0).then(ok => { if (ok) { setStage("practice"); setFeedback(null); } }); }}>단어·회화 다시 연습하기</button>
     </section>}
     {error && <p role="alert">{error}</p>}
   </div>;

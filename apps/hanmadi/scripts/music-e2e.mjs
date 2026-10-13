@@ -56,6 +56,13 @@ let logs = "", browser, page;
 app.stdout.on("data", b => { logs += b; }); app.stderr.on("data", b => { logs += b; });
 try {
   for (let i = 0; i < 120; i++) { try { if ((await fetch(base + "/study")).ok) break; } catch {} await new Promise(r => setTimeout(r, 500)); }
+  await new Promise((resolve, reject) => {
+    const httpCheck = spawn(process.execPath, ["--import", "tsx", "scripts/practice-music-http-test.mjs"], {
+      env: { ...process.env, HANMADI_TEST_BASE: base }, stdio: "inherit",
+    });
+    httpCheck.once("error", reject);
+    httpCheck.once("exit", code => code === 0 ? resolve() : reject(new Error(`Music HTTP checks failed: ${code}`)));
+  });
   browser = await chromium.launch({ ...(process.env.PLAYWRIGHT_CHANNEL ? { channel: process.env.PLAYWRIGHT_CHANNEL } : {}), headless: true });
   const context = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true });
   page = await context.newPage(); const errors = [], audioRequests = [];
@@ -208,6 +215,78 @@ try {
     await page.getByRole("button", { name: "뜻 보기", exact: true }).click();
     await page.locator(".hm-lyrics-line").scrollIntoViewIfNeeded();
     await page.screenshot({ path: resolve(dir, `original-${song.language}-lyrics.png`) });
+    // Curated words and conversations use the real API/store, with one lost save response.
+    const wordRegion = page.getByRole("region", { name: "음악 단어 연습", exact: true });
+    await wordRegion.getByRole("button", { name: "단어장에 저장", exact: true }).waitFor();
+    const word = await wordRegion.locator("h3").innerText();
+    let lostSave = true;
+    await page.route("**/api/study/practice-music", async route => {
+      const body = route.request().postDataJSON();
+      if (lostSave && route.request().method() === "POST" && body?.action === "save-word") {
+        lostSave = false;
+        await route.fetch(); // It was saved, but the response did not reach the client.
+        return route.fulfill({ status: 503, contentType: "application/json", body: '{"error":"저장 응답 재시도 테스트"}' });
+      }
+      return route.fallback();
+    });
+    await wordRegion.getByRole("button", { name: "단어장에 저장", exact: true }).click();
+    await page.getByText("저장 응답 재시도 테스트", { exact: true }).waitFor();
+    await wordRegion.getByRole("button", { name: "단어장에 저장", exact: true }).click();
+    await wordRegion.getByRole("button", { name: "단어장에 저장됨", exact: true }).waitFor();
+    const wordChoices = wordRegion.locator(".hm-song-choices button");
+    await wordChoices.nth(0).click(); // fixed shuffled order: first is line 3, not line 1
+    await page.getByText("아직 아니에요. 가사 속 뜻을 다시 떠올려 보세요.", { exact: true }).waitFor();
+    await wordChoices.nth(1).click();
+    await page.getByRole("button", { name: "이 단어로 회화 연습", exact: true }).click();
+    const conversation = page.getByRole("region", { name: "음악 회화 연습", exact: true });
+    assert.equal(await conversation.locator(".hm-music-my-turn").count(), 0);
+    await conversation.getByRole("button", { name: "예시 답변 보기", exact: true }).click();
+    const expression = await conversation.locator(".hm-music-my-turn p").first().innerText();
+    await conversation.getByRole("button", { name: "혼자 말했어요", exact: true }).click();
+    await page.getByText("혼자 말하기 기록이 저장됐어요.", { exact: true }).waitFor();
+    await conversation.getByRole("button", { name: "내 표현에 저장", exact: true }).click();
+    await conversation.getByRole("button", { name: "내 표현에 저장됨", exact: true }).waitFor();
+    for (const width of [320, 390, 1024]) {
+      await page.setViewportSize({ width, height: 844 });
+      assert(await page.locator(".hm-music-language").evaluate(el => el.scrollWidth <= el.clientWidth + 1));
+    }
+    await page.setViewportSize({ width: 390, height: 844 });
+    await conversation.scrollIntoViewIfNeeded();
+    await page.screenshot({ path: resolve(dir, `original-${song.language}-conversation.png`) });
+    await conversation.getByRole("button", { name: "새 AI 대화로 연습", exact: true }).click();
+    const draft = await page.getByLabel("말이 막히면 한국어로 도움 요청", { exact: true }).inputValue();
+    assert(draft.includes(word) && draft.includes(expression));
+    let chatCalls = 0;
+    const chatFixture = async route => {
+      const body = route.request().postDataJSON();
+      if (body?.action !== "chat") return route.fallback();
+      chatCalls++;
+      assert.equal(body.language, song.language);
+      assert.equal(body.scene, "smalltalk");
+      assert(body.messages.at(-1).content.includes(word) && body.messages.at(-1).content.includes(expression));
+      return route.fulfill({ contentType: "application/json", body: JSON.stringify({ reply: { text: expression, reading: "회화 응답 테스트", meaning: "음악 문맥 응답 테스트" }, learnerPhrase: null, learning: "not-saved" }) });
+    };
+    await page.route("**/api/study", chatFixture);
+    assert.equal(chatCalls, 0, "handoff does not submit paid model requests automatically");
+    await page.getByRole("button", { name: "음악 회화 시작", exact: true }).click();
+    await page.getByText("음악 문맥 응답 테스트", { exact: true }).waitFor();
+    assert.equal(chatCalls, 1);
+    await page.unroute("**/api/study", chatFixture);
+    await page.getByRole("button", { name: "단어장", exact: true }).click();
+    await page.getByText(word, { exact: true }).waitFor();
+    await page.getByRole("button", { name: "내 표현", exact: true }).click();
+    await page.getByText(expression, { exact: true }).waitFor();
+    assert(await page.getByText("음악 학습에서", { exact: false }).count() >= 1);
+    const learningState = (await (await context.request.get(base + "/api/study")).json()).state;
+    assert.equal(learningState.expressions.filter(e => e.language === song.language && e.text === word).length, 1);
+    assert(learningState.expressions.some(e => e.language === song.language && e.text === expression));
+    assert.equal(learningState.originalMusicProgress[song.id].conversations["line-1"], "alone");
+    assert.deepEqual(learningState.originalMusicProgress[song.id].wordsReviewed, ["line-1"]);
+    await page.reload(); await page.getByRole("button", { name: "음악", exact: true }).click();
+    await wordRegion.getByRole("button", { name: "단어장에 저장됨", exact: true }).waitFor();
+    await page.getByRole("button", { name: "회화에 써보기", exact: true }).click();
+    await conversation.getByRole("button", { name: "내 표현에 저장됨", exact: true }).waitFor();
+    assert.equal(await conversation.getByRole("button", { name: "혼자 말했어요", exact: true }).getAttribute("aria-pressed"), "true");
     for (let i = 0; i < 4; i++) {
       await page.getByText(`연습 ${i + 1} / 4`, { exact: true }).waitFor();
       await page.getByRole("button", { name: "따라 불렀어요", exact: true }).click();
@@ -239,7 +318,7 @@ try {
     await page.getByText("복습 1 / 4", { exact: true }).waitFor();
   }
   assert.deepEqual(errors, []);
-  await writeFile(resolve(dir, "result.json"), JSON.stringify({ passed: true, supplier: "Hanmadi-contract fixture, no commercial provider connected", lines: 12, calls, videoRequests, audioRequests: audioRequests.length, errors, verified: ["four original songs: actual audio playback, TTS pause, meaning/practice/review, reload/repeat, responsive widths", "unconfigured/rights-pending states have no retry or learning promise", "transient errors keep retry", "no emotional lessons", "12 ordered lines including repeat", "Korean pronunciation/meaning", "manual segment replay", "speech unmounts video", "cursor persistence and account isolation", "no lyric persistence", "failed save/retry", "auth/origin/index/revision guards", "provider errors/expiry", "no overflow at 320/390/1024"] }, null, 2));
+  await writeFile(resolve(dir, "result.json"), JSON.stringify({ passed: true, supplier: "Hanmadi-contract fixture, no commercial provider connected", lines: 12, calls, videoRequests, audioRequests: audioRequests.length, errors, verified: ["four language word recall, conversation self-record, save/retry/deduplicate/reload, contextual AI request/response fixture and saved collections", "four original songs: actual audio playback, TTS pause, meaning/practice/review, reload/repeat, responsive widths", "unconfigured/rights-pending states have no retry or learning promise", "transient errors keep retry", "no emotional lessons", "12 ordered lines including repeat", "Korean pronunciation/meaning", "manual segment replay", "speech unmounts video", "cursor persistence and account isolation", "no lyric persistence", "failed save/retry", "auth/origin/index/revision guards", "provider errors/expiry", "no overflow at 320/390/1024"] }, null, 2));
   console.log("PASS licensed lyrics fixture journey, 12 lines, progress, playback controls and errors");
 } catch (error) {
   await page?.screenshot({ path: resolve(dir, "music-failure.png"), fullPage: true }).catch(() => {});

@@ -1,3 +1,4 @@
+import { musicLanguageLessons } from "./music-language";
 import { ConversationError } from "./conversation";
 import type { Phrase, StudyLanguage } from "./v2";
 
@@ -7,6 +8,7 @@ export type PracticeSong = {
 };
 export type SongProgress = {
   revision: string; index: number; practiced: string[]; reviewed: string[];
+  wordsReviewed?: string[]; conversations?: Record<string, "help" | "alone">;
   completedAt?: number; dueAt?: number; phase?: "practice" | "review";
 };
 // Original lyrics written for Hanmadi. No commercial song reconstruction.
@@ -49,22 +51,29 @@ export function songProgress(song: PracticeSong, saved?: SongProgress): SongProg
   const valid = new Set(song.lines.map(line => line.id));
   const unique = (ids: string[] | undefined) => [...new Set(ids ?? [])].filter(id => valid.has(id));
   return { ...saved, index: Number.isInteger(saved.index) && saved.index >= 0 && saved.index < song.lines.length ? saved.index : 0,
-    practiced: unique(saved.practiced), reviewed: unique(saved.reviewed) };
+    practiced: unique(saved.practiced), reviewed: unique(saved.reviewed),
+    wordsReviewed: unique(saved.wordsReviewed), conversations: Object.fromEntries(Object.entries(saved.conversations ?? {}).filter(([id, confidence]) => valid.has(id) && ["help", "alone"].includes(confidence))) };
 }
-export type SongAction = { trackId: string; revision: string; index: number; action: "move" | "practice" | "review" | "answer"; answer?: string };
+export type SongAction = { trackId: string; revision: string; index: number; action: "move" | "practice" | "review" | "answer" | "word-answer" | "conversation" | "save-word" | "save-expression"; answer?: string; confidence?: "help" | "alone" };
 export function parseSongAction(value: unknown): { song: PracticeSong; input: SongAction } {
   const b = value as Partial<SongAction> | null;
   const song = practiceSongs.find(song => song.id === b?.trackId);
   if (!song || !b || !Number.isInteger(b.index) || Number(b.index) < 0 || Number(b.index) >= song.lines.length ||
-    !["move", "practice", "review", "answer"].includes(b.action ?? "")) throw new ConversationError(400, "연습할 곡과 줄을 다시 선택해 주세요.");
+    !["move", "practice", "review", "answer", "word-answer", "conversation", "save-word", "save-expression"].includes(b.action ?? "")) throw new ConversationError(400, "연습할 곡과 줄을 다시 선택해 주세요.");
   if (b.revision !== song.revision) throw new ConversationError(409, "연습곡이 바뀌었어요. 다시 불러와 주세요.");
-  if (b.action === "answer" && !song.lines.some(line => line.id === b.answer)) throw new ConversationError(400, "뜻을 하나 골라 주세요.");
+  if ((b.action === "answer" || b.action === "word-answer") && !song.lines.some(line => line.id === b.answer)) throw new ConversationError(400, "뜻을 하나 골라 주세요.");
+  if (b.action === "conversation" && !["help", "alone"].includes(b.confidence ?? "")) throw new ConversationError(400, "도움을 받았는지 선택해 주세요.");
   return { song, input: b as SongAction };
 }
 export function updateSongProgress(song: PracticeSong, previous: SongProgress | undefined, input: SongAction, now = Date.now()) {
   const progress = songProgress(song, previous), line = song.lines[input.index];
   progress.index = input.index;
   let correct: boolean | undefined;
+  if (input.action === "word-answer") {
+    correct = input.answer === line.id;
+    if (correct) progress.wordsReviewed = [...new Set([...(progress.wordsReviewed ?? []), line.id])];
+  }
+  if (input.action === "conversation") progress.conversations = { ...progress.conversations, [line.id]: input.confidence! };
   if (input.action === "practice") progress.phase = "practice";
   if (input.action === "practice" && !progress.practiced.includes(line.id)) progress.practiced = [...progress.practiced, line.id];
   if (input.action === "review") {
@@ -83,4 +92,9 @@ export function updateSongProgress(song: PracticeSong, previous: SongProgress | 
     }
   }
   return { progress, correct };
+}
+
+export function songLearningPhrase(song: PracticeSong, index: number, kind: "save-word" | "save-expression") {
+  const lesson = musicLanguageLessons[song.language][index];
+  return kind === "save-word" ? lesson.word : lesson.answer;
 }

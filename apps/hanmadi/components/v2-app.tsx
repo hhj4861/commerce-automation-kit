@@ -955,6 +955,7 @@ export function V2App() {
       }[]
     >([]),
     [chatInput, setChatInput] = useState("");
+  const [musicConversation, setMusicConversation] = useState<string | null>(null);
   const [aiFromSettings, setAiFromSettings] = useState(false);
   const [assessmentInfo, setAssessmentInfo] = useState(false);
   const operation = useRef(false);
@@ -1043,7 +1044,7 @@ export function V2App() {
     } catch {
       /* Server preference still works. */
     }
-    setChat([]);
+    setChat([]); setMusicConversation(null);
     setText("");
     setChatInput("");
     setTranslation(null);
@@ -1348,7 +1349,7 @@ export function V2App() {
                     setIdentity(null);
                     setState(emptyStudy());
                     setExtra([]);
-                    setChat([]);
+                    setChat([]); setMusicConversation(null);
                     setTranslation(null);
                     setSelection("default");
                     setModal(null);
@@ -1365,7 +1366,7 @@ export function V2App() {
               selection={selection}
               onSelect={(s) => {
                 setSelection(s);
-                setChat([]);
+                setChat([]); setMusicConversation(null);
               }}
               onConversation={() => {
                 setModal(null);
@@ -1442,7 +1443,10 @@ export function V2App() {
                     </div>
                   )}
                   {section === "music" && (
-                    <MusicStudy key={language} language={language} />
+                    <MusicStudy key={language} language={language} expressions={state.expressions} onSaved={apply} onConversation={prompt => {
+                      setScene("smalltalk"); setChat([]); setChatInput(prompt); setMusicConversation(prompt); setTab("chat"); setError("");
+                      setNotice("음악에서 배운 표현으로 새 대화를 준비했어요. 아래 입력창을 확인하고 보내기를 눌러 주세요.");
+                    }} />
                   )}
                   {section === "today" && (
                     <>
@@ -1576,7 +1580,7 @@ export function V2App() {
                               <span className="hm-badge">
                                 {e.source === "translation"
                                   ? "번역에서"
-                                  : e.source === "vocabulary" ? "단어장에서" : "AI 대화에서"}
+                                  : e.source === "vocabulary" ? "단어장에서" : e.source === "music" ? "음악 학습에서" : "AI 대화에서"}
                               </span>
                               <div className="hm-row">
                                 <button
@@ -1833,7 +1837,7 @@ export function V2App() {
                             className="hm-primary hm-full"
                             onClick={() => {
                               setTab("chat");
-                              setChat([]);
+                              setChat([]); setMusicConversation(null);
                             }}
                           >
                             AI와 이 상황 대화하기 <Icon name="arrow" />
@@ -2113,7 +2117,7 @@ export function V2App() {
                           value={scene}
                           onChange={(e) => {
                             setScene(e.target.value);
-                            setChat([]);
+                            setChat([]); setMusicConversation(null);
                           }}
                         >
                           {curriculum.scenes.map((s) => (
@@ -2132,7 +2136,7 @@ export function V2App() {
                       </button>
                       <button
                         disabled={busy || !chat.length}
-                        onClick={() => setChat([])}
+                        onClick={() => { setChat([]); setMusicConversation(null); setChatInput(""); }}
                       >
                         새 대화
                       </button>
@@ -2159,10 +2163,10 @@ export function V2App() {
                             }
                           />
                         </span>
-                        <h2>먼저 말을 걸어 드릴게요.</h2>
+                        <h2>{musicConversation ? "노래 속 표현으로 대화해요" : "먼저 말을 걸어 드릴게요."}</h2>
                         <p>
                           {
-                            curriculum.scenes.find((s) => s.id === scene)
+                            musicConversation ?? curriculum.scenes.find((s) => s.id === scene)
                               ?.prompt
                           }
                         </p>
@@ -2171,11 +2175,11 @@ export function V2App() {
                           disabled={busy}
                           onClick={() =>
                             void sendChat(
-                              "아직 이 언어를 몰라요. 짧은 인사와 따라 말할 예시부터 알려 주세요.",
+                              musicConversation ? chatInput : "아직 이 언어를 몰라요. 짧은 인사와 따라 말할 예시부터 알려 주세요.",
                             )
                           }
                         >
-                          AI가 먼저 말하기 →
+                          {musicConversation ? "음악 회화 시작" : "AI가 먼저 말하기 →"}
                         </button>
                       </div>
                     )}
@@ -2340,7 +2344,7 @@ export function V2App() {
                             <span className="hm-badge">
                               {e.source === "translation"
                                 ? "번역에서"
-                                : e.source === "vocabulary" ? "단어장에서" : "AI 대화에서"}
+                                : e.source === "vocabulary" ? "단어장에서" : e.source === "music" ? "음악 학습에서" : "AI 대화에서"}
                             </span>
                             <button
                               disabled={busy}
@@ -2414,7 +2418,7 @@ export function V2App() {
                   setError("");
                   setNotice("");
                   if (id !== "chat") {
-                    setChat([]);
+                    setChat([]); setMusicConversation(null);
                     setChatInput("");
                   }
                 }}

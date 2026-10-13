@@ -132,3 +132,19 @@ body {
 .hm-music-source button { border: 1px solid #d8e3da; padding: 10px 14px; border-radius: 24px; font-size: 13px; }
 .hm-music-source button[aria-pressed=true] { background: #e2efe2; border-color: #72977b; }
 @media (max-width: 400px) { .hm-song-player { padding: 12px; } .hm-original-music .hm-music-cover { gap: 12px; } }
+
+/* Keep music learning in the same reading column as the current lyric. */
+.hm-music-language { margin-top: 24px; padding: 22px 0; border-top: 1px solid #dae4dd; }
+.hm-music-language h3 { font-size: 22px; line-height: 1.5; margin: 18px 0 8px; overflow-wrap: anywhere; }
+.hm-music-language p { line-height: 1.8; overflow-wrap: anywhere; }
+.hm-music-language small { display: block; line-height: 1.7; margin-top: 12px; }
+.hm-music-learning-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0; }
+.hm-music-learning-tabs button { flex: 1 1 130px; padding: 12px; border-radius: 12px; border: 1px solid #b3c6b9; }
+.hm-music-learning-tabs button[aria-pressed="true"] { background: #e5f2e9; color: #224c32; border-color: #487b58; font-weight: 700; }
+.hm-music-language .hm-primary, .hm-music-language .hm-soft { margin: 12px 8px 0 0; max-width: 100%; }
+.hm-music-language details { padding: 12px 0; }
+.hm-music-language summary { cursor: pointer; }
+.hm-music-dialogue { background: #f4f7f3; padding: 16px; margin: 14px 0; border-radius: 14px; }
+.hm-music-my-turn { border-left: 3px solid #487b58; }
+.hm-music-dialogue p { margin: 6px 0; }
+.hm-music-language button:focus-visible, .hm-music-language summary:focus-visible { outline: 2px solid #246442; outline-offset: 3px; }

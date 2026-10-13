@@ -39,3 +39,38 @@ test("revision reset and invalid saved indices/line IDs are isolated", () => {
   assert.equal(result.index,0); assert.deepEqual(result.practiced,["line-1"]);
   assert.equal(new Set(practiceSongs.map(s=>s.id)).size,4);
 });
+
+import { musicLanguageLessons, musicConversationPrompt } from "./music-language";
+import { songLearningPhrase } from "./original-music";
+import { safePractice } from "./v2";
+for (const song of practiceSongs) test(`${song.language}: words come from the lyric and transfer to a speakable daily exchange`, () => {
+  const lessons = musicLanguageLessons[song.language];
+  assert.equal(lessons.length, song.lines.length);
+  assert.equal(new Set(lessons.map(x => x.word.meaning)).size, 4, "quiz choices must be distinct");
+  for (const [index, lesson] of lessons.entries()) {
+    assert(song.lines[index].text.toLowerCase().includes(lesson.word.text.toLowerCase()));
+    assert(lesson.answer.text.toLowerCase().includes(lesson.word.text.toLowerCase()));
+    for (const phrase of [lesson.word, lesson.question, lesson.answer]) assert(safePractice(phrase));
+    assert.deepEqual(songLearningPhrase(song, index, "save-word"), lesson.word);
+    assert.deepEqual(songLearningPhrase(song, index, "save-expression"), lesson.answer);
+    const prompt = musicConversationPrompt(song.title, lesson);
+    assert(prompt.includes(lesson.word.text) && prompt.includes(lesson.situation) && prompt.includes(lesson.answer.text));
+    assert(prompt.length < 2000);
+  }
+});
+test("vocabulary/conversation progress is independent, retry-safe and preserves earlier song completion", () => {
+  const song = practiceSongs[0];
+  const base = { trackId: song.id, revision: song.revision, index: 0 };
+  let saved = { ...songProgress(song), completedAt: 100, dueAt: 86400100 };
+  const wrong = updateSongProgress(song, saved, { ...base, action: "word-answer", answer: "line-2" });
+  assert.equal(wrong.correct, false); assert.equal(wrong.progress.wordsReviewed?.length, 0);
+  for (let i = 0; i < 2; i++) saved = updateSongProgress(song, saved, { ...base, action: "word-answer", answer: "line-1" }).progress as typeof saved;
+  assert.deepEqual(saved.wordsReviewed, ["line-1"]); assert.deepEqual(saved.practiced, []);
+  for (const confidence of ["help", "alone"] as const) saved = updateSongProgress(song, saved, { ...base, action: "conversation", confidence }).progress as typeof saved;
+  assert.deepEqual(saved.conversations, { "line-1": "alone" });
+  assert.equal(saved.completedAt, 100); assert.equal(saved.dueAt, 86400100);
+  assert.deepEqual(songProgress(song, JSON.parse(JSON.stringify(saved))), saved);
+  for (const input of [{...base,action:"word-answer",answer:"bad"}, {...base,action:"conversation",confidence:"perfect"}, {...base,action:"conversation"}]) assert.throws(() => parseSongAction(input));
+  const legacy = songProgress(song, { revision: song.revision, index: 2, practiced: ["line-2"], reviewed: [] });
+  assert.deepEqual(legacy.wordsReviewed, []); assert.deepEqual(legacy.conversations, {}); assert.deepEqual(legacy.practiced, ["line-2"]);
+});
