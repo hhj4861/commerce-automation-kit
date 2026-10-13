@@ -63,3 +63,22 @@
 - 후속 원본 a484253, 운영 승격 914a066, 각각 작업 upstream 정상 push. 원본 관련 45개 검사와 승격 통합 18개 통과.
 - PR #213: https://github.com/hhj4861/commerce-automation-kit/pull/213 / PR #214: https://github.com/hhj4861/commerce-automation-kit/pull/214 . 이 두 PR은 새 승인 대상이며 아직 머지·운영 적용하지 않았다.
 - 다음 확인은 승인 후 후속 배포에서 같은 기획의 실제 생성 결과를 확인하는 것이다. CI의 Cloudflare credential 403도 별도 미해결이다.
+
+## #213·#214 승인 후 운영 반영
+
+- 사용자 ‘응 진행해줘’로 두 후속 PR 머지·배포 승인. #213 main merge `e154e577cd944b87cebf67e9dbc4dd524e355fbb`, #214 deploy merge `b14a0009475562b8b17a307658ae799da879da00`.
+- 운영 checkout clean 확인 후 exact merge로 전환. 검사 18개가 통과했던 승격 커밋 914a066과 머지본의 전체 tree diff가 0임을 확인해 일치하는 통합 검사 증거를 재사용했다.
+- aggregate account poll 0건/다음 페이지 없음 확인 후 계정 워커 재시작. PID 12306, LastExitStatus 0. Pages 배포 exit 0; Production / deploy/shopshorts / source b14a000, deployment c053edb0-6133-4398-981d-7af47b13aa54 확인. https://c053edb0.shopshorts-dash.pages.dev 및 운영 도메인에 반영.
+- GitHub 자동 배포 run 38367288557은 failure. 이번 반영은 인증된 Wrangler 수동 배포다.
+- 동일 QA 프로젝트에서 ‘대본 생성 다시 시도’를 1회 요청한 뒤 ‘선택한 주제의 자료 확인 중’을 운영 UI에서 확인했다. 결과는 다음 항목에 기록한다.
+
+
+## #214 실생성 결과·자동배포 진단
+
+- 1회 요청은 자료 확인 → 대본 작성 → 보완 후 SCENARIO_FORMAT_INVALID로 종료. 이번 요청은 CODEX_TIMEOUT이 아니다. 첫 실패가 형식/내용 중 무엇인지 UI에서 직접 확인하지 못했다. 원본 출력은 보존되지 않아 당시 실패 필드를 소급 단정하지 않는다. 새 미디어·음성 생성·렌더·발행은 시작하지 않았다.
+- 보완 요청에는 오류 코드만 있고 실패한 필드가 누락된 것을 확인했다. 웹툰 레이어/장면과 길이 제약을 안전한 힌트로 전달하고 공개 오류에도 고정 항목명을 남기는 수정 a76251a를 준비했다. 관련 64개 검사와 별도 웹툰 3개 검사 통과. PR #215: https://github.com/hhj4861/commerce-automation-kit/pull/215 — 아직 운영 미반영.
+- 실제 broker 버전 319343f0-b890-4ebf-8959-5d7ee70028af의 GITHUB_DEPLOY_ALLOWED_REFS에는 refs/heads/deploy/hanmadi-admin만 있었다. deploy/shopshorts는 GitHub에서 protected=true임을 확인했다.
+- Cloudflare 공식 Workers settings PATCH로 기존 허용을 보존하며 refs/heads/deploy/shopshorts 하나를 추가했다. 기존 35개 바인딩 중 다른 바인딩은 모두 동일함을 조회로 검증. 코드/시크릿 값은 수정하지 않았다. 공식 API: https://developers.cloudflare.com/api/resources/workers/subresources/scripts/subresources/script_and_version_settings/methods/edit/
+- GitHub run 38367288557 재실행은 403 대신 503으로 종료. 실제 SS_DEPLOY_CLOUDFLARE_API_TOKEN 바인딩 없음, Secrets Store CAK_DEPLOY_CLOUDFLARE_API_TOKEN도 없음(전체 1페이지 목록에서 이름만 비교). 토큰을 사용자에게 채팅으로 요구하지 않았고 CI용 토큰의 안전한 로컬 파일 경로 전달을 안내했다. Wrangler OAuth를 장기 CI 토큰으로 복제하지 않았다.
+- 사용자의 ‘이미 자동배포 중 아닌가’ 질문에 Pages API를 직접 재조회했다. shopshorts-dash source=null, production_branch=deploy/shopshorts. 최근 5개 배포 모두 trigger=ad_hoc/success이며 최신 c053edb0/source b14a000이다. GitHub workflow 존재와 자동배포 성공을 혼동하지 않는다. 현 상태는 수동 운영 배포 성공 / 머지 기반 자동배포 미완료.
+- 남은 작업: 새 대본 수정 PR/운영 승격 승인 후 동일 기획 실생성 검증, CI 전용 토큰 등록 후 GitOps 실행 검증. 이 문서는 보류나 단위 검사 통과를 실생성 완료로 보고하지 않는다.
