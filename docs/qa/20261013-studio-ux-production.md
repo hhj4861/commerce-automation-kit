@@ -20,11 +20,15 @@
 - 별도 미디어 워커 재시작 질문에 사용자가 ‘계속’으로 승인. 정상 SIGTERM 후 KeepAlive로 재기동(PID 15337, running, 이전 종료 0). 강제 종료하지 않았다.
 - 운영 config 조회: cloud-worker, workerAt 2026-10-13T01:59:54.634Z, 확인 당시 age 5초. image/video/voice/shortsUpload/motion/animation/webtoon/hybrid/metadata capability 확인. 프로세스 존재만이 아니라 서버 heartbeat 복구 확인.
 - 시나리오 재검증은 자료 확인 뒤 `codex scenario UNKNOWN`으로 실패. 이전 CODEX_TIMEOUT과 다르다. 원래 오류의 상세 필드가 남지 않아 원인을 단정할 수 없다.
-- 생성 데이터의 길이/장면 형식 검증 오류가 UNKNOWN으로 축약되는 코드 경로를 확인해 별도 `fix/shopshorts-scenario-validation`에서 보완 중. 운영에는 아직 적용하지 않았다.
+- 생성 데이터의 길이/장면 형식 검증 오류가 UNKNOWN으로 축약되는 코드 경로를 확인해 `fix/shopshorts-scenario-validation`에서 안전한 오류 분류와 공유 1회 보완 한도를 구현했다. 80개 로컬 검사 통과, 선택 실행 검사 1개 미실행. 실제 렌더 검사도 통과했다.
+- 사용자 추가 승인 후 #207(main) merge `3f38a86f89c6e4b1170c1abb355c7e9469a24a06`, #208(deploy/shopshorts) merge `7c2011ee7e089633574ce04df1fcecaec9185319` 반영. 두 PR 필수 CI 통과, 배포 브랜치와 실제 운영 checkout 각각 계정/시나리오 통합 26개 통과.
+- 최신 운영 Pages deployment `add8d16f-dc2f-4832-a648-0d9d85fde85a`, Production / deploy/shopshorts / source 7c2011e 확인. https://add8d16f.shopshorts-dash.pages.dev . 사용자 주소 https://shopshorts-dash.pages.dev 에 적용됐다.
+- activeCount 0, hasNext false 확인 후 계정 워커를 최신 소스로 재시작. PID 14854 running / 이전 exit 0. 미디어 워커 PID 15337 running 유지.
+- #208 GitHub 자동 배포 run 38336633193도 Cloudflare credential request failed (403). 기존 Wrangler 로그인으로 수동 운영 배포 exit 0. 자동배포 자격 문제는 해결되지 않았다.
 
 ## 남은 경계
 
 - 전체 자동 실생성 E2E는 아직 미완료다. 대본 실패를 해결하고 최종 렌더까지 다시 확인해야 한다.
 - GitHub 자동 배포의 Cloudflare credential request 403은 남아 있다. 이번 Pages 수동 배포 성공과 GitOps 복구는 다르다.
-- 이번 재개 시점에는 연결된 브라우저가 없어 UI heartbeat를 다시 볼 수 없었고 공식 운영 config API로 확인했다. 기존 화면 검증 증거는 앞 절과 같다.
+- 재검증 시 CUA 브라우저 목록이 비었고 Chrome native 제어도 `Sky Computer Use native pipe startup failed`. 사용자 요청에 따라 제어 커널 초기화 후 getState를 재실행했지만 apps/browsers 모두 비었고 같은 오류였다. #208 배포 후 UI를 통한 새 대본 생성 요청은 아직 시작하지 못했다. 기존 화면 검증 증거와 API heartbeat 확인은 앞 절과 같다.
 - 신규 유료 미디어 생성/발행 없음. 기존 승인 차단은 사용자 추가 승인으로 해소됐다.
