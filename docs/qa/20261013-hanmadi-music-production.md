@@ -1,0 +1,44 @@
+# Hanmadi 음악·단어·회화 학습 — 운영 반영 (2026-10-13)
+
+## 결과
+
+PR #209·#210의 구체적인 머지·운영 배포 승인 요청에 대한 사용자의 “계속해줘” 지시로 두 PR을 main에 정상 머지하고 학습 앱 Production에 반영했다. 기존 네 언어 오리지널 곡에 단어 회상, 일상 회화, 단어장·내 표현 저장, 음악 문맥의 AI 대화 시작을 연결했다. 상용곡 가사 공급 연결은 별도이며 이번에 활성화하지 않았다.
+
+- 운영: https://hanmadi-lake.vercel.app/study
+- PR #209: https://github.com/hhj4861/commerce-automation-kit/pull/209 — merge `ba50446f6403b9945ef9258a09037afed8ce1a3e`.
+- PR #210: https://github.com/hhj4861/commerce-automation-kit/pull/210 — merge `f77f853119f99cd20c3f6c3d9204c8663d09900b`.
+- 배포: https://hanmadi-6nvar5v5l-dean-10.vercel.app — `dpl_2XdKt3bZBbg5qKSLEctfht6GxnJd`, Production **READY**, 공식 alias 연결 완료.
+- Vercel 상세: https://vercel.com/dean-10/hanmadi/2XdKt3bZBbg5qKSLEctfht6GxnJd
+- 원격 Next.js 16.3.6 빌드·TypeScript 완료. Vercel build output 생성 18초.
+
+## 소스와 배포 경계
+
+두 PR 각각 CI 5개 성공 및 정확한 head SHA를 확인하고 일반 merge를 사용했다. #209 머지 후 #210의 base를 main으로 변경했다. GitHub의 실제 통합 소스에서 Hanmadi 앱·공용 Google 인증·LiteLLM 클라이언트가 이미 검증한 소스와 동일함을 비교했다. 다른 main 변경은 보존됐다.
+
+배포용 `/Users/admin/workSpace/commerce-automation-kit-worktrees/hanmadi-music-release-20261013`은 `f77f853`의 깨끗한 detached worktree다. 앱 디렉터리가 검증한 #210 head `af6cde7`과 동일함을 다시 확인했다. 기존 공식 Vercel CLI 60.1.3 인증으로 `dean-10/hanmadi` 프로젝트를 명시해 원격 production 빌드를 실행했다. release SHA와 learner 모드를 build/runtime에 지정했다.
+
+배포 전 production 필수 설정 존재와 기존 14개 변수 목록을 확인했다. 최근 다른 세션이 제거한 Dify/accounts v1 변수 7개는 없는 상태를 유지했다. 환경변수, 관리자 앱, 공용 AI 서버, CI 인증은 변경하지 않았다. 새 비밀 값을 만들거나 다운로드하지 않았다.
+
+`deploy/hanmadi`의 조회된 최신 실행은 초기 브랜치 생성 실행 `37291015909`뿐이었다. 기존 CI 자격 연결 미완료 상태를 임의 변경하지 않았다. **이번은 승인된 수동 CLI 운영 배포이며 자동 GitOps 활성화 완료가 아니다.**
+
+## 검증
+
+| 경계 | 결과·증거 |
+|---|---|
+| 배포 identity | `verifyLearnerRelease` 통과: `/api/deployment`의 `application=hanmadi`, revision `f77f853119f99cd20c3f6c3d9204c8663d09900b` |
+| 공개·로그인 | `/study`, `/privacy` 200, Google 로그인 준비 API의 available/clientId 일치, 비로그인 관리자 API 403 |
+| 신규 API 보호 | 비로그인 `/api/study/practice-music` 401 |
+| 네 언어 음원 | 영어·일본어·태국어·스페인어 MP3 각각 HTTP 200, audio MIME, 512,462바이트. `bytes=0-1023` 요청 각각 206 및 1,024바이트 |
+| 실제 운영 UI | 로그인된 Chrome에서 새 버전 새로고침 → 음악 → 한마디 연습곡. 일본어 `小さな今日`, 네 줄 가사, 단어 퀴즈·저장 버튼·회화 화면 표시 확인 |
+| 원곡 재생 | 실제 운영 플레이어의 재생 버튼을 누른 뒤 일시중지 상태, 다시 눌러 정지 상태 확인. 원어민 청음 평가로 보고하지 않음 |
+| 회화 연결 | `おはよう`의 “아침에 친구와 만나 인사하기” → 질문 `おはよう。元気？` → 예시 답변 `おはよう。元気だよ。` 표시 확인 |
+| AI 연결 | “새 AI 대화로 연습” → 곡명·단어·뜻·상황·예시를 담은 입력창 및 “음악 회화 시작” 버튼 확인. 실제 전송은 하지 않음 |
+| 운영 오류 관측 | 이번 deployment에 한정한 직전 10분 error-level 조회 `No logs found`. 짧은 관측·해당 필터 범위에 한정 |
+
+개인 계정의 정답·말하기 완료·단어장·내 표현 기록은 변경하지 않았다. 실제 AI·TTS 유료 호출과 신규 계정 생성은 없다. 저장·중복 방지·응답 유실 재시도·새로고침 복원·계정 격리·네 언어 전체 연습은 실제 로컬 HTTP/격리 브라우저 검증으로 확인했다. 이를 운영 개인 기록 쓰기 검증과 혼동하지 않는다.
+
+로컬 검증은 전체 단위 256개, lint 오류 0, production build, 320/390/1024px 브라우저 흐름과 pageerror 0개다. [GitHub 사용자 흐름 CI](https://github.com/hhj4861/commerce-automation-kit/actions/runs/38346325602)도 통과했다. 자세한 구현·fixture 범위는 PR #210의 `docs/tasks/20261013-hanmadi-music-words-conversation.md`에 있다.
+
+운영 UI 캡처는 도구 출력으로 확인했다. 지정 iCloud 경로로 캡처 파일 저장은 브라우저 도구의 EPERM으로 실패해 저장 완료로 기록하지 않는다. 후속 화면 이동 시 검증 탭이 없어 추가 브라우저 조작은 중단했다. 앞서 확인한 운영 결과와 공개 URL 검증은 유지된다.
+
+이 문서는 현재 프로젝트 docs에 별도 보관하는 QA 기록이다. 문서 커밋 자체가 운영 배포를 다시 실행하지 않는다.
