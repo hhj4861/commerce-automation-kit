@@ -44,6 +44,12 @@
 - Vercel CLI가 설치돼 있지 않고 프로젝트 링크도 없어 변수 이름을 직접 확인하지 못했다.
 - 대신 Dify 로그로 판단했다. Hanmadi는 일일 진단 cron이 있어서 Dify를 썼다면 호출이 남는다. 9/28 이후 0건이므로 Dify를 쓰지 않는다.
 - 남은 확인(사용자): Phase 5의 D6 정리 전에 Vercel에서 `CONVERSATION_PROVIDER`·`DIFY_*`·`AI_ACCOUNTS_*`가 없는지 본다.
+- **2026-10-12 정정:** 위 판단은 틀렸다.
+  - 일일 진단 cron은 Dify를 거치지 않고 LiteLLM만 부른다. 그래서 Dify 호출이 0건이라는 것은 변수가 없다는 증거가 아니다.
+  - 9/27·9/28 QA 기록에 운영 Production 등록이 남아 있다: `CONVERSATION_PROVIDER`·`DIFY_*`(9/27), `AI_ACCOUNTS_*`(9/28). 지운 기록은 없다.
+  - 이 머신에는 이전 세션의 Vercel CLI 로그인과 프로젝트 링크가 남아 있었다. CLI 자체는 npx 캐시에만 있다.
+  - 2026-10-12에 Codex 스레드가 읽기 전용으로 확인했다. Production에 7개(`AI_ACCOUNTS_*` 3개, `DIFY_*` 3개, `CONVERSATION_PROVIDER`)가 모두 남아 있고, Preview와 팀 공용 변수에는 없다.
+  - 후속 조치는 `docs/plans/20261012-shared-ai-vm-maintenance.md` §4 선행 조건 2를 따른다.
 
 ## discovery JEV 키
 
@@ -67,4 +73,4 @@
 | 결정 기록 | 완료 |
 | state 확보 | shared-ai-host는 확보·검증 완료(plan 차이는 D0의 machine_type뿐). WIF는 적용된 적 없음(Phase 1에서 새로 만듦) |
 | VM 정상 기동과 공개 `/llm`·`/discovery` 응답 | 완료 |
-| 확인값 기록 | 완료(Hanmadi 변수는 간접 확인) |
+| 확인값 기록 | 완료(Hanmadi 변수는 간접 확인). 2026-10-12 정정: 그 간접 판단은 틀렸다(위 「Hanmadi 운영 변수」) |
