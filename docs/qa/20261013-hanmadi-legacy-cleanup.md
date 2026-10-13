@@ -32,7 +32,7 @@
 |---|---|---|
 | (a) 배포 revision | **PASS** | 공식 `/api/deployment` HTTP 200, `application=hanmadi`, `revision=2bc71787a8417d0cd315b80dab04acded829d9fb` (`04:07:50.517Z`) |
 | (b) 학습자 내 AI | **PASS — 실제 Chrome 화면** | 새 배포로 새로고침 후 「내 AI」를 열어 “개인 계정 연결 서버를 준비 중이에요. 기본 Gemini로 연습할 수 있어요.” 표시를 확인했다. 개인 학습 설정·진도·대화는 변경하지 않았다. |
-| (c) 튜터 회화 안내 | **미검증 — 점검 이후로 보류** | `/conversation?language=ja&mode=free`는 튜터 로그인 안내를 표시했다. 현재 브라우저의 학습자 로그인은 튜터 권한이 아니다. PIN은 조회·출력·추정하지 않았고 인증을 우회하지 않았다. “이 앱은 대화 내용을 서버에 저장하지 않아요” 안내는 아직 실제 화면에서 확인하지 못했다. Claude의 W1 시작 통지에서 이 검증을 점검 뒤로 미룬다는 결정을 전달받았다. |
+| (c) 튜터 회화 안내 | **미검증 — 기존 튜터 인증 필요** | `/conversation?language=ja&mode=free`는 튜터 로그인 안내를 표시했다. 현재 브라우저의 학습자 로그인은 튜터 권한이 아니다. PIN은 조회·출력·추정하지 않았고 인증을 우회하지 않았다. “이 앱은 대화 내용을 서버에 저장하지 않아요” 안내는 아직 실제 화면에서 확인하지 못했다. 점검 종료 후에도 동일한 인증 요구를 확인했다. |
 | (d) 퇴역 경로 호출 | **보조 확인: 조회 0건** | 새 READY 시각 이후 Cloud Run `shared-ai` 로그에서 UA `node` 및 `/accounts`, `/v1/chat-messages`, `/v1/workflows/run`을 조회했을 때 `[]`였다. 짧은 관측 기간이며 로그 지연·기존 클라이언트는 별도 고려한다. (b)·(c)의 대체 증거로 쓰지 않는다. |
 
 추가: 새 배포의 Vercel error 로그를 직전 15분 범위로 조회했으나 항목이 없었다. 이것을 모든 요청의 오류 부재로 일반화하지 않는다. 모델·음성 공급자 호출은 0회이며, 유료 회화 전송은 하지 않았다.
@@ -54,3 +54,14 @@
 - Git 기록상 `f77f853`은 음악 학습 PR #210 머지이며 #209의 머지 `ba50446`을 포함한다. [별도 운영 기록](20261013-hanmadi-music-production.md)은 새 배포 `dpl_2XdKt3bZBbg5qKSLEctfht6GxnJd` 및 퇴역 변수 7개를 제외한 기존 14개 유지 확인을 기록하고 있다. 이 문서의 설정 정리 배포와 후속 음악 배포는 별개다.
 - 이번 Vercel 관리 API의 현재 배포 상세 조회는 HTTP 403으로 실패해 최신 환경변수 목록을 직접 재조회하지 못했다. 공개 revision과 위 별도 운영 기록을 구분해 보존한다. 인증을 변경하거나 접근 제한을 우회하지 않았다.
 - 두 revision 사이 `conversation-provider.ts`, `model-connections.ts`, `app/conversation`, `components/model-conversation.tsx`의 Git 차이는 없었다. 코드 동일성은 (c)의 실제 운영 화면 확인을 대체하지 않으며 **(c)는 계속 미검증**이다.
+
+## 현재 운영 버전 후속 검증 — 11:53~11:55 UTC
+
+사용자의 후속 진행 요청으로 `f77f853`에서 확인 가능한 검증을 이어갔다. 새 코드·배포·환경변수·학습 진도 변경은 없다.
+
+- **관리 조회 재확인:** 공식 Vercel CLI 60.1.3 `project inspect`로 `dean-10/hanmadi`와 프로젝트 ID를 확인했다. `env ls production`의 메타데이터만 출력한 결과 `11:53:04.180Z`에 14개가 존재하고 퇴역 변수 7개는 없었다. `LITELLM_*` 6개도 유지됐다. 앞선 직접 REST API의 403 원인은 확정하지 않았지만, 공식 CLI를 통한 현재 설정 재조회는 성공했다. 민감 변수 값은 조회·출력·저장하지 않았다.
+- **현재 배포:** CLI `inspect`에서 `dpl_2XdKt3bZBbg5qKSLEctfht6GxnJd`가 Production READY이고 공식 alias 두 개가 연결된 것을 직접 확인했다. `(a)` 공개 `/api/deployment`도 `11:55:49.237Z`에 200과 `f77f853119f99cd20c3f6c3d9204c8663d09900b`를 반환했다.
+- **(b) 현재 버전의 실제 Chrome 확인:** `/study` → 「내 AI」에서 “개인 계정 연결 서버를 준비 중이에요. 기본 Gemini로 연습할 수 있어요.”를 확인했다. 기본 Gemini가 선택돼 있었으며 연결 동의·계정 연결·모델 선택·대화 전송은 하지 않았다.
+- **(d) 점검 종료 뒤 로그:** `2026-10-13T10:54:00Z`부터 `11:55:49.237Z`까지 Cloud Run `shared-ai`의 UA `node` 및 `/accounts`, `/v1/chat-messages`, `/v1/workflows/run` 요청 조회 결과는 **0건**이었다(조회 한도 100). 조회 시점의 수집 지연 가능성을 포함한 이 범위의 결과이며, 앞으로의 모든 요청을 보증하지 않는다.
+- **(c)의 로그인 없는 보조 검증:** 운영 소스는 Dify·명시 provider 설정이 없으면 LiteLLM을 선택하고, `/conversation`은 그 provider가 Dify일 때만 `storesConversation=true`를 전달한다. 일반 회화 컴포넌트는 false일 때 저장 안 함 안내를 표시한다. 해당 소스·테스트·관련 의존 파일과 lockfile이 운영 revision과 같은 기존 `hanmadi-language-music-20261013` checkout에서 `conversation-provider.test.ts`와 `model-connections.test.ts` **12개가 통과**했다. 가짜 전송을 주입한 단위 검증이며 실제 공급자 호출은 없다.
+- **남은 한계:** 현재 `/conversation`은 여전히 튜터 로그인 안내를 표시한다. 위 코드·설정·단위 테스트는 인증된 운영 화면의 렌더링이나 실제 튜터 회화 요청을 대신하지 않는다. **(c) 실제 화면 확인만 미검증으로 유지**하고, 기존 튜터 인증이 가능해지면 이어서 확인한다. 인증 우회나 새 튜터 권한 생성은 하지 않았다.
