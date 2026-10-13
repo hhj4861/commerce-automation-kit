@@ -50,3 +50,7 @@ ElevenLabs 공식 Music v2 API의 기존 플랜 크레딧으로 총 5회 생성(
 - 첫 CI(`38337540825`, `f6d9211`)는 기본 빌드·단위·기존 학습/대화/단어장 검사를 통과했지만 음악 시험의 언어 전환 직후 동기식 개수 검사가 실패했다. 설정 저장·프로필 반영 전에 메뉴를 세던 시험을 화면 표시 대기로 수정했다. 최종 실행과 캡처 검토 결과는 [PR #209](https://github.com/hhj4861/commerce-automation-kit/pull/209)의 본문·Checks에 기록한다. 사용자 Chrome은 확장 UI 차단 후 연결 불가 상태라 직접 화면 E2E는 완료하지 못했다. API 통과를 운영 브라우저 E2E 통과로 취급하지 않는다.
 
 증적: 지정 iCloud 작업 루트 `gpt 작업/commerce-automation-kit/hanmadi-language-music-20261013/`의 `language-live.json`, `audio-live.json`, `music-th-take2/audio-live.json`, 단위·lint·build 로그. 로그인 쿠키·검증 비밀번호·공급자 키는 증적에 저장하지 않았다. 테스트 계정은 로그아웃했으며 합성 진도는 해당 별도 계정에만 남는다.
+
+## CI 화면 검증 후 보완
+
+수정 커밋 `5cb58a5`의 [Hanmadi user journeys 실행](https://github.com/hhj4861/commerce-automation-kit/actions/runs/38338341202)이 통과했다. 원곡 4개 실제 재생·TTS 전환 정지·뜻 숨기기·자가 연습·오답/정답·완료·새로고침·반복과 320/390/1024px 검사가 통과했고 브라우저 오류는 0개였다. 캡처에서 초기 플레이어가 `0:00 / 0:00`으로 보여 길이 메타데이터를 미리 읽도록 개선했다. 최종 CI는 재생 전 30~34초 길이 확인 및 가사/복습 화면 캡처도 포함한다.

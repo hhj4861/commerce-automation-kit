@@ -190,6 +190,7 @@ try {
     await page.getByLabel("학습 언어", { exact: true }).selectOption(song.language);
     await page.getByRole("button", { name: "음악", exact: true }).click();
     await page.getByRole("heading", { name: song.title, exact: true }).waitFor();
+    await page.waitForFunction(() => { const a = document.querySelector(".hm-song-player audio"); return a && Number.isFinite(a.duration) && a.duration > 30 && a.duration < 34; });
     for (const width of [320, 390, 1024]) {
       await page.setViewportSize({ width, height: 844 });
       assert(await page.locator(".hm-original-music").evaluate(el => el.scrollWidth <= el.clientWidth + 1));
@@ -205,6 +206,8 @@ try {
     await page.getByRole("button", { name: "뜻 가리기", exact: true }).click();
     assert.equal(await page.locator(".hm-lyrics-meaning").count(), 0);
     await page.getByRole("button", { name: "뜻 보기", exact: true }).click();
+    await page.locator(".hm-lyrics-line").scrollIntoViewIfNeeded();
+    await page.screenshot({ path: resolve(dir, `original-${song.language}-lyrics.png`) });
     for (let i = 0; i < 4; i++) {
       await page.getByText(`연습 ${i + 1} / 4`, { exact: true }).waitFor();
       await page.getByRole("button", { name: "따라 불렀어요", exact: true }).click();
@@ -216,6 +219,8 @@ try {
     await page.getByRole("button", { name: "뜻 복습 시작", exact: true }).click();
     await page.getByRole("button", { name: song.lines[1].meaning, exact: true }).click();
     await page.getByText("한 번 더 생각해 보세요.", { exact: true }).waitFor();
+    await page.getByRole("region", { name: "연습곡 뜻 복습", exact: true }).scrollIntoViewIfNeeded();
+    await page.screenshot({ path: resolve(dir, `original-${song.language}-review.png`) });
     for (let i = 0; i < 4; i++) {
       await page.getByText(`복습 ${i + 1} / 4`, { exact: true }).waitFor();
       await page.getByRole("button", { name: song.lines[i].meaning, exact: true }).click();

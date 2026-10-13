@@ -105,7 +105,7 @@ function SongPractice({ song, initial, onProgress }: { song: PracticeSong; initi
     <ol className="hm-song-steps" aria-label="음악 학습 순서"><li>노래 듣기</li><li>한 줄씩 따라 부르기</li><li>뜻 떠올리기</li></ol>
     {stage !== "complete" && <section className="hm-song-player" aria-label="연습곡 듣기">
       <label htmlFor={`audio-${song.id}`}>노래 전체 듣기 · 반복 재생 가능</label>
-      <audio key={audioAttempt} id={`audio-${song.id}`} ref={player} controls preload="none" loop={loop && segment === null} src={song.audio} onTimeUpdate={timeUpdate}
+      <audio key={audioAttempt} id={`audio-${song.id}`} ref={player} controls preload="metadata" loop={loop && segment === null} src={song.audio} onTimeUpdate={timeUpdate}
         onPlay={() => setAudioEpoch(v => v + 1)} onError={() => setAudioError(true)} onLoadedData={() => setAudioError(false)} />
       <button disabled={busy} onClick={() => void playSong()}>처음부터 노래 전체 듣기</button>
       <label className="hm-song-loop"><input type="checkbox" checked={loop} onChange={e => setLoop(e.target.checked)} /> {segment === null ? "노래 반복" : "현재 줄 반복"}</label>

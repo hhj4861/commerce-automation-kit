@@ -14,4 +14,4 @@ Each line playback window is based on returned word alignment, checked against a
 
 Generation: `scripts/generate-practice-music.py` with a JSON export of `practiceSongs`, an artifact directory, one `--language`, and `--confirm-paid`. No automatic paid retries or overwrites. `--shared-ai` runs the provider request in memory on the existing VM without copying its API key or changing services. See [official composition plan schema](https://elevenlabs.io/docs/eleven-api/guides/how-to/music/composition-plans).
 
-Thai regeneration uses `--single-verse` to avoid an extra greeting between chunks. Five successful 32-second generations were made; only the four selected final files ship. No native-speaker listening or browser playback review is claimed.
+Thai regeneration uses `--single-verse` to avoid an extra greeting between chunks. Five successful 32-second generations were made; only the four selected final files ship. Browser CI verified actual playback of each selected file. No native-speaker listening review is claimed.
