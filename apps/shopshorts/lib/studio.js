@@ -41,6 +41,7 @@ export function validateScenes(scenes, {animationStyle = false, stripMotion = fa
   if (!Array.isArray(scenes) || !scenes.length || scenes.length > 100) fail('장면은 1~100개 필요합니다.');
   const ids = new Set();
   return scenes.map((scene, i) => {
+    try {
     const id = scene.id || `scene-${i + 1}`;
     if (!/^[a-z0-9-]{1,60}$/.test(id) || ids.has(id)) fail('장면 ID가 중복되거나 잘못되었습니다.');
     ids.add(id);
@@ -51,6 +52,10 @@ export function validateScenes(scenes, {animationStyle = false, stripMotion = fa
     if(scene.shot!==undefined&&!SHOTS.includes(scene.shot))fail('지원하지 않는 장면 구도입니다.');
     const motion=stripMotion?undefined:validateMotionScene(scene,i,{animationStyle});
     return { ...(scene.hybrid!==undefined?{hybrid:hybridScene(scene.hybrid,scene)}:{}), id, narration: scene.narration.trim(), prompt: scene.prompt.trim(), duration: scene.duration, kind: scene.kind, ...(scene.camera?{camera:scene.camera}:{}), ...(scene.shot?{shot:scene.shot}:{}), ...(scene.animation!==undefined?{animation:animationPlan(scene.animation)}:{}), ...(motion?{motion}:{}), ...(scene.webtoon!==undefined?{webtoon:webtoonPlan(scene.webtoon)}:{}), ...(scene.visualDirection!==undefined?{visualDirection:visualDirection(scene.visualDirection)}:{}) };
+    } catch(error) {
+      if(error.validationIssue)error.validationIssue={...error.validationIssue,path:`scenes[${i}].${error.validationIssue.path}`};
+      throw error;
+    }
   });
 }
 export function validateEdit(input, job) {
