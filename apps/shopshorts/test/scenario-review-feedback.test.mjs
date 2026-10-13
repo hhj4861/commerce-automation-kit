@@ -9,7 +9,8 @@ const scenario={title:'유리의 연결',scenes:[{id:'scene-1',narration:'유리
 test('malformed review repairs the same draft once and still rejects weak content',async()=>{
  const good=mockReview(await reviewPrompt(brief,scenario),['mechanism']);
  let calls=0;
- const result=await reviewDepth(brief,scenario,{generate:async prompt=>{
+ const result=await reviewDepth(brief,scenario,{generate:async (prompt,options)=>{
+  assert.equal(options.draftOnly,true);
   calls++;
   if(calls===1)return {value:{checks:{},digest:'wrong'}};
   assert.match(prompt,/대본은 변경하지/);assert.match(prompt,new RegExp(good.value.digest));
