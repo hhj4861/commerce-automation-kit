@@ -38,6 +38,7 @@ export type Profile = {
   completedLessons?: Record<string, { at: number; phrases: number }>;
 };
 export type StudyState = {
+  originalMusicProgress?: Record<string, import("./original-music").SongProgress>;
   musicProgress?: Record<string, { revision: string; index: number }>;
   revision: number;
   saveEpoch: number;

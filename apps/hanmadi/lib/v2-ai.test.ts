@@ -842,3 +842,16 @@ test("bad Japanese pronunciation is repaired across chat, learner and both trans
   const translated=await translate("커피 주세요.","ja","ko",async()=>JSON.stringify({translated:phrase.text,reading:phrase.reading,practice:bad}));
   assert.equal(translated.practice,null,"invalid practice must not be saved even when main translation is valid");
 });
+
+
+test("live Japanese order without a temperature cannot be silently made hot", async () => {
+  const incorrect = { text: "温かいコーヒーですね。店内でお召し上がりですか？", meaning: "따뜻한 커피군요. 매장에서 드시나요?", reading: "아타타카이 코오히이데스네. 텐나이데 오메시아가리데스카?" };
+  const corrected = { text: "コーヒーですね。店内でお召し上がりですか？", meaning: "커피군요. 매장에서 드시나요?", reading: "코오히이데스네. 텐나이데 오메시아가리데스카?" };
+  let calls = 0;
+  const reply = await roleplayReply("ja", 1, "cafe", [{role:"user",content:"コーヒーを一つください。"}], "default", async () => JSON.stringify(++calls === 1 ? incorrect : corrected));
+  assert.equal(calls, 2); assert.deepEqual(reply, corrected);
+  const { dialogueIssue } = await import("./study-quality");
+  assert.equal(dialogueIssue("温かいコーヒーをください。", incorrect, "ja", "cafe"), null);
+  assert.equal(dialogueIssue("コーヒーを一つください。", { ...incorrect, text:"温かいコーヒーですか？" }, "ja", "cafe"), null);
+  assert.equal(dialogueIssue("コーヒーを一つください。", incorrect, "ja", "hotel"), null);
+});

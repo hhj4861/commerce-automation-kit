@@ -4,7 +4,7 @@ import { pretender } from "@/lib/v2-music";
 import type { MusicLyricsResult } from "@/lib/music-lyrics";
 import { LyricsPractice } from "./v2-lyrics";
 
-export function MusicStudy() {
+export function LicensedMusicStudy() {
   const [playing, setPlaying] = useState(false);
   const [result, setResult] = useState<MusicLyricsResult | null>(null);
   const [error, setError] = useState("");
