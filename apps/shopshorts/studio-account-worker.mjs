@@ -32,7 +32,7 @@ const transient = error => error?.name === 'TimeoutError' ||
 const withoutHistory = ({ recommendations, ...value }) => value;
 const LEASE_MS = 120000; // Covers a bounded read/write retry; job deadline still wins.
 
-export function startAccountWorker({ env = process.env, call = accountBroker(env), execute = executeProviderJob, intervalMs = 5000, log = console.error, keepAlive = false, retryDelayMs = 250 } = {}) {
+export function startAccountWorker({ env = process.env, call = accountBroker(env), execute = executeProviderJob, intervalMs = 5000, log = console.error, keepAlive = false, retryDelayMs = 250, renewIntervalMs = 10000 } = {}) {
   const ownerId = randomUUID(), tasks = new Map(); let cursor = null, polling = false, stopped = false;
   const accountCall = async body => {
     for (let attempt = 0; ; attempt++) {
@@ -78,7 +78,14 @@ export function startAccountWorker({ env = process.env, call = accountBroker(env
       return next;
     };
     const deadline = setTimeout(() => controller.abort(), Math.max(1, initial.job.deadline - Date.now()));
-    const renew = setInterval(() => update({}).catch(() => {}), 10000);
+    // Keep at most one renewal pending: slow broker calls must not queue ahead
+    // of progress, credential rotation or final completion indefinitely.
+    let renewing = false;
+    const renew = setInterval(() => {
+      if (renewing || controller.signal.aborted) return;
+      renewing = true;
+      update({}).catch(() => {}).finally(() => { renewing = false; });
+    }, renewIntervalMs);
     const task = { controller, done: null };
     tasks.set(owner, task);
     task.done = (async () => {

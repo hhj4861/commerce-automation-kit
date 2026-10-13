@@ -106,7 +106,10 @@ export async function executeAccountJob(value, { signal, update, read, subject, 
     await rpc.close(); rpc = null;
     if (value.job.kind === 'connect') { await update({ job: { state: 'done', device: null } }); return; }
     try {
-      const result = await (value.job.kind === 'scenario' ? scenarioBrief : recommendBrief)(value.job.input, env, { history: value.recommendations, subject, requestId:value.job.id, assertConnection, onProgress:phase=>update({job:{phase}}), generate: generator({ env: runtime }), signal });
+      // Scenario drafts include research, scene direction and a separate review.
+      // Allow a longer individual call; the worker's persisted deadline and
+      // cancellation signal still cap the entire job (including all calls).
+      const result = await (value.job.kind === 'scenario' ? scenarioBrief : recommendBrief)(value.job.input, env, { history: value.recommendations, subject, requestId:value.job.id, assertConnection, onProgress:phase=>update({job:{phase}}), generate: generator({ env: runtime, timeoutMs: value.job.kind === 'scenario' ? 360000 : 180000 }), signal });
       await persist({ credential: await credential(), job: { state: 'done', result } });
     } catch (e) {
       // Official CLI may rotate even on a failed generation; persist before cleanup.
