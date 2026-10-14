@@ -6,6 +6,7 @@ import { Speaker } from "./v2-speaker";
 import { studyAudio } from "@/lib/study-audio-client";
 import { Dialog } from "./v2-dialog";
 import { Wordbook } from "./v2-wordbook";
+import { WordStudy } from "./v2-word-study";
 import { Vocabulary } from "./v2-vocabulary";
 import { MusicStudy } from "./v2-original-music";
 import { V2Lesson } from "./v2-lesson";
@@ -953,12 +954,17 @@ export function V2App() {
             <>
               {tab === "study" && (
                 <>
-                  <nav className="hm-segments" aria-label="학습 보기">
+                  <nav className="hm-study-modes" aria-label="학습 방식">
+                    {[["today", "회화", "chat"], ["vocabulary", "단어", "dictionary"], ["music", "음악", "music"]].map(([id, label, icon]) => (
+                      <button key={id} aria-pressed={id === "today" ? !["vocabulary", "music"].includes(section) : section === id}
+                        onClick={() => { setSection(id); setSceneDetail(false); }}><Icon name={icon} />{label}</button>
+                    ))}
+                  </nav>
+                  {!["vocabulary", "music"].includes(section) && <nav className="hm-segments" aria-label="회화 학습 보기">
                     {[
                       ["today", "오늘 추천"],
                       ["levels", "레벨별"],
                       ["scenes", "상황별"],
-                      ["music", "음악"],
                     ].map(([id, label]) => (
                       <button
                         key={id}
@@ -972,7 +978,7 @@ export function V2App() {
                         {label}
                       </button>
                     ))}
-                  </nav>
+                  </nav>}
                   {!identity && (
                     <div className="hm-guest">
                       <button onClick={() => setModal("login")}>
@@ -980,6 +986,8 @@ export function V2App() {
                       </button>
                     </div>
                   )}
+                  {section === "vocabulary" && <WordStudy key={language} language={language} expressions={state.expressions}
+                    onSaved={apply} onWordbook={() => setTab("words")} />}
                   {section === "music" && (
                     <MusicStudy key={language} language={language} expressions={state.expressions} onSaved={apply} onConversation={prompt => {
                       setScene("smalltalk"); setChat([]); setChatInput(prompt); setMusicConversation(prompt); setTab("chat"); setError("");
@@ -1844,7 +1852,7 @@ export function V2App() {
               )}
               {tab === "words" && (
                 <Wordbook key={language} language={language} words={due.filter(isVocabulary)} busy={busy}
-                  onStudy={() => setTab("study")}
+                  onStudy={() => { setTab("study"); setSection("vocabulary"); }}
                   onRemove={id => { void run({ action: "remove-word", id }); }}
                   onReview={(id, confidence) => { void run({ action: "practice", id, confidence }); }} />
               )}
