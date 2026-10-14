@@ -1,6 +1,16 @@
 # Shopshorts 운영 제작 파이프라인 인수인계 — 2026-10-14
 
-## 새 세션에서 먼저 볼 결론
+## 최신 후속 구현 — 조사 답변 검증 (운영 미반영)
+
+- 사용자 ‘진행해줘/계속’으로 공통 조사→대본 경로를 보완했다. [#236 main](https://github.com/hhj4861/commerce-automation-kit/pull/236), source `34a5187`; [#237 deploy/shopshorts](https://github.com/hhj4861/commerce-automation-kit/pull/237), release `e4afa16`. 각각 전용 upstream push 완료. **두 새 PR의 명시적 머지 승인은 아직 없으며, 이번 수정의 Pages·워커 배포도 하지 않았다.**
+- 조사 자료가 선택 질문에 답하는지 독립 검토하고, 부족한 항목만 한 번 추가 조사한다. 통과한 답을 대사·최종 검토에 연결한다. 끝내 부족하면 대본 작성 전 중단하며 부족 항목과 검토 형식 오류를 구분한다. 기존 대본 품질 검토·기획·음성·예산·제한 시간은 유지한다.
+- source/release 각각 통합98검사 통과(0fail/0skip). 유료 공급자 시험 응답을 사용한 실제 렌더·CLI 공통 경로·워커/브로커 오류 전달 포함. 긴 테스트 소켓 경로로 앞선 3검사가 실패했지만 동일 iCloud 폴더의 짧은 링크로 재실행해 모두 통과했다. 임시 의존성/출력 링크는 제거했다.
+- 같은 수원 질문으로 공식 로컬 Codex 실호출: 초기 조사→독립 거부→보충 조사까지 완료(호출당360초, 총404초). 마지막 호출은 CODEX_REQUEST_FAILED. 저장한 공개 보충 자료에 대한 마지막 검토만 한 번 재실행해 정상 종료/5항목 불충분 판정을 받았다. 돌출의 측면 공격 원리는 찾았으나 ‘작은 구멍 선택 이유’는 보충 후에도 미확인이었다. **거부 경로를 확인한 것이며 전체 실생성 성공이 아니다.** 운영 격리 계정 대신 로컬 운영자 로그인으로 검증했으므로 환경 동일성도 주장하지 않는다.
+- 실제 자료/로그: iCloud `commerce-automation-kit/research-answer-gate/`의 `live-v2-call-{1,2,3}.json`, `live-v2-final-review.json`, `final-shortpath-tests.log`, `release-tests.log`. 생성된 조사 요약은 원문 전체를 독립 검증한 자료와 구분한다. 토큰/인증정보는 기록하지 않았다.
+- 다음: #236·#237 명시적 승인→정확한 head/CI 재확인→운영 반영. 동일 질문 실생성은 여전히 미완료이며 근거를 추가 확보하거나 사용자가 질문을 좁히도록 승인해야 할 수 있다. 다른 질문으로 몰래 전환하거나 검토를 완화하지 않는다. CI 전용 배포 자격의 기존503 문제도 별개로 남아 있다.
+- 구현 worktree는 `scenario-review-feedback`, branch `fix/shopshorts-research-answer-gate`; 승격은 `studio-workspace-release`, branch `release/studio-research-answer-gate`. 아래 과거 경로 표의 branch/head는 #227 시점 기록이다. source base48d1dfe, release based87324e에 있던 타 세션 Hanmadi/Kandinsky 변경은 보존했다. 운영 현재 head는 반영 전 새로 확인한다.
+
+## #227 시점 운영 검증 결론
 
 **PR #226·#227 머지와 운영 Pages·두 워커 반영은 완료됐다. 전체 실생성 E2E는 대본 내용 검토 실패로 미완료다.** 사용자 ‘머지해줘’로 승인받아 main `62758a88fb3586d4daa07c770de36a95642e3286`, deploy/shopshorts `eb32c9a4956a04251838302cfb05b2d785929447`에 머지했다. Pages `1f5e8e1c-9a4a-422b-a093-4ee86d6323af` 수동 배포 exit0, 공식 목록의 Production/deploy/shopshorts/source eb32c9a를 확인했다. 검증된 승격 head a54e8a8과 운영 merge의 전체 tree diff는 0이다.
 
