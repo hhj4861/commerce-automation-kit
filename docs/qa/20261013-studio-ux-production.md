@@ -126,3 +126,14 @@
 - 후속으로 조사 단계의 질문 중심 인과 검색과 작성 단계의 구체적 행동/결과 지침을 보강했다. 원본 4ade2cb, 운영 승격 1e46b90, 각 upstream push 완료. 각 브랜치에서 기존 67검사 + 조사/옵션 2검사 통과(비관련 렌더 등 5개는 필터 제외). 프롬프트 개선의 의미 품질은 아직 실 LLM으로 검증하지 않았다.
 - PR #223(main): https://github.com/hhj4861/commerce-automation-kit/pull/223 / PR #224(deploy/shopshorts): https://github.com/hhj4861/commerce-automation-kit/pull/224 . 두 새 PR은 아직 사용자 머지 승인 전이며 운영 미반영.
 - GitHub 자동배포 run 38400297168은 Cloudflare credential request failed (503). 기존 CI 전용 토큰 미등록 문제가 남아 있으며 수동 운영 배포 성공과 구분한다.
+
+## 2026-10-14 #223·#224 승인·머지·Pages 반영과 인수인계
+
+- 사용자 ‘응 진행해주고…새로운세션에 인수인계가능하도록…문서로 저장’ 승인에 따라 #223 main merge `1d9c69ed8ba3f8e2400f06beb2778fa5fbbcc1a5`, #224 deploy merge `1cec2cef08ade129569af771ee7592eb928ce22c` 완료. 승인된 head/CI 성공을 다시 확인했다.
+- 운영 checkout clean 확인, 검증된 승격 head1e46b90과 운영 merge 전체 tree diff0 확인 후 detached exact merge로 전환했다.
+- Wrangler Pages 배포 exit0. 공식 API에서 deployment `e6f4d2ea-9703-4189-a1b7-a945f815c4c6`, production/deploy/shopshorts/exact1cec2ce/success/ad_hoc 확인. 완료 08:19:40 KST, https://e6f4d2ea.shopshorts-dash.pages.dev 및 운영 도메인 반영.
+- 정상 서명/환경의 계정 runner 집계 poll은 HTTP429 HTML을 반환했다. 응답 제목은 Cloudflare의 ‘This website has been temporarily rate limited’. retry-after 없음. 일일 쿼터/WAF 등 구체적 원인은 미확정이며 애플리케이션의 중복 요청 방지 JSON과 구분한다.
+- 활성0건 확인 불가로 계정 워커 재시작하지 않았다. 소스 checkout 갱신과 실행 중 프로세스 적용을 구분한다. 공용 broker/미디어 워커 배포·재시작 없음.
+- 새 Chrome 탭에서 운영 UI 로그인 상태 확인 실패, 작업 목록의 HTML→JSON 파싱 실패 확인. 새 대본 생성은 요청하지 않았고 신규 유료 미디어/TTS/렌더/업로드 없음. 전체 E2E는 여전히 미완료다.
+- 최신 GitOps run38483105758 실패 원인은 credential429. 이전503(CI 토큰 미등록)은 별도 미해결이며 최신 실패 원인을 과거503으로 단정하지 않는다.
+- 새 세션 인수인계: [20261014-shopshorts-production.md](../handoffs/20261014-shopshorts-production.md). 실제 반영 상태·승인·경로·검증·재개 순서·잔여 장애를 정리했다. 문서 저장을 다른 열린 세션 수신이나 전체 작업 완료라고 보고하지 않는다.
