@@ -11,7 +11,7 @@
 - [PR #242](https://github.com/hhj4861/commerce-automation-kit/pull/242), 커밋 `07e47d2`: 시간 편집, TXT/SRT/VTT/LRC, 재생 줄 강조·구간 탐색/반복·속도, 번역/발음 표시를 기존 학습에 연결.
 - 단위 263개·타입·린트·빌드, 네 언어 음악 E2E 2종 통과. GitHub CI 2개 모두 PASS(2026-10-14 08:53:48 UTC, study 7m19s).
 - 공식 YouTube API 샘플 영상 실재생 동기화도 확인. Pretender 임베드는 재생 불가여서 해당 곡 실재생은 미검증이며 원문도 아직 미등록.
-- 구현 브랜치에 커밋·push 완료. PR은 OPEN/MERGEABLE/CLEAN, 운영 미반영. 다음은 PR #242에 대한 명시적 머지 승인.
+- 사용자 승인 후 PR #242를 main에 머지했고, 승격 PR #245·#246으로 학습자·관리자 운영 배포 완료(2026-10-14). 운영 일본어 연습곡에서 동기화 강조·0.75배속·줄 반복·번역 표시를 직접 확인했다. [운영 검증 기록](../qa/20261014-hanmadi-synced-lyrics-production.md).
 
 ## 이전 조사 결론 (현재 실행 계획 아님)
 
