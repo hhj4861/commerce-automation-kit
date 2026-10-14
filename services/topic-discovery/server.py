@@ -94,11 +94,20 @@ def make_server(address, discovery, keys):
     server.daemon_threads = False
     return server
 
+def configured_store(env):
+    if env.get("DISCOVERY_DATABASE_URL"):
+        from pgstore import PostgresStore
+        return PostgresStore(env["DISCOVERY_DATABASE_URL"])
+    if env.get("K_SERVICE"):
+        raise ValueError("Cloud Run discovery requires PostgreSQL")
+    return Store(env["DISCOVERY_DB"])
+
+
 if __name__ == "__main__":
     os.umask(0o077)
-    if not all(os.environ.get(k) for k in ("DISCOVERY_DB", "DISCOVERY_PLATFORM_KEYS", "NAVER_CLIENT_ID", "NAVER_CLIENT_SECRET", "JEV_BASE_URL", "JEV_API_KEY")):
+    if not all(os.environ.get(k) for k in ("DISCOVERY_PLATFORM_KEYS", "NAVER_CLIENT_ID", "NAVER_CLIENT_SECRET", "JEV_BASE_URL", "JEV_API_KEY")):
         raise SystemExit("Discovery server configuration is incomplete")
-    discovery = Discovery(Store(os.environ["DISCOVERY_DB"]), NaverSearch(os.environ["NAVER_CLIENT_ID"], os.environ["NAVER_CLIENT_SECRET"]), Jev(os.environ), per_day=int(os.environ.get("DISCOVERY_REQUESTS_PER_DAY", "30")))
+    discovery = Discovery(configured_store(os.environ), NaverSearch(os.environ["NAVER_CLIENT_ID"], os.environ["NAVER_CLIENT_SECRET"]), Jev(os.environ), per_day=int(os.environ.get("DISCOVERY_REQUESTS_PER_DAY", "30")))
     if not 1 <= discovery.per_day <= 1000:
         raise SystemExit("Invalid request budget")
     server = make_server((os.environ.get("DISCOVERY_BIND", "127.0.0.1"), int(os.environ.get("PORT", "4195"))), discovery, json.loads(os.environ["DISCOVERY_PLATFORM_KEYS"]))

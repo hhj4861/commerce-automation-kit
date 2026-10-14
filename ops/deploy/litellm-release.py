@@ -12,7 +12,9 @@ import subprocess
 import sys
 import time
 
-FILES = ('gateway.py', 'subscriptions.py', 'subscription_runtime.py', 'compose.yaml')
+FILES = ('gateway.py', 'compose.yaml')
+RENDER = ('python3', 'gateway.py', 'render')
+PINNED_IMAGE = re.compile(r'image: ghcr[.]io/berriai/litellm@sha256:[a-f0-9]{64}')
 
 
 def run(args, cwd, stdout=subprocess.DEVNULL):
@@ -23,22 +25,12 @@ def run(args, cwd, stdout=subprocess.DEVNULL):
 
 
 def compose(root, action):
-    args = ['docker', 'compose', '-p', 'shared-ai-gateway', '-f', str(root / 'compose.yaml')]
-    if (root / '.runtime/subscriptions.compose.json').exists():
-        args += ['-f', str(root / '.runtime/subscriptions.compose.json')]
-    return args + action
-
-
-def services(root):
-    overlay = root / '.runtime/subscriptions.compose.json'
-    names = list(json.loads(overlay.read_text())['services']) if overlay.exists() else ['gateway']
-    if 'gateway' not in names or any(name != 'gateway' and not re.fullmatch(r'codex-[a-z][a-z0-9-]{0,31}', name) for name in names):
-        raise ValueError('Unexpected services in subscription overlay')
-    return names
+    # Only the gateway is released. Subscription worker overlays (retired, D5) are ignored.
+    return ['docker', 'compose', '-p', 'shared-ai-gateway', '-f', str(root / 'compose.yaml')] + action
 
 
 def generated(runtime):
-    return [runtime / name for name in ('litellm.json', 'subscriptions.env', 'subscriptions.compose.json')] + list(runtime.glob('subscriptions/*/config.json'))
+    return [runtime / 'litellm.json']
 
 
 def release(source, sha, home=Path('/opt/shared-ai'), execute=run):
@@ -48,6 +40,8 @@ def release(source, sha, home=Path('/opt/shared-ai'), execute=run):
     for name in FILES:
         if not (source / name).is_file() or (source / name).is_symlink():
             raise ValueError('Missing release source')
+    if not PINNED_IMAGE.search((source / 'compose.yaml').read_text()):
+        raise ValueError('The gateway must use a pinned LiteLLM image.')
     state = home / 'gitops'
     state.mkdir(mode=0o700, exist_ok=True)
     with ExitStack() as stack:
@@ -59,10 +53,6 @@ def release(source, sha, home=Path('/opt/shared-ai'), execute=run):
         if not old.is_relative_to(home.resolve()) or not (old / '.env').is_file() or not (old / '.runtime').is_dir():
             raise ValueError('Existing private state is missing; initial provisioning is not a deployment')
         runtime = (old / '.runtime').resolve()
-        accounts = runtime / 'subscriptions'
-        accounts.mkdir(mode=0o700, exist_ok=True)
-        account_lock = stack.enter_context((accounts / '.lock').open('a'))
-        fcntl.flock(account_lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         destination = home / 'releases' / f'gitops-litellm-{sha}'
         if destination.exists():
             raise ValueError('This immutable revision already has a release directory; use a new reviewed commit')
@@ -83,12 +73,11 @@ def release(source, sha, home=Path('/opt/shared-ai'), execute=run):
                 item = backup / f'config-{index}'; item.write_bytes(value); item.chmod(0o600)
         started = False
         try:
-            # The parent holds the CLI's lock throughout render, restart and rollback.
-            execute(['python3', '-c', 'from subscriptions import write_configs; write_configs()'], destination)
+            # The parent holds gitops/litellm.lock throughout render, restart and rollback.
+            execute(list(RENDER), destination)
             execute(compose(destination, ['config', '--quiet']), destination)
-            selected = services(destination)
             started = True
-            execute(compose(destination, ['up', '-d', '--no-deps', '--wait', '--wait-timeout', '300', *selected]), destination)
+            execute(compose(destination, ['up', '-d', '--no-deps', '--wait', '--wait-timeout', '300', 'gateway']), destination)
             execute(['curl', '--fail', '--silent', '--max-time', '15', 'http://127.0.0.1:4100/health/readiness'], destination)
         except Exception:
             for path, value in saved.items():
@@ -98,7 +87,7 @@ def release(source, sha, home=Path('/opt/shared-ai'), execute=run):
                     path.write_bytes(value); path.chmod(0o600)
             if started:
                 try:
-                    execute(compose(old, ['up', '-d', '--no-deps', '--wait', '--wait-timeout', '300', *services(old)]), old)
+                    execute(compose(old, ['up', '-d', '--no-deps', '--wait', '--wait-timeout', '300', 'gateway']), old)
                 except Exception:
                     raise RuntimeError(f'Deployment and rollback failed; database backup: {backup}') from None
             raise RuntimeError(f'Deployment failed; previous configuration restored. Database backup: {backup}') from None

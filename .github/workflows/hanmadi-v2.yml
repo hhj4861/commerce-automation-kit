@@ -1,10 +1,10 @@
 name: Hanmadi 2.0 user journeys
 on:
   pull_request:
-    paths: ['apps/hanmadi/**', 'packages/google-identity/**', '.github/workflows/hanmadi-v2.yml']
+    paths: ['apps/hanmadi/**', 'packages/google-identity/**', 'packages/litellm-client/**', '.github/workflows/hanmadi-v2.yml']
   push:
     branches: [main]
-    paths: ['apps/hanmadi/**', 'packages/google-identity/**', '.github/workflows/hanmadi-v2.yml']
+    paths: ['apps/hanmadi/**', 'packages/google-identity/**', 'packages/litellm-client/**', '.github/workflows/hanmadi-v2.yml']
 permissions:
   contents: read
 jobs:
@@ -27,9 +27,17 @@ jobs:
           diff ../../packages/google-identity/index.mjs node_modules/@cak/google-identity/index.mjs
           diff ../../packages/google-identity/index.d.ts node_modules/@cak/google-identity/index.d.ts
       - run: npm test
+      # Moved from the retired hanmadi-dify.yml (D6, 2026-10-13): `next build` skips
+      # diagnostics in *.test.* files, so test sources need an explicit type check.
+      - name: Route types and full TypeScript check
+        run: |
+          node node_modules/next/dist/bin/next typegen
+          node node_modules/typescript/bin/tsc --noEmit
       - run: npm run lint
       - run: npm run build
       - run: npx playwright install --with-deps chromium
+      # Language selection browser regression, also moved from hanmadi-dify.yml.
+      - run: npm run test:language-flow
       - run: npm run test:google-login
         env:
           HANMADI_E2E_SCREENSHOTS: ${{ runner.temp }}/hanmadi-google-login
@@ -38,6 +46,12 @@ jobs:
       - run: npm run test:dialog-vocabulary
         env:
           HANMADI_E2E_ARTIFACTS: ${{ runner.temp }}/hanmadi-vocabulary
+      - run: npm run test:music
+        env:
+          HANMADI_E2E_ARTIFACTS: ${{ runner.temp }}/hanmadi-music
+      - run: npm run test:owned-music
+        env:
+          HANMADI_E2E_ARTIFACTS: ${{ runner.temp }}/hanmadi-owned-music
       - run: npm run test:diagnostics
         env:
           HANMADI_E2E_SCREENSHOTS: ${{ runner.temp }}/hanmadi-diagnostics
@@ -53,4 +67,9 @@ jobs:
             ${{ runner.temp }}/hanmadi-diagnostics/result.json
             ${{ runner.temp }}/hanmadi-vocabulary/*.png
             ${{ runner.temp }}/hanmadi-vocabulary/result.json
+            ${{ runner.temp }}/hanmadi-music/*.png
+            ${{ runner.temp }}/hanmadi-music/result.json
+            ${{ runner.temp }}/hanmadi-owned-music/*.png
+            ${{ runner.temp }}/hanmadi-owned-music/result.json
+            ${{ runner.temp }}/hanmadi-owned-music/server.log
           retention-days: 7

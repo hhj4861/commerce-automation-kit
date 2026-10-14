@@ -5,7 +5,7 @@ import { authorizeGithub, authorizeMigration, REPOSITORY, SUBJECT_PREFIX, DEPLOY
 
 const claims = (name = 'shopshorts') => {
   const ref = `refs/heads/deploy/${name}`;
-  return { ...(name === 'hanmadi' ? { ref_protected: 'true' } : {}), repository: REPOSITORY, repository_id: '1310729493', repository_owner_id: '71001056',
+  return { ...(['shopshorts', 'hanmadi'].includes(name) ? { ref_protected: 'true' } : {}), repository: REPOSITORY, repository_id: '1310729493', repository_owner_id: '71001056',
     runner_environment: 'github-hosted', event_name: 'push', ref,
     sub: `${SUBJECT_PREFIX}:ref:${ref}`, workflow_ref: `${REPOSITORY}/.github/workflows/platform-deploy.yml@${ref}` };
 };
@@ -53,16 +53,17 @@ test('learner deployment requires a protected ref and receives no admin or Repla
     assert.throws(() => authorizeGithub({ ...learner, ...patch }, config));
 });
 
-test('checked-in broker configuration isolates both Hanmadi deployment keys', () => {
+test('checked-in broker configuration isolates protected Shopshorts and Hanmadi deployment keys', () => {
   const deployed = JSON.parse(readFileSync(new URL('../wrangler.json', import.meta.url), 'utf8'));
-  for (const [name, key] of [['hanmadi', 'DEPLOY_VERCEL_TOKEN'], ['hanmadi-admin', 'HANMADI_ADMIN_DEPLOY_VERCEL_TOKEN']]) {
+  for (const [name, key] of [['shopshorts', 'DEPLOY_CLOUDFLARE_API_TOKEN'], ['hanmadi', 'DEPLOY_VERCEL_TOKEN'], ['hanmadi-admin', 'HANMADI_ADMIN_DEPLOY_VERCEL_TOKEN']]) {
     const identity = { ...claims(name), ref_protected: 'true' };
     assert.deepEqual(authorizeGithub(identity, deployed.vars).keys, [key]);
     assert.deepEqual(deployed.secrets_store_secrets.filter(b => b.binding === `SS_${key}`), [
       { binding: `SS_${key}`, store_id: deployed.vars.STORE_ID, secret_name: `CAK_${key}` },
     ]);
-    assert.throws(() => authorizeGithub({ ...identity, ref_protected: 'false' }, deployed.vars));
+    for (const ref_protected of [undefined, false, 'false'])
+      assert.throws(() => authorizeGithub({ ...identity, ref_protected }, deployed.vars));
     assert.throws(() => authorizeGithub({ ...identity, ref: 'refs/heads/main' }, deployed.vars));
   }
-  for (const name of ['shopshorts', 'firstframe']) assert.throws(() => authorizeGithub(claims(name), deployed.vars));
+  assert.throws(() => authorizeGithub(claims('firstframe'), deployed.vars));
 });

@@ -3,7 +3,6 @@ import { redirect } from "next/navigation";
 import { LEARNING_LANGUAGE_COOKIE, languageSelectionHref, resolveLearningLanguage } from "@/lib/learning-language";
 import Link from "next/link";
 import { ModelConversation } from "@/components/model-conversation";
-import { getConversationTutor } from "@/lib/conversation-access";
 import { courses, getLesson } from "@/lib/courses";
 import { getConversationProvider } from "@/lib/conversation-provider";
 import { audioConfig } from "@/lib/conversation-audio";
@@ -30,8 +29,6 @@ export default async function ConversationPage({
   if (actor && !profile) redirect(assessmentHref(language, params.s, `/conversation?${new URLSearchParams(params)}`));
   let canRecord = false;
   let canSpeak = false;
-  let storesConversation = false;
-  const canConnect = Boolean((await getConversationTutor())?.tid);
   try {
     audioConfig("transcribe");
     canRecord = true;
@@ -46,7 +43,7 @@ export default async function ConversationPage({
   }
   if (actor) {
     try {
-      storesConversation = getConversationProvider().provider === "dify";
+      getConversationProvider();
     } catch {
       notice = "AI 회화 연결을 준비 중이에요. 튜터에게 문의해 주세요.";
     }
@@ -79,7 +76,6 @@ export default async function ConversationPage({
       ) : (
         <ModelConversation
           guided={guided}
-          canConnect={canConnect}
           key={`${language}:${lesson.id}:${params.s ?? actor}:${profile?.revision ?? "legacy"}`}
           cacheKey={`${guided ? "hanmadi:speaking:v1" : "hanmadi:conversation:v2"}:${actor}:${language}:${lesson.id}:${profile?.revision ?? "legacy"}`}
           language={language}
@@ -88,7 +84,6 @@ export default async function ConversationPage({
           learningProfile={profile}
           canRecord={canRecord}
           canSpeak={canSpeak}
-          storesConversation={storesConversation}
         />
       )}
     </div>

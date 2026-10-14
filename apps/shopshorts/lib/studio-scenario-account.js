@@ -1,5 +1,6 @@
 import { busy, changeProject, fail } from './studio.js';
 import { llmOwner } from './llm-account-api.js';
+import { readScenarioRejection } from './scenario-rejection.js';
 import { scenarioResult } from './studio-scenario.js';
 
 const changed = project => ({ ...project, revision: project.revision + 1, updatedAt: new Date().toISOString() });
@@ -26,7 +27,7 @@ export async function startScenario(request, env, store, project, body, call) {
   if (!status.available) fail('LLM 실행기가 오프라인입니다. 실행기를 연결한 뒤 다시 생성하세요.', 503);
   if (!status.scenarioAvailable) fail('시나리오를 지원하는 LLM 실행기를 연결하세요.', 503);
   if (['queued', 'running'].includes(status.job?.state)) fail('연결한 계정의 다른 요청이 끝난 뒤 다시 생성하세요.', 409);
-  next.task = { ...next.task, runner: 'llm-account', accountOwner: owner, deadline: Date.now() + (project.brief.workflow==='explainer-v1'?600000:240000) };
+  next.task = { ...next.task, runner: 'llm-account', accountOwner: owner, deadline: Date.now() + 900000 };
   const reserved = changed(next);
   if (!await store.cas(reserved, project.revision)) fail('다른 창에서 변경되었습니다. 새로고침 후 다시 시도하세요.', 409);
   // Reserve the project first. A competing browser cannot enqueue a second job.
@@ -56,12 +57,16 @@ export async function syncScenario(store, project, call, now = Date.now()) {
   const acknowledge = async () => {
     try { await call(task.accountOwner, 'scenario-ack', input); } catch { /* Retry on the next read. */ }
   };
-  if (!busy(project)) { await acknowledge(); return project; }
-  let job;
-  try { job = (await call(task.accountOwner, 'scenario-status', input)).job; }
+  const legacyFailure=task.state==='failed' && task.reviewAvailable===undefined;
+  if (!busy(project) && !legacyFailure) { await acknowledge(); return project; }
+  let job, received=false;
+  try { const status=await call(task.accountOwner, 'scenario-status', input); if(status&&!status.error&&Object.hasOwn(status,'job')){job=status.job;received=true;} }
   catch { /* Temporary broker outage must not discard a result. */ }
   let next = structuredClone(project);
-  if (job && job.id === task.id && job.projectId === project.id) {
+  if(legacyFailure&&!received)return project;
+  const matches=job && job.id===task.id && job.projectId===project.id;
+  if(legacyFailure)next.task.reviewAvailable=!!(matches&&job.state==='failed'&&await readScenarioRejection(job.rejection));
+  else if (matches) {
     if (job.state === 'done') {
       try {
         Object.assign(next, scenarioResult(job.result, project.brief), { assets: {}, edit: null, approved: false, render: null });
@@ -71,10 +76,13 @@ export async function syncScenario(store, project, call, now = Date.now()) {
       }
     } else if (job.state === 'failed') {
       next.task.state = 'failed'; next.task.error = job.error || '시나리오 생성에 실패했습니다. 다시 시도하세요.';
-    } else if (job.state === 'running') {next.task.state = 'running';if(['research','scenario'].includes(job.phase))next.task.phase=job.phase;}
+      next.task.reviewAvailable=!!await readScenarioRejection(job.rejection);
+    } else if (job.state === 'running') {next.task.state = 'running';if(['research','scenario','review','revision'].includes(job.phase))next.task.phase=job.phase;}
   }
   if (busy(next) && now >= task.deadline) {
-    next.task.state = 'failed'; next.task.error = '시나리오 생성 시간이 초과됐습니다. 계정 실행기 상태를 확인하고 다시 시도하세요.';
+    next.task.state = 'failed';
+    const phase={research:'자료 검색',scenario:'대본 작성',review:'대본 검토',revision:'대본 보완'}[next.task.phase]||'계정 실행기 응답 대기';
+    next.task.error = `${phase} 단계에서 제한 시간을 초과했습니다. 요청 ${task.id}의 실행기 상태를 확인한 뒤 다시 시도하세요.`;
   }
   if (JSON.stringify(next.task) === JSON.stringify(task)) return project;
   next = changed(next);

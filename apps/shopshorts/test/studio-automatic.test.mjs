@@ -59,10 +59,10 @@ test('worker completes media and queues render atomically; browser cannot comple
  const body={revision:p.revision,taskId:p.task.id,result:{assets:Object.fromEntries(scenes.map(s=>[s.id,{key:`studio/${p.id}/${s.id}.png`,kind:'image'}]))}};
  assert.equal((await f.request(`/${p.id}/complete`,body)).status,403);
  p=(await f.request(`/${p.id}/complete`,body,{localWorker:true})).project;
- assert.equal(p.task.action,'render');assert.equal(p.task.state,'queued');assert.equal(p.edit.clips.length,2);assert.equal(p.edit.captions.length,2);assert.notEqual(p.edit.voice,'none');assert.equal(p.upload,null);
+ assert.equal(p.task.action,'render');assert.equal(p.task.state,'queued');assert.equal(p.edit.clips.length,2);assert.ok(p.edit.captions.filter(c=>c.source==='script').length>=2);for(const clip of p.edit.clips)assert.equal(p.edit.captions.filter(c=>c.clipId===clip.id&&c.source==='script').map(c=>c.text).join('').replace(/\s/gu,''),p.scenes.find(s=>s.id===clip.sceneId).narration.replace(/\s/gu,''));assert.equal(p.edit.captions[0].presentation,'modern-header-v1');assert.notEqual(p.edit.voice,'none');assert.equal(p.upload,null);
  assert.equal((await f.request(`/${p.id}/complete`,body,{localWorker:true})).status,409);
  p=(await f.request(`/${p.id}/claim`,{revision:p.revision},{localWorker:true})).project;
- p=(await f.request(`/${p.id}/complete`,{revision:p.revision,taskId:p.task.id,result:{render:{key:`studio/${p.id}/final.mp4`}}},{localWorker:true})).project;
+ p=(await f.request(`/${p.id}/complete`,{revision:p.revision,taskId:p.task.id,result:{render:{key:`studio/${p.id}/final.mp4`,sha256:'fixture',verification:{passed:true,version:'studio-production-v1',sha256:'fixture'}}}},{localWorker:true})).project;
  assert.equal(p.task.state,'done');assert.equal(automaticStatus(p),'발행 검수');assert.equal(p.upload,null);
  assert.equal((await f.request(`/${p.id}/publish`,{revision:p.revision,platforms:['youtube'],privacy:'private',title:p.title})).status,400);
  const publication=await f.request(`/${p.id}/publish`,{revision:p.revision,reviewed:true,platforms:['youtube'],privacy:'private',title:p.title});assert.equal(publication.project.task.action,'publish');
@@ -89,7 +89,7 @@ test('real local server serves automatic route and every browser module dependen
  let output='',errors='';child.stderr.on('data',chunk=>errors+=chunk);
  const base=await new Promise((resolve,reject)=>{child.once('error',reject);child.once('exit',code=>reject(Error(`Server ${code}: ${errors}`)));child.stdout.on('data',chunk=>{output+=chunk;const match=output.match(/http:\/\/127\.0\.0\.1:\d+/);if(match)resolve(match[0]);});});
  assert.equal((await fetch(base+'/automatic',{redirect:'manual'})).status,302);
- for(const path of ['/studio/automatic','/automatic','/automatic-creation.js','/automatic-creation.css','/architecture-case.js','/content-library.js','/workspace.css','/ai-account.js','/llm-connection.js']){
+ for(const path of ['/studio/automatic','/automatic','/automatic-creation.js','/automatic-creation.css','/architecture-case.js','/architecture-quality.js','/hybrid-plan.js','/content-library.js','/workspace.css','/ai-account.js','/llm-connection.js']){
   const response=await fetch(base+path,{headers:{cookie:'ss=fixture-static-only'}});assert.equal(response.status,200,path);assert.match(response.headers.get('content-type'),path.endsWith('.js')?/javascript/:path.endsWith('.css')?/css/:/html/);
  }
 });
@@ -98,7 +98,7 @@ test('local worker matches cloud continuation and local storage rejects duplicat
  const {startLocalStudio,localStudioStore}=await import('../studio-local.mjs');const {mkdtemp,rm}=await import('node:fs/promises');const {tmpdir}=await import('node:os');const {join}=await import('node:path');
  const dir=await mkdtemp(join(tmpdir(),'cak-auto-local-'));t.after(()=>rm(dir,{recursive:true,force:true}));
  const store=localStudioStore(dir,{});let p={...createProject({...input,topic:'감정'}),scenes,automation:{version:1}};p=changeProject(p,'media',{approved:true});await store.create(p);await assert.rejects(store.create(p),/이미 생성/);
- const worker=startLocalStudio(store,{},async job=>job.task.action==='media'?{assets:Object.fromEntries(scenes.map(s=>[s.id,{key:`studio/${p.id}/${s.id}.png`,kind:'image'}]))}:{render:{key:`studio/${p.id}/final.mp4`}});t.after(()=>worker.stop());
+ const worker=startLocalStudio(store,{},async job=>job.task.action==='media'?{assets:Object.fromEntries(scenes.map(s=>[s.id,{key:`studio/${p.id}/${s.id}.png`,kind:'image'}]))}:{render:{key:`studio/${p.id}/final.mp4`,sha256:'fixture',verification:{passed:true,version:'studio-production-v1',sha256:'fixture'}}});t.after(()=>worker.stop());
  await worker.tick();p=await store.get(p.id);assert.equal(p.task.action,'render');assert.equal(p.task.state,'queued');
  await worker.tick();p=await store.get(p.id);assert.equal(p.task.state,'done');assert.equal(p.upload,null);assert.equal(automaticStatus(p),'발행 검수');
 });
@@ -108,5 +108,6 @@ test('automatic selection preserves the saved architecture case and ignores brow
  const f=fixture({savedInput:{...input,category:'건축학'},savedResult});
  const response=await f.request('/automatic',{recommendationId,index:1,caseStudy:{entity:'forged'},topic:'forged'});
  assert.equal(response.status,201);assert.deepEqual(response.project.automation.caseStudy,savedResult.suggestions[1].caseStudy);
+ assert.equal(response.project.brief.architectureQuality,'architecture-cycles-v1');assert.equal(response.project.brief.productionStyle,'webtoon');
  assert.equal(response.project.brief.topic,savedResult.suggestions[1].topic);assert.equal(response.project.brief.direction,savedResult.suggestions[1].direction);
 });

@@ -1,3 +1,4 @@
+import {mockReview} from './helpers/editorial-review.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {mkdtemp, readFile, rm} from 'node:fs/promises';
@@ -22,6 +23,7 @@ const scenes=[
 ];
 function fixture(){
  const p={...createProject(brief),scenes:structuredClone(scenes),visualStyle:'따뜻한 창빛과 남색 그림자. 같은 흰 종이와 나무 책상.',automation:{version:1},approved:true,task:{id:'fixture',action:'media',state:'done'}};
+ delete p.pipelineVersion; // Legacy synthetic-tone fixture; new pipeline alignment has separate E2E.
  p.assets=Object.fromEntries(scenes.map(s=>[s.id,{kind:s.kind,key:`studio/${p.id}/${s.id}`} ]));
  const voice=normalizeEdit(p).voice;
  for(const s of p.scenes)p.assets[narrationId(s.id)]={key:`studio/${p.id}/${s.id}.mp3`,kind:'audio',purpose:'narration',voice,text:s.narration,duration:9};
@@ -30,7 +32,7 @@ function fixture(){
 
 test('cinematic scenario metadata survives validation and is required only on the new profile',async()=>{
  const value={title:'같은 종이, 다른 빛',scenes,visualStyle:'따뜻한 창빛과 남색 그림자',storyArc:{hook:{sceneId:'scene-1',line:scenes[0].narration},payoff:{sceneId:'scene-2',line:'빛이 오는 방향을 바꿔요.'},ending:{sceneId:'scene-2',line:'종이를 돌려 직접 살펴보세요.'}}};
- const result=await scenarioBrief(brief,{}, {generate:async prompt=>{assert.match(prompt,/visualStyle/);assert.match(prompt,/4~8초/);return {value};}});
+ const result=await scenarioBrief(brief,{}, {generate:async prompt=>{if(mockReview(prompt))return mockReview(prompt);assert.match(prompt,/visualStyle/);assert.match(prompt,/4~8초/);return {value};}});
  assert.equal(result.visualStyle,value.visualStyle);assert.equal(result.scenes[0].camera,'push-in');
  assert.throws(()=>scenarioResult({...value,visualStyle:undefined},brief),/공통 연출/);
  assert.throws(()=>scenarioResult({...value,scenes:scenes.map(s=>({...s,camera:undefined}))},brief),/공통 연출/);
@@ -97,7 +99,8 @@ test('real automatic pipeline caches measured speech, renders camera motion, hol
  const video=probe.streams.find(s=>s.codec_type==='video');assert.equal(video.width,1920);assert.equal(video.height,1080);assert.equal(Number(video.nb_frames),frameCount(p.edit));assert.equal(result.render.duration,frameCount(p.edit)/30);
  const raw=join(dir,'frames.rgb');await command('ffmpeg',['-y','-v','error','-i',final,'-vf','fps=5,scale=96:54','-pix_fmt','rgb24','-f','rawvideo',raw],{});
  const pixels=await readFile(raw),size=96*54*3;
- const difference=(a,b)=>{let sum=0;for(let i=0;i<size;i++)sum+=Math.abs(pixels[a*size+i]-pixels[b*size+i]);return sum/size;};
+ const difference=(a,b)=>{let sum=0;const region=96*32*3;for(let i=0;i<region;i++)sum+=Math.abs(pixels[a*size+i]-pixels[b*size+i]);return sum/region; // Compare media above the timed subtitle, which deliberately disappears.
+ };
  assert.ok(difference(0,8)>1,'image camera visibly moves');
  const last=Math.floor(pixels.length/size)-1;assert.ok(difference(last-1,last)<2,'short video holds its last frame instead of looping');
  const audio=join(dir,'speech.raw');await command('ffmpeg',['-y','-v','error','-i',final,'-vn','-ac','1','-ar','44100','-f','f32le',audio],{});

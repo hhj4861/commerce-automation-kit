@@ -1,3 +1,4 @@
+import {mockReview} from './helpers/editorial-review.mjs';
 import {normalizeEdit} from '../public/editor-model.js';
 import {SHORTS_DEFAULT_SECONDS,suggestedDescription,relatedVideoUrl} from '../public/shorts-policy.js';
 import test from 'node:test';
@@ -25,7 +26,7 @@ test('new projects opt into a versioned direction plan; legacy briefs are not si
  assert.equal(scenarioResult(legacy,legacy.brief).visualQuality,undefined);
 });
 test('web generation, stored result validation and CLI compile the same safe plan',async t=>{
- const f=fixture();let prompt='';const generated=await scenarioBrief(f.brief,{}, {generate:async p=>{prompt=p;return {value:f};}});
+ const f=fixture();let prompt='';const generated=await scenarioBrief(f.brief,{}, {generate:async p=>{if(mockReview(p))return mockReview(p);prompt=p;return {value:f};}});
  assert.match(prompt,/before/);assert.match(prompt,/물리 시뮬레이션/);assert.equal(generated.visualQuality.passed,true);
  assert.equal(generated.scenes[2].motion.template,'summary');assert.equal(generated.scenes[2].motion.vars.label3,'녹은 물 배출');
  assert.deepEqual(scenarioResult(generated,f.brief),generated,'account result survives second validation');
@@ -44,7 +45,7 @@ test('invalid, repetitive or unchanged plans fail before paid media generation',
  assert.throws(()=>scenarioResult({...f,scenes:[{...f.scenes[0],visualDirection:{...f.scenes[2].visualDirection,hookText:'왜 그럴까?'}},...f.scenes.slice(1)]},f.brief),/summary-placement/);
 });
 test('editing direction invalidates only its own media; saved legacy scenes stay editable',()=>{
- const f=fixture(),result=scenarioResult(f,f.brief);const p={...createProject(f.brief),...result,assets:{'scene-1':{source:'ai',key:'a'},'scene-2':{source:'ai',key:'b'}},task:null};
+ const f=fixture(),result=scenarioResult(f,f.brief);const p={...createProject(f.brief),brief:f.brief,...result,assets:{'scene-1':{source:'ai',key:'a'},'scene-2':{source:'ai',key:'b'}},task:null};
  const changed=changeProject(p,'scenes',{scenes:p.scenes.map((s,i)=>i? s:{...s,visualDirection:{...s.visualDirection,lighting:'왼쪽 측면광'}})});
  assert.equal(changed.assets['scene-1'],undefined);assert.equal(changed.assets['scene-2'].key,'b');
 });
@@ -57,9 +58,10 @@ test('automatic summary renders real landscape frames without any paid media cal
 
 test('shorts hook starts on frame zero and user deletion is preserved; metadata stays relevant',()=>{
  const f=fixture(),p={...createProject(f.brief),...scenarioResult(f,f.brief)};const edit=normalizeEdit(p);
- assert.equal(SHORTS_DEFAULT_SECONDS,45);assert.equal(edit.captions[0].startFrame,0);assert.equal(edit.captions[0].endFrame,90);assert.equal(edit.captions[0].position,'top');
+ assert.equal(SHORTS_DEFAULT_SECONDS,45);assert.equal(edit.captions[0].startFrame,0);assert.equal(edit.captions[0].endFrame,105);assert.equal(edit.captions[0].position,'top');
  assert.deepEqual(normalizeEdit({...p,edit:{...edit,captions:[]}}).captions,[]);
- assert.deepEqual(normalizeEdit({...p,brief:{...p.brief,format:'long'}}).captions,[]);
+ assert.equal(normalizeEdit({...p,brief:{...p.brief,format:'long'}}).captions[0].presentation,'modern-header-v1');
+ const legacy={...p,brief:{...p.brief}};delete legacy.brief.typography;assert.equal(normalizeEdit(legacy).captions[0].endFrame,90);
  assert.match(suggestedDescription(p),/#건축/);assert.doesNotMatch(suggestedDescription(p),/automobile/);
  assert.throws(()=>scenarioResult({...f,scenes:f.scenes.map((s,i)=>i?s:{...s,visualDirection:direction(1)})},f.brief),/첫 3초/);
 });
@@ -67,7 +69,7 @@ test('shorts hook starts on frame zero and user deletion is preserved; metadata 
 test('related video is a validated handoff, not a false automatic YouTube association',()=>{
  assert.equal(relatedVideoUrl('https://youtu.be/lQaYhIJePu0?si=tracking'),'https://www.youtube.com/watch?v=lQaYhIJePu0');
  for(const url of ['https://evil.test/watch?v=lQaYhIJePu0','javascript:alert(1)','https://youtube.com/watch?v=bad'])assert.throws(()=>relatedVideoUrl(url));
- const f=fixture(),p={...createProject(f.brief),...scenarioResult(f,f.brief),render:{key:'render'},approved:true};
+ const f=fixture(),p={...createProject(f.brief),...scenarioResult(f,f.brief),render:{key:'render',sha256:'fixture',verification:{version:'studio-production-v1',passed:true,sha256:'fixture'}},approved:true};
  const changed=changeProject(p,'publish',{platforms:['youtube'],privacy:'private',title:p.title,description:'설명',reviewed:true,relatedVideoUrl:'https://youtu.be/lQaYhIJePu0'});
  assert.equal(changed.publication.relatedVideoStatus,'manual-required');
 });

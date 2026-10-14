@@ -27,7 +27,7 @@ export function publicAccount(value = {}, now = Date.now()) {
     connected: !!value.credential, provider: value.credential ? value.provider || 'codex' : null,
     account: value.credential ? String(value.account || (value.provider === 'claude' ? 'Claude' : 'ChatGPT')).slice(0, 200) : null,
     job: job ? { id: job.id, kind: job.kind, provider: job.provider || value.provider || 'codex', state, deadline: job.deadline,
-      ...(['research','scenario'].includes(job.phase)?{phase:job.phase}:{}),
+      ...(['research','scenario','review','revision'].includes(job.phase)?{phase:job.phase}:{}),
       error: expired ? '연결 시간이 지났거나 실행기가 중단됐습니다. 다시 시도하세요.' : job.error || null,
       ...(device ? { device: { url: device.url, code: device.code } } : {}),
       ...(manual ? { manual: { url: manual.url }, codeSubmitted: job.codeSubmitted === true } : {}),
@@ -44,7 +44,8 @@ function scenarioJob(value, now) {
   const job = publicAccount(value, now).job;
   if (job?.kind !== 'scenario') return null;
   return { ...job, projectId: value.job.projectId,
-    ...(job.state === 'done' ? { result: value.job.result } : {}) };
+    ...(job.state === 'done' ? { result: value.job.result } : {}),
+    ...(job.state === 'failed' && value.job.state === 'failed' && value.job.rejection ? {rejection:value.job.rejection} : {}) };
 }
 async function retainScenario(env, owner, record, now) {
   const value = record?.value || {};
@@ -68,15 +69,18 @@ export async function accountAction(env, owner, operation, input = {}, now = Dat
   if (operation === 'scenario-status' || operation === 'scenario-ack') {
     if (!uuid(input.id) || !uuid(input.projectId)) return problem('시나리오 요청을 확인하세요.', 400);
     const current = value.job?.id === input.id;
-    const archived = current ? null : await readVault(env, scenarioName(owner, input.id));
-    const job = current ? scenarioJob(value, now) : archived?.value.job;
+    const archived = current && !value.job.acknowledged ? null : await readVault(env, scenarioName(owner, input.id));
+    const job = current && !value.job.acknowledged ? scenarioJob(value, now) : archived?.value.job;
     if (!job || job.projectId !== input.projectId) return { job: null };
     if (operation === 'scenario-status') return { job };
     if (current && value.job.acknowledged) return { ok: true };
     if (['queued', 'running'].includes(job.state)) return problem('아직 생성 중입니다.');
-    if (current) await writeVault(env, name, { ...value, job: { ...value.job, result: null, acknowledged: true } }, record.revision);
+    // Archive rejected evidence before acknowledgement; a lost CAS is retryable.
+    // It is returned only by the owner/project-bound scenario-status route.
+    if (current && job.rejection) await retainScenario(env, owner, record, now);
+    if (current) await writeVault(env, name, { ...value, job: { ...value.job, result: null, rejection: null, acknowledged: true } }, record.revision);
     // Keep the source revision tombstone to fence delayed archival writers.
-    else await writeVault(env, scenarioName(owner, input.id), { sourceRevision: archived.value.sourceRevision, job: null }, archived.revision);
+    else if (!job.rejection) await writeVault(env, scenarioName(owner, input.id), { sourceRevision: archived.value.sourceRevision, job: null }, archived.revision);
     return { ok: true };
   }
   if (operation === 'notifications') {
@@ -134,7 +138,7 @@ export async function accountAction(env, owner, operation, input = {}, now = Dat
   if (operation === 'scenario' && heartbeat.value.scenario !== true) return problem('시나리오를 지원하는 LLM 실행기를 연결하세요.', 503);
   const provider = operation === 'connect' ? input.provider : value.provider || 'codex';
   if (value.lastKind === operation && value.lastProvider === provider && value.lastRequest > now - 5000) return problem('잠시 후 다시 시도하세요.', 429);
-  const job = { id: operation === 'scenario' ? input.id : crypto.randomUUID(), kind: operation, provider, state: 'queued', createdAt: now, deadline: now + (operation === 'connect' || (operation === 'scenario' && input.brief.workflow==='explainer-v1') ? 600000 : 240000),
+  const job = { id: operation === 'scenario' ? input.id : crypto.randomUUID(), kind: operation, provider, state: 'queued', createdAt: now, deadline: now + (operation === 'scenario' ? 900000 : operation === 'connect' ? 600000 : 240000),
     ...(['recommend', 'scenario'].includes(operation) ? { input: input.brief } : {}),
     ...(operation === 'scenario' ? { projectId: input.projectId } : {}) };
   await retainScenario(env, owner, record, now);

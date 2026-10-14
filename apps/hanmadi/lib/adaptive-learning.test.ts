@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { learningProfile, studyPlan, adjustLevel, localDay, learningTask, type LearningEvent, type LearningProfile } from "./adaptive-learning";
 import { assessmentQuestions, scoreAssessment } from "./learning-assessment";
-import { difyUser, getConversationProvider, replyToConversation } from "./conversation-provider";
+import { getConversationProvider, replyToConversation } from "./conversation-provider";
 import { parseConversation, tutorPrompt } from "./conversation";
 
 const now = Date.parse("2026-09-28T09:00:00Z");
@@ -56,22 +56,18 @@ test("wrong first attempts become next-day priority, successful practice gets sp
   assert.equal(later.length, 5); assert.equal(later[0].date, "2026-10-28");
   assert.notEqual(learningTask("beginner", "cafe"), learningTask("intermediate", "cafe"));
 });
-test("all three levels reach both providers with matching learning tasks and distinct conversation scopes", async () => {
-  const config = getConversationProvider({ CONVERSATION_PROVIDER: "dify", DIFY_BASE_URL: "https://dify.example", DIFY_API_KEY: "test", DIFY_USER_SECRET: "synthetic-secret-with-at-least-32-characters" });
-  const users = new Set<string>();
+test("all three levels reach LiteLLM with matching server learning tasks", async () => {
+  const config = getConversationProvider({ LITELLM_BASE_URL: "https://gateway.example", LITELLM_API_KEY: "test", LITELLM_MODEL: "hanmadi-chat" });
   for (const level of ["beginner", "elementary", "intermediate"] as const) {
-    const input = parseConversation({ language: "th", lessonId: "cafe", level, learningRevision: "r1", storageConsent: true, messages: [{ role: "user", content: "hello" }] });
-    assert.match(tutorPrompt(input), /Difficulty guidance:/);
-    users.add(difyUser("actor", input, "secret"));
-    assert.notEqual(difyUser("actor", input, "secret"), difyUser("actor", { ...input, learningRevision: "r2" }, "secret"));
-    await replyToConversation(input, "actor", config, async (_, init) => {
+    const input = parseConversation({ language: "th", lessonId: "cafe", level, learningRevision: "r1", messages: [{ role: "user", content: "hello" }] });
+    await replyToConversation(input, config, async (_, init) => {
       const body = JSON.parse(String(init?.body));
-      assert.ok(body.inputs.scenario.length <= 300);
-      assert.match(body.inputs.scenario, /한글 발음과 한국어 뜻/);
-      return Response.json({ answer: "สวัสดี", conversation_id: "12345678-1234-1234-1234-123456789abc" });
+      assert.equal(body.messages[0].content, tutorPrompt(input));
+      assert.ok(body.messages[0].content.includes(`Level: ${level}.`));
+      assert.ok(body.messages[0].content.includes(learningTask(level, "cafe")));
+      return Response.json({ choices: [{ message: { content: "สวัสดี" }, finish_reason: "stop" }] });
     });
   }
-  assert.equal(users.size, 3);
 });
 
 test("changing the study budget preserves level, feedback, quiz history and conversation revision", () => {

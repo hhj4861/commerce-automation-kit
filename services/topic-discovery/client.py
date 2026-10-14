@@ -40,7 +40,7 @@ class DiscoveryClient:
     def discover(self,input,*,idempotency_key,generate,assert_connection):
         assert_connection(input['runtime'])
         result=self.request('/v1/discover',input,idempotency_key)
-        stages=('research','draft') if input.get('workflow')=='research-v2' else (None,)
+        stages=(('research','draft','review') if input.get('reviewMode')=='native-llm-v1' else ('research','draft')) if input.get('workflow')=='research-v2' else (None,)
         seen=set()
         if result['state'] in ('complete','held'):return result
         if result['state']!='awaiting_generation':raise DiscoveryError('discovery_in_progress')

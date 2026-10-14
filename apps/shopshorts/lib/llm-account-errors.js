@@ -1,6 +1,7 @@
 // Only these fixed diagnostics may cross the runner boundary. Never return CLI
 // stdout/stderr: login output can contain authorization URLs and credentials.
 const messages = Object.freeze({
+  DISCOVERY_RESEARCH_UNGROUNDED: 'AI가 고른 대상명을 인용된 검색 자료에서 확인하지 못해 추천을 보류했어요. 주제나 조건을 좁혀 다시 추천받아 주세요.',
   DISCOVERY_NO_ACCEPTED_CANDIDATES: '검색 근거와 새로움을 모두 충족한 후보를 찾지 못했어요. 관심사를 더 구체화해 주세요.',
   DISCOVERY_BUDGET_LIMIT: '오늘의 주제 검증 요청 한도에 도달했어요. 한도가 회복된 뒤 다시 시도해 주세요.',
   DISCOVERY_IN_PROGRESS: '이전 주제 검증이 진행 중이에요. 완료 후 결과를 확인해 주세요.',
@@ -16,6 +17,9 @@ const messages = Object.freeze({
   CODEX_REQUEST_FAILED: 'Codex 요청을 완료하지 못했습니다. 잠시 후 다시 시도하고, 반복되면 운영자에게 확인을 요청해 주세요.',
   RECOMMENDATION_REPEATED: '이전 추천과 다른 기획을 완성하지 못했어요. 관심사를 구체화한 뒤 다시 추천받으세요.',
   SCENARIO_RESEARCH_INVALID: '주제를 뒷받침할 검색 근거를 확인하지 못했어요. 주제를 구체화해 다시 시도해 주세요.',
+  SCENARIO_FORMAT_INVALID: '대본의 장면 형식 또는 목표 길이를 맞추지 못했어요. 다시 생성해 주세요.',
+  SCENARIO_REVIEW_INVALID: '대본 검토 결과의 인용·형식을 확인하지 못했어요. 대본 내용 부족 판정과는 다른 오류입니다. 다시 검토해 주세요.',
+  SCENARIO_DEPTH_INVALID: '대본의 이유·작동 과정·예시 또는 마무리 설명이 부족해 제작을 멈췄어요. 주제 범위를 좁혀 시나리오를 다시 생성해 주세요.',
   SCENARIO_ARC_INVALID: '도입·킬링파트·마무리가 연결된 대본을 완성하지 못했습니다. 시나리오를 다시 생성해 주세요.',
   SCENARIO_DIRECTION_INVALID: '영상의 공통 연출과 장면별 구도를 완성하지 못했어요. 대본을 다시 생성해 주세요.',
   CLAUDE_LOGIN_RUNTIME_MISSING: 'Claude 연결 실행 환경이 준비되지 않았습니다. 운영자에게 확인을 요청해 주세요.',
@@ -35,8 +39,22 @@ export const codexFailure = (code = 'CODEX_REQUEST_FAILED', status = 502) => Obj
 export const accountFailureCode = error => Object.hasOwn(messages, error?.code) ? error.code : 'UNKNOWN';
 export function accountFailureMessage(provider, error) {
   const code = accountFailureCode(error);
+  if(code==='SCENARIO_FORMAT_INVALID' && typeof error?.validationIssue?.path==='string'){
+    // Persist a useful diagnosis through the existing safe message transport.
+    // Only fixed field names become labels; input values and rule text stay private.
+    const path=error.validationIssue.path;
+    const match=/^scenes\[(\d{1,2})\]\.(.+)$/.exec(path);
+    const key=(match?match[2]:path).replace(/\[\d{1,2}\]/g,'');
+    const labels={'scenes':'장면 목록','scenes[].duration':'전체 길이','duration':'장면 길이','scene':'장면 형식','id':'장면 구분','narration':'대사','prompt':'화면 설명','camera':'카메라 움직임','shot':'장면 구도','hybrid.renderer':'제작 방식','hybrid.focus':'확대할 대상','hybrid.depth':'구조도 깊이','hybrid.authored':'등록된 3D 장면','hybrid.parts':'건축 부품 구성','hybrid.parts.layerId':'건축 부품 연결','hybrid.parts.material':'건축 부품 재질','hybrid.parts.offset':'부품 깊이 위치','hybrid.parts.hinge':'부품 회전 설정','visualDirection.treatment':'장면 설명 방식','kind':'장면 유형','title':'제목','webtoon':'웹툰 구성','webtoon.artPrompt':'웹툰 원화 설명','webtoon.answer':'장면의 설명 목적','webtoon.layers':'움직이는 대상 구성','webtoon.layers.id':'대상 구분','webtoon.layers.label':'대상 이름','webtoon.layers.meaning':'대상과 대사의 연결','webtoon.layers.shape':'도형 종류','webtoon.layers.color':'대상 색상','webtoon.layers.from':'동작 시작 위치','webtoon.layers.to':'동작 종료 위치','webtoon.layers.size':'대상 크기','webtoon.layers.start':'동작 시작 시점','webtoon.layers.end':'동작 종료 시점','webtoon.layers.motion':'동작 종류','webtoon.layers.points':'도형 좌표'};
+    if(Object.hasOwn(labels,key))return `${messages[code]} 확인 항목: ${match?`${Number(match[1])+1}번 장면의 `:''}${labels[key]}.`;
+  }
+  if(code==='SCENARIO_DEPTH_INVALID' && Array.isArray(error?.failedChecks)){
+    const labels={focus:'질문과 답의 일치',why:'필요한 이유',mechanism:'작동 과정',example:'구체적 예시',payoff:'완결된 답',pacing:'설명 호흡',visuals:'대사와 화면의 연결'};
+    const missing=Object.keys(labels).filter(key=>error.failedChecks.includes(key)).map(key=>labels[key]);
+    if(missing.length)return `대본 검토에서 보완이 필요해 제작을 멈췄어요. 확인할 항목: ${missing.join(', ')}. 이 부분을 구체화해 다시 생성해 주세요.`;
+  }
   if (code.startsWith('DISCOVERY_')) return messages[code];
-  if (['SCENARIO_RESEARCH_INVALID', 'SCENARIO_ARC_INVALID', 'SCENARIO_DIRECTION_INVALID', 'RECOMMENDATION_REPEATED', 'RECOMMENDATION_CASE_INVALID'].includes(code)) return messages[code];
+  if (['SCENARIO_REVIEW_INVALID', 'SCENARIO_FORMAT_INVALID', 'SCENARIO_DEPTH_INVALID', 'SCENARIO_RESEARCH_INVALID', 'SCENARIO_ARC_INVALID', 'SCENARIO_DIRECTION_INVALID', 'RECOMMENDATION_REPEATED', 'RECOMMENDATION_CASE_INVALID'].includes(code)) return messages[code];
   return provider === 'claude' ? messages[code] || messages.CLAUDE_REQUEST_FAILED
     : code.startsWith('CODEX_') ? messages[code] : messages.CODEX_REQUEST_FAILED;
 }

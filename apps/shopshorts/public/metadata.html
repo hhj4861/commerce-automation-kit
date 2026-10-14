@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="ko">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>게시 문구 추천 · Shopshorts</title><link rel="stylesheet" href="/app-shell.css"><link rel="stylesheet" href="/studio.css"><link rel="stylesheet" href="/metadata.css"><link rel="stylesheet" href="/workspace.css"><link rel="stylesheet" href="/llm-connection.css"><link rel="stylesheet" href="/ai-account.css"><script type="module" src="/metadata.js"></script><link rel="stylesheet" href="/studio-ux.css"><script type="module" src="/studio-navigation.js"></script></head>
+<body class="studio-workspace"><a class="skip-link" href="#main-content">본문으로 건너뛰기</a>
+<div data-workspace-shell></div><header class="metadata-header"><a href="/" class="metadata-brand">Shopshorts</a><nav aria-label="작업 메뉴"><a href="/studio/dashboard">영상 제작실</a><a href="/contents">콘텐츠</a><a href="/metadata" aria-current="page">게시 문구 추천</a></nav></header>
+<main class="metadata-main" id="main-content" tabindex="-1">
+  <div class="metadata-heading"><h1>게시 문구 추천</h1><p>완성한 영상을 바탕으로 제목·설명·해시태그 3안을 준비합니다.</p></div>
+  <div class="metadata-layout">
+    <aside class="metadata-input">
+      <h2>추천받을 영상</h2>
+      <label class="field"><span>영상 선택</span><select id="project"><option value="">새 영상 첨부</option></select></label>
+      <div id="file-area"><label class="metadata-file" for="video-file"><strong>완성된 영상을 선택하세요</strong><span>MP4 · 최대 50MB · 1초~10분</span><input type="file" id="video-file" accept="video/mp4,.mp4"></label></div>
+      <video id="preview" controls playsinline preload="metadata" hidden></video>
+      <p id="source-name" class="hint"></p>
+      <label class="field"><span>게시할 형식</span><select id="format"><option value="auto">영상 비율·길이로 판단</option><option value="short">쇼츠</option><option value="long">롱폼</option></select></label>
+      <p class="hint">분석을 시작하면 영상이 서버에 저장되고 Google AI에 전달됩니다. 영상 분석 이용료가 발생할 수 있습니다.</p>
+      <button id="recommend" class="primary" disabled>영상 분석하고 추천받기</button>
+      <p id="connection" class="hint" role="status">분석 서버를 확인하고 있어요.</p>
+      <details class="metadata-history"><summary>이전 첨부 영상 추천</summary><div id="history"></div></details>
+    </aside>
+    <section class="metadata-output" aria-label="추천 결과">
+      <div id="status" role="status" aria-live="polite"></div>
+      <div id="error" role="alert" hidden></div>
+      <div id="results"><div class="metadata-empty"><h2>제목보다 영상을 먼저 읽습니다.</h2><p>주제와 카테고리를 확인한 뒤, 영상에 담긴 내용으로 추천합니다.</p><ol><li>화면·자막·음성 분석</li><li>최근 3개월 유사 영상 조사</li><li>서로 다른 추천안 3개 작성</li></ol><p class="hint">참고 자료가 부족하거나 쇼츠 여부가 불확실하면 결과에 함께 표시합니다.</p></div></div>
+    </section>
+  </div>
+</main><div id="toast" role="status" hidden></div>
+</body></html>

@@ -1,6 +1,6 @@
 # 한마디 2.0 구현·인수 기록
 
-승인된 2.0 디자인을 기존 Hanmadi 앱에 구현했다. 신규 진입점은 `/study`, 콘텐츠 관리자는 `/study/admin`이다. `/`는 `/study`로 이동한다. 기존 한국어·튜터 수업, Dify 회화는 `/learn`, `/conversation`, 학생 포털에 유지한다.
+승인된 2.0 디자인을 기존 Hanmadi 앱에 구현했다. 신규 진입점은 `/study`, 콘텐츠 관리자는 `/study/admin`이다. `/`는 `/study`로 이동한다. 기존 한국어·튜터 수업, LiteLLM 회화는 `/learn`, `/conversation`, 학생 포털에 유지한다.
 
 ## 사용자 흐름
 
@@ -8,8 +8,8 @@
 - 스터디: 오늘 학습 / 레벨별 / 상황별. 기본 표현 128개(4언어 × 4레벨 × 8상황). 스몰토크·클럽/바·카페·식당·호텔·길 찾기·쇼핑·친구와 약속을 포함한다. 듣고 따라 말하기, 도움 받아/혼자 말하기 기록, AI 역할극으로 연결한다.
 - 번역: 하나의 마이크로 30초 이내 발화를 녹음하거나 텍스트 입력. STT에 자동 모드를 전달할 때 강제 language를 보내지 않는다. 전사된 문자로 한국어/선택 언어 방향을 판정하고 짧거나 섞인 입력은 사용자 확인 후 처리한다. 상시 청취·동시 화자 분리·통역 중 끼어들기는 지원 범위가 아니다.
 - 번역 자동 학습은 첫 동의 전 OFF. 켜면 성공한 번역의 짧은 일반 표현을 개인 복습에 반영한다. 양방향, 언어별 중복 제거, 삭제, 다음 복습일(도움 1일/혼자 3일)을 지원한다. 저장 자체는 학습 완료나 레벨 상승이 아니다.
-- AI 대화: 실제 설정된 기본 LiteLLM 별칭(Gemini 운영 설정) 또는 연결된 개인 모델로 역할극. 한국어 도움과 한글 발음 제공. 마음에 드는 표현만 명시적으로 추가한다. 전체 대화 자동 수집은 하지 않는다.
-- 내 AI: 기존 accounts 서버를 재사용한다. Codex 계정 로그인, Claude **API 키** 연결. Claude 구독 OAuth를 지원한다고 표시하지 않는다. 연결 해제/만료 시 기본 모델로 몰래 전환하지 않는다. 번역과 음성은 기본 서비스 유지.
+- AI 대화: 실제 설정된 기본 LiteLLM 별칭(Gemini 운영 설정) 으로 역할극. 한국어 도움과 한글 발음 제공. 마음에 드는 표현만 명시적으로 추가한다. 전체 대화 자동 수집은 하지 않는다.
+- AI 설정: 기본 Gemini만 제공한다. accounts v1의 계정 로그인·API 키 입력 UI는 제거했다. 이전 개인 모델 요청은 409, 연결 API는 410으로 종료를 알리며 다른 모델로 자동 전환하지 않는다. accounts v2/BYOK 연결은 별도 작업이다.
 - 학습자는 별도 아이디·비밀번호로 가입하며 튜터/관리자 권한을 받지 않는다. 기존 튜터 계정도 학습 화면을 사용할 수 있다. 비밀번호 복구/계정 탈퇴는 이번 버전에 포함하지 않았고 가입 화면에 복구 미지원 안내가 있다.
 
 ## 서버와 저장
@@ -52,11 +52,10 @@ flowchart LR
 | 영구 저장 | `UPSTASH_REDIS_REST_URL/TOKEN` 또는 `KV_REST_API_URL/TOKEN` |
 | 기본 대화·번역·초안 | `LITELLM_BASE_URL`, `LITELLM_API_KEY`, `LITELLM_MODEL` |
 | 음성 | `LITELLM_STT_MODEL`, `LITELLM_TTS_MODEL`, `LITELLM_TTS_VOICE` |
-| 개인 AI | `AI_ACCOUNTS_URL`, `AI_ACCOUNTS_KEY`, `AI_ACCOUNTS_SUBJECT_SECRET` |
 | 공식 영상 검색 | `YOUTUBE_API_KEY` (미설정이면 원문 직접 입력은 계속 가능) |
 | 콘텐츠 소유자 | 기존 `TUTOR_PINS` 소유자 로그인 |
 
-공용 Dify/gateway 배포는 이 앱 변경에 포함하지 않는다. PR별 명시적 머지 승인 후 `docs/deployment/platform-gitops.md`의 Hanmadi 배포 절차로 운영 반영한다. 현재 작업 브랜치 구현과 운영 배포를 구분한다.
+공용 gateway 배포는 이 앱 변경에 포함하지 않는다. PR별 명시적 머지 승인 후 `docs/deployment/platform-gitops.md`의 Hanmadi 배포 절차로 운영 반영한다. 현재 작업 브랜치 구현과 운영 배포를 구분한다.
 
 ## 검증
 
@@ -64,9 +63,11 @@ flowchart LR
 - `npm run build`: Next.js 16.3.6 운영 빌드·타입 검사 통과.
 - `npm run lint`: 오류 없음. 변경 전 파일의 unused 변수 경고 4개 유지.
 - `npm audit --workspaces=false`: 확인된 취약점을 호환 패치로 수정, 0건. Next.js [16.3.6 보안 릴리스](https://github.com/vercel/next.js/releases/tag/v16.3.6) 적용, 앱과 모노레포 잠금 파일 동기화.
-- `npm run test:v2`: 브라우저 → 실제 Next API → 격리된 테스트 저장소 → 응답 UI. `HANMADI_LOCAL_DATA_FILE`은 개발 모드에서만 사용하며 E2E 전용 파일을 종료 시 제거한다. 외부 모델·accounts는 격리된 테스트 서버로 대체한다. 실제 사용자 구독 로그인·실서비스 발음 품질·운영 Redis 인수 시험을 했다는 뜻이 아니다.
+- `npm run test:v2`: 브라우저 → 실제 Next API → 격리된 테스트 저장소 → 응답 UI. `HANMADI_LOCAL_DATA_FILE`은 개발 모드에서만 사용하며 E2E 전용 파일을 종료 시 제거한다. 외부 모델은 격리된 테스트 서버로 대체하며, accounts v1은 호출이 없는지 검사한다. 실제 사용자 구독 로그인·실서비스 발음 품질·운영 Redis 인수 시험을 했다는 뜻이 아니다.
 - PR마다 `.github/workflows/hanmadi-v2.yml`에서 같은 테스트를 실행하며 화면 증거를 보관한다.
 
 화면 증거: [모바일](hanmadi-v2-e2e/mobile.png), [데스크톱](hanmadi-v2-e2e/desktop.png), [번역](hanmadi-v2-e2e/translation.png), [관리자](hanmadi-v2-e2e/admin.png). 개발 모드 스크린샷이며 운영 화면으로 오인하지 않는다.
 
 기본 외국어 예문과 한글 발음은 승인 목업을 초기 콘텐츠로 옮긴 것이다. 외부 원어민 감수는 수행하지 않았다. 태국어 여성 화자용 정중 표현의 차이는 연습 화면에 안내한다.
+
+2026-10-14 퇴역 연동 정리의 현재 증적과 운영 반영 여부는 [QA 기록](qa/20261014-hanmadi-retired-integrations.md)을 따른다.

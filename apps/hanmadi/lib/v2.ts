@@ -18,12 +18,12 @@ export type Unit = {
   level: number;
   title: string;
   phrase: Phrase;
-  source: "starter" | "admin";
+  source: "starter" | "admin" | "music";
 };
 export type Expression = Phrase & {
   id: string;
   language: StudyLanguage;
-  source: "translation" | "chat" | "vocabulary";
+  source: "translation" | "chat" | "vocabulary" | "music";
   inVocabulary?: boolean;
   createdAt: number;
   dueAt: number;
@@ -38,6 +38,8 @@ export type Profile = {
   completedLessons?: Record<string, { at: number; phrases: number }>;
 };
 export type StudyState = {
+  originalMusicProgress?: Record<string, import("./original-music").SongProgress>;
+  musicProgress?: Record<string, { revision: string; index: number }>;
   revision: number;
   saveEpoch: number;
   autoSave: boolean;

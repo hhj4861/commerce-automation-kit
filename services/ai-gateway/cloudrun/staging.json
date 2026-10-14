@@ -1,0 +1,35 @@
+{
+  "model_list": [
+    {
+      "model_name": "hanmadi-chat",
+      "litellm_params": {
+        "model": "gemini/gemini-flash-lite-latest",
+        "api_key": "os.environ/HANMADI_CHAT_API_KEY"
+      }
+    },
+    {
+      "model_name": "hanmadi-stt",
+      "litellm_params": {
+        "model": "elevenlabs/scribe_v1",
+        "api_key": "os.environ/ELEVENLABS_API_KEY"
+      }
+    },
+    {
+      "model_name": "hanmadi-tts",
+      "litellm_params": {
+        "model": "elevenlabs/eleven_v3",
+        "api_key": "os.environ/ELEVENLABS_API_KEY"
+      }
+    }
+  ],
+  "general_settings": {
+    "master_key": "os.environ/LITELLM_MASTER_KEY",
+    "store_prompts_in_spend_logs": false
+  },
+  "litellm_settings": {
+    "set_verbose": false,
+    "turn_off_message_logging": true,
+    "num_retries": 0,
+    "request_timeout": 30
+  }
+}

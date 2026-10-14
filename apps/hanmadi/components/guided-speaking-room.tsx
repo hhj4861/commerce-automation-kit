@@ -8,15 +8,15 @@ import { languages, type Language, type Lesson } from "@/lib/courses";
 import { useSessionDraft } from "@/lib/use-session-draft";
 import { ConversationVoice, type VoiceHandle } from "./conversation-voice";
 
-type Draft = { step: number; phase: "listen" | "repeat" | "roleplay" | "done"; consent: boolean };
-const initial: Draft = { step: 0, phase: "listen", consent: false };
+type Draft = { step: number; phase: "listen" | "repeat" | "roleplay" | "done" };
+const initial: Draft = { step: 0, phase: "listen" };
 const valid = (v: unknown): v is Draft => !!v && typeof v === "object" &&
-  [0, 1].includes((v as Draft).step) && ["listen", "repeat", "roleplay", "done"].includes((v as Draft).phase) && typeof (v as Draft).consent === "boolean";
+  [0, 1].includes((v as Draft).step) && ["listen", "repeat", "roleplay", "done"].includes((v as Draft).phase);
 
-export function GuidedSpeakingRoom({ language, modelSelection, lesson, studentSlug, canRecord, canSpeak, storesConversation, learningProfile: profile, cacheKey }: {
+export function GuidedSpeakingRoom({ language, modelSelection, lesson, studentSlug, canRecord, canSpeak, learningProfile: profile, cacheKey }: {
   modelSelection?: string;
   language: Language; lesson: Lesson; studentSlug?: string; canRecord: boolean; canSpeak: boolean;
-  storesConversation: boolean; learningProfile?: LearningProfile | null; cacheKey: string;
+  learningProfile?: LearningProfile | null; cacheKey: string;
 }) {
   const router = useRouter();
   const [draft, setDraft, unavailable] = useSessionDraft(cacheKey, initial, valid);
@@ -37,7 +37,6 @@ export function GuidedSpeakingRoom({ language, modelSelection, lesson, studentSl
   const steps = speakingSteps(language, lesson.id);
   const target = steps[draft.step];
   const phrase = target.phrase;
-  const needsConsent = storesConversation && !draft.consent;
   const disabled = busy || voiceBusy || stale;
   const query = new URLSearchParams({ language, lesson: lesson.id, ...(studentSlug ? { s: studentSlug } : {}) });
   function move(phase: Draft["phase"], step = draft.step) {
@@ -46,7 +45,7 @@ export function GuidedSpeakingRoom({ language, modelSelection, lesson, studentSl
     requestAnimationFrame(() => heading.current?.focus());
   }
   async function respond(text: string) {
-    if (lock.current || needsConsent || stale) return;
+    if (lock.current || stale) return;
     lock.current = true; setBusy(true); setError(""); setReply(""); setTranscript(text); setAttempted(false);
     const controller = new AbortController(); request.current = controller;
     const timer = setTimeout(() => controller.abort(), 40000);
@@ -54,7 +53,7 @@ export function GuidedSpeakingRoom({ language, modelSelection, lesson, studentSl
       // Each bounded attempt is independent. Free-chat conversation IDs/history are never reused.
       const res = await fetch("/api/conversation", { method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ language, modelSelection, lessonId: lesson.id, level: "beginner", learningRevision: profile?.revision,
-          studentSlug, storageConsent: draft.consent, guidedStep: draft.step, messages: [{ role: "user", content: text }] }), signal: controller.signal });
+          studentSlug, guidedStep: draft.step, messages: [{ role: "user", content: text }] }), signal: controller.signal });
       const data = await res.json();
       if (res.status === 409) setStale(true);
       if (!res.ok || typeof data.reply !== "string") throw new Error(data.error || "응답을 받지 못했어요.");
@@ -80,7 +79,7 @@ export function GuidedSpeakingRoom({ language, modelSelection, lesson, studentSl
     finally { clearTimeout(timer); lock.current = false; setBusy(false); request.current = null; }
   }
   const voiceControl = <ConversationVoice ref={voice} language={language} studentSlug={studentSlug} speakingFirst listenOnly={draft.phase === "listen"}
-    onTranscript={text => void respond(text)} onBusyChange={setVoiceBusy} disabled={busy || stale || needsConsent || draft.phase === "listen"}
+    onTranscript={text => void respond(text)} onBusyChange={setVoiceBusy} disabled={busy || stale || draft.phase === "listen"}
     canRecord={canRecord} canSpeak={canSpeak} preferencesKey={`${cacheKey}:audio`} />;
   return <section aria-label="글자 없이 듣고 말하기" className="mt-7">
     <p className="text-sm text-accent">{languages[language].name} · {lesson.title} · 표현 {draft.step + 1} / {steps.length}</p>
@@ -102,8 +101,6 @@ export function GuidedSpeakingRoom({ language, modelSelection, lesson, studentSl
         {draft.phase === "listen" && voiceControl}
         {draft.phase === "listen" ? <button type="button" disabled={disabled} onClick={() => move("repeat")} className="mt-5 block min-h-12 rounded-full border border-accent px-6 text-accent">따라 말해 볼게요 →</button> : <>
           <p className="mt-4 text-sm">{draft.phase === "repeat" ? "위 소리를 따라 해 보세요. 글자를 읽거나 입력할 필요 없어요." : "기억나는 만큼 말해 보세요. 잊었으면 언제든 힌트를 다시 열어요."}</p>
-          {storesConversation && <label className="mt-4 flex items-start gap-3 text-sm text-ink-soft"><input type="checkbox" checked={draft.consent} disabled={disabled} onChange={e => setDraft(d => ({ ...d, consent: e.target.checked }))} className="mt-1" />음성에서 인식한 말과 AI 답변이 회화 서버에 저장되는 것에 동의해요. 튜터·운영자가 볼 수 있고 삭제는 튜터에게 요청해요.</label>}
-          {needsConsent && <p className="mt-2 text-sm text-ink-soft">AI와 연습하려면 위 안내에 동의해 주세요. 마이크 없이 따라 말하기는 동의 없이도 가능해요.</p>}
           {voiceControl}
           {busy && <p role="status" className="mt-4">AI가 말씀하신 내용을 확인하고 있어요…</p>}
           {reply && <div className="mt-4 rounded-xl bg-accent-wash p-4" role="status"><p className="text-sm font-medium">AI와 주고받기</p><p className="mt-2 whitespace-pre-wrap break-words">{reply}</p><p className="mt-2 text-xs text-ink-soft">{spokenReply(reply, language) ? "음성으로 AI의 짧은 대답을 들어요." : "답변에서 음성으로 읽을 문장을 구분하지 못해 연습 표현을 다시 들려드려요."}</p></div>}
@@ -121,6 +118,6 @@ export function GuidedSpeakingRoom({ language, modelSelection, lesson, studentSl
     {error && <p role="alert" className="mt-4 rounded-xl bg-amber-wash p-4 text-amber">{error}</p>}
     {stale && <button type="button" onClick={() => router.refresh()} className="mt-3 min-h-11 text-accent underline">최신 학습 설정 불러오기</button>}
     {unavailable && <p className="mt-3 text-sm text-ink-soft">임시 저장이 안 돼요. 새로고침하면 처음부터 다시 연습해요.</p>}
-    <details className="mt-5 text-sm text-ink-soft"><summary className="min-h-11 cursor-pointer py-3">연습 안내와 다른 방식</summary><p>AI 도움말은 틀릴 수 있어요. 음성 인식으로 발음이나 성조를 채점하지 않아요. 말하기 체감은 하루 첫 기록을 계획에 반영해요.</p><Link href={`/conversation?${query}&mode=free`} className="mt-3 inline-flex min-h-11 items-center text-accent underline">도움 없이 자유 회화하기 →</Link></details>
+    <details className="mt-5 text-sm text-ink-soft"><summary className="min-h-11 cursor-pointer py-3">연습 안내와 다른 방식</summary><p>인식한 말은 AI 제공업체로 전송돼요. 개인정보는 말하지 마세요. AI 도움말은 틀릴 수 있어요. 음성 인식으로 발음이나 성조를 채점하지 않아요. 말하기 체감은 하루 첫 기록을 계획에 반영해요.</p><Link href={`/conversation?${query}&mode=free`} className="mt-3 inline-flex min-h-11 items-center text-accent underline">도움 없이 자유 회화하기 →</Link></details>
   </section>;
 }

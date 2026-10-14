@@ -154,9 +154,9 @@ export function V2Settings(p: Props) {
         <span>한국어 표기와 원음</span>
       </div>
       <div className="hm-setting-row">
-        <b>내 AI 연결</b>
+        <b>AI 대화 설정</b>
         <button onClick={p.onAI}>
-          연결·모델 선택 <Icon name="arrow" />
+          AI 설정 보기 <Icon name="arrow" />
         </button>
       </div>
       <div className="hm-setting-row">

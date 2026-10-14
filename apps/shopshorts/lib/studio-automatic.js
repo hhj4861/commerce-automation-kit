@@ -1,3 +1,5 @@
+import {sharedPipeline} from './production-pipeline.js';
+import {modernProject,defaultCaption,captionPhrases} from '../public/video-typography.js';
 import {createProject, changeProject, validateEdit, fail} from './studio.js';
 import {llmOwner} from './llm-account-api.js';
 import {recommendationInput, parseRecommendations} from './studio-recommendations.js';
@@ -24,7 +26,7 @@ export async function startAutomatic(request, env, store, input, call) {
   const brief = recommendationInput(saved.input);
   const result = parseRecommendations(saved.result, true, 'keywords');
   const selected = result.suggestions[input.index];
-  const project = {...createProject({...brief, topic: selected.topic, direction: selected.direction, productionStyle:brief.productionStyle||'cinematic'}), id,
+  const project = {...createProject({...brief, topic: selected.topic, direction: selected.direction, productionStyle:brief.productionStyle||(brief.category==='건축학'?'webtoon':'cinematic')}), id,
     ...(brief.voiceId?{voicePreference:brief.voiceId}:{}),
     automation: {version: brief.workflow?2:1, recommendationId: input.recommendationId, keyword: selected.keyword, ...(selected.caseStudy?{caseStudy:selected.caseStudy}:{}), sources: result.sources, checkedAt: saved.result.checkedAt}};
   try { await store.create(project); }
@@ -37,21 +39,26 @@ export async function startAutomatic(request, env, store, input, call) {
 }
 
 export function continueAutomatic(project) {
-  if (!project.automation || project.task?.action !== 'media' || project.task.state !== 'done') return project;
+  if (project.task?.action !== 'media' || project.task.state !== 'done') return project;
+  if (!project.automation) {
+    // Manual hybrid editing starts with measured speech/captions but never auto-renders.
+    if (!(sharedPipeline(project)?['cinematic','animation','webtoon','hybrid']:['webtoon','hybrid']).includes(project.brief.productionStyle) || project.edit || !project.approved || project.scenes.some(s=>!project.assets[s.id])) return project;
+    return {...project,edit:validateEdit(cinematicEdit(project),project)};
+  }
   if (!project.approved || project.scenes.some(scene => !project.assets[scene.id])) fail('완료되지 않은 장면이 있어 영상을 조립할 수 없습니다.', 409);
   const next = structuredClone(project);
-  if(!next.edit && ['cinematic','animation'].includes(next.brief.productionStyle))next.edit=validateEdit(cinematicEdit(next),next);
+  if(!next.edit && ['cinematic','animation','webtoon','hybrid'].includes(next.brief.productionStyle))next.edit=validateEdit(cinematicEdit(next),next);
   if (!next.edit) {
     const edit = normalizeEdit(next);
     for (const clip of edit.clips) {
       const text = next.scenes.find(scene => scene.id === clip.sceneId).narration;
       const chunkSize = Math.max(80, Math.ceil(text.length / Math.floor(300 / next.scenes.length)));
-      const chunks = text.match(new RegExp(`[\\s\\S]{1,${chunkSize}}`, 'gu')) || [];
-      let offset = 0;
+      const chunks = modernProject(next)?captionPhrases(text,next.brief.aspect==='9:16'?14:28):text.match(new RegExp(`[\\s\\S]{1,${chunkSize}}`, 'gu')) || [];
+      let offset = 0;const total=chunks.reduce((sum,c)=>sum+c.length,0);
       chunks.forEach((chunk, i) => {
-        const startFrame = Math.round(offset / text.length * clip.outFrame); offset += chunk.length;
+        const startFrame = Math.round(offset / total * clip.outFrame); offset += chunk.length;
         edit.captions.push({id:`${clip.id}-caption-${i}`, clipId:clip.id, source:'script', text:chunk, startFrame,
-          endFrame:Math.round(offset / text.length * clip.outFrame), font:'gothic', size:56, color:'#ffffff', position:'bottom', background:true});
+          endFrame:Math.round(offset / total * clip.outFrame), font:'gothic', size:56, color:'#ffffff', position:'bottom', background:true,...(modernProject(next)?defaultCaption(next.brief.aspect):{})});
       });
     }
     next.edit = validateEdit(edit, next);

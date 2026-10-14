@@ -1,3 +1,4 @@
+import {mockReview} from './helpers/editorial-review.mjs';
 // Local fixture only: actual application/API, simulated providers, no paid calls.
 import {createServer} from 'node:http';
 import {mkdtemp,rm,readFile} from 'node:fs/promises';
@@ -24,7 +25,8 @@ const call=async(owner,operation,input)=>{
   const job={id:input.id,projectId:input.projectId,state:'running'};scenarios.set(input.id,job);
   void (async()=>{try{
    let count=0;
-   job.result=await scenarioBrief(input.brief,{}, {onProgress:async phase=>{job.phase=phase;await new Promise(r=>setTimeout(r,600));},generate:async()=>{
+   job.result=await scenarioBrief(input.brief,{}, {onProgress:async phase=>{job.phase=phase;await new Promise(r=>setTimeout(r,600));},generate:async prompt=>{
+    if(mockReview(prompt))return mockReview(prompt);
     if(count++===0)return {searched:true,value:{sources:[{id:'source-1',title:'테스트용 자료 · 실검색 아님',url:'https://example.org/architecture'}],facts:[{claim:'로컬 검증용 사실 데이터입니다.',sourceIds:['source-1']}],limitations:['이 자료는 실제 영상에 사용하지 마세요.']}};
     const animation={title:'대화로 시작하는 변화',presentation:'illustrated',staging:'exchange',prop:'document',layout:'sequence',elements:[{icon:'person',label:'질문하는 사람',motion:'talk',expression:'worried'},{icon:'robot',label:'도우미',motion:'wave'}]};
     return {value:{title:input.brief.topic,scenes:[{id:'scene-1',kind:'video',duration:input.brief.duration/2,narration:'어떻게 움직일까요?',prompt:'사람이 도우미에게 질문하는 그림',animation},{id:'scene-2',kind:'video',duration:input.brief.duration/2,narration:'원리를 살펴보세요. 이해해 봅시다.',prompt:'대화를 통해 설명을 전달하는 그림',animation}],storyArc:{hook:{sceneId:'scene-1',line:'어떻게 움직일까요?'},payoff:{sceneId:'scene-2',line:'원리를 살펴보세요.'},ending:{sceneId:'scene-2',line:'이해해 봅시다.'}}}};

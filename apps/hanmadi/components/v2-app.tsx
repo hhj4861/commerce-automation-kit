@@ -7,6 +7,7 @@ import { studyAudio } from "@/lib/study-audio-client";
 import { Dialog } from "./v2-dialog";
 import { Wordbook } from "./v2-wordbook";
 import { Vocabulary } from "./v2-vocabulary";
+import { MusicStudy } from "./v2-original-music";
 import { V2Lesson } from "./v2-lesson";
 import { lessonPlan } from "@/lib/v2-lesson";
 import { GoogleLogin } from "./google-login";
@@ -25,7 +26,6 @@ import {
   type Unit,
   type Phrase,
 } from "@/lib/v2";
-import type { ModelConnection } from "@/lib/model-connections";
 type Identity = { name: string; owner: boolean };
 type Tab = "study" | "chat" | "translate" | "phrases" | "words";
 async function request(
@@ -291,485 +291,24 @@ function Login({ onDone }: { onDone: () => void }) {
     </form>
   );
 }
-function ConnectionChallenge({
-  connection,
-  busy,
-  onAuthorize,
-}: {
-  connection: ModelConnection;
-  busy: boolean;
-  onAuthorize: (id: string, code: string) => Promise<void>;
-}) {
-  const [code, setCode] = useState("");
-  const [copyMessage, setCopyMessage] = useState("");
-  const challenge = connection.challenge;
-  if (!challenge) return <p role="status">공식 인증창을 준비하고 있어요…</p>;
-  const native = challenge.kind === "code-entry";
-  return (
-    <div className="hm-auth-challenge">
-      <p>
-        {native
-          ? "1. Claude 인증창에서 로그인하고 승인코드를 복사하세요."
-          : "1. 아래 인증코드를 복사해 Codex 인증창에 입력하세요."}
-      </p>
-      {!native && (
-        <>
-          <label>
-            Codex 인증코드
-            <input
-              readOnly
-              value={challenge.code}
-              onFocus={(e) => e.currentTarget.select()}
-            />
-          </label>
-          <button
-            onClick={async () => {
-              try {
-                await navigator.clipboard.writeText(challenge.code);
-                setCopyMessage("인증코드를 복사했어요.");
-              } catch {
-                setCopyMessage(
-                  "자동 복사를 사용할 수 없어요. 위 코드를 선택해 직접 복사해 주세요.",
-                );
-              }
-            }}
-          >
-            인증코드 복사
-          </button>
-          {copyMessage && <p role="status">{copyMessage}</p>}
-        </>
-      )}
-      <a href={challenge.url} target="_blank" rel="noopener noreferrer">
-        {native ? "Claude" : "Codex"} 인증창 열기 ↗
-      </a>
-      <small>새 창이 열리지 않거나 닫혔다면 위 링크를 눌러 주세요.</small>
-      {native && !challenge.submitted && (
-        <form
-          onSubmit={async (event) => {
-            event.preventDefault();
-            if (busy || !code.trim()) return;
-            const submittedCode = code.trim();
-            setCode("");
-            await onAuthorize(connection.id, submittedCode);
-          }}
-        >
-          <label>
-            2. Claude 승인코드
-            <input
-              type="password"
-              autoComplete="off"
-              spellCheck={false}
-              value={code}
-              onChange={(e) => setCode(e.target.value)}
-              placeholder="Claude 인증창에서 받은 승인코드"
-              required
-            />
-          </label>
-          <button disabled={busy || !code.trim()}>승인코드로 연결</button>
-        </form>
-      )}
-      <p role="status">
-        {native && !challenge.submitted
-          ? "승인코드를 입력하면 연결 결과를 자동으로 확인해요."
-          : "인증 완료를 기다리고 있어요. 연결되면 모델 목록이 자동으로 나타나요."}
-      </p>
-    </div>
-  );
-}
-function Connections({
-  selection,
-  onSelect,
-  onConversation,
-}: {
+function Connections({ selection, onSelect, onConversation }: {
   selection: string;
-  onSelect: (s: string) => void;
+  onSelect: (selection: string) => void;
   onConversation: () => void;
 }) {
-  const [items, setItems] = useState<ModelConnection[]>([]),
-    [error, setError] = useState(""),
-    [loadError, setLoadError] = useState(""),
-    [pending, setPending] = useState(true),
-    [busy, setBusy] = useState(false),
-    [consent, setConsent] = useState(false),
-    [key, setKey] = useState(""),
-    [claudeSetup, setClaudeSetup] = useState(false);
-  const mounted = useRef(false);
-  const revision = useRef(0);
-  const loginWindow = useRef<{
-    window: Window | null;
-    id: string;
-    navigated: boolean;
-  } | null>(null);
-  const refresh = useCallback(async () => {
-    const version = ++revision.current;
-    const data = await request("/api/model-connections");
-    if (!mounted.current || version !== revision.current) return;
-    setItems(data.connections);
-    setLoadError("");
-    setPending(false);
-  }, []);
-  useEffect(() => {
-    mounted.current = true;
-    const requestRevision = revision;
-    let stopped = false,
-      checking = false;
-    async function check() {
-      if (checking || stopped) return;
-      checking = true;
-      try {
-        await refresh();
-      } catch (e) {
-        if (!stopped)
-          setLoadError(
-            e instanceof Error ? e.message : "연결을 확인해 주세요.",
-          );
-      } finally {
-        checking = false;
-        if (!stopped) setPending(false);
-      }
-    }
-    void check();
-    const timer = setInterval(() => void check(), 3000);
-    const focus = () => void check();
-    window.addEventListener("focus", focus);
-    document.addEventListener("visibilitychange", focus);
-    return () => {
-      stopped = true;
-      mounted.current = false;
-      requestRevision.current++;
-      clearInterval(timer);
-      window.removeEventListener("focus", focus);
-      document.removeEventListener("visibilitychange", focus);
-      if (loginWindow.current && !loginWindow.current.navigated)
-        loginWindow.current.window?.close();
-      loginWindow.current = null;
-    };
-  }, [refresh]);
-  useEffect(() => {
-    const target = loginWindow.current;
-    if (!target || target.navigated) return;
-    const connection = items.find((c) => c.id === target.id);
-    if (connection?.challenge && target.window && !target.window.closed) {
-      // URLs have already passed the account client's exact official URL allowlist.
-      target.window.location.replace(connection.challenge.url);
-      target.navigated = true;
-    } else if (connection && connection.state !== "authorizing") {
-      target.window?.close();
-      loginWindow.current = null;
-    }
-  }, [items]);
-  async function act(body: unknown, method = "POST", login = false) {
-    setBusy(true);
-    setError("");
-    setKey("");
-    revision.current++;
-    try {
-      const data = await request("/api/model-connections", body, method);
-      if (login && loginWindow.current)
-        loginWindow.current.id = data.connection.id;
-      if (mounted.current && data.connection)
-        setItems((previous) => [
-          ...previous.filter((c) => c.id !== data.connection.id),
-          data.connection,
-        ]);
-      await refresh();
-      setClaudeSetup(false);
-    } catch (e) {
-      if (login && loginWindow.current && !loginWindow.current.navigated) {
-        loginWindow.current.window?.close();
-        loginWindow.current = null;
-      }
-      setError(e instanceof Error ? e.message : "연결 상태를 확인해 주세요.");
-    } finally {
-      setBusy(false);
-    }
-  }
-  function startLogin(provider: "codex" | "claude") {
-    if (busy || pending || loadError || !consent) return;
-    // Reserve the window during the click so async challenge delivery is not popup-blocked.
-    const popup = window.open("about:blank", "_blank");
-    if (popup) {
-      popup.opener = null;
-      popup.document.title = "공식 인증창 준비 중";
-      popup.document.body.textContent =
-        "공식 인증창을 준비하고 있어요. 잠시만 기다려 주세요.";
-    }
-    loginWindow.current = { window: popup, id: "", navigated: false };
-    void act(
-      {
-        provider,
-        ...(provider === "claude" ? { authMethod: "claude-code" } : {}),
-      },
-      "POST",
-      true,
-    );
-  }
-  const choices = items
-    .filter((c) => c.state === "connected")
-    .flatMap((c) =>
-      c.models.map((m) => ({
-        id: `${c.id}:${m}`,
-        label: `${c.provider} · ${m}`,
-      })),
-    );
-  return (
-    <section className="hm-ai-settings">
-      <h2 className="hm-panel-heading">
-        내 AI로도
-        <br />
-        이야기해요.
-      </h2>
-      <p className="hm-settings-note">
-        연결 없이 기본 Gemini로 시작할 수 있어요.
-      </p>
-      <section className="hm-model-active">
-        <span className="hm-badge">현재 AI</span>
-        <h3>
-          {selection === "default"
-            ? "기본 Gemini"
-            : (choices.find((c) => c.id === selection)?.label ??
-              "선택한 연결 확인 필요")}
-        </h3>
-        <p>
-          AI 회화에 적용하는 선택이에요.
-          <br />
-          여행 번역과 음성은 기본 서비스를 사용해요.
-        </p>
-      </section>
-      <fieldset className="hm-model-choices">
-        <legend>대화할 AI 선택</legend>
-        <button
-          aria-pressed={selection === "default"}
-          onClick={() => onSelect("default")}
-        >
-          <span>
-            <b>기본 Gemini</b>
-            <small>별도 연결 없이 사용</small>
-          </span>
-          {selection === "default" && <Icon name="check" />}
-        </button>
-        {choices.map((c) => (
-          <button
-            key={c.id}
-            aria-pressed={selection === c.id}
-            onClick={() => onSelect(c.id)}
-          >
-            <span>
-              <b>{c.label}</b>
-              <small>연결된 내 계정으로 대화해요</small>
-            </span>
-            {selection === c.id && <Icon name="check" />}
-          </button>
-        ))}
-      </fieldset>
-      <button
-        className="hm-primary hm-full"
-        disabled={
-          selection !== "default" && !choices.some((c) => c.id === selection)
-        }
-        onClick={onConversation}
-      >
-        이 AI로 대화하기 <Icon name="arrow" />
-      </button>
-
-      {pending && <p role="status">내 계정 연결을 확인하고 있어요…</p>}
-      {loadError && (
-        <div className="hm-alert" role="alert">
-          <p>{loadError}</p>
-          <button
-            disabled={busy}
-            onClick={() =>
-              void refresh().catch((e) =>
-                setLoadError(
-                  e instanceof Error ? e.message : "연결을 확인해 주세요.",
-                ),
-              )
-            }
-          >
-            연결 상태 다시 확인
-          </button>
-        </div>
-      )}
-      <div className="hm-section-heading">
-        <h2>연결 관리</h2>
-      </div>
-      <label className="hm-check">
-        <input
-          type="checkbox"
-          checked={consent}
-          onChange={(e) => setConsent(e.target.checked)}
-        />
-        대화를 선택한 공급자에 전달하고 연결 정보를 서버에 보관하는 데 동의해요.
-      </label>
-      {!consent && (
-        <p className="hm-muted">
-          새 계정을 연결하려면 위 동의 항목을 선택하세요. 기본 Gemini는 별도
-          연결이 필요 없어요.
-        </p>
-      )}
-      {(["codex", "claude"] as const).map((provider) => (
-        <section
-          key={provider}
-          className="hm-provider-card"
-          aria-label={`${provider === "codex" ? "Codex" : "Claude"} 연결 관리`}
-        >
-          <div className="hm-provider-row">
-            <div>
-              <h3>{provider === "codex" ? "Codex" : "Claude"}</h3>
-              <small>
-                {provider === "codex"
-                  ? "ChatGPT 계정 로그인"
-                  : "Claude 계정 로그인 · 공식 Claude Code 실행"}
-              </small>
-            </div>
-            {!items.some((c) => c.provider === provider) &&
-              (provider === "codex" ? (
-                <button
-                  disabled={busy || pending || !!loadError || !consent}
-                  onClick={() => startLogin("codex")}
-                >
-                  Codex 계정 연결
-                </button>
-              ) : (
-                <div className="hm-provider-actions">
-                  <button
-                    disabled={busy || pending || !!loadError || !consent}
-                    onClick={() => startLogin("claude")}
-                  >
-                    Claude 계정 연결
-                  </button>
-                  <button
-                    disabled={busy || pending || !!loadError}
-                    aria-expanded={claudeSetup}
-                    aria-controls="claude-connection-setup"
-                    onClick={() => setClaudeSetup(true)}
-                  >
-                    API 키로 연결
-                  </button>
-                </div>
-              ))}
-          </div>
-          {items
-            .filter((c) => c.provider === provider)
-            .map((c) => (
-              <div key={c.id} className="hm-connection-state">
-                <p
-                  role={
-                    c.state === "error" || c.state === "expired"
-                      ? "alert"
-                      : "status"
-                  }
-                >
-                  {
-                    {
-                      connected: "연결됨",
-                      authorizing: "공식 로그인 대기",
-                      expired: "다시 로그인 필요",
-                      quota_exceeded: "사용 한도 초과",
-                      error: "연결에 실패했어요",
-                      disconnected: "연결 해제됨",
-                    }[c.state]
-                  }
-                </p>
-                {["error", "expired", "quota_exceeded"].includes(c.state) && (
-                  <p className="hm-muted">
-                    {c.state === "quota_exceeded"
-                      ? "계정의 사용 한도를 확인하거나 기본 Gemini를 선택해 주세요."
-                      : "인증을 다시 확인해야 해요. 아래에서 연결을 해제한 뒤 다시 연결해 주세요."}
-                  </p>
-                )}
-                {c.state === "connected" && (
-                  <p>연결됐어요. 위에서 사용할 모델을 선택해 주세요.</p>
-                )}
-                {c.state === "authorizing" && (
-                  <ConnectionChallenge
-                    key={c.id}
-                    connection={c}
-                    busy={busy}
-                    onAuthorize={(id, code) =>
-                      act({ action: "authorize", id, code })
-                    }
-                  />
-                )}
-                <button
-                  disabled={busy}
-                  onClick={() => void act({ id: c.id }, "DELETE")}
-                >
-                  연결 해제
-                </button>
-              </div>
-            ))}
-          {provider === "claude" && claudeSetup && (
-            <section
-              id="claude-connection-setup"
-              className="hm-claude-setup"
-              aria-label="Claude 연결 안내"
-            >
-              <h3>Claude 연결하기</h3>
-              <p>
-                1. 공식 Claude Console에 로그인해 API 키를 발급하세요. 구독
-                로그인 인증 코드와는 다른 키예요.
-              </p>
-              <a
-                href="https://platform.claude.com/settings/keys"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                Claude Console에서 키 발급하기 ↗
-              </a>
-              <p>
-                2. 발급한 API 키를 아래에 붙여넣으세요. API 사용료는 키
-                소유자에게 별도로 청구돼요.
-              </p>
-              <label>
-                Claude API 키
-                <input
-                  type="password"
-                  autoComplete="off"
-                  value={key}
-                  onChange={(e) => setKey(e.target.value)}
-                  placeholder="sk-ant-api…"
-                />
-              </label>
-              {!consent && (
-                <p>
-                  연결을 완료하려면 위의 공급자 전송·연결 정보 보관 동의 항목을
-                  선택하세요.
-                </p>
-              )}
-              <div className="hm-row">
-                <button
-                  className="hm-primary"
-                  disabled={busy || !consent || !key.trim()}
-                  onClick={() =>
-                    void act({ provider: "claude", apiKey: key.trim() })
-                  }
-                >
-                  키 확인하고 연결
-                </button>
-                <button
-                  disabled={busy}
-                  onClick={() => {
-                    setClaudeSetup(false);
-                    setKey("");
-                  }}
-                >
-                  취소
-                </button>
-              </div>
-            </section>
-          )}
-        </section>
-      ))}
-      {error && <p role="alert">{error}</p>}
-
-      <p className="hm-settings-note">
-        모델을 바꾸면 새 대화를 시작해요. 연결 오류가 나면 다른 모델로 자동
-        전환하지 않아요.
-      </p>
-    </section>
-  );
+  return <section className="hm-ai-settings" aria-label="AI 대화 설정">
+    <p className="hm-eyebrow">AI CONVERSATION</p>
+    <h2>기본 Gemini와 이야기해요</h2>
+    <p className="hm-muted">별도 AI 계정 연결 없이 지금 배우는 언어로 연습할 수 있어요.</p>
+    {selection !== "default" && <p role="alert">개인 AI 연결은 종료됐어요. 기본 Gemini를 선택한 뒤 새 대화를 시작해 주세요.</p>}
+    <div className="hm-model-choices"><button type="button" aria-pressed={selection === "default"} onClick={() => { if (selection !== "default") onSelect("default"); }}>
+      기본 Gemini
+    </button></div>
+    <p className="hm-muted">AI 답변은 틀릴 수 있어요. 대화는 답변 생성을 위해 AI 제공업체로 전송되니 개인정보는 입력하지 마세요.</p>
+    <button type="button" className="hm-primary" disabled={selection !== "default"} onClick={onConversation}>대화 연습하기</button>
+  </section>;
 }
+
 const questions = [
   {
     title: "처음 만난 사람에게 내 출신을 말할 때",
@@ -954,6 +493,7 @@ export function V2App() {
       }[]
     >([]),
     [chatInput, setChatInput] = useState("");
+  const [musicConversation, setMusicConversation] = useState<string | null>(null);
   const [aiFromSettings, setAiFromSettings] = useState(false);
   const [assessmentInfo, setAssessmentInfo] = useState(false);
   const operation = useRef(false);
@@ -1035,13 +575,14 @@ export function V2App() {
   async function chooseLanguage(value: StudyLanguage) {
     if (operation.current) return;
     const previousLanguage = language;
+    setSection("today");
     setLanguage(value);
     try {
       localStorage.setItem("hanmadi:v2:language", value);
     } catch {
       /* Server preference still works. */
     }
-    setChat([]);
+    setChat([]); setMusicConversation(null);
     setText("");
     setChatInput("");
     setTranslation(null);
@@ -1202,7 +743,7 @@ export function V2App() {
             <button aria-label="이전 화면으로" onClick={closePanel}>
               <Icon name="back" />
             </button>
-            <h1>{modal === "settings" ? "학습 설정" : "내 AI 연결"}</h1>
+            <h1>{modal === "settings" ? "학습 설정" : "AI 대화 설정"}</h1>
             <span aria-hidden="true" />
           </header>
         ) : (
@@ -1248,7 +789,7 @@ export function V2App() {
                   disabled={busy}
                   onClick={() => setModal(identity ? "ai" : "login")}
                 >
-                  내 AI
+                  AI 설정
                 </button>
                 <button
                   aria-label={identity ? "설정" : "로그인"}
@@ -1269,7 +810,7 @@ export function V2App() {
             secondary
               ? modal === "settings"
                 ? "학습 설정 내용"
-                : "내 AI 연결 내용"
+                : "AI 대화 설정 내용"
               : undefined
           }
         >
@@ -1346,7 +887,7 @@ export function V2App() {
                     setIdentity(null);
                     setState(emptyStudy());
                     setExtra([]);
-                    setChat([]);
+                    setChat([]); setMusicConversation(null);
                     setTranslation(null);
                     setSelection("default");
                     setModal(null);
@@ -1363,7 +904,7 @@ export function V2App() {
               selection={selection}
               onSelect={(s) => {
                 setSelection(s);
-                setChat([]);
+                setChat([]); setMusicConversation(null);
               }}
               onConversation={() => {
                 setModal(null);
@@ -1417,6 +958,7 @@ export function V2App() {
                       ["today", "오늘 추천"],
                       ["levels", "레벨별"],
                       ["scenes", "상황별"],
+                      ["music", "음악"],
                     ].map(([id, label]) => (
                       <button
                         key={id}
@@ -1437,6 +979,12 @@ export function V2App() {
                         로그인하고 레벨 체크하기 →
                       </button>
                     </div>
+                  )}
+                  {section === "music" && (
+                    <MusicStudy key={language} language={language} expressions={state.expressions} onSaved={apply} onConversation={prompt => {
+                      setScene("smalltalk"); setChat([]); setChatInput(prompt); setMusicConversation(prompt); setTab("chat"); setError("");
+                      setNotice("음악에서 배운 표현으로 새 대화를 준비했어요. 아래 입력창을 확인하고 보내기를 눌러 주세요.");
+                    }} />
                   )}
                   {section === "today" && (
                     <>
@@ -1570,7 +1118,7 @@ export function V2App() {
                               <span className="hm-badge">
                                 {e.source === "translation"
                                   ? "번역에서"
-                                  : e.source === "vocabulary" ? "단어장에서" : "AI 대화에서"}
+                                  : e.source === "vocabulary" ? "단어장에서" : e.source === "music" ? "음악 학습에서" : "AI 대화에서"}
                               </span>
                               <div className="hm-row">
                                 <button
@@ -1827,7 +1375,7 @@ export function V2App() {
                             className="hm-primary hm-full"
                             onClick={() => {
                               setTab("chat");
-                              setChat([]);
+                              setChat([]); setMusicConversation(null);
                             }}
                           >
                             AI와 이 상황 대화하기 <Icon name="arrow" />
@@ -2107,7 +1655,7 @@ export function V2App() {
                           value={scene}
                           onChange={(e) => {
                             setScene(e.target.value);
-                            setChat([]);
+                            setChat([]); setMusicConversation(null);
                           }}
                         >
                           {curriculum.scenes.map((s) => (
@@ -2126,7 +1674,7 @@ export function V2App() {
                       </button>
                       <button
                         disabled={busy || !chat.length}
-                        onClick={() => setChat([])}
+                        onClick={() => { setChat([]); setMusicConversation(null); setChatInput(""); }}
                       >
                         새 대화
                       </button>
@@ -2153,10 +1701,10 @@ export function V2App() {
                             }
                           />
                         </span>
-                        <h2>먼저 말을 걸어 드릴게요.</h2>
+                        <h2>{musicConversation ? "노래 속 표현으로 대화해요" : "먼저 말을 걸어 드릴게요."}</h2>
                         <p>
                           {
-                            curriculum.scenes.find((s) => s.id === scene)
+                            musicConversation ?? curriculum.scenes.find((s) => s.id === scene)
                               ?.prompt
                           }
                         </p>
@@ -2165,11 +1713,11 @@ export function V2App() {
                           disabled={busy}
                           onClick={() =>
                             void sendChat(
-                              "아직 이 언어를 몰라요. 짧은 인사와 따라 말할 예시부터 알려 주세요.",
+                              musicConversation ? chatInput : "아직 이 언어를 몰라요. 짧은 인사와 따라 말할 예시부터 알려 주세요.",
                             )
                           }
                         >
-                          AI가 먼저 말하기 →
+                          {musicConversation ? "음악 회화 시작" : "AI가 먼저 말하기 →"}
                         </button>
                       </div>
                     )}
@@ -2334,7 +1882,7 @@ export function V2App() {
                             <span className="hm-badge">
                               {e.source === "translation"
                                 ? "번역에서"
-                                : e.source === "vocabulary" ? "단어장에서" : "AI 대화에서"}
+                                : e.source === "vocabulary" ? "단어장에서" : e.source === "music" ? "음악 학습에서" : "AI 대화에서"}
                             </span>
                             <button
                               disabled={busy}
@@ -2408,7 +1956,7 @@ export function V2App() {
                   setError("");
                   setNotice("");
                   if (id !== "chat") {
-                    setChat([]);
+                    setChat([]); setMusicConversation(null);
                     setChatInput("");
                   }
                 }}

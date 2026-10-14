@@ -1,9 +1,9 @@
 import { courses, type Language } from "./courses";
 
 export const learningLevels = {
-  beginner: { label: "입문", difyLevel: "입문", guide: "한 번에 짧은 표현 하나와 따라 말할 예시를 제시하세요. 선택형 질문으로 도와주세요.", task: "소리를 듣고 따라 말한 뒤, 짧은 상황에서 주고받기", reviewDays: 1 },
-  elementary: { label: "기초", difyLevel: "초급", guide: "쉬운 문장 두 개로 답하고 예시를 조금씩 줄이세요. 주문·위치 같은 일상 질문을 하세요.", task: "이름·수량·장소를 바꿔 두 문장 만들기", reviewDays: 2 },
-  intermediate: { label: "중급 연습", difyLevel: "중급", guide: "일상 역할극에서 이유·경험을 묻고 세 문장 이내로 대화를 이어가세요. 완성 답안보다 힌트를 먼저 주세요.", task: "예시 없이 상황을 설명하고 이유 덧붙이기", reviewDays: 3 },
+  beginner: { label: "입문", guide: "한 번에 짧은 표현 하나와 따라 말할 예시를 제시하세요. 선택형 질문으로 도와주세요.", task: "소리를 듣고 따라 말한 뒤, 짧은 상황에서 주고받기", reviewDays: 1 },
+  elementary: { label: "기초", guide: "쉬운 문장 두 개로 답하고 예시를 조금씩 줄이세요. 주문·위치 같은 일상 질문을 하세요.", task: "이름·수량·장소를 바꿔 두 문장 만들기", reviewDays: 2 },
+  intermediate: { label: "중급 연습", guide: "일상 역할극에서 이유·경험을 묻고 세 문장 이내로 대화를 이어가세요. 완성 답안보다 힌트를 먼저 주세요.", task: "예시 없이 상황을 설명하고 이유 덧붙이기", reviewDays: 3 },
 } as const;
 export type LearningLevel = keyof typeof learningLevels;
 export type Difficulty = "easy" | "right" | "hard";

@@ -1,4 +1,4 @@
-/** Browser -> Next -> mock Dify regression; no production credentials or student data. */
+/** Browser -> Next -> mock LiteLLM regression; no production credentials or student data. */
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
 import { spawn } from 'node:child_process';
@@ -6,11 +6,10 @@ import { cpSync, mkdtempSync, rmSync, symlinkSync, mkdirSync, writeFileSync } fr
 import { tmpdir } from 'node:os';
 import { dirname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { randomUUID } from 'node:crypto';
 import { setTimeout as delay } from 'node:timers/promises';
 import { chromium } from 'playwright';
 const source = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const temp = mkdtempSync(join(tmpdir(), 'hanmadi-language-'));
+const temp = mkdtempSync(join(process.env.HANMADI_E2E_WORK_DIR || tmpdir(), 'hanmadi-language-'));
 const app = join(temp, 'app');
 const origin = 'http://127.0.0.1:3190';
 const requests = [];
@@ -33,9 +32,13 @@ const mock = createServer(async (req, res) => {
     res.setHeader('content-type', 'audio/wav'); return res.end(wav);
   }
   const body = JSON.parse(raw); requests.push(body);
-  assert.ok(answers[body.inputs.language]);
+  assert.equal(req.url, '/v1/chat/completions');
+  assert.equal(body.model, 'mock-chat');
+  const language = Object.keys(answers).find(name => body.messages[0].content.includes(name));
+  assert.ok(language, 'server-owned language prompt');
   res.setHeader('content-type', 'application/json');
-  res.end(JSON.stringify({ answer: body.query === '긴 답변 테스트' ? '**첫 문장**\n' + '긴 답변 연습입니다.\n'.repeat(40) + '<img src=x onerror=alert(1)>' : answers[body.inputs.language], conversation_id: body.conversation_id || randomUUID() }));
+  const content = body.messages.at(-1).content === '긴 답변 테스트' ? '**첫 문장**\n' + '긴 답변 연습입니다.\n'.repeat(40) + '<img src=x onerror=alert(1)>' : answers[language];
+  res.end(JSON.stringify({ choices: [{ message: { content }, finish_reason: 'stop' }] }));
 });
 let child, browser;
 async function cleanup() {
@@ -61,9 +64,9 @@ try {
   await new Promise((resolve, reject) => { mock.once('error', reject); mock.listen(4196, '127.0.0.1', resolve); });
   child = spawn(process.execPath, [join(app, 'node_modules/next/dist/bin/next'), 'dev', '--webpack', '--hostname', '127.0.0.1', '--port', '3190'], {
     cwd: app, stdio: 'inherit', env: { PATH: process.env.PATH, HOME: process.env.HOME, NODE_ENV: 'development', NEXT_TELEMETRY_DISABLED: '1',
-      TUTOR_PINS: 'Smoke:864209,Other:753108', AUTH_SECRET: 'isolated-language-flow-never-use-in-production', CONVERSATION_PROVIDER: 'dify',
-      LITELLM_BASE_URL: 'http://127.0.0.1:4196/v1', LITELLM_API_KEY: 'language-smoke-only', LITELLM_STT_MODEL: 'mock-stt', LITELLM_TTS_MODEL: 'mock-tts', LITELLM_TTS_VOICE: 'mock-voice',
-      DIFY_BASE_URL: 'http://127.0.0.1:4196', DIFY_API_KEY: 'language-smoke-only', DIFY_USER_SECRET: 'isolated-language-flow-secret-not-production' },
+      TUTOR_PINS: 'Smoke:864209,Other:753108', AUTH_SECRET: 'isolated-language-flow-never-use-in-production', CONVERSATION_PROVIDER: 'litellm',
+      LITELLM_BASE_URL: 'http://127.0.0.1:4196/v1', LITELLM_API_KEY: 'language-smoke-only', LITELLM_MODEL: 'mock-chat', LITELLM_STT_MODEL: 'mock-stt', LITELLM_TTS_MODEL: 'mock-tts', LITELLM_TTS_VOICE: 'mock-voice',
+    },
   });
   let ready = false;
   for (let i = 0; i < 90; i++) {
@@ -143,7 +146,7 @@ try {
     if (code === 'th') await page.goto(page.url() + '&mode=free');
     assert.ok((await page.locator('body').innerText()).includes('맞춤 난이도 · ' + level));
     assert.equal(await page.getByRole('button', { name: '적당해요', exact: true }).isEnabled(), false);
-    await page.getByLabel('대화가 회화 서버에 저장되는 것에 동의해요.').check();
+    assert.equal(await page.getByLabel('대화가 회화 서버에 저장되는 것에 동의해요.').count(), 0);
     if (await page.getByLabel('답변 자동 듣기').isEnabled()) await page.getByLabel('답변 자동 듣기').uncheck();
     if (code === 'th') {
       await page.locator('textarea').fill('아직 보내지 않은 문장');
@@ -182,13 +185,35 @@ try {
       assert.equal((await speech).status(), 200);
     }
     await chat('한 번 더 연습해요');
-    assert.ok(requests.at(-1).conversation_id, 'server conversation continues after reload');
+    assert.deepEqual(requests.at(-1).messages.map(m => m.role), ['system', 'user', 'assistant', 'user'], 'history continues after reload');
     await page.getByRole('button', { name: '새 대화', exact: true }).click();
     await page.getByRole('button', { name: '계속 이어가기', exact: true }).click();
     assert.equal(await page.getByRole('log').getByText('한마디 AI', { exact: true }).count(), 2);
-    assert.equal(requests.at(-1).inputs.language, name);
-    assert.equal(requests.at(-1).inputs.level, ({ "기초": "초급", "중급 연습": "중급" })[level] ?? level);
-    if (code === 'th') await screenshot('conversation-mobile');
+    assert.ok(requests.at(-1).messages[0].content.includes(name));
+    assert.ok(requests.at(-1).messages[0].content.includes(`Level: ${({ "기초": "elementary", "중급 연습": "intermediate", "입문": "beginner" })[level]}.`));
+    const retiredBefore = requests.length;
+    for (const change of [{ conversationId: '12345678-1234-1234-1234-123456789abc' }, { modelSelection: 'a'.repeat(32) + ':retired-model' }]) {
+      const retired = await page.request.post(origin + '/api/conversation', { headers: { Origin: origin }, data: {
+        language: code, lessonId: 'greetings', level: 'beginner', learningRevision: profiles[code].revision,
+        messages: [{ role: 'user', content: '이전 요청' }], ...change,
+      } });
+      assert.equal(retired.status(), 409);
+    }
+    assert.equal(requests.length, retiredBefore);
+    if (code === 'th') {
+      await screenshot('conversation-mobile');
+      await page.evaluate(() => {
+        const keys = Object.keys(sessionStorage).filter(k => k.startsWith('hanmadi:conversation:v2:') && !k.endsWith(':audio'));
+        if (keys.length !== 1) throw new Error('expected one scoped conversation draft');
+        const value = JSON.parse(sessionStorage.getItem(keys[0]));
+        value.data.conversationId = '12345678-1234-1234-1234-123456789abc';
+        sessionStorage.setItem(keys[0], JSON.stringify(value));
+      });
+      await page.reload();
+      await page.getByText('첫 한마디를 건네 보세요.', { exact: true }).waitFor();
+      assert.equal(await page.getByRole('log').getByText('한마디 AI', { exact: true }).count(), 0);
+      assert.equal(requests.length, retiredBefore, 'old stored-provider history is not migrated or sent');
+    }
     const pendingFeedback = page.waitForResponse(r => r.url().endsWith('/api/learning-profile') && r.request().method() === 'POST');
     await page.getByRole('button', { name: '적당해요', exact: true }).click();
     const feedback = await pendingFeedback; assert.equal(feedback.status(), 200);
@@ -247,9 +272,9 @@ try {
     // The server owns the level even if an old or modified client claims another one.
     const forged = await page.request.post(origin + '/api/conversation', { headers: { Origin: origin }, data: {
       language: code, lessonId: 'greetings', level: 'beginner', learningRevision: profiles[code].revision,
-      storageConsent: true, messages: [{ role: 'user', content: '연습해요' }],
+      messages: [{ role: 'user', content: '연습해요' }],
     } });
-    assert.equal(forged.status(), 200); assert.equal(requests.at(-1).inputs.level, ({ "기초": "초급", "중급 연습": "중급" })[level] ?? level);
+    assert.equal(forged.status(), 200); assert.ok(requests.at(-1).messages[0].content.includes(`Level: ${({ "기초": "elementary", "중급 연습": "intermediate", "입문": "beginner" })[level]}.`));
     await page.request.delete(origin + '/api/auth');
   }
   // First-attempt persistence, duplicate request idempotency, and invalid input.
@@ -279,7 +304,7 @@ try {
   assert.equal(retake.status(), 200); const retaken = await retake.json();
   assert.equal(retaken.profile.level, 'beginner'); assert.equal(retaken.profile.confirmed, false);
   const stale = await page.request.post(origin + '/api/conversation', { headers: { Origin: origin }, data: {
-    language: 'ja', lessonId: 'greetings', level: 'intermediate', learningRevision: profiles.ja.revision, storageConsent: true, messages: [{ role: 'user', content: 'hello' }],
+    language: 'ja', lessonId: 'greetings', level: 'intermediate', learningRevision: profiles.ja.revision, messages: [{ role: 'user', content: 'hello' }],
   } }); assert.equal(stale.status(), 409);
   await page.goto(origin + '/learn?language=ja'); await page.waitForURL('**/conversation?language=ja');
   await page.goto(origin + '/learn?language=th'); assert.ok(await page.getByRole('heading', { name: '오늘부터 1주 학습 계획' }).isVisible());
@@ -304,7 +329,7 @@ try {
   const invalid = await page.request.post(origin + '/api/learning-language', { headers: { Origin: origin }, form: { language: 'xx' } });
   assert.equal(invalid.status(), 400);
   // A long model reply must keep its beginning visible and never become HTML.
-  await page.getByLabel('대화가 회화 서버에 저장되는 것에 동의해요.').check();
+  assert.equal(await page.getByLabel('대화가 회화 서버에 저장되는 것에 동의해요.').count(), 0);
   await page.getByLabel('답변 자동 듣기').uncheck();
   await chat('긴 답변 테스트');
   assert.equal(await page.getByRole('log').locator('img').count(), 0);
@@ -382,8 +407,8 @@ try {
       if (step === 0) await screenshot('speaking-' + language + '-listen');
       await page.getByRole('button', { name: '따라 말해 볼게요 →', exact: true }).click();
       if (step === 0) {
-        assert.equal(await page.getByRole('button', { name: '눌러서 말하기', exact: true }).isEnabled(), false, 'consent required for STT/AI');
-        await page.getByLabel(/음성에서 인식한 말과 AI 답변이/).check();
+        assert.equal(await page.getByRole('button', { name: '눌러서 말하기', exact: true }).isEnabled(), true);
+        assert.equal(await page.getByLabel(/음성에서 인식한 말과 AI 답변이/).count(), 0);
         await page.getByLabel('AI 대답 자동 듣기').uncheck();
       }
       for (const phase of ['repeat', 'roleplay']) {
@@ -399,9 +424,9 @@ try {
           const conversation = page.waitForResponse(r => r.url().endsWith('/api/conversation') && r.request().method() === 'POST');
           await page.getByRole('button', { name: '말 다 했어요 · AI에게 보내기', exact: true }).click();
           assert.equal((await conversation).status(), 200);
-          assert.match(requests.at(-1).query, /음성 인식 결과/);
-          assert.equal(requests.at(-1).inputs.language, name);
-          assert.equal(requests.at(-1).conversation_id, undefined);
+          assert.match(requests.at(-1).messages[0].content, /음성 인식 결과/);
+          assert.ok(requests.at(-1).messages[0].content.includes(name));
+          assert.equal(requests.at(-1).messages.length, 2);
           await page.getByText('AI와 주고받기', { exact: true }).waitFor();
           if (phase === 'roleplay') {
             const replay = page.waitForResponse(r => r.url().endsWith('/api/conversation/speech'));
@@ -449,7 +474,7 @@ try {
     }
     await page.emulateMedia({ colorScheme: 'light' }); await page.setViewportSize({ width: 390, height: 844 });
   }
-  console.log('PASS: Japanese + Thai voice-first beginner -> listen -> repeat -> situation -> self-report -> speaking plan, no typing; target-only audio, real browser recording with mocked providers, consent, microphone fallback, reload, no false proficiency promotion.');
+  console.log('PASS: Japanese + Thai voice-first beginner -> listen -> repeat -> situation -> self-report -> speaking plan, no typing; target-only audio, real browser recording with mocked providers, no retired storage consent, microphone fallback, reload, no false proficiency promotion.');
   assert.deepEqual(errors, []);
   console.log('PASS: three-language assessment -> two real API turns -> feedback -> persistent plan; server-owned levels, retake isolation, stale revision rejection, first-attempt idempotency, actor/student isolation, mobile/desktop/light/dark, draft recovery, goal edits, lesson navigation, failed-save retry, fake-microphone denial/recovery, audio replay, long replies, auth and origin checks.');
   if (process.argv.includes('--serve')) { console.log('LANGUAGE_SMOKE_URL=' + origin + '/login (synthetic PIN 864209)'); await new Promise(() => {}); }

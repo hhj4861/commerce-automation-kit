@@ -1,3 +1,4 @@
+import {mockReview} from './helpers/editorial-review.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { CATEGORIES } from '../lib/studio.js';
@@ -28,11 +29,12 @@ test('every supported category has a distinct editorial structure, with longform
   assert.match(narrationGuide({ ...brief, duration: 60 }), /180~270자/);
 });
 
-for (const provider of ['codex', 'claude']) test(`${provider} scenario uses message-first guidance without changing user brief, JSON contract or number of calls`, async () => {
+for (const provider of ['codex', 'claude']) test(`${provider} scenario uses message-first guidance without changing user brief, JSON contract, plus an independent review`, async () => {
   const input = structuredClone(brief), controller = new AbortController(); let calls = 0;
   const actual = await scenarioBrief(input, { SHOPSHORTS_CODEX_MODEL: 'codex-model', SHOPSHORTS_CLAUDE_MODEL: 'claude-model' }, {
     provider, signal: controller.signal, generate: async (prompt, options) => {
       calls++;
+      if(mockReview(prompt)) return mockReview(prompt);
       assert.equal(options.model, `${provider}-model`); assert.equal(options.signal, controller.signal);
       assert.match(prompt, /내레이션·대사 → 문장과 호흡에 맞춘 장면 분할/);
       assert.match(prompt, /공감할 일상 상황 →/); assert.match(prompt, /이유와 구체적 예/);
@@ -46,7 +48,7 @@ for (const provider of ['codex', 'claude']) test(`${provider} scenario uses mess
       return { value: { ...value, storyArc: Object.fromEntries(['hook', 'payoff', 'ending'].map((key, i) => [key, { sceneId: value.scenes[i].id, line: value.scenes[i].narration }])) }, searched: false };
     },
   });
-  assert.deepEqual(actual, value); assert.deepEqual(input, brief); assert.equal(calls, 1);
+  assert.deepEqual(actual, value); assert.deepEqual(input, brief); assert.equal(calls, 2);
 });
 
 for (const focus of ['topic', 'direction']) test(`${focus} recommendations establish message and explanation before visual direction`, async () => {

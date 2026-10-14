@@ -2,7 +2,7 @@
 
 > **이 파일의 목적:** 새 IDE/새 Claude 세션이 이 문서 하나만 읽고 곧바로 이어서 작업할 수 있게 한다.
 > 설계 근거는 각 문서에, **"지금 어디까지 왔고 다음에 뭘 하나"는 여기에** 기록한다.
-> 최종 갱신: **2026-09-14**
+> 최종 갱신: **2026-10-13**
 
 ---
 
@@ -80,6 +80,21 @@ npm run dlq -- clear [키워드]                # 격리 즉시 해제
 npm run report -- --dry-run                  # 다이제스트 미리보기(전송 안 함)
 npm run report -- --setup                    # 텔레그램 chat_id 탐색
 ```
+
+### 공용 AI 게이트웨이 (shared-ai, GCP `replay-live-508202`)
+
+- 운영 구성: GCE VM `shared-ai`(e2-small, us-central1-a, 부팅 디스크 20GiB `shared-ai-boot`)에서 LiteLLM·Postgres·discovery가 돈다. accounts v1과 Dify는 2026-10-13 점검에서 퇴역했다(§7 #18·#19). 그 앞에 공개 Cloud Run edge `shared-ai`가 있다(`allUsers` 호출 허용. 인증은 뒤의 LiteLLM·discovery가 키로 한다). Hanmadi·Festa·Replay·JEV가 이 게이트웨이를 쓴다.
+- **2026-10-12 결정: 서버리스 전환 보류, VM 유지.** Phase 2 콜드 경로 p95가 약 47초(JEV 기준 5초)라 게이트에서 떨어졌다. 근거와 측정표는 `docs/20261009-shared-ai-serverless-migration-plan.md` Phase 2의 「게이트 결과와 결정」에 있다.
+- 서버리스 스테이징은 2026-10-12에 철거했다(§7 #17). 코드·Terraform은 재개 경로로 main에 남기며, `serverless_staging=true`로 다시 켤 수 있다. Terraform 밖에 있는 Neon Free 프로젝트만 남아 있다(비용 $0).
+- 기록:
+  - `docs/qa/20261009-serverless-phase2-handoff.md` — Phase 2 실측
+  - `docs/qa/20261011-serverless-platform-compatibility.md` — 플랫폼 동등성
+  - `docs/qa/20261012-accounts-serverless-staging.md`
+  - `docs/qa/20261012-litellm-cold-start.md`
+  - `docs/qa/20261013-shared-ai-maintenance-claude-status.md` — VM 점검(디스크 축소·Dify 삭제·accounts v1 퇴역)의 Claude 작업 현황: 목적, 완료, 남은 일, Codex 분담
+  - `docs/qa/20261013-shared-ai-vm-maintenance-result.md` — 2026-10-13 VM 점검 실행 결과: 단계별 시각, 행 수·공개 확인, 계획과 달라진 점, D+1·D+7 남은 일
+  - `docs/20261010-shared-ai-hosting-cost-comparison.md`
+- ⚠️ 모든 `gcloud` 명령에 `--project=replay-live-508202`를 붙인다. 로컬 기본 프로젝트가 이 프로젝트가 아니다.
 
 ---
 
@@ -201,6 +216,9 @@ src/
 | 14 | 쿠팡 파트너스 링크를 유료 광고 랜딩으로 사용 | TODO(D1) | 파트너스 약관의 유료 광고 조건 + Google Ads 브리지 페이지/리디렉션 정책 미확인. 이번 설계는 파트너스 링크를 쓰지 않아 해당 없음(`docs/YOUTUBE-SHORTS-1000-VIEWS-E2E-TEST.md` §6) |
 | 15 | Shorts 단독 동영상 조회 캠페인(VVC) 저장 가능 여부 | TODO(D1) | 공식 문서가 "Shorts ads only VVC"를 언급(입찰 추천 부정확 경고)하나 화면에서 인스트림·인피드 해제 저장이 되는지 미확인. 1회차 집행 때 확인 |
 | 16 | 스마트스토어 화장품 단순유통 추가 서류·스마트에디터 HTML 입력 | 사람 확인 | 네이버 도메인 자동 접근 불가. 판매자센터 화면에서 확인 후 `docs/HANDCREAM-PILOT-CHECKLIST.md` §6 갱신 |
+| 17 | ~~shared-ai 서버리스 스테이징 철거~~ ✅해결(2026-10-12) | — | #188의 `serverless_staging` 스위치(기본 off)를 머지하고 apply했다. 삭제 52, 추가·변경 0이었고, 이후 plan은 No changes다. 운영 공급자 키 사본을 포함한 시크릿 17개가 삭제됐다. 남은 것: 스테이징 서브넷(무료), Neon Free 프로젝트(Terraform 밖, $0, 콘솔에서 삭제 가능), Artifact Registry 이미지(저장소 전체 580MB) |
+| 18 | ~~shared-ai VM 디스크 축소~~ ✅해결(2026-10-13) | — | **2026-10-13 18:25~19:55 KST 점검으로 부팅 디스크를 80GiB `shared-ai-data`에서 20GiB `shared-ai-boot`로 바꿨다**(같은 이름·내부 IP). #195를 W6에서 머지(`5ea798c`)하고 apply했다(3 added, 2 destroyed). LiteLLM 행 수가 중단 직후 백업(W2)과 같고(78개 테이블·2,930행), 앱 키 4개의 모델 목록과 discovery 최근 작업이 점검 전과 같으며, 공개 확인(W15)을 통과했다. 점검 뒤 디스크 32%(5.8G/19G), 메모리 1,068/1,960MiB 사용. 공개 경로 중단은 약 89분이고, 그중 약 75분은 노트북 절전 때문이었다(중단 중 요청 0건). 월 고정비는 약 $23.9에서 $17.9로 준다. 남은 일: D+1(10-14) Hanmadi 진단 cron의 `/llm` 200 확인, D+7(10-20 이후) ★ 옛 디스크·자동 스냅샷·최종 스냅샷 삭제. 기록: `docs/qa/20261013-shared-ai-vm-maintenance-result.md`. 점검 전 기록: `shared-ai-data`는 80GiB pd-balanced(월 약 $8)이고 부팅 디스크를 겸한다. 2026-10-12에 IAP SSH 읽기 전용으로 실측했다. 디스크는 77G 중 21G 사용(28%)이고, 이미지 저장소(`/var/lib/containerd`)가 16G다. 이미지별 크기로 나누면 Dify 약 10.9GB, 사용 중 약 4.2GB이고 나머지는 미사용 이미지다. 회수할 수 있는 양은 Dify 컨테이너·소스와 미사용 이미지를 더해 약 12GB이고, 새 VM에 필요한 양은 약 6GB다. 처음 적은 "약 17GB 회수 가능"은 정정한다. `docker system df`는 이미지 23개 중 16개가 쓰이는데도 95%를 회수 가능으로 보고해, containerd 이미지 저장소에서는 믿을 수 없다. 메모리는 1,125/1,960MiB 사용(가용 834MiB)이다. 점검 계획은 `docs/plans/20261012-shared-ai-vm-maintenance.md`에 있다. D6 Dify 삭제와 #19를 한 번의 점검으로 묶고, 같은 이름·내부 IP로 인스턴스를 교체해 옛 디스크를 읽기 전용으로 붙여 복사한다. 예상 중단은 45~60분이고, 월 고정비는 약 $23.9에서 $17.9로 준다. 읽기 전용 plan으로 `3 to add, 0 to change, 2 to destroy`를 확인했다. 2026-10-12 준비: 복원 리허설 통과(덤프 0.9초·복원 1.1초, 기본 테이블 78개 행 수 일치), 점검 시각은 주말 10~12시(KST) 권장, 코드 PR #195는 점검 W6 단계에서 머지. 2026-10-12 밤 Cloud Run 요청 기록으로 재확인: 최근 2주 주말 10~12시 요청 0건. Hanmadi 진단 cron이 09시대 KST에 돌아서, W1은 10:05 KST 이후에 시작한다. 점검 중에는 모든 공개 경로가 502이고 알림 장치가 없다(계획 §5-3) |
+| 19 | accounts v1 구독 로그인 폐기 | 퇴역 완료(2026-10-13 점검). 저장소 정리: #221(D6)·#222(#19+D5), Hanmadi 앱은 그 뒤 Codex PR. 남은 일: Claude 토큰 삭제(사용자), Hanmadi 확인 (c)(Codex), D+7 사본 삭제 | **2026-10-13 점검에서 퇴역했다.** accounts 이미지·데이터·릴리스·`.env.accounts`를 새 VM으로 옮기지 않았고, edge는 `/accounts`를 404로 돌려준다. 자격 사본은 옛 디스크·스냅샷에만 남고 D+7에 지운다. Hanmadi 변수 7개는 Codex가 지우고 재배포했다(13:06 KST, 확인 (c)만 미검증). 사용자는 (c)와 Claude 토큰 삭제를 점검 뒤로 미루기로 했다. 기록: `docs/qa/20261013-shared-ai-vm-maintenance-result.md`. 이전 기록: 마스터 플랜 D4: 제공사 약관상 구독 자격을 중개할 수 없고 실사용자도 없다. VM의 15행은 2026-09-28~29 시험 기록이다(Festa 연결 2, Hanmadi 오류 1, 나머지 끊김). #18 점검 계획 §4는 v1을 그 점검에서 퇴역시키는 안을 권한다. accounts 데이터·키·이미지를 옮기지 않고, `/accounts`와 Dify 경로를 edge에서 404로 바꾼다. 선행 조건은 셋이다: 시험 자격의 제공사 쪽 해지(사용자), 운영 Hanmadi에 `AI_ACCOUNTS_*`·`DIFY_*` 변수 이름이 없는지 확인, Festa의 `/accounts` 사용 여부 확인. API 키 연결(v2, #183 코드)은 BYOK 약관 확인 뒤 별도 과제다. Hanmadi는 패키지 0.4.0·API·화면이 codex·claude만 지원한다. 사용자가 2026-10-12 점검 때 퇴역을 결정했다. Cloud Run 기록에 10-04 16:48 UTC Vercel로 보이는 클라이언트의 `GET /accounts/connections` 3건이 있어, Hanmadi 운영·프리뷰의 `AI_ACCOUNTS_*` 확인이 남아 있다(계획 §4). 2026-10-12 밤 사전 확인(읽기 전용, 항목별 반박 검증, 계획 §4): **Hanmadi** 운영 Production에 `AI_ACCOUNTS_*`(9-28)와 `DIFY_*`·`CONVERSATION_PROVIDER`(9-27)를 등록한 기록이 있고, 지운 기록은 없다. 마스터 플랜의 "미주입" 서술과 Phase 0의 Dify 미사용 판단은 틀렸다. Codex 스레드가 읽기 전용으로 확인한 결과 Production에 7개가 모두 있다(Preview·팀 공용 변수에는 없음). 그래서 레거시 회화는 10-09 Dify 중지 뒤로 이미 실패 중일 수 있다(재현은 안 함). 7개를 지우고 현재 운영 배포를 다시 배포한다(Codex 담당, 사용자 승인 뒤). **Festa**는 운영 코드에 v1을 쓰는 「개인 AI」 기능과 secret이 있지만 9-30 뒤 호출이 없다. 사용자가 「개인 AI」 중단을 받아들이고 #19에 포함하기로 했다(10-13). **제공사 해지**: Claude는 claude.ai 설정에서 토큰 단위로 해지할 수 있다. codex는 사용자가 개별로 해지할 메뉴가 없어, 사본 삭제를 앞당기기로 했다(최종 스냅샷 D+7, 사용자 결정). 순서는 Hanmadi → Festa → 해지다 |
 
 ---
 
@@ -247,3 +265,10 @@ src/
 | 2026-09-06 (훅 변형 결정) | 사용자 질의 "기존과 달라진 게 없는데 조회수가 나올까?" → 정리: 유료 조회는 예산÷CPV로 도달, 소재는 CPV(조회율)를 정함. **결정: 최종본은 훅 3종(A 문제제시·B 결과선공개·C 호기심) 세트**, 바디·CTA 공유, 광고그룹 1개에 광고 3개로 조회율 비교. 잡 `shorts.job.hook{A,B,C}.json` lint 통과, 훅 B/C 내레이션 생성(`output/handcream-pilot/draft/vo-hooks/`). 발림 비트 5→4초(종이 테스트 7초 시작). 최종 제작비 ≈ 38cr/세트(pro) |
 | 2026-09-06 (훅 B·C 시안) | 훅 B(종이 테스트 선공개)·C(호기심) 3초 클립 std 생성(**실비 9.0cr**, 1303.1→1294.1) → 바디·CTA 공유 클립으로 3편 조립(`handcream-draft-hook{B,C}.mp4`, 1080x1920 14.5초). 프레임 확인: "(광고)" 오버레이·자막 정상. 함정: `--narration-dir` manifest의 `file`은 **절대경로**여야 함(상대경로면 원자가 패키지 기준으로 찾아 ffprobe 실패). 시안 3편은 업로드 대상 아님(실제 제품과 다름) |
 | 2026-09-06 (생성 전 효율 깔때기) | 사용자 지적 "생성 전에 효율 판단 장치가 있어야" → 3층 깔때기 도입. **1층 대본 스코어러**: shopping-shorts `score --jobs …`(TDD 9테스트, 계약 `ScriptScoreReport` append, 9차원 100점: 훅 움직임/길이/밀도·10초 페이오프·내레이션 밀도·자막 가독성·브랜딩 시점·CTA·길이, Google ABCD+Shorts 권장 번역, 참고용). 훅 A/B/C 96→CTA 내레이션 29→20자 축약 후 100 동률. **2층 힉스필드 Virality Predictor 실측**: 3초 훅 클립 job_id로 실행, **0cr**(잔액 불변), `analysis.scores` 반환 — A 62/훅49 > C 51/37 > B 45/30(`output/handcream-pilot/draft/predictor/`). 구조 동률일 때 소재 차이를 가르는 용도. **3층 광고 실측**이 최종 검증. 스킬 §3.5·README 반영. 전체 테스트 497→506 |
+| 2026-10-12 (shared-ai 서버리스 게이트 결정) | Phase 2 스테이징 실측(Codex 세션이 이어받아 진행): (a) 콜드 p95가 JEV 47.16초·chat 47.60초로 불합격, (b)(c)(d)는 통과, (e)는 미실시, (f)는 중단. g2 비용 관측은 사용자 선택으로 약 5.2시간에서 멈췄다. 플랫폼 스테이징(#176)과 accounts v2 스테이징(#183)은 API 수준에서 통과했다(앱 화면·실제 키는 미검증). 콜드 원인은 서버 시작 전 Python import 약 40초다. **사용자 결정: 서버리스 보류, e2-small VM 유지**(기준: 기능이 같고 확장성·범용성에 문제가 없으면 가성비). Codex 기록 5개를 `feat/common-video-generator`에서 main으로 옮겼다. 후속은 §7 #17~19 |
+| 2026-10-12 (shared-ai 스테이징 철거) | #185(결정 기록)와 #188(`serverless_staging` 스위치)을 머지했다. 검토한 plan을 그대로 apply해 스테이징 Terraform 자원 52개를 삭제했다(운영 변경 0, 이후 plan No changes). 확인 결과 Cloud Run 서비스는 운영 `shared-ai` 하나만 남았고, 스케줄러·시크릿은 0개다. VM 디스크·메모리 실측 결과는 §7 #18에 있다 |
+| 2026-10-12 (shared-ai VM 점검 계획) | #190을 머지했다. 디스크 축소·Dify 삭제·accounts v1 퇴역을 한 번에 하는 점검 계획을 `docs/plans/20261012-shared-ai-vm-maintenance.md`에 썼다. VM은 읽기 전용으로 실측했고, Terraform은 임시 복사본에서 읽기 전용 plan을 돌렸다. 그 과정에서 회수 가능 용량을 약 17GB에서 약 12GB로 정정했다(§7 #18). 실행은 사용자 승인 대기다 |
+| 2026-10-12 (shared-ai 점검 준비) | #194를 머지했다. 코드 PR #195를 올렸다(Terraform 20GiB 부팅 디스크, Docker 로그 상한, accounts·Dify 경로 404, 테스트 98개 통과, 점검 W6 단계에서 머지). 운영 VM에서 복원 리허설을 했다(서비스 중단 없음, 행 수 일치). 사용 기록으로 점검 시각 후보를 정했고, #19 선행 조건의 근거를 Cloud Run 기록으로 확인했다(계획 §4·§5) |
+| 2026-10-12 (shared-ai 점검 사전 확인) | 사용자 지시로 Codex 스레드 `01a0dc15`와 한 팀으로 일하기로 했다(메일함 `shared-ai-serverless`, Baton 짝 `shared-ai`). 읽기 전용으로 사전 확인했다: Hanmadi·Festa 소비 여부, Cloud Run 요청 기록, 제공사 해지 방법, 그 밖의 소비자. 항목마다 다른 방법으로 반박 검증했다. 그 결과 Hanmadi 운영 변수에 관한 Phase 0 판단과 계획 §4의 "미주입" 서술을 정정했다. 마스터 플랜과 Phase 0 기록에도 정정을 남겼다. 사전 확인 중 운영 퇴역 경로에 무인증 GET 2건(13:25 UTC)을 보냈으며, 점검 직전 재확인에서는 이 2건을 제외한다(계획 §5-4). Codex가 Hanmadi Production에 7개 변수가 모두 남아 있음을 확인했다. 사용자 결정은 셋이다: Hanmadi 변수 정리는 Codex가 맡고, codex 토큰은 사본 삭제를 앞당기며(최종 스냅샷 D+7), 점검은 2026-10-17(토) 10:05 KST에 한다. 10-13에는 Festa 「개인 AI」 중단을 받아들이고 #19를 포함하기로 했다 |
+| 2026-10-13 (shared-ai VM 점검 실행) | 사용자 결정으로 점검을 10-17에서 10-13으로 당겨 실행했다(W0~W17, W16 유료 확인 제외). Codex가 Hanmadi 변수 7개를 지우고 재배포했고(13:06 KST), 사용자는 Hanmadi 확인 (c)와 Claude 토큰 삭제를 점검 뒤로 미루기로 했다. 18:25 KST에 W1을 시작했고, #195를 W6에서 머지(`5ea798c`)하고 apply했다. 새 20GiB 부팅 디스크에 LiteLLM DB를 복원해 행 수가 중단 직후 백업과 같았고, 공개 확인을 통과했다. 중단은 약 89분이었고 그중 약 75분은 노트북 절전 때문이었다(중단 중 요청 0건). 90분 규칙 대신 앞으로 진행한 판단과 계획과 달라진 점은 `docs/qa/20261013-shared-ai-vm-maintenance-result.md`에 있다. R2용 되돌리기 PR #217은 쓰지 않고 닫았다. 남은 일은 §7 #18·#19 |
+| 2026-10-13 (shared-ai 저장소 정리) | 점검 뒤 저장소 정리를 두 PR로 올렸다(읽기 전용 의존 관계 조사 에이전트 5개 뒤). #221(D6): `services/dify`와 Dify 워크플로 2개를 지우고, `hanmadi-dify.yml`에서만 돌던 Hanmadi typegen·`tsc --noEmit`·`test:language-flow`를 `hanmadi-v2.yml`로 옮겼다. #222(#19+D5): accounts v1 파일·테스트·워크플로와 계정별 구독 워커를 지웠다. 둘이 함께 쓰는 `subscription_runtime.py` 때문에 한 PR로 묶었다. `litellm-release.py`의 `write_configs`는 `gateway.py render`로 바꾸고 digest 고정 검사를 남겼으며, FILES가 실제로 있고 그것만으로 render되는지 보는 테스트를 더했다. accounts v2·`packages/litellm-client`·edge 404 회귀 검사는 그대로다. Hanmadi 앱 쪽 정리는 Codex 담당이고, 머지 순서는 #221 → #222 → Codex PR이다 |
