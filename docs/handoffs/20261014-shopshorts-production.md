@@ -2,11 +2,22 @@
 
 ## 새 세션에서 먼저 볼 결론
 
-**PR #223·#224는 머지됐고 운영 Pages 배포도 성공했다. 전체 실생성 E2E는 아직 미완료다.** 현재 Cloudflare credential-broker가 HTML 요청 제한 페이지(HTTP 429)를 반환한다. 운영 UI도 로그인 상태와 작업 목록을 읽지 못한다. 계정 작업의 활성 건수를 확인하지 못했으므로 계정 워커는 이번 커밋으로 재시작하지 않았다. 소스 checkout 갱신과 실행 중 프로세스 적용을 혼동하지 않는다.
+**PR #223·#224는 머지됐고 운영 Pages 배포도 성공했다. 전체 실생성 E2E는 아직 미완료다.** 10월14일 오전의 Cloudflare429는 이후 정상 응답으로 복구됐고, 11:26 KST HTTP200 및 운영 UI의 Codex 연결·작업 목록·제작 워커 온라인을 확인했다. 후속 ‘계속해줘’ 요청에서 활성0건을 다시 확인하고 계정 워커를 #224 소스로 정상 재시작했다(새 PID66989, running, 이전 exit0). 같은 QA의 대본을 1회 재생성했지만, 보완 단계 뒤 `SCENARIO_FORMAT_INVALID`로 종료됐다. 새 PR #226·#227은 검증·push를 마쳤으며 아직 머지·운영 미반영이다.
 
-다음 순서: **Cloudflare 요청 제한 원인/해제 확인 → 활성 작업 0건 확인 → 계정 워커 안전 재시작 → 기존 QA 프로젝트에서 대본 1회 재생성 → 실제 대본 검토 → 승인된 예산 안에서 미디어·TTS·렌더 검증.** 아래의 승인 범위는 유지된다. 제한을 우회하거나 동일 생성 요청을 반복하지 않는다.
+다음 순서: **PR #226·#227의 새 명시적 머지 승인 → Pages·계정 워커 반영 → 같은 QA 대본 1회 재검증 → 통과 시 기존 예산 안에서 미디어·TTS·렌더 검증.** 아래의 승인 범위는 유지된다. 제한 재발 시 원인을 확인하고, 진행 중인 작업에 중복 생성 요청을 보내지 않는다.
 
 이 문서는 실제 작업 상태의 인수인계다. 전체 영상 완성, 자동배포 완성, 다른 실행 중 세션의 수신을 의미하지 않는다. 확인 시점 이후 상태는 재조회한다.
+
+## 2026-10-14 최신 실검증과 후속 PR
+
+- #224 계정 워커 재기동 후 한 번 요청한 대본이 자료 검색 → 작성 → 보완 → 형식 실패로 종료됐다. 실제 오류 문구는 “대본의 장면 형식 또는 목표 길이를 맞추지 못했어요. 다시 생성해 주세요.”였다.
+- ‘대본과 보완 이유 보기’를 눌렀으나 검토 자료가 없다고 표시됐다. 이번 원본의 잘못된 필드는 보존되지 않아 확정할 수 없다. revision 단계만으로 첫 실패가 형식인지 설명 검토인지 구분할 수 없으며, 과거 #220의 검토 결과를 이번 결과로 사용하지 않는다.
+- 확인한 코드 결함: 기본 대사/화면 설명과 hybrid·건축 부품 제약 일부가 안전한 validationIssue를 전달하지 않아 1회 보완 요청도 구체적인 필드를 받지 못했다. UI는 실제 증거 유무와 무관하게 모든 scenario 실패에 검토 버튼을 표시했다.
+- 수정 PR: [#226 main](https://github.com/hhj4861/commerce-automation-kit/pull/226), source `8690e34`; [#227 deploy/shopshorts](https://github.com/hhj4861/commerce-automation-kit/pull/227), release `a54e8a8`. 아직 미머지·미배포. 앱·브로커·packages 코드 차이는 없고 기존 package-lock 차이는 보존했다. 각 브랜치를 같은 운영 의존성과 Node20에서 별도로 검증했다.
+- 각 브랜치 97검사 통과, 2개 opt-in 실 Blender/전체 hybrid 검사는 미실행. 실제 본문 렌더 회귀 검사에서는 유료 공급자를 시험 응답으로 대체하므로 실제 ElevenLabs/Higgsfield 성공 증거가 아니다. 로컬 Chrome에서 자료 없는 형식 실패에는 보기 버튼이 없고, 검토 증거가 있는 실패에는 대본과 이유 조회가 작동함을 확인했다.
+- 변경은 고정된 필드·허용 규칙과 안전한 표시명 전달, 검증된 증거 존재 여부의 project flag, 기존 실패의 1회 상태 확인이다. 원본 오류·토큰·CLI 출력은 공개하지 않는다. 모델·시간·품질 판정·보완 횟수·유료 생성 예산은 유지한다. 공용 broker 배포 변경은 필요 없다.
+- 신규 유료 미디어/TTS/운영 렌더/업로드 없음. 전체 실생성 E2E 미완료. 위 PR이 이번 미보존 응답의 정확한 원인을 해결했다고 단정하지 않는다.
+- 로컬 시험 서버 종료(exit0), 임시 node_modules 링크와 짧은 테스트 경로 링크 제거. 로그는 지정 iCloud `commerce-automation-kit/scenario-field-diagnostics/`의 `final-tests.log`와 `release-tests.log`에 있다. 상세 구현 카드: 구현/승격 worktree의 `docs/tasks/20261014-scenario-field-diagnostics.md`.
 
 ## 사용자 목표와 현재 승인
 
@@ -28,7 +39,7 @@
 | Pages 배포 | `e6f4d2ea-9703-4189-a1b7-a945f815c4c6`, https://e6f4d2ea.shopshorts-dash.pages.dev |
 | 배포 확인 | 공식 API: production / deploy/shopshorts / exact `1cec2ce` / success / **ad_hoc**. 완료 2026-10-14 08:19:40 KST. Wrangler exit 0 |
 | 운영 checkout | `/Users/admin/workSpace/shopshorts-production`, clean detached `1cec2ce`; 검증된 승격 head `1e46b90`과 전체 tree diff 0 |
-| 계정 워커 | 이번 재시작 미수행. 이전 #220 적용 때 PID 61759였으나 현재 PID로 재사용하지 말 것. 프로세스에는 새 프롬프트 적용 미확인 |
+| 계정 워커 | 복구 후 활성0건 확인·SIGTERM 재시작 완료. PID61759→66989, running/이전 exit0. #224의 조사·대본 지침 적용 |
 | 미디어 워커 | 이번 변경/재시작 없음 |
 | 공용 broker | 이번 배포 없음. 마지막 확인된 #220 version `bdd47446-e19d-4a0f-b79e-286ef390a0b1`, deployment `8b64e8ed-4db0-44fa-b61d-a0d0bf744099` |
 
@@ -40,7 +51,7 @@
 2. `apps/shopshorts/lib/studio-scenario.js`: 조사된 행동을 주체/대상 → 어디서 무엇을 함 → 달라지는 결과로 설명한다. 연도/명칭 나열보다 작동 과정과 완결된 답을 우선한다. 시각 효과는 실제 작동에 대응해야 한다. 빈 근거를 상상으로 메우거나 사용자 질문을 몰래 바꾸지 않는다.
 3. `docs/qa/20261013-causal-research.md`: 범위·실패 근거·검사 기록.
 
-원본 head `4ade2cbbf07129fa48bf50956bd62f1266b9f5b2`, 승격 head `1e46b90424a81aa200a7ca632adf85b09a56681c`. 두 브랜치 각각 **67개 통합/검토 검사 + 조사·옵션 2개 검사 통과**, 관련 없는 렌더 5개는 명시적으로 필터 제외했다. 74개 통과라고 쓰지 않는다. GitOps CI 두 PR 성공, diff check 통과. 동일 tree 증거를 재사용했으며 프롬프트의 실제 의미 품질은 아직 실 LLM으로 검증하지 못했다.
+원본 head `4ade2cbbf07129fa48bf50956bd62f1266b9f5b2`, 승격 head `1e46b90424a81aa200a7ca632adf85b09a56681c`. 두 브랜치 각각 **67개 통합/검토 검사 + 조사·옵션 2개 검사 통과**, 관련 없는 렌더 5개는 명시적으로 필터 제외했다. 74개 통과라고 쓰지 않는다. GitOps CI 두 PR 성공, diff check 통과. 당시 동일 tree 증거를 재사용했다. 이후 #224 실 LLM 요청은 형식 검증에서 실패했으므로 의미 품질 통과나 영상 완성을 입증하지 못했다.
 
 ```sh
 # 운영과 같은 Node 20.19.3 및 의존성에서 실시한 검사
@@ -63,12 +74,12 @@ QA URL: https://shopshorts-dash.pages.dev/studio/automatic?project=7e88650a-54f0
 - “왜 성벽 밖으로 나왔을까요?”를 묻고 “방어 공간 자체를 성벽 바깥에 둔 겁니다”라고 형태를 반복했다. 감시/공격 목적만 말하고 구체적 행동과 결과를 설명하지 않았다. 연도·구멍 종류 나열로 45초를 사용했다.
 - 새 ‘대본과 보완 이유 보기’와 ‘검토받은 대본 전체 · 6장면’을 열어 실제 내용 확인. 새로고침 이후에도 같은 거부 자료를 조회했다. #219/#220의 실패 증거 보존·owner 조회는 **실운영 검증됨**.
 - 모델의 7항목 부정 판정을 그대로 객관적 사실이라고 취급하지 않았고, 원문에서 인과 설명 부족을 직접 확인했다.
-- 해당 실패 이후 신규 미디어/TTS/렌더/업로드는 시작되지 않았다. #224 재생성은 현재 통신 제한 때문에 아직 요청하지 않았다.
+- 해당 실패 이후 신규 미디어/TTS/렌더/업로드는 시작되지 않았다. #224 재생성은 통신 복구·계정 워커 갱신 후 정확히 1회 요청했으며 자료 확인 단계 진입을 확인했다. 최종 형식 오류와 후속 PR은 문서 상단의 최신 항목을 확인한다.
 - 검토를 우회해 실패 대본을 승인하거나, 원문을 읽지 않고 같은 조건으로 반복 생성하지 않는다. 보완 후에도 실패하면 저장된 실제 대사·근거부터 읽는다.
 
-## 지금 막힌 두 가지
+## 인프라 이슈 두 가지 — 대본 형식 실패는 상단 최신 항목 참고
 
-### A. Cloudflare의 일시적 요청 제한 — 새로 확인된 장애
+### A. Cloudflare의 일시적 요청 제한 — 복구 확인, 원인/재발 방지 미완료
 
 - 운영 계정 워커와 같은 Node/환경/서명 경로로 `/runner/accounts`의 집계 poll을 요청했으나 HTTP **429**, `content-type: text/html`, `retry-after` 없음.
 - 응답 제목: **This website has been temporarily rate limited | cak-credential-broker.guswhd1085.workers.dev | Cloudflare**.
@@ -76,6 +87,8 @@ QA URL: https://shopshorts-dash.pages.dev/studio/automatic?project=7e88650a-54f0
 - 새 Chrome 탭은 정상 열림. 운영 제작실은 `Unexpected token '<', "<!doctype "... is not valid JSON`, 로그인 상태 확인 실패, 작업 목록 확인 필요를 표시했다. 이전 탭의 CDP focus 시간 초과와 구분한다.
 - Python urllib의 비인증 `/health` 조회는 403/1010이므로 서비스 장애의 독립 증거로 사용하지 않는다. 위 정상 서명 워커 요청의 429와 실제 UI 실패가 근거다.
 - 작업 0건을 확인하기 전 워커 재시작하지 않았다. 네트워크·인증서 검증·Cloudflare 보안을 끄거나 프록시로 우회하지 않는다.
+- 후속 재확인에서 정상 서명 요청 HTTP200/active0, 운영 UI 정상 조회를 확인했다. 어제 UTC 일자 GraphQL 집계는 broker90030 + 기타 Worker19 + Pages Functions32903 = 약122952요청. 무료플랜의 계정 공용 일일10만 제한과 오전9시 초기화는 공식 문서로 확인했으나 당시 오류번호/실제 구독 플랜 조회는 확보하지 못해 ‘일일 한도 소진 가능성이 높음’으로 보고했다. 집계는 과금 원장/정밀 요청 로그와 동일하다고 가정하지 않는다. 계정 워커의 5초 poll은 코드에서 확인한 기여 요인이지 모든 요청의 원인을 규명한 것은 아니다.
+- 근거: https://developers.cloudflare.com/workers/platform/limits/#daily-requests , https://developers.cloudflare.com/pages/functions/pricing/ . 조회 간격·중복 요청·실패 backoff 개선이나 요금제 변경은 이번 확인만으로 구현/적용하지 않았다.
 
 ### B. GitOps CI 전용 배포 자격 부재 — 기존 미해결
 
@@ -88,9 +101,9 @@ QA URL: https://shopshorts-dash.pages.dev/studio/automatic?project=7e88650a-54f0
 ## 안전한 재개 절차
 
 1. AGENTS.md와 `~/.codex/SESSION_MEMORY.md`, engine-exchange/efficiency 상태를 새로 읽는다. 확인 시점 worker OFF / Claude crosscheck OFF, efficiency ON이었다. 과거 Claude 협업을 근거로 새 자동 요청을 보내지 않는다.
-2. 제한 원인을 확인한다. 정상 runner aggregate poll에서 activeCount/hasNext만 출력한다. 제한 해제 후 `activeCount=0, hasNext=false`일 때 승인된 SIGTERM 재시작을 수행하고 새 PID/running 상태를 확인한다. 실행 중이면 완료를 기다린다.
+2. #226·#227의 새 사용자 승인을 확인하고 CI/head를 재조회한다. 승인 전에는 머지·운영 교체하지 않는다. 이미 완료한 #223·#224 승인·머지·배포·워커 적용을 다시 요청하지 않는다. 새 운영 반영 시에는 정상 runner aggregate poll에서 activeCount/hasNext만 확인하고 활성0건일 때 안전한 재시작을 한다.
 3. 계정 워커 launchagent: `com.cak.llm-accounts`; plist `~/Library/LaunchAgents/com.cak.llm-accounts.plist`; cwd는 운영 checkout. `launchctl kill SIGTERM "gui/$(id -u)/com.cak.llm-accounts"` 후 KeepAlive 정상 재기동 확인. plist 환경/키는 출력하지 않는다.
-4. 위 QA URL에 로그인된 개인 계정으로 들어가 대본 생성 다시 시도를 **1회** 누른다. research/scenario/revision/review의 실제 진행과 종료를 확인한다. 화면만 진행 중이면 실제 lease/deadline 집계로 구분한다. 검토 후 실패 시 owner 전용 거부 자료를 읽는다.
+4. 새 수정의 Pages·계정 워커 반영이 확인된 뒤 위 QA URL에 로그인된 개인 계정으로 들어가 대본 생성 다시 시도를 **1회** 누른다. research/scenario/revision/review의 실제 진행과 종료를 확인한다. 화면만 진행 중이면 실제 lease/deadline 집계로 구분한다. 검토 후 실패 시 owner 전용 거부 자료를 읽는다.
 5. 통과했다면 내용의 질문·인과·예시·결말을 직접 검토하고 기존 승인 범위 안에서 미디어/TTS/렌더까지 검증한다. 실제 소리, 자막 위치, 끝 문장/마지막 프레임, 재생 가능 파일을 확인한다. 최종 발행 게이트/공개 업로드는 별도 경계다.
 6. CI 자격 문제가 해결된 뒤 운영 브랜치 workflow의 실제 success와 Pages source SHA를 비교한다. 수동 배포 성공을 GitOps 검증으로 대체하지 않는다.
 7. 새 수정은 별도 구현 worktree, 경로 track, 의미 있는 관련 검사, 본인 변경 commit/upstream push, 새 PR 머지 승인 순서로 진행한다. 실패/미완료는 그 상태로 기록한다.
@@ -100,14 +113,14 @@ QA URL: https://shopshorts-dash.pages.dev/studio/automatic?project=7e88650a-54f0
 | 용도 | 경로/설명 |
 |---|---|
 | 사용자 프로젝트 / 독립 문서 | `/Users/admin/workSpace/commerce-automation-kit` — 현재 `feat/common-video-generator`, upstream `origin/feat/common-video-generator`. 이 checkout은 운영 소스보다 오래돼 일부 파일이 없을 수 있다 |
-| 구현 worktree | `/Users/admin/workSpace/commerce-automation-kit-worktrees/scenario-review-feedback` — `fix/shopshorts-causal-research`, head4ade2cb |
-| 승격 worktree | `/Users/admin/workSpace/commerce-automation-kit-worktrees/studio-workspace-release` — `release/studio-causal-research`, head1e46b90 |
+| 구현 worktree | `/Users/admin/workSpace/commerce-automation-kit-worktrees/scenario-review-feedback` — `fix/shopshorts-scenario-field-diagnostics`, head8690e34 / PR #226 |
+| 승격 worktree | `/Users/admin/workSpace/commerce-automation-kit-worktrees/studio-workspace-release` — `release/studio-scenario-field-diagnostics`, heada54e8a8 / PR #227 |
 | 운영 소스/의존성 | `/Users/admin/workSpace/shopshorts-production` — Node20 의존성/SQLite ABI 보존; 함부로 npm 재설치하지 않는다 |
 | 계정 워커 로그 | `~/Library/Logs/Shopshorts/llm-account-worker.log` |
 | 제작 워커 | `com.cak.studio-production`, 로그 `~/Library/Logs/Shopshorts/studio-production.log` |
 | 최종 영상 | `/Users/admin/Downloads/vedio/` |
 | 중간 산출물/로그 | `/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/<task>/` — 비밀·런타임 DB는 새 클라우드 동기화 금지 |
-| Chrome 검증 | CUA browser1 사용. 새 탭1694573541에서 오류 확인했지만 tabID는 재검증. 고장난 이전 탭 ID를 반복 사용하지 않는다 |
+| Chrome 검증 | CUA browser1 사용. 운영 탭1694573626을 handoff 표시했지만 tabID는 재검증. 고장난 이전 탭 ID를 반복 사용하지 않는다 |
 
 - UI 조작은 `mcp__cua_repl`. 계정 선택은 기존 승인 유지. 브라우저 DOM에서 쿠키/토큰을 추출해 API 호출에 옮기지 않는다.
 - 계정 워커 Node: `/Users/admin/.nvm/versions/node/v20.19.3/bin/node`. Pages Wrangler: Node22 `/Users/admin/.nvm/versions/node/v22.23.3/bin/node`, 기존 캐시 `/Users/admin/.npm/_npx/fcecf7954caf6a82/node_modules/wrangler/bin/wrangler.js`.
@@ -133,4 +146,4 @@ QA URL: https://shopshorts-dash.pages.dev/studio/automatic?project=7e88650a-54f0
 - 관련 코드: `lib/scenario-rejection.js`, `lib/studio-scenario.js`, `lib/explainer-production.js`, `studio-account-worker.mjs`, `apps/credential-broker/llm-accounts.mjs`, `lib/llm-account-api.js`, `public/scenario-rejection.js`, 자동 제작 UI.
 - 소유자 전용 실패 증거 API: `/api/studio/llm/scenario-review?id=<task>&projectId=<project>`; owner는 인증 세션으로 결정, no-store. 로그/문서에 실제 인증정보를 붙이지 않는다.
 
-새 세션 전달 문장: **“docs/handoffs/20261014-shopshorts-production.md를 읽고 이어서 진행해줘. #223·#224 머지와 Pages 배포는 완료됐고, Cloudflare429 복구·계정 워커 적용·실생성 E2E가 남아 있어. 같은 승인은 다시 묻지 말고 실제 상태를 확인해서 이어가.”**
+새 세션 전달 문장: **“docs/handoffs/20261014-shopshorts-production.md를 읽고 이어서 진행해줘. #223·#224 머지와 Pages 배포는 완료됐고, Cloudflare429 복구와 #224 계정 워커 적용도 확인됐어. 최신 대본은 형식 오류로 종료돼 #226·#227의 새 머지 승인과 운영 반영 후 실생성 E2E가 남아 있어. 승인 상태와 실제 배포를 구분해서 이어가.”**
