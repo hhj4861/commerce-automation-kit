@@ -4,23 +4,24 @@
 <script type="module" src="/studio-navigation.js"></script><script type="module" src="/kandinsky.js"></script></head>
 <body class="kandinsky-workspace"><a class="skip-link" href="#main-content">본문으로 건너뛰기</a><div data-workspace-shell></div>
 <main class="k-main" id="main-content" tabindex="-1">
-<header class="k-heading"><div><p class="k-model">Kandinsky 6.0 Pro Distill</p><h1>장면에 움직임과 소리를.</h1><p>이야기 한 장면을 약 5초의 영상으로 만드세요.</p></div><a class="k-link" href="https://huggingface.co/spaces/kandinskylab/Kandinsky-6.0-Pro-distill-5s" target="_blank" rel="noopener noreferrer">공식 데모 열기 ↗</a></header>
+<header class="k-heading"><div><p class="k-model">Kandinsky 6.0 Pro Distill</p><h1>상상한 장면을 짧은 영상으로</h1><p>움직임과 소리까지, 약 5초의 한 장면을 만들어 보세요.</p></div><a class="k-link" href="https://huggingface.co/spaces/kandinskylab/Kandinsky-6.0-Pro-distill-5s" target="_blank" rel="noopener noreferrer">공식 데모 ↗</a></header>
+<section class="k-connection" aria-label="Hugging Face 계정 연결"><span id="connection-dot" class="k-dot" aria-hidden="true"></span><div><strong id="connection-title">계정 확인 중</strong><p id="account-state" role="status">설정에 저장한 계정을 확인합니다.</p></div><div class="k-connection-actions"><button type="button" class="k-text-button" id="refresh-connection">연결 다시 확인</button><a class="k-button k-small" href="/settings">토큰 설정</a></div></section>
 <div class="k-layout"><form id="generate-form" class="k-input">
-<label class="k-field" for="prompt">어떤 장면을 만들까요?<textarea id="prompt" maxlength="4000" rows="7" required placeholder="섬세한 웹툰 그림체. 비 오는 창가에서 고양이가 기지개를 켠다. 카메라는 천천히 다가가고, 빗소리와 조용한 골골거림이 들린다."></textarea></label>
-<button type="button" class="k-text-button" id="example">예시 입력</button>
-<label class="k-field" for="image">첫 프레임 이미지 <span class="k-optional">선택</span><input id="image" type="file" accept="image/png,image/jpeg,image/webp"></label>
-<p class="k-hint">PNG·JPG·WebP, 최대 10MB. 이미지 비율을 따라 생성합니다. 본인이 사용할 권리가 있는 이미지를 선택하세요.</p>
-<img id="image-preview" alt="선택한 첫 프레임" hidden><button type="button" class="k-text-button" id="clear-image" hidden>이미지 제거</button>
-<details class="k-settings"><summary>생성 설정</summary><label class="k-field" for="seed">시드<input id="seed" type="number" min="0" max="2147483647" step="1" value="42" required></label><label class="k-check"><input id="beautify" type="checkbox"> 장면 설명 자동 확장</label><p class="k-hint">설명을 확장하면 추가 GPU 시간을 사용합니다.</p></details>
-<details class="k-settings" id="connection-settings"><summary>무료 Hugging Face 계정 연결</summary><p class="k-hint">비로그인 한도는 생성 1회에도 부족할 수 있습니다. 무료 계정의 읽기 토큰을 연결하면 계정 한도를 사용합니다.</p><label class="k-field" for="hf-token">읽기 토큰<input id="hf-token" type="password" autocomplete="off" spellcheck="false" placeholder="hf_…"></label><p class="k-hint">토큰은 이 탭의 메모리에서만 사용하며 저장하지 않습니다. 결제 가능한 계정은 이 메뉴에서 연결하지 않습니다.</p><a class="k-link" href="https://huggingface.co/settings/tokens" target="_blank" rel="noopener noreferrer">Hugging Face에서 읽기 토큰 만들기 ↗</a></details>
-<p class="k-disclosure">생성을 누르면 입력한 설명과 이미지가 Hugging Face 공식 데모에 전달됩니다. 모델 설치는 필요 없습니다.</p>
-<button type="submit" class="k-primary" id="generate">영상 생성</button>
-<p class="k-hint">무료 한도 안에서 이용합니다. 한도가 부족해도 유료 생성으로 전환하거나 자동 재시도하지 않습니다.</p>
-</form><section class="k-output" aria-label="생성 결과">
-<div class="k-preview" id="preview-frame"><div id="empty"><svg viewBox="0 0 100 72" aria-hidden="true"><rect x="4" y="4" width="92" height="64" rx="6"/><path d="m42 25 21 12-21 12Z"/></svg><h2>다음 장면을 기다리고 있어요</h2><p>대상, 움직임, 카메라, 소리를 설명해 보세요.</p></div><video id="result-video" controls playsinline preload="metadata" hidden></video></div>
-<div class="k-spec"><span>약 5초 · 24fps · 소리 포함</span><span>텍스트 생성 기본 864×480</span></div>
-<p id="status" role="status" aria-live="polite">장면 설명을 입력하고 영상을 생성하세요.</p><p id="error" role="alert" hidden></p>
-<div class="k-actions"><button type="button" id="resume" hidden>결과 확인 다시 하기</button><button type="button" id="stop" hidden>대기 중단</button><button type="button" id="download" hidden>MP4 다운로드</button><button type="button" id="new" hidden>새 영상 만들기</button></div>
+<div class="k-section-heading"><h2>장면 만들기</h2><span>텍스트 + 선택 이미지</span></div>
+<label class="k-field" for="prompt">장면 설명</label><textarea id="prompt" maxlength="4000" rows="5" required aria-describedby="prompt-help prompt-count" placeholder="어떤 대상이, 어떻게 움직이나요? 카메라 움직임과 들리는 소리도 함께 적어주세요."></textarea>
+<div class="k-prompt-meta"><span id="prompt-help">대상 · 움직임 · 카메라 · 소리</span><span id="prompt-count">0 / 4,000</span></div>
+<div class="k-examples" aria-label="장면 설명 예시"><span>예시로 시작</span><button type="button" id="example" data-example="cat">웹툰 고양이</button><button type="button" data-example="product">제품 클로즈업</button><button type="button" data-example="landscape">바다 풍경</button></div>
+<div class="k-upload"><label class="k-field" for="image">첫 프레임 이미지 <span class="k-optional">선택</span></label><input id="image" type="file" accept="image/png,image/jpeg,image/webp" aria-describedby="image-help"><p id="image-help" class="k-hint">PNG·JPG·WebP, 최대 10MB. 선택한 이미지 비율로 생성합니다.</p><img id="image-preview" alt="선택한 첫 프레임" hidden><button type="button" class="k-text-button" id="clear-image" hidden>이미지 제거</button></div>
+<details class="k-settings"><summary>고급 설정 <span>시드 · 설명 확장</span></summary><label class="k-field" for="seed">시드<input id="seed" type="number" min="0" max="2147483647" step="1" value="42" required></label><p class="k-hint">같은 입력과 시드로 비슷한 결과를 시도할 수 있습니다.</p><label class="k-check"><input id="beautify" type="checkbox"> 장면 설명 자동 확장</label><p class="k-hint">설명 확장에는 추가 GPU 시간이 필요합니다.</p></details>
+<div class="k-submit-area"><button type="submit" class="k-primary" id="generate">영상 생성</button><p id="generate-help" class="k-hint">무료 한도 내 생성 · 유료 전환 없음</p></div>
+<p class="k-disclosure">입력한 설명과 이미지는 Hugging Face 공식 데모로 전달됩니다. 사용할 권리가 있는 이미지를 올려주세요.</p>
+</form><section class="k-output" aria-label="생성 결과" aria-busy="false">
+<div class="k-section-heading"><h2>미리보기</h2><span id="phase-badge" class="k-badge">입력 대기</span></div>
+<div class="k-preview" id="preview-frame" data-phase="idle"><div id="empty"><svg viewBox="0 0 100 72" aria-hidden="true"><rect x="4" y="4" width="92" height="64" rx="6"/><path d="m42 25 21 12-21 12Z"/></svg><h3 id="preview-title">첫 장면은 어떤 모습인가요?</h3><p id="preview-description">장면을 설명하거나 예시를 골라 시작하세요.<br>완성된 영상은 여기에서 재생할 수 있어요.</p></div><video id="result-video" controls playsinline preload="metadata" hidden></video></div>
+<div class="k-spec"><span>약 5초</span><span>24fps</span><span>소리 포함</span><span>텍스트 기본 864×480</span></div>
+<ol class="k-progress" aria-label="영상 생성 단계"><li id="step-check">연결 확인</li><li id="step-create">대기 및 생성</li><li id="step-done">영상 확인</li></ol>
+<div class="k-feedback"><p id="status" role="status" aria-live="polite">장면 설명을 입력하고 영상을 생성하세요.</p><p id="error" role="alert" hidden></p>
+<div class="k-actions"><button type="button" class="k-button" id="resume" hidden>결과 확인 다시 하기</button><button type="button" class="k-button" id="stop" hidden>결과 대기 중단</button><a id="download" class="k-button k-download" hidden download>MP4 다운로드</a><button type="button" class="k-button" id="new" hidden>새 영상 만들기</button></div></div>
 <details id="used-prompt" hidden><summary>생성에 사용한 설명</summary><p id="used-prompt-text"></p></details>
-<aside class="k-note"><h2>무료 데모 사용 안내</h2><p>공유 GPU라 대기하거나 한도로 중단될 수 있습니다. 무료 계정의 기본 한도는 하루 GPU 시간 5분이며, 영상 길이 5분을 뜻하지 않습니다. 비로그인은 2분입니다.</p><p>이 메뉴는 5초 클립 생성용입니다. Full HD 업스케일과 긴 영상 편집은 포함하지 않습니다. 결과 파일은 데모에서 만료될 수 있으니 생성 후 다운로드하세요.</p><a class="k-link" href="https://huggingface.co/docs/hub/spaces-zerogpu" target="_blank" rel="noopener noreferrer">현재 무료 한도 확인 ↗</a></aside>
+<details class="k-note"><summary>무료 사용 범위와 결과 보관</summary><p>공유 GPU라 대기하거나 무료 한도로 중단될 수 있습니다. 유료 생성으로 전환하거나 자동 재시도하지 않습니다. 계정별 현재 한도는 Hugging Face에서 확인할 수 있습니다.</p><p>이 메뉴는 약 5초 클립 생성용입니다. Full HD 업스케일과 긴 영상 편집은 포함하지 않습니다. 최근 생성 기록 한 개를 보관하며, 데모 파일은 만료될 수 있으니 새 영상을 만들기 전에 다운로드하세요.</p><a class="k-link" href="https://huggingface.co/docs/hub/spaces-zerogpu" target="_blank" rel="noopener noreferrer">무료 한도 안내 ↗</a></details>
 </section></div></main></body></html>

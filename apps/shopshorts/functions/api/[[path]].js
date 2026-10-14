@@ -1,6 +1,7 @@
 import { studioApi, cloudStudioStore } from '../../lib/studio-api.js';
 import { workerAuthorized } from '../../lib/google-auth.js';
 import { llmAccountApi } from '../../lib/llm-account-api.js';
+import { kandinskyApi } from '../../lib/kandinsky-service.js';
 /**
  * shopshorts Cloudflare API — Pages Functions 라우터.
  *
@@ -209,6 +210,8 @@ export async function onRequest(context) {
   const method = request.method;
 
   try {
+    const kandinskyResponse = await kandinskyApi(request,env,(owner,operation,input)=>env.CREDENTIALS.huggingFaceAccount(owner,operation,input));
+    if(kandinskyResponse)return kandinskyResponse;
     const accountResponse = await llmAccountApi(request, env, (owner, operation, input) => env.CREDENTIALS.llmAccount(owner, operation, input));
     if (accountResponse) return accountResponse;
     if (path === 'studio/worker' && method === 'PUT') {
