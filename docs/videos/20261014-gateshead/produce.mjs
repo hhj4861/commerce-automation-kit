@@ -64,11 +64,8 @@ if(mode==='review'){
   }
  }else if(mode==='compose'){
   const tl=JSON.parse(await readFile(join(root,'timeline.json'),'utf8'));if(tl.sourceHash!==hash||tl.beats.length!==story.scenes.length)throw Error('Timeline mismatch');
-  const {captionArtwork,defaultCaption}=await mod('apps/shopshorts/public/video-typography.js');
-  const font=join(runtime,'apps/shopshorts/public/Pretendard-SemiBold.otf');
-  const cfg=join(root,'fonts.conf');await writeFile(cfg,`<?xml version="1.0"?><!DOCTYPE fontconfig SYSTEM "fonts.dtd"><fontconfig><dir>${dirname(font)}</dir><cachedir>${root}/font-cache</cachedir><include ignore_missing="yes">/opt/homebrew/etc/fonts/fonts.conf</include></fontconfig>`);
-  process.env.FONTCONFIG_FILE=cfg;
-  const sharp=(await mod('node_modules/sharp/lib/index.js')).default;
+  const {defaultCaption}=await mod('apps/shopshorts/public/video-typography.js');
+  const {renderCaptionArtwork}=await mod('apps/shopshorts/studio-typography.mjs');
   const layers=[];let offset=0;
   for(const b of tl.beats){
    const video=join(root,'render',b.id+'.mp4'),audio=join(root,b.id+'.mp3'),clip=join(root,b.id+'-av.mp4');
@@ -83,13 +80,12 @@ if(mode==='review'){
   const overlays=[];offset=0;let n=0;
   for(const b of tl.beats){
    for(const c of b.alignment.phrases){
-    const art=captionArtwork({...defaultCaption(),text:c.text});const f=join(root,`caption-${n++}.png`);
-    await sharp(Buffer.from(art.svg)).png().toFile(f);
+    const f=join(root,`caption-${n++}.png`);const art=await renderCaptionArtwork({...defaultCaption(),text:c.text},'9:16',f);
     overlays.push({file:f,x:Math.round((1080-art.width)/2),y:Math.round(1920*.74-art.height/2),start:offset+c.start,end:offset+c.end});
    }offset+=b.duration;
   }
-  const header=captionArtwork({...defaultCaption(),presentation:'modern-header-v1',text:'다리를 끊지 않고\n배가 지나간다고?',size:88});const hf=join(root,'header.png');await sharp(Buffer.from(header.svg)).png().toFile(hf);overlays.push({file:hf,x:0,y:0,start:0,end:3.5});
-  const label=captionArtwork({...defaultCaption(),text:'작동 원리 재현 · 실제 비율과 다름',size:24,backgroundOpacity:.5});const lf=join(root,'label.png');await sharp(Buffer.from(label.svg)).png().toFile(lf);overlays.push({file:lf,x:Math.round((1080-label.width)/2),y:1700,start:0,end:offset});
+  const hf=join(root,'header.png');await renderCaptionArtwork({...defaultCaption(),presentation:'modern-header-v1',text:'다리를 끊지 않고\n배가 지나간다고?',size:88},'9:16',hf);overlays.push({file:hf,x:0,y:0,start:0,end:3.5});
+  const lf=join(root,'label.png');const label=await renderCaptionArtwork({...defaultCaption(),text:'작동 원리 재현 · 실제 비율과 다름',size:24,backgroundOpacity:.5},'9:16',lf);overlays.push({file:lf,x:Math.round((1080-label.width)/2),y:1700,start:0,end:offset});
   // One intermediate per 12 overlays keeps file descriptors/memory bounded.
   let input=join(root,'joined.mp4');
   for(let i=0;i<overlays.length;i+=12){
