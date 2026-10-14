@@ -39,18 +39,30 @@ try{
   await page.goto('https://settings.test/settings');
   const hf=page.locator('hf-account-settings'),state=hf.locator('#state'),token=hf.locator('#token');
   const waitText=async text=>{await page.waitForFunction(text=>document.querySelector('hf-account-settings')?.shadowRoot.querySelector('#state').textContent.includes(text),text);};
-  await waitText('계정을 연결');assert(await token.isVisible());assert.equal(await hf.locator('#generate').isVisible(),false);
+  await waitText('계정을 연결');assert.equal(await hf.locator('#account-dialog').isVisible(),false);await hf.locator('#manage').click();assert(await token.isVisible());assert.equal(await hf.locator('#generate').isVisible(),false);
   console.log('PASS missing token invites registration');
   await token.fill('hf_SyntheticBrowserFixture12345');delayWrite=true;
   await hf.locator('#save').click();await waitText('저장하는 중');assert(await token.isDisabled());assert(await hf.locator('#save').isDisabled());
   await page.evaluate(()=>document.querySelector('hf-account-settings').shadowRoot.querySelector('form').dispatchEvent(new Event('submit',{bubbles:true,cancelable:true})));
-  assert.equal(puts,1);releaseWrite();delayWrite=false;
+  assert.equal(puts,1);await page.keyboard.press('Escape');assert(await hf.locator('#account-dialog').isVisible());releaseWrite();delayWrite=false;
   await waitText('저장이 완료');assert.equal(await token.inputValue(),'');assert.equal(await token.isVisible(),false);assert(await hf.locator('#generate').isVisible());
   assert.match(await hf.locator("#description").innerText(),/sample-creator/);assert.match(await hf.locator("#description").innerText(),/다시 입력할 필요 없어요/);
   console.log('PASS pending blocks duplicate submits; saved view hides token and shows next action');
+  await page.screenshot({path:resolve(out,'settings-dialog-desktop.png'),fullPage:true});
+  await hf.locator('#close').click();
+  const checkAlignment=async()=>{
+    const result=await page.evaluate(()=>{
+      const host=document.querySelector('hf-account-settings');
+      const buttons=[host.shadowRoot.querySelector('#manage'),...document.querySelectorAll('.settings-other .account-action')];
+      return buttons.map(el=>{const r=el.getBoundingClientRect(),s=getComputedStyle(el),row=getComputedStyle(el.closest('.account-row'));return {width:r.width,height:r.height,right:r.right,fontSize:s.fontSize,lineHeight:s.lineHeight,letterSpacing:s.letterSpacing,fontWeight:s.fontWeight,paddingTop:row.paddingTop,paddingBottom:row.paddingBottom};});
+    });
+    assert.equal(result.length,3);
+    for(const value of result){assert.equal(value.width,104);assert.equal(value.height,42);assert(Math.abs(value.right-result[0].right)<1);assert.equal(value.fontSize,'13px');assert.equal(value.lineHeight,'20px');assert(['normal','0px'].includes(value.letterSpacing));assert.equal(value.fontWeight,'600');assert.equal(value.paddingTop,'18px');assert.equal(value.paddingBottom,'18px');}
+  };
+  await checkAlignment();
   await page.screenshot({path:resolve(out,'settings-saved-desktop.png'),fullPage:true});
   await page.reload();await waitText('안전하게 저장');assert.equal(await token.isVisible(),false);
-  console.log('PASS reload reads persisted account status');
+  console.log('PASS reload reads persisted account status');await hf.locator('#manage').click();
   await hf.locator('#replace').click();await token.fill('hf_SyntheticDraft12345');
   await page.evaluate(()=>load(true));assert.equal(await token.inputValue(),'hf_SyntheticDraft12345');
   assert.equal(await hf.locator('#replace').getAttribute('aria-expanded'),'true');
@@ -70,7 +82,7 @@ try{
   account={configured:true,name:'sample-creator',updatedAt:'2026-10-14T12:00:00Z'};
   await page.setViewportSize({width:390,height:844});await page.reload();await waitText('안전하게 저장');
   assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
-  await page.screenshot({path:resolve(out,'settings-saved-mobile.png'),fullPage:true});
+  await checkAlignment();await page.screenshot({path:resolve(out,'settings-saved-mobile.png'),fullPage:true});await hf.locator('#manage').click();
   await hf.locator('#replace').click();await token.fill('hf_SyntheticMobileDraft12345');
   assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
   await page.screenshot({path:resolve(out,'settings-replace-mobile.png'),fullPage:true});
@@ -80,6 +92,11 @@ try{
   assert.equal(await token.isVisible(),false);assert.equal(await token.inputValue(),'');assert.equal(await hf.locator('#generate').isVisible(),false);
   failRead=false;failWrite=false;await hf.locator('#retry').click();await waitText('안전하게 저장');
   console.log('PASS uncertain write plus read failure hides stale account; explicit refresh recovers');
+  await hf.locator('#replace').click();await token.fill('hf_SyntheticCancelDraft12345');await page.keyboard.press('Escape');
+  await page.waitForFunction(()=>document.querySelector('hf-account-settings').shadowRoot.querySelector('#token').value==='');
+  assert.equal(await token.inputValue(),'');assert.equal(await hf.locator('#account-dialog').isVisible(),false);
+  assert(await hf.locator('#manage').evaluate(el=>el.getRootNode().activeElement===el));
+  console.log('PASS dialog Escape clears draft and restores focus; all three account buttons align on desktop and mobile');
 
   assert.deepEqual(errors,[]);console.log('PASS no browser page errors');
 }finally{await browser.close();}
