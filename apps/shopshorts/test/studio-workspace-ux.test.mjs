@@ -18,8 +18,8 @@ test('failed regeneration or upload takes priority over an older available rende
  }
  assert.equal(projectSummary({...base,task:{state:'running',action:'render'}}).action,'진행 상황 보기');
 });
-test('all ten menu destinations are available in the compact menu, with exact single current page',()=>{
- assert.equal(new Set(studioNavigation.map(x=>x.href)).size,10);
+test('all eleven menu destinations are available in the compact menu, with exact single current page',()=>{
+ assert.equal(new Set(studioNavigation.map(x=>x.href)).size,11);
  for(const route of studioNavigation){const html=navigationLinks(route.href);assert.equal((html.match(/aria-current="page"/g)||[]).length,1);assert.ok(html.includes('설정'));assert.ok(html.includes('성과'));assert.ok(html.includes('알림함'));}
  assert.equal(navigationRoute('/studio/automatic/'),'/studio/dashboard');assert.equal(navigationRoute('/studio'),'/studio/dashboard');
  assert.equal(navigationRoute('/contents/'),'/contents');

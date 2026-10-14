@@ -2,6 +2,7 @@
 export const studioNavigation = [
   {label:'홈',href:'/',group:'영상 작업'},
   {label:'영상 제작실',href:'/studio/dashboard',group:'영상 작업'},
+  {label:'Kandinsky 영상 생성',href:'/kandinsky',group:'영상 작업'},
   {label:'게시 문구 추천',href:'/metadata',group:'영상 작업'},
   {label:'콘텐츠',href:'/contents',group:'영상 작업'},
   {label:'트렌드 탐색',href:'/trends',group:'탐색과 실험'},
@@ -23,8 +24,8 @@ if(typeof document!=='undefined') {
   const brand='<a class="brand" href="/" aria-label="Shopshorts 홈"><span class="brand-mark" aria-hidden="true">✦</span><span class="brand-name">Shopshorts<span>Content Studio</span></span></a>';
   const shell=document.querySelector('[data-workspace-shell]');
   if(shell){
-    document.body.classList.add('metadata-workspace');
-    shell.outerHTML=`<aside class="sidebar">${brand}${[...new Set(studioNavigation.map(item=>item.group))].map(group=>`<div class="nav-label">${group}</div><nav aria-label="${group}">${studioNavigation.filter(item=>item.group===group).map(item=>`<a class="nav-item${item.href==='/metadata'?' active':''}" href="${item.href}"${item.href==='/metadata'?' aria-current="page"':''}>${item.label}</a>`).join('')}</nav>`).join('')}<div class="sidebar-foot"><a class="workspace-link" href="/studio/dashboard">제작 관리로 돌아가기</a></div></aside>`;
+    if(!document.body.classList.contains('kandinsky-workspace'))document.body.classList.add('metadata-workspace');
+    shell.outerHTML=`<aside class="sidebar">${brand}${[...new Set(studioNavigation.map(item=>item.group))].map(group=>`<div class="nav-label">${group}</div><nav aria-label="${group}">${studioNavigation.filter(item=>item.group===group).map(item=>`<a class="nav-item${item.href===navigationRoute(location.pathname)?' active':''}" href="${item.href}"${item.href===navigationRoute(location.pathname)?' aria-current="page"':''}>${item.label}</a>`).join('')}</nav>`).join('')}<div class="sidebar-foot"><a class="workspace-link" href="/studio/dashboard">제작 관리로 돌아가기</a></div></aside>`;
   }
   let mobileHead=document.querySelector('.mobile-head');
   if(!mobileHead){mobileHead=document.createElement('div');mobileHead.className='mobile-head';mobileHead.innerHTML=brand;document.body.insertBefore(mobileHead,document.body.children[1]);}
