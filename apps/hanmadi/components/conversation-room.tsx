@@ -8,13 +8,12 @@ import { languages, type Language, type Lesson } from "@/lib/courses";
 import type { ChatMessage } from "@/lib/conversation";
 import { ConversationVoice, type VoiceHandle } from "./conversation-voice";
 
-type ConversationDraft = { messages: ChatMessage[]; draft: string; conversationId?: string; storageConsent: boolean };
-const emptyDraft: ConversationDraft = { messages: [], draft: "", storageConsent: false };
+type ConversationDraft = { messages: ChatMessage[]; draft: string };
+const emptyDraft: ConversationDraft = { messages: [], draft: "" };
 function validDraft(value: unknown): value is ConversationDraft {
   if (!value || typeof value !== "object") return false;
   const v = value as ConversationDraft;
-  return typeof v.draft === "string" && v.draft.length <= 2000 && typeof v.storageConsent === "boolean" &&
-    (v.conversationId === undefined || typeof v.conversationId === "string") && Array.isArray(v.messages) && v.messages.length <= 20 && v.messages.length % 2 === 0 &&
+  return typeof v.draft === "string" && v.draft.length <= 2000 && !("conversationId" in v && v.conversationId !== undefined) && Array.isArray(v.messages) && v.messages.length <= 20 && v.messages.length % 2 === 0 &&
     v.messages.every((m, i) => m && m.role === (i % 2 ? "assistant" : "user") && typeof m.content === "string" && m.content.length <= 20000);
 }
 
@@ -25,7 +24,6 @@ export function ConversationRoom({
   studentSlug,
   canRecord,
   canSpeak,
-  storesConversation,
   learningProfile, cacheKey,
 }: {
   modelSelection?: string;
@@ -35,12 +33,11 @@ export function ConversationRoom({
   studentSlug?: string;
   canRecord: boolean;
   canSpeak: boolean;
-  storesConversation: boolean;
   learningProfile?: LearningProfile | null;
 }) {
   const router = useRouter();
   const [saved, setSaved, unavailable] = useSessionDraft(cacheKey, emptyDraft, validDraft);
-  const { messages, draft, conversationId, storageConsent } = saved;
+  const { messages, draft } = saved;
   const setDraft = (draft: string) => setSaved(v => ({ ...v, draft }));
   const [restartPending, setRestartPending] = useState(false);
   const [stale, setStale] = useState(false);
@@ -52,7 +49,6 @@ export function ConversationRoom({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [voiceBusy, setVoiceBusy] = useState(false);
-  const needsConsent = storesConversation && !storageConsent;
   const voice = useRef<VoiceHandle | null>(null);
   const request = useRef<AbortController | null>(null);
   const log = useRef<HTMLDivElement>(null);
@@ -73,7 +69,7 @@ export function ConversationRoom({
     else if (reply) container.scrollTop += reply.getBoundingClientRect().top - container.getBoundingClientRect().top - 20;
   }, [messages, busy]);
   async function send() {
-    if (sending.current || feedbackBusy || feedbackDone || voiceBusy || needsConsent || !draft.trim() || messages.length >= 20)
+    if (sending.current || feedbackBusy || feedbackDone || voiceBusy || !draft.trim() || messages.length >= 20)
       return;
     sending.current = true;
     setBusy(true);
@@ -98,19 +94,16 @@ export function ConversationRoom({
           learningRevision: learningProfile?.revision,
           messages: pending,
           studentSlug,
-          conversationId,
-          storageConsent,
         }),
         signal: controller.signal,
       });
       const data = await res.json();
       if (res.status === 409) setStale(true);
-      if (!res.ok || typeof data.reply !== "string" ||
-          (storesConversation && typeof data.conversationId !== "string"))
+      if (!res.ok || typeof data.reply !== "string")
         throw new Error(
           data.error || "답변을 받지 못했어요. 다시 보내 주세요.",
         );
-      setSaved(v => ({ ...v, messages: [...pending, { role: "assistant", content: data.reply }], conversationId: data.conversationId, draft: "" }));
+      setSaved(v => ({ ...v, messages: [...pending, { role: "assistant", content: data.reply }], draft: "" }));
       setCompletedTurns(n => n + 1);
       voice.current?.answer(data.reply);
     } catch (e) {
@@ -157,16 +150,9 @@ export function ConversationRoom({
       <p className="mt-4 text-sm text-accent">{languages[language].name}로 대화해요.{language !== "ko" ? " 답변에 한글 발음과 한국어 뜻을 함께 보여 드려요." : ""}</p>
       <details className="mt-3 text-sm text-ink-soft">
         <summary className="min-h-11 cursor-pointer py-3">AI 답변과 대화 기록 안내</summary>
-        <p>AI 답변은 틀릴 수 있어요. 대화는 답변 생성을 위해 AI 제공업체로 전송됩니다. 개인정보는 입력하지 마세요. {storesConversation ? "대화는 AI 회화 서버에 기록되며 튜터와 운영자가 확인할 수 있어요. 새 대화를 시작해도 서버 기록은 삭제되지 않아요. 기록 삭제는 튜터에게 요청해 주세요." : "이 앱은 대화 내용을 서버에 저장하지 않아요."}</p>
+        <p>AI 답변은 틀릴 수 있어요. 대화는 답변 생성을 위해 AI 제공업체로 전송됩니다. 개인정보는 입력하지 마세요. 이 앱은 대화 내용을 서버에 저장하지 않아요.</p>
       </details>
       <p className="mt-2 text-xs text-ink-soft">{unavailable ? "이 브라우저에서는 임시 저장이 안 돼요. 새로고침하면 대화가 사라질 수 있어요." : "이 탭에서는 대화와 입력 중인 문장을 24시간 동안 이어서 볼 수 있어요."}</p>
-      {storesConversation && (
-        <label className="mt-3 flex items-start gap-2 text-sm text-ink-soft">
-          <input type="checkbox" checked={storageConsent} disabled={busy || messages.length > 0}
-            onChange={(event) => setSaved(v => ({ ...v, storageConsent: event.target.checked }))} className="mt-1" />
-          대화가 회화 서버에 저장되는 것에 동의해요.
-        </label>
-      )}
       <div
         ref={log}
         role="log"
@@ -234,14 +220,14 @@ export function ConversationRoom({
         studentSlug={studentSlug}
         onTranscript={setDraft}
         onBusyChange={setVoiceBusy}
-        disabled={busy || feedbackBusy || feedbackDone || needsConsent || messages.length >= 20}
+        disabled={busy || feedbackBusy || feedbackDone || messages.length >= 20}
         canRecord={canRecord}
         canSpeak={canSpeak}
         preferencesKey={`${cacheKey}:audio`}
         restoredAnswer={messages.at(-1)?.role === "assistant" ? messages.at(-1)?.content : undefined}
       />
       {restartPending && <div role="group" aria-label="새 대화 확인" className="mt-4 rounded-xl border border-ink-faint p-4">
-        <p>현재 화면의 대화와 입력을 비우고 새로 시작할까요? 서버에 저장된 기록은 삭제되지 않아요.</p>
+        <p>이 탭의 대화와 입력을 비우고 새로 시작할까요? 학습 진도는 그대로 남아요.</p>
         <button type="button" onClick={() => { voice.current?.reset(); setSaved(emptyDraft); setError(""); setRestartPending(false); input.current?.focus(); }} className="mr-4 mt-3 min-h-11 text-accent underline">비우고 시작</button>
         <button type="button" onClick={() => setRestartPending(false)} className="min-h-11 underline">계속 이어가기</button>
       </div>}
@@ -291,7 +277,7 @@ export function ConversationRoom({
             <button
               type="submit"
               disabled={
-                busy || feedbackBusy || feedbackDone || voiceBusy || needsConsent || !draft.trim() || messages.length >= 20
+                busy || feedbackBusy || feedbackDone || voiceBusy || !draft.trim() || messages.length >= 20
               }
               className="min-h-11 rounded-full bg-accent px-6 font-medium text-accent-ink hover:bg-accent-strong disabled:opacity-50"
             >

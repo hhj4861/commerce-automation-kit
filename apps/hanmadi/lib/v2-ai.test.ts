@@ -658,18 +658,18 @@ test("Thai female incoming speech is translated faithfully and its exact practic
   });
   assert.equal(result.translated, "안녕하세요."); assert.deepEqual(result.practice, thaiFemaleHello);
 });
-test("Thai dialogue and learner recasts regenerate mismatched gendered endings on the selected model", async () => {
+test("Thai dialogue and learner recasts regenerate mismatched gendered endings on the default model", async () => {
   for (const mode of ["dialogue", "learner"] as const) {
     let calls = 0;
     const complete: typeof studyCompletion = async (system, _messages, selection) => {
-      assert.match(system, /male speaker by default/); assert.equal(selection, "codex-personal");
+      assert.match(system, /male speaker by default/); assert.equal(selection, "default");
       const phrase = ++calls === 1 ? thaiFemaleHello : thaiMaleHello;
       return JSON.stringify(mode === "learner" ? { phrase, reusable: true } : phrase);
     };
     const input = [{ role: "user" as const, content: "안녕하세요." }];
     const result = mode === "learner"
-      ? (await learnerTurn("th", input, "codex-personal", complete)).phrase
-      : await roleplayReply("th", 1, "smalltalk", input, "codex-personal", complete);
+      ? (await learnerTurn("th", input, "default", complete)).phrase
+      : await roleplayReply("th", 1, "smalltalk", input, "default", complete);
     assert.equal(calls, 2); assert.deepEqual(result, thaiMaleHello);
   }
 });

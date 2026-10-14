@@ -48,7 +48,7 @@ export function DiagnosticsAdmin() {
       <h2>AI가 지금 제대로 응답하나요?</h2>
       <p>카페 · 레벨 1 · 기본 AI 경로를 고정 예문으로 검사합니다. 회화에는 현재 활성 학습 모델이 적용될 수 있어요.</p>
       <blockquote>{diagnosticInput}</blockquote>
-      <p className="hm-muted">목표 언어·한글 발음·한국어 뜻의 형식, 일부 의미 오류와 재시도·응답 시간을 확인해요. 모든 상황의 정확도나 음성 속도, 개인 Codex·Claude 연결을 보증하는 검사는 아니에요.</p>
+      <p className="hm-muted">목표 언어·한글 발음·한국어 뜻의 형식, 일부 의미 오류와 재시도·응답 시간을 확인해요. 모든 상황의 정확도나 음성 속도를 보증하는 검사는 아니에요.</p>
       <p role="status">{data ? data.scheduleConfigured ? "자동 진단 설정됨 · 매일 09시대(KST). 아래 실행 기록으로 실제 수행 여부를 확인하세요." : "자동 진단 미설정 · 서버 활성화와 예약 인증 설정이 필요해요." : error ? "진단 상태를 불러오지 못했어요." : "진단 이력을 불러오는 중…"}</p>
       <p className="hm-muted">수동 검사는 언어당 하루 2회(UTC 기준), 최대 AI 6회 호출입니다. 고정 예문만 보내며 사용자 대화를 저장하거나 모델을 자동 변경하지 않아요.</p>
       <button disabled={!!busy || (!data && !error)} onClick={() => void refresh()}>상태 새로고침</button>

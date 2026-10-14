@@ -1,76 +1,51 @@
-# Hanmadi Study — Dify 회화 연결
+# Hanmadi 회화 연결 — LiteLLM
 
-`/learn` → `/conversation` → 서버 `/api/conversation` → Dify hanmadi chatflow → LiteLLM.
-음성은 기존 `/api/conversation/transcribe`·`speech` → LiteLLM 경로를 그대로 사용한다.
-이 연결 구현은 기존 다국어·음성 회화 PR #31에 포함된다. 운영 사이트 적용과 PR 병합은 별도다.
+`/learn` → `/conversation` → `/api/conversation` → 공용 LiteLLM의 Hanmadi 모델 별칭.
+`/study`의 영어·일본어·태국어·스페인어 역할극도 LiteLLM을 사용한다.
+음성은 `/api/conversation/transcribe`·`speech` → LiteLLM 경로를 유지한다.
 
 ## 서버 설정
 
-먼저 [공용 Dify 구성](../../../services/dify/README.md)의 한마디 DSL을 가져오고 게시한다.
-아래의 앱 키는 Dify의 **hanmadi 앱 → API Access**에서 발급한다.
-LiteLLM 가상 키나 관리자 키를 `DIFY_API_KEY`로 쓰지 않는다.
+서버 전용 `LITELLM_BASE_URL`, `LITELLM_API_KEY`, `LITELLM_MODEL`이 필요하다.
+음성에는 `LITELLM_STT_MODEL`, `LITELLM_TTS_MODEL`, `LITELLM_TTS_VOICE`를 추가한다.
+실제 값은 비공개 `.env.local` 또는 배포 환경변수에 두고 `NEXT_PUBLIC_`를 붙이지 않는다.
 
-```dotenv
-CONVERSATION_PROVIDER=dify
-DIFY_BASE_URL=https://your-dify-host.example/v1
-DIFY_API_KEY=app-your-hanmadi-app-key
-DIFY_USER_SECRET=your-independent-random-secret-at-least-32-characters
-```
-
-실제 값은 앱의 비공개 `.env.local` 또는 배포 플랫폼의 서버 환경변수에 설정한다.
-`NEXT_PUBLIC_` 접두사를 붙이지 않는다. 로컬 Dify는 `http://localhost:4180/v1`을 쓸 수 있다.
-외부 주소는 HTTPS만 허용한다. `DIFY_USER_SECRET`은 예를 들어 `openssl rand -hex 32`로 생성하고
-비밀관리 시스템에 보관한다. 이 값을 바꾸면 기존 대화의 사용자 식별자가 바뀌므로 기존 대화 연결이 끊긴다.
-주소·앱 키 일부만 설정되면 오류를 표시하며 다른 모델로 조용히 우회하지 않는다.
-
-`CONVERSATION_PROVIDER=litellm`은 기존 직접 회화 경로다.
-공급자 미지정 시 Dify 주소/키가 하나라도 있으면 Dify, 둘 다 없으면 기존 LiteLLM을 사용한다.
-음성에는 여전히 `LITELLM_BASE_URL`, `LITELLM_API_KEY`, `LITELLM_STT_MODEL`,
-`LITELLM_TTS_MODEL`, `LITELLM_TTS_VOICE`가 필요하다. 텍스트를 Dify로 설정한 경우
-`LITELLM_MODEL`은 필요 없다. 음성 모델 설정이 없으면 텍스트만 사용할 수 있다.
+Dify와 accounts v1은 퇴역했다. `CONVERSATION_PROVIDER=litellm` 또는 공급자 설정이 없는 환경을 사용한다.
+`CONVERSATION_PROVIDER=dify`/알 수 없는 값은 503이다. 공급자 미지정 상태에서 `DIFY_*`가 남아 있어도
+503으로 거부하므로 배포 시 옛 설정을 제거한다. 암묵적으로 다른 공급자로 전환하지 않는다.
+`AI_ACCOUNTS_*`는 더 이상 앱이 읽지 않는다. accounts v2/BYOK를 활성화하는 변경이 아니다.
 
 ## 인증·대화·기록
 
-- 기존 튜터 로그인 또는 유효한 비공개 학생 링크가 있어야 회화 API를 호출할 수 있다.
-- 서버가 인증된 사용자와 선택한 언어·수업·수준으로 불투명한 Dify `user` 값을 만든다.
-  클라이언트가 보낸 `user` 값, 튜터 이름, 학생 링크 자체를 Dify 사용자로 전달하지 않는다.
-- 첫 응답의 `conversation_id`로 다음 대화를 이어간다. 다른 사용자·다른 수업의 ID는 사용할 수 없다.
-  새 대화 버튼은 연결 ID도 초기화한다. 대화 ID와 메시지는 브라우저 영구 저장소에 보관하지 않는다.
-- Dify에는 현재 입력만 보내고, 이전 문맥은 Dify가 관리한다. 자동 제목 생성은 꺼 추가 모델 호출을 줄인다.
-- Dify는 **대화와 실행 기록을 저장**한다. 화면에 저장 사실을 안내하고 동의를 받아야 첫 메시지를 보낼 수 있다.
-  API도 동의 필드를 확인한다. 체크박스는 법적 동의 적합성의 보증이나 감사용 동의 원장은 아니다.
-- 화면 새로고침/새 대화는 Dify 기록 삭제가 아니다. 운영자는 Dify 기록·DB·백업의 보관 기간과 삭제 절차를
-  정하고 튜터를 통한 삭제 요청을 처리해야 한다. 이 구현은 장기 기억·자동 학습이나 자동 삭제 기능을 켜지 않는다.
-- 서버 타임아웃은 30초다. 실패를 자동 재전송하지 않고 사용자가 재시도 여부를 정한다.
-  타임아웃 전에 Dify가 처리했을 수 있으므로 실패가 항상 미저장을 의미하지 않는다.
+- 교실 회화는 기존 튜터 로그인 또는 유효한 비공개 학생 링크가 필요하다. 학습자 스터디 로그인은 별도다.
+- 서버가 언어·수업·학습 프로필의 난이도를 확인하고 시스템 지시와 현재 대화 이력을 LiteLLM으로 전달한다.
+  튜터 이름·학생 링크·학습 revision을 모델 요청의 식별자로 전달하지 않는다.
+- 대화와 입력은 같은 탭의 sessionStorage에서 최대 24시간 이어 볼 수 있다. 새 대화는 탭의 대화만 비우고 학습 진도는 유지한다.
+  앱은 전체 대화 본문을 서버 저장소에 보관하지 않는다. 공급자 측 기록 정책과는 별개다.
+- 옛 Dify `conversationId`를 가진 요청은 409이며 해당 ID가 있는 임시 대화는 재사용하지 않는다.
+  기존 LiteLLM 대화 이력과 미전송 입력은 새로고침 뒤에도 유지된다.
+- 기본 Gemini만 선택할 수 있다. 옛 개인 모델 선택값은 409로 거부하며 기본 모델로 몰래 전환하지 않는다.
+- 캐시된 화면의 `/api/model-connections` 요청은 410이다. 연결·승인·해제 요청의 키/코드를 읽거나 외부로 전달하지 않는다.
+  변경 요청의 same-origin 검사는 유지한다.
+- 음성 입문 연습은 매 시도 하나의 전사와 서버 지시만 전송한다. 옛 저장 동의 체크박스는 제거했다.
+- 대화는 AI 제공업체로 전송됨을 안내한다. 실패는 명시적으로 반환하며 다른 공급자로 재시도하지 않는다.
 
 ## 검증
 
 ```sh
 cd apps/hanmadi
-npm ci --prefix . --workspaces=false
+npm ci --workspaces=false
 npm test
 node node_modules/next/dist/bin/next typegen
 node node_modules/typescript/bin/tsc --noEmit
-npm run test:dify
+npm run test:language-flow
+npm run test:v2
 ```
 
-`test:dify`는 임시 디렉터리에 한마디를 복사해 실행한다. 실제 `.env`, `.data`, `.litellm`은 복사하지 않는다.
-기본은 로컬 모의 Dify/음성 공급자이며 테스트 완료 후 임시 서버와 데이터는 제거한다.
-브라우저 확인을 위해 유지하려면 `npm run test:dify -- --serve`를 쓰고 종료 시 Ctrl+C를 누른다.
-ffmpeg와 비어 있는 3188/4197/4198 포트가 필요하다.
+`test:language-flow`는 실제 브라우저 → Next API → 모의 LiteLLM을 검사한다.
+한국어·일본어·태국어 교실, 튜터/학생 접근, 난이도·대화 이력·전사·음성 응답·학습 기록을 포함한다.
+`test:v2`는 스터디 4언어와 퇴역 API의 무호출 차단, 기본 AI 설정 화면을 확인한다.
+실제 `.env`, `.data`, `.litellm`을 복사하지 않으며 외부 모델의 교수 품질이나 운영 PIN 로그인 검증을 대신하지 않는다.
+Dify·accounts v1의 별도 스모크와 워크플로는 퇴역했다.
 
-CI `Hanmadi Dify connection`은 실제 Dify/LiteLLM/PostgreSQL과 한마디 Next.js 서버를 사용한다.
-최종 LLM 응답과 STT/TTS는 합성 테스트 공급자다. 세 언어, 대화 이어가기/새 대화,
-사용자·수업 경계, 저장 동의, 튜터/학생 접근, 음성 전사 → 회화 → 음성 응답을 검사한다.
-CI 앱 키는 비공개 임시 JSON 파일로만 전달하며 로그나 artifact에 올리지 않는다.
-실제 모델의 교수 품질·실제 마이크/스피커·운영 서버 연결은 별도 검증 대상이다.
-
-2026-09-27 검증: 단위 테스트 15개, 타입 검사, 프로덕션 빌드와
-[실제 Dify/LiteLLM 통합 CI](https://github.com/hhj4861/commerce-automation-kit/actions/runs/36282994191)가 통과했다.
-로컬 Chrome에서 합성 데이터로 저장 동의 전 전송 차단, 일본어 예문 전송,
-응답·음성 플레이어 표시 및 새 대화 초기화를 확인했다. 운영 Dify 서버와 실제 모델 연결은 아직 미설정이다.
-
-공식 근거: [Chatflow API](https://docs.dify.ai/en/api-reference/guides/chatflow),
-[사용자 식별](https://docs.dify.ai/en/api-reference/guides/end-user-identity),
-[회화 요청](https://docs.dify.ai/en/api-reference/chat-messages/send-chat-message).
+현재 정리의 검증·반영 상태: [2026-10-14 QA](../../../docs/qa/20261014-hanmadi-retired-integrations.md).
