@@ -12,7 +12,7 @@ const badLength={...good,scenes:scenes.map(s=>({...s,duration:1}))};
 test('repairs invalid generated duration before independent review and preserves target',async()=>{
  let drafts=0,reviews=0;const phases=[];
  const result=await scenarioBrief(brief,{}, {onProgress:async p=>phases.push(p),generate:async prompt=>{
-   const review=mockReview(prompt);if(review){reviews++;return review;}
+   const review=mockReview(prompt);if(review){if(prompt.startsWith('대본 독립 검토 '))reviews++;return review;}
    drafts++;if(drafts===2){assert.match(prompt,/SCENARIO_FORMAT_INVALID/);assert.match(prompt,/목표 24초/);assert.match(prompt,/scenes\[\]\.duration/);assert.match(prompt,/sum must match target 24 seconds/);}
    return {value:drafts===1?badLength:good};
  }});
@@ -41,7 +41,7 @@ test('repairs a story arc that does not quote the actual narration',async()=>{
 test('format repair and depth repair share one budget, never accepting a failed review',async()=>{
  let drafts=0,reviews=0;
  await assert.rejects(scenarioBrief(brief,{}, {generate:async prompt=>{
-  const review=mockReview(prompt,['mechanism']);if(review){reviews++;return review;}
+  const review=mockReview(prompt,['mechanism']);if(review){if(prompt.startsWith('대본 독립 검토 '))reviews++;return review;}
   return {value:++drafts===1?badLength:good};
  }}),{code:'SCENARIO_DEPTH_INVALID'});
  assert.equal(drafts,2);assert.equal(reviews,1);
@@ -67,11 +67,11 @@ test('research searches once; drafting, repair and review use that fixed evidenc
   calls++;assert.equal(options.signal,signal);assert.equal(options.model,model);
   if(calls===1){assert.notEqual(options.draftOnly,true);return {searched:true,value:research};}
   assert.equal(options.draftOnly,true);
-  const review=mockReview(prompt);if(review){reviews++;return review;}
+  const review=mockReview(prompt);if(review){if(prompt.startsWith('대본 독립 검토 '))reviews++;return review;}
   assert.match(prompt,/자료 조사는 이미 완료/);assert.match(prompt,/source-1/);
   drafts++;return {value:drafts===1?badLength:good};
  }});
- assert.equal(calls,4);assert.equal(drafts,2);assert.equal(reviews,1);
+ assert.equal(calls,5);assert.equal(drafts,2);assert.equal(reviews,1);
  assert.deepEqual(result.research.facts,research.facts);
 });
 
@@ -91,7 +91,7 @@ test('webtoon field and numeric scene index reach the one repair without echoing
   let calls=0,drafts=0,reviews=0;
   const result=await scenarioBrief({...brief,productionStyle:'webtoon'}, {}, {generate:async prompt=>{
    if(++calls===1)return {searched:true,value:research};
-   const review=mockReview(prompt);if(review){reviews++;return review;}
+   const review=mockReview(prompt);if(review){if(prompt.startsWith('대본 독립 검토 '))reviews++;return review;}
    drafts++;
    assert.ok(!prompt.includes('"kind":"image"},{"id":"scene-2"'));
    if(drafts===2){const hint=JSON.parse(prompt.split('실패한 필드와 제약: ')[1].split('. 목표 길이')[0]);assert.deepEqual(hint,{path,rule});assert.ok(!JSON.stringify(hint).includes('private-invalid-value'));}
@@ -104,13 +104,13 @@ test('webtoon field and numeric scene index reach the one repair without echoing
 test('repeated webtoon failure retains a safe diagnostic but not raw input in public errors',async()=>{
  const malformed=structuredClone(webtoonGood);malformed.scenes[1].webtoon.layers[0].color='private-invalid-value';
  let calls=0;
- await assert.rejects(scenarioBrief({...brief,productionStyle:'webtoon'},{},{generate:async()=>++calls===1?{searched:true,value:research}:{value:malformed}}),e=>{
+ await assert.rejects(scenarioBrief({...brief,productionStyle:'webtoon'},{},{generate:async prompt=>{calls++;return mockReview(prompt)||(calls===1?{searched:true,value:research}:{value:malformed});}}),e=>{
   assert.deepEqual(e.validationIssue,{path:'scenes[1].webtoon.layers[0].color',rule:'#RRGGBB'});
   assert.equal(e.code,'SCENARIO_FORMAT_INVALID');assert.ok(!e.message.includes('private-invalid-value'));assert.match(accountFailureMessage('codex',e),/2번 장면의 대상 색상/);
   for(const provider of ['codex','claude'])assert.ok(!accountFailureMessage(provider,e).includes('private-invalid-value'));
   return true;
  });
- assert.equal(calls,3);
+ assert.equal(calls,4);
 });
 
 test('format diagnostics reject untrusted path and rule text at the public boundary',()=>{
@@ -138,7 +138,7 @@ test('basic and hybrid/architecture violations give the exact field to one repai
    let calls=0,drafts=0,reviews=0;
    const promise=scenarioBrief(hybridBrief,{}, {generate:async prompt=>{
     if(++calls===1)return {searched:true,value:research};
-    const review=mockReview(prompt);if(review){reviews++;return review;}
+    const review=mockReview(prompt);if(review){if(prompt.startsWith('대본 독립 검토 '))reviews++;return review;}
     drafts++;
     if(drafts===2){const hint=JSON.parse(prompt.split('실패한 필드와 제약: ')[1].split('. 목표 길이')[0]);assert.deepEqual(hint,{path,rule});}
     return {value:repairSucceeds&&drafts===2?hybridGood:malformed};
