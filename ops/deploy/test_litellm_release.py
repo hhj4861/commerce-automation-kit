@@ -2,7 +2,9 @@ import fcntl
 import importlib.util
 import json
 from pathlib import Path
+import shutil
 import subprocess
+import sys
 import tempfile
 import unittest
 
@@ -10,6 +12,8 @@ spec = importlib.util.spec_from_file_location('release', Path(__file__).with_nam
 module = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(module)
 SHA = 'a' * 40
+GATEWAY = Path(__file__).resolve().parents[2] / 'services/ai-gateway'
+PINNED = 'services:\n  gateway:\n    image: ghcr.io/berriai/litellm@sha256:' + '0' * 64 + '\n'
 
 
 class ReleaseTests(unittest.TestCase):
@@ -21,24 +25,20 @@ class ReleaseTests(unittest.TestCase):
         self.runtime = self.old / '.runtime'
         self.runtime.mkdir(parents=True)
         (self.old / '.env').write_text('DO_NOT_ROTATE=fixture\n')
-        (self.runtime / 'subscriptions/alice/auth').mkdir(parents=True)
-        (self.runtime / 'subscriptions/alice/auth/auth.json').write_text('private-auth-fixture')
-        (self.runtime / 'subscriptions/alice/config.json').write_text('original-account-config')
         (self.runtime / 'litellm.json').write_text('original-config')
-        (self.runtime / 'subscriptions.compose.json').write_text(json.dumps({'services': {'gateway': {}, 'codex-alice': {}}}))
         self.source = self.home / 'source'
         self.source.mkdir()
         for name in module.FILES:
-            (self.source / name).write_text('fixture-' + name)
+            (self.source / name).write_text(PINNED if name == 'compose.yaml' else 'fixture-' + name)
         self.calls = []
 
     def execute(self, args, cwd, stdout=subprocess.DEVNULL):
         self.calls.append((args, cwd))
         if 'pg_dump' in args:
             stdout.write(b'fixture database dump')
-        if args[0] == 'python3':
-            # The CLI's account lock must stay held while rendering and restarting.
-            with (self.runtime / 'subscriptions/.lock').open('a') as lock:
+        if args == list(module.RENDER):
+            # The release lock must stay held while rendering and restarting.
+            with (self.home / 'gitops/litellm.lock').open('a') as lock:
                 with self.assertRaises(BlockingIOError):
                     fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
             (self.runtime / 'litellm.json').write_text('new-config')
@@ -46,25 +46,63 @@ class ReleaseTests(unittest.TestCase):
     def release(self, execute=None, sha=SHA):
         module.release(self.source, sha, self.home, execute or self.execute)
 
-    def test_success_preserves_secrets_and_restarts_only_gateway_and_account_workers(self):
+    def test_success_preserves_secrets_renders_then_restarts_only_gateway(self):
         self.release()
         record = json.loads((self.home / 'gitops/litellm.json').read_text())
         self.assertEqual(record['sha'], SHA)
         destination = Path(record['source'])
         self.assertTrue((destination / '.env').is_symlink())
         self.assertEqual((destination / '.env').read_text(), 'DO_NOT_ROTATE=fixture\n')
-        self.assertEqual((destination / '.runtime/subscriptions/alice/auth/auth.json').read_text(), 'private-auth-fixture')
+        self.assertEqual((destination / '.runtime/litellm.json').read_text(), 'new-config')
         backup = Path(record['backup']) / 'postgres.sql'
         self.assertEqual(backup.stat().st_mode & 0o777, 0o600)
         self.assertEqual(backup.read_bytes(), b'fixture database dump')
         self.assertIn('pg_dump', self.calls[0][0])
-        starts = [args for args, _ in self.calls if 'up' in args]
-        self.assertEqual(len(starts), 1)
-        self.assertEqual(starts[0][-2:], ['gateway', 'codex-alice'])
-        self.assertIn('--no-deps', starts[0])
-        for args, _ in self.calls:
+        commands = [args for args, _ in self.calls]
+        self.assertEqual([cwd for args, cwd in self.calls if args == list(module.RENDER)], [destination])
+        self.assertEqual([args for args in commands if 'up' in args], [[
+            'docker', 'compose', '-p', 'shared-ai-gateway', '-f', str(destination / 'compose.yaml'),
+            'up', '-d', '--no-deps', '--wait', '--wait-timeout', '300', 'gateway']])
+        self.assertLess(commands.index(list(module.RENDER)), next(i for i, args in enumerate(commands) if 'up' in args))
+        for args in commands:
             self.assertNotIn('down', args)
             self.assertNotIn('init', args)
+            self.assertFalse(any('codex-' in part or 'subscriptions' in part for part in args), args)
+
+    def test_leftover_subscription_overlay_is_ignored(self):
+        # D5 retired the per-account workers; files an earlier admin CLI wrote can remain on the host.
+        overlay = self.runtime / 'subscriptions.compose.json'
+        overlay.write_text(json.dumps({'services': {'gateway': {}, 'codex-alice': {}}}))
+        (self.runtime / 'subscriptions.env').write_text('')
+        self.release()
+        for args, _ in self.calls:
+            self.assertFalse(any('subscriptions' in part for part in args), args)
+        starts = [args for args, _ in self.calls if 'up' in args]
+        self.assertEqual(starts[0][-1], 'gateway')
+        self.assertTrue(overlay.exists())
+
+    def test_unpinned_litellm_image_is_rejected_before_any_command(self):
+        (self.source / 'compose.yaml').write_text('services:\n  gateway:\n    image: ghcr.io/berriai/litellm:main-stable\n')
+        with self.assertRaisesRegex(ValueError, 'pinned'):
+            self.release()
+        self.assertFalse(self.calls)
+        self.assertFalse((self.home / 'releases' / f'gitops-litellm-{SHA}').exists())
+
+    def test_release_files_exist_in_repository(self):
+        for name in module.FILES:
+            self.assertTrue((GATEWAY / name).is_file(), name)
+        self.assertRegex((GATEWAY / 'compose.yaml').read_text(), module.PINNED_IMAGE)
+
+    def test_release_files_alone_render_the_gateway_config(self):
+        destination = self.home / 'render-check'
+        (destination / '.runtime').mkdir(parents=True)
+        for name in module.FILES:
+            shutil.copyfile(GATEWAY / name, destination / name)
+        (destination / '.env').write_text(''.join(f'{key}={value}\n' for key, value in (
+            ('LITELLM_MASTER_KEY', 'sk-' + '1' * 64), ('LITELLM_SALT_KEY', 'sk-' + '2' * 64),
+            ('POSTGRES_PASSWORD', '3' * 64))))
+        subprocess.run([sys.executable, *module.RENDER[1:]], cwd=destination, check=True, capture_output=True)
+        self.assertEqual(json.loads((destination / '.runtime/litellm.json').read_text())['model_list'], [])
 
     def test_health_failure_restores_previous_config_and_container_revision(self):
         def failing(args, cwd, **kwargs):
@@ -75,8 +113,9 @@ class ReleaseTests(unittest.TestCase):
             self.release(failing)
         self.assertEqual((self.runtime / 'litellm.json').read_text(), 'original-config')
         self.assertFalse((self.home / 'gitops/litellm.json').exists())
-        self.assertEqual(self.calls[-1][1], self.old)
-        self.assertIn('up', self.calls[-1][0])
+        self.assertEqual(self.calls[-1], ([
+            'docker', 'compose', '-p', 'shared-ai-gateway', '-f', str(self.old / 'compose.yaml'),
+            'up', '-d', '--no-deps', '--wait', '--wait-timeout', '300', 'gateway'], self.old))
 
     def test_failed_backup_never_renders_or_restarts(self):
         def fail_backup(args, cwd, **kwargs):
@@ -87,18 +126,10 @@ class ReleaseTests(unittest.TestCase):
         self.assertEqual(len(self.calls), 1)
         self.assertEqual((self.runtime / 'litellm.json').read_text(), 'original-config')
 
-    def test_unexpected_service_is_rejected_before_restart(self):
-        def inject(args, cwd, **kwargs):
-            self.execute(args, cwd, **kwargs)
-            if args[0] == 'python3':
-                (self.runtime / 'subscriptions.compose.json').write_text(json.dumps({'services': {'gateway': {}, 'accounts': {}}}))
-        with self.assertRaisesRegex(RuntimeError, 'previous configuration restored'):
-            self.release(inject)
-        self.assertFalse(any('up' in args for args, _ in self.calls))
-        self.assertEqual(module.services(self.old), ['gateway', 'codex-alice'])
-
-    def test_account_admin_lock_blocks_release_without_creating_revision(self):
-        with (self.runtime / 'subscriptions/.lock').open('a') as lock:
+    def test_concurrent_release_is_blocked_without_creating_revision(self):
+        state = self.home / 'gitops'
+        state.mkdir()
+        with (state / 'litellm.lock').open('a') as lock:
             fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
             with self.assertRaises(BlockingIOError):
                 self.release()

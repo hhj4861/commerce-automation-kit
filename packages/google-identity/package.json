@@ -1,0 +1,27 @@
+{
+  "name": "@cak/google-identity",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Server-side Google identity verification; apps own accounts, admission and sessions",
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "default": "./index.mjs"
+    }
+  },
+  "files": [
+    "index.mjs",
+    "index.d.ts",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "jose": "6.2.3"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.mjs"
+  }
+}

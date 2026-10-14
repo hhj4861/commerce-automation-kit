@@ -201,7 +201,7 @@ test("both translation directions specify pronunciation of the non-Korean senten
       calls++;
       return JSON.stringify({
         translated: calls === 1 ? "Coffee please" : "커피 주세요.",
-        reading: "코히오 쿠다사이",
+        reading: "코오히이오 쿠다사이",
         practice: null,
       });
     },
@@ -621,7 +621,7 @@ test("cafe partner repairs repeated conditions or customer voice, retaining the 
     const good={en:"One coffee without ice. Got it!",ja:"氷なしのコーヒーですね。かしこまりました。",es:"De acuerdo, un café sin hielo."}[language];
     const result=await roleplayReply(language,1,"cafe",[{role:"user",content:"얼음 없이 커피 한 잔 주세요."}],"personal",async(prompt,_,selection)=>{
       assert.equal(selection,"personal");calls++;if(calls===2)assert.match(prompt,/REPAIR/);
-      return JSON.stringify({text:calls===1?text:good,reading:"올바른 발음",meaning:calls===1?meaning:"얼음 없는 커피 한 잔, 알겠습니다."});
+      return JSON.stringify({text:calls===1?text:good,reading:language==="ja" ? "코오리나시노 코오히이데스네. 카시코마리마시타." : "올바른 발음",meaning:calls===1?meaning:"얼음 없는 커피 한 잔, 알겠습니다."});
     });
     assert.equal(calls,2);assert.equal(result.text,good);
   }
@@ -658,18 +658,18 @@ test("Thai female incoming speech is translated faithfully and its exact practic
   });
   assert.equal(result.translated, "안녕하세요."); assert.deepEqual(result.practice, thaiFemaleHello);
 });
-test("Thai dialogue and learner recasts regenerate mismatched gendered endings on the selected model", async () => {
+test("Thai dialogue and learner recasts regenerate mismatched gendered endings on the default model", async () => {
   for (const mode of ["dialogue", "learner"] as const) {
     let calls = 0;
     const complete: typeof studyCompletion = async (system, _messages, selection) => {
-      assert.match(system, /male speaker by default/); assert.equal(selection, "codex-personal");
+      assert.match(system, /male speaker by default/); assert.equal(selection, "default");
       const phrase = ++calls === 1 ? thaiFemaleHello : thaiMaleHello;
       return JSON.stringify(mode === "learner" ? { phrase, reusable: true } : phrase);
     };
     const input = [{ role: "user" as const, content: "안녕하세요." }];
     const result = mode === "learner"
-      ? (await learnerTurn("th", input, "codex-personal", complete)).phrase
-      : await roleplayReply("th", 1, "smalltalk", input, "codex-personal", complete);
+      ? (await learnerTurn("th", input, "default", complete)).phrase
+      : await roleplayReply("th", 1, "smalltalk", input, "default", complete);
     assert.equal(calls, 2); assert.deepEqual(result, thaiMaleHello);
   }
 });
@@ -792,3 +792,66 @@ for(const flow of resilientFlows){
     }
   });
 }
+
+
+test("Japanese speaking notation preserves long vowels without guessing compound kanji", async () => {
+  const {pronunciationIssue} = await import("./study-quality");
+  for (const [text,bad,good] of [
+    ["氷抜きでコーヒーを一杯ください。", "고리누키데 코히오 입파이 쿠다사이.", "코오리누키데 코오히이오 잇파이 쿠다사이."],
+    ["氷を抜いてください。", "코리오 누이테 쿠다사이.", "코오리오 누이테 쿠다사이."],
+    ["ビールをください。", "비루오 쿠다사이.", "비이루오 쿠다사이."],
+    ["タクシーです。", "타쿠시데스.", "타쿠시이데스."],
+    ["ケーキです。", "케키데스.", "케에키데스."],
+  ]) {
+    assert(pronunciationIssue(text,bad,"ja"), text);
+    assert.equal(pronunciationIssue(text,good,"ja"),null,text);
+  }
+  for (const [text,reading] of [
+    ["かき氷をください。","카키고오리오 쿠다사이."],
+    ["氷点下です。","효오텐카데스."],
+    ["ビルです。","비루데스."],
+    ["ｺｰﾋｰです。","코-히-데스."],
+    ["氷なしです。","고오리나시데스."],
+  ]) assert.equal(pronunciationIssue(text,reading,"ja"),null,text);
+  assert(pronunciationIssue("コーヒーです。コーヒーですね。","코오히이데스. 코히데스네.","ja"),"each repeated word needs its own reading");
+  assert.equal(pronunciationIssue("coffee","커피","en"),null);
+});
+
+test("bad Japanese pronunciation is repaired across chat, learner and both translation directions", async () => {
+  const {learnerTurn} = await import("./v2-ai");
+  const phrase={text:"氷抜きでコーヒーを一杯ください。",reading:"코오리누키데 코오히이오 잇파이 쿠다사이.",meaning:"얼음 없이 커피 한 잔 주세요."};
+  const bad={...phrase,reading:"고리누키데 코히오 입파이 쿠다사이."};
+  const history=[{role:"user" as const,content:phrase.meaning}];
+  const flows=[
+    {run:(c:typeof studyCompletion)=>roleplayReply("ja",1,"smalltalk",history,"chosen",c), value:(p:typeof phrase)=>p},
+    {run:(c:typeof studyCompletion)=>learnerTurn("ja",history,"chosen",c), value:(p:typeof phrase)=>({phrase:p,reusable:true})},
+    {run:(c:typeof studyCompletion)=>translate(phrase.meaning,"ja","ko",c),value:(p:typeof phrase)=>({translated:p.text,reading:p.reading,practice:p})},
+    {run:(c:typeof studyCompletion)=>translate(phrase.text,"ja","ja",c),value:(p:typeof phrase)=>({translated:p.meaning,reading:p.reading,practice:p})},
+  ];
+  for (const flow of flows) {
+    let calls=0;
+    const result=await flow.run(async (prompt)=>{
+      if (++calls===2) assert.match(prompt,/Japanese pronunciation mismatch/);
+      return JSON.stringify(flow.value(calls===1?bad:phrase));
+    });
+    assert.equal(calls,2);assert(!JSON.stringify(result).includes(bad.reading));
+    calls=0;
+    await assert.rejects(flow.run(async()=>{calls++;return JSON.stringify(flow.value(bad));}));
+    assert.equal(calls,2,"no third call and no invalid pronunciation returned for saving");
+  }
+  const translated=await translate("커피 주세요.","ja","ko",async()=>JSON.stringify({translated:phrase.text,reading:phrase.reading,practice:bad}));
+  assert.equal(translated.practice,null,"invalid practice must not be saved even when main translation is valid");
+});
+
+
+test("live Japanese order without a temperature cannot be silently made hot", async () => {
+  const incorrect = { text: "温かいコーヒーですね。店内でお召し上がりですか？", meaning: "따뜻한 커피군요. 매장에서 드시나요?", reading: "아타타카이 코오히이데스네. 텐나이데 오메시아가리데스카?" };
+  const corrected = { text: "コーヒーですね。店内でお召し上がりですか？", meaning: "커피군요. 매장에서 드시나요?", reading: "코오히이데스네. 텐나이데 오메시아가리데스카?" };
+  let calls = 0;
+  const reply = await roleplayReply("ja", 1, "cafe", [{role:"user",content:"コーヒーを一つください。"}], "default", async () => JSON.stringify(++calls === 1 ? incorrect : corrected));
+  assert.equal(calls, 2); assert.deepEqual(reply, corrected);
+  const { dialogueIssue } = await import("./study-quality");
+  assert.equal(dialogueIssue("温かいコーヒーをください。", incorrect, "ja", "cafe"), null);
+  assert.equal(dialogueIssue("コーヒーを一つください。", { ...incorrect, text:"温かいコーヒーですか？" }, "ja", "cafe"), null);
+  assert.equal(dialogueIssue("コーヒーを一つください。", incorrect, "ja", "hotel"), null);
+});

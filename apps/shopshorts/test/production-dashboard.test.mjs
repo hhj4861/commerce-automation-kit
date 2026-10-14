@@ -96,3 +96,18 @@ test('automatic dashboard retains its complete last known list when any source f
   assert.ok(calls.includes('/api/hot-keywords'));
   await assert.rejects(fetchAutomaticProjects(async()=>Response.json({})),/응답/);
 });
+
+test('sidebar checks studio heartbeat independently of the legacy queue and exposes unavailable status',async()=>{
+ const source=html.slice(html.indexOf('async function updateStudioWorkerStatus()'),html.indexOf('async function load(keepSelection=false)'));
+ const nodes={systemStatus:{},systemNote:{}};let response,fail=false;
+ const context={Date,Number,document:{getElementById:id=>nodes[id]},api:async path=>{assert.equal(path,'/api/studio/config');if(fail)throw Error('unavailable');return response;},state:{workerAt:null}};
+ vm.runInNewContext(source,context);
+ for(const [config,expected] of [
+  [{execution:'cloud-worker',capabilities:{workerAt:new Date().toISOString()}},'온라인'],
+  [{execution:'cloud-worker',capabilities:{workerAt:new Date(Date.now()-120000).toISOString()}},'오프라인'],
+  [{execution:'cloud-worker',capabilities:{}},'오프라인'],
+  [{execution:'local'},'온라인']]){
+  response=config;await context.updateStudioWorkerStatus();assert.match(nodes.systemStatus.innerHTML,new RegExp(expected));
+ }
+ fail=true;await context.updateStudioWorkerStatus();assert.match(nodes.systemStatus.innerHTML,/확인 필요/);assert.doesNotMatch(nodes.systemNote.textContent,/처리할 수/);
+});

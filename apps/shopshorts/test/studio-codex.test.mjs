@@ -113,3 +113,11 @@ test('MCP restrictions explicitly disable both configured and plugin servers',()
  assert.ok(args.includes('mcp_servers.remote.enabled=false'));
  assert.throws(()=>disabledMcpArgs([{name:'bad.name'}]));
 });
+
+
+test('shared discovery draft disables native web search in actual spawn arguments',async()=>{
+ const f=fixture(),generate=createCodexGenerator({prepare:async()=>[],spawnProcess:f.spawn});
+ const pending=generate('server evidence only',{draftOnly:true});await f.ready();
+ assert.ok(f.args.includes('web_search="disabled"'));assert.ok(!f.args.includes('web_search="live"'));
+ f.finish(events(false));assert.equal((await pending).searched,false);
+});

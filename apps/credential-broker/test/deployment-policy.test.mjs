@@ -1,10 +1,11 @@
+import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { authorizeGithub, authorizeMigration, REPOSITORY, SUBJECT_PREFIX, DEPLOYMENT_KEYS, STATIC_KEYS, PAGE_KEYS, GITHUB_KEYS } from '../policy.mjs';
 
 const claims = (name = 'shopshorts') => {
   const ref = `refs/heads/deploy/${name}`;
-  return { repository: REPOSITORY, repository_id: '1310729493', repository_owner_id: '71001056',
+  return { ...(['shopshorts', 'hanmadi'].includes(name) ? { ref_protected: 'true' } : {}), repository: REPOSITORY, repository_id: '1310729493', repository_owner_id: '71001056',
     runner_environment: 'github-hosted', event_name: 'push', ref,
     sub: `${SUBJECT_PREFIX}:ref:${ref}`, workflow_ref: `${REPOSITORY}/.github/workflows/platform-deploy.yml@${ref}` };
 };
@@ -41,4 +42,28 @@ test('admin gets a dedicated credential and cannot use learner or Replay trust',
   for (const patch of [{ repository_id: 'other' }, { repository_owner_id: 'other' }, { event_name: 'pull_request' }, { runner_environment: 'self-hosted' }, { workflow_ref: claims('hanmadi').workflow_ref }, { sub: claims('hanmadi').sub }]) assert.throws(() => authorizeGithub({ ...adminClaims, ...patch }, adminConfig));
   assert.throws(() => authorizeGithub(claims('hanmadi'), adminConfig));
   assert.throws(() => authorizeGithub(adminClaims, { GITHUB_REPLAY_DEPLOY_ENABLED: 'true' }));
+});
+
+test('learner deployment requires a protected ref and receives no admin or Replay credential', () => {
+  const learner = claims('hanmadi');
+  assert.deepEqual(authorizeGithub(learner, config).keys, ['DEPLOY_VERCEL_TOKEN']);
+  for (const ref_protected of [undefined, false, 'false'])
+    assert.throws(() => authorizeGithub({ ...learner, ref_protected }, config));
+  for (const patch of [{ workflow_ref: adminClaims.workflow_ref }, { sub: adminClaims.sub }, { repository_id: 'other' }, { runner_environment: 'self-hosted' }])
+    assert.throws(() => authorizeGithub({ ...learner, ...patch }, config));
+});
+
+test('checked-in broker configuration isolates protected Shopshorts and Hanmadi deployment keys', () => {
+  const deployed = JSON.parse(readFileSync(new URL('../wrangler.json', import.meta.url), 'utf8'));
+  for (const [name, key] of [['shopshorts', 'DEPLOY_CLOUDFLARE_API_TOKEN'], ['hanmadi', 'DEPLOY_VERCEL_TOKEN'], ['hanmadi-admin', 'HANMADI_ADMIN_DEPLOY_VERCEL_TOKEN']]) {
+    const identity = { ...claims(name), ref_protected: 'true' };
+    assert.deepEqual(authorizeGithub(identity, deployed.vars).keys, [key]);
+    assert.deepEqual(deployed.secrets_store_secrets.filter(b => b.binding === `SS_${key}`), [
+      { binding: `SS_${key}`, store_id: deployed.vars.STORE_ID, secret_name: `CAK_${key}` },
+    ]);
+    for (const ref_protected of [undefined, false, 'false'])
+      assert.throws(() => authorizeGithub({ ...identity, ref_protected }, deployed.vars));
+    assert.throws(() => authorizeGithub({ ...identity, ref: 'refs/heads/main' }, deployed.vars));
+  }
+  assert.throws(() => authorizeGithub(claims('firstframe'), deployed.vars));
 });

@@ -154,9 +154,9 @@ export function V2Settings(p: Props) {
         <span>한국어 표기와 원음</span>
       </div>
       <div className="hm-setting-row">
-        <b>내 AI 연결</b>
+        <b>AI 대화 설정</b>
         <button onClick={p.onAI}>
-          연결·모델 선택 <Icon name="arrow" />
+          AI 설정 보기 <Icon name="arrow" />
         </button>
       </div>
       <div className="hm-setting-row">
@@ -196,6 +196,10 @@ export function V2Settings(p: Props) {
         <Link href="/learn">
           한국어·튜터 수업 <Icon name="arrow" />
         </Link>
+      </div>
+      <div className="hm-setting-row">
+        <b>개인정보</b>
+        <Link href="/privacy">처리방침·문의 <Icon name="arrow" /></Link>
       </div>
       <button className="hm-logout" disabled={p.busy} onClick={p.onLogout}>
         로그아웃

@@ -96,11 +96,11 @@ export async function loginClaude(env, { signal, update, read, spawnProcess, pol
   } finally { clearInterval(timer); await pollTask; }
 }
 
-export function claudeArgs(model) {
+export function claudeArgs(model, {draftOnly=false}={}) {
   if (model && !/^[a-zA-Z0-9._-]+$/.test(model)) throw failure();
   // Only built-in web search is available. No shell, file, app, MCP or subagent tools.
   return ['-p', '--output-format', 'stream-json', '--verbose', '--no-session-persistence',
-    '--tools', 'WebSearch', '--allowedTools', 'WebSearch', '--permission-mode', 'dontAsk',
+    '--tools', draftOnly ? '' : 'WebSearch', '--allowedTools', draftOnly ? '' : 'WebSearch', '--permission-mode', 'dontAsk',
     '--strict-mcp-config', '--mcp-config', '{"mcpServers":{}}', '--setting-sources', '',
     ...(model ? ['--model', model] : [])];
 }
@@ -122,8 +122,8 @@ export function parseClaudeEvents(output) {
   try { return { searched, value: JSON.parse(String(result.result || answer).replace(/^\s*```(?:json)?\s*/, '').replace(/\s*```\s*$/, '')) }; }
   catch { throw failure('CLAUDE_OUTPUT_INVALID'); }
 }
-export const generateClaude = (env, { spawnProcess, oauthToken } = {}) => async (prompt, { signal, model } = {}) =>
-  parseClaudeEvents(await childRun(claudeArgs(model), { env, signal, input: prompt, spawnProcess, oauthToken }).done);
+export const generateClaude = (env, { spawnProcess, oauthToken } = {}) => async (prompt, { signal, model, draftOnly=false } = {}) =>
+  parseClaudeEvents(await childRun(claudeArgs(model,{draftOnly}), { env, signal, input: prompt, spawnProcess, oauthToken }).done);
 
 // Claude Code scopes its macOS Keychain item to CLAUDE_CONFIG_DIR. This adapter
 // touches only the fresh private runtime namespace, never the operator's entry.
@@ -161,9 +161,15 @@ async function accountStatus(env, signal) {
   }
 }
 
-export async function executeClaudeAccountJob(value, { signal, update, read, env = process.env,
+export async function executeClaudeAccountJob(value, { signal, update, read, subject, env = process.env,
   login = loginClaude, credential = readClaudeCredential, identify = accountStatus,
   generator = generateClaude, cleanup = clearKeychain } = {}) {
+  const assertConnection = async () => {
+    signal?.throwIfAborted();
+    if (!read) throw failure();
+    const fresh = await read();
+    if (fresh.job?.id !== value.job.id || fresh.job.provider !== value.job.provider || !fresh.credential) throw failure();
+  };
   const home = await mkdtemp(join(tmpdir(), 'shopshorts-claude-'));
   const runtime = { ...claudeEnvironment(env), HOME: home, CLAUDE_CONFIG_DIR: join(home, '.claude') };
   let retainCache = false;
@@ -197,13 +203,13 @@ export async function executeClaudeAccountJob(value, { signal, update, read, env
       return;
     }
     if (setupCredential(value.credential)) {
-      const result = await (value.job.kind === 'scenario' ? scenarioBrief : recommendBrief)(value.job.input, env, { history: value.recommendations, onProgress:phase=>update({job:{phase}}), generate: generator(runtime, { oauthToken: value.credential.accessToken }), signal, provider: 'claude' });
+      const result = await (value.job.kind === 'scenario' ? scenarioBrief : recommendBrief)(value.job.input, env, { history: value.recommendations, subject, requestId:value.job.id, assertConnection, onProgress:phase=>update({job:{phase}}), generate: generator(runtime, { oauthToken: value.credential.accessToken }), signal, provider: 'claude' });
       await update({ job: { state: 'done', result } });
       return;
     }
     await identify(runtime, signal);
     try {
-      const result = await (value.job.kind === 'scenario' ? scenarioBrief : recommendBrief)(value.job.input, env, { history: value.recommendations, onProgress:phase=>update({job:{phase}}), generate: generator(runtime), signal, provider: 'claude' });
+      const result = await (value.job.kind === 'scenario' ? scenarioBrief : recommendBrief)(value.job.input, env, { history: value.recommendations, subject, requestId:value.job.id, assertConnection, onProgress:phase=>update({job:{phase}}), generate: generator(runtime), signal, provider: 'claude' });
       await persist({ credential: await capture(), job: { state: 'done', result } });
     } catch (e) { await persist({ credential: await capture() }); throw e; }
   } finally {

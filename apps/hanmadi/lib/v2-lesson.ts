@@ -1,7 +1,10 @@
+import { musicLesson } from "./v2-music";
 import { sceneLessonPlans } from "./v2-scene-lessons";
 import type { Phrase, Unit } from "./v2";
 
 export function lessonPlan(unit: Unit) {
+  const music = musicLesson(unit);
+  if (music) return { title: music.title, instruction: music.pattern, context: music.listen, goal: `${music.goal} ${music.pattern}`, cues: music.steps.map(s => s.cue), rows: "" };
   return unit.source === "starter"
     ? sceneLessonPlans[unit.scene]?.[unit.level - 1]
     : undefined;
@@ -10,6 +13,11 @@ export function lessonPlan(unit: Unit) {
 export function lessonPhrases(unit: Unit): Phrase[] {
   // A published admin item is one approved expression, not ten invented lesson steps.
   if (unit.source === "admin") return [unit.phrase];
+  if (unit.source === "music") {
+    const music = musicLesson(unit);
+    if (!music) throw new Error("지원하지 않는 음악 수업이에요.");
+    return music.steps.map(s => s.phrase);
+  }
   const plan = lessonPlan(unit);
   if (!plan) throw new Error("지원하지 않는 학습 상황이에요.");
   const index = { ja: 1, th: 3, en: 5, es: 7 }[unit.language];

@@ -54,13 +54,20 @@ def render(root=ROOT):
     # Password is embedded into the Compose database URL: require URL-safe characters.
     if any(c not in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_" for c in env["POSTGRES_PASSWORD"]):
         raise ValueError("POSTGRES_PASSWORD must be URL-safe (letters/digits/-/_).")
+    models = model_list(env)
+    private_write(root / ".runtime/litellm.json", json.dumps(config_for(models), indent=2) + "\n")
+    return [m["model_name"] for m in models]
+
+
+def model_list(env):
     models = []
     for app, alias in (("HANMADI", "hanmadi-chat"), ("REPLAY", "replay-video-planner"), ("FESTA", "festa-travel")):
         model = env.get(f"{app}_CHAT_MODEL", "")
         if not model:
             continue
         if model.startswith("chatgpt/"):
-            raise ValueError("ChatGPT subscriptions require an isolated account; use subscriptions.py create.")
+            raise ValueError("ChatGPT subscription models are not served by the shared gateway; "
+                             "per-account subscription workers were retired (D5).")
         local = model.startswith(("ollama/", "ollama_chat/"))
         if not local and not env.get(f"{app}_CHAT_API_KEY"):
             raise ValueError(f"{app}_CHAT_API_KEY is required for this provider.")
@@ -79,14 +86,33 @@ def render(root=ROOT):
         for alias, model in (("hanmadi-stt", "scribe_v1"), ("hanmadi-tts", "eleven_v3")):
             models.append({"model_name": alias, "litellm_params": {
                 "model": f"elevenlabs/{model}", "api_key": "os.environ/ELEVENLABS_API_KEY"}})
-    from subscriptions import routes
-    models.extend(routes(root))
-    config = {"model_list": models,
-              "general_settings": {"master_key": "os.environ/LITELLM_MASTER_KEY", "store_prompts_in_spend_logs": False},
-              "litellm_settings": {"set_verbose": False, "turn_off_message_logging": True,
-                                   "num_retries": 0, "request_timeout": 30}}
-    private_write(root / ".runtime/litellm.json", json.dumps(config, indent=2) + "\n")
-    return [m["model_name"] for m in models]
+    return models
+
+
+def config_for(models):
+    return {"model_list": models,
+            "general_settings": {"master_key": "os.environ/LITELLM_MASTER_KEY", "store_prompts_in_spend_logs": False},
+            "litellm_settings": {"set_verbose": False, "turn_off_message_logging": True,
+                                 "num_retries": 0, "request_timeout": 30}}
+
+
+def render_cloudrun(settings, target):
+    """Cloud Run config from committed, non-secret settings. Credentials stay env references
+    resolved on the service; subscription routes (retired, D5) are never added."""
+    if target not in settings["targets"]:
+        raise ValueError(f"Unknown Cloud Run target: {target}")
+    spec = settings["targets"][target]
+    env = {}
+    for app in spec["apps"]:
+        env[f"{app.upper()}_CHAT_MODEL"] = settings["models"][app]
+        env[f"{app.upper()}_CHAT_API_KEY"] = "set-on-service"  # presence marker; never rendered
+    if spec.get("elevenlabs"):
+        env["ELEVENLABS_API_KEY"] = "set-on-service"
+    return config_for(model_list(env))
+
+
+def cloudrun_text(settings, target):
+    return json.dumps(render_cloudrun(settings, target), indent=2) + "\n"
 
 
 class ApiError(Exception):
@@ -162,7 +188,7 @@ def provision_scope(app, model_scope, budget, base, root=ROOT, client=None):
                                            "models": allowed, "max_budget": budget,
                                            "budget_duration": "30d", "rpm_limit": 30})
     values = {"LITELLM_BASE_URL": base.rstrip("/") + "/v1", "LITELLM_API_KEY": response["key"],
-              "LITELLM_MODEL": "hanmadi-chat" if "hanmadi-chat" in allowed else "replay-video-planner" if "replay-video-planner" in allowed else "festa-travel" if "festa-travel" in allowed else allowed[0] if app.startswith("codex-") else ""}
+              "LITELLM_MODEL": "hanmadi-chat" if "hanmadi-chat" in allowed else "replay-video-planner" if "replay-video-planner" in allowed else "festa-travel" if "festa-travel" in allowed else ""}
     if app == "hanmadi":
         values.update(LITELLM_STT_MODEL="hanmadi-stt" if "hanmadi-stt" in allowed else "",
                       LITELLM_TTS_MODEL="hanmadi-tts" if "hanmadi-tts" in allowed else "",
@@ -177,6 +203,7 @@ def main():
     sub = parser.add_subparsers(dest="command", required=True)
     sub.add_parser("init")
     sub.add_parser("render")
+    sub.add_parser("render-cloudrun")
     p = sub.add_parser("provision")
     p.add_argument("--app", choices=APPS, required=True)
     p.add_argument("--budget-usd", type=float, required=True)
@@ -189,6 +216,11 @@ def main():
         elif args.command == "render":
             names = render()
             print("Configured models: " + (", ".join(names) or "none — provider setup pending"))
+        elif args.command == "render-cloudrun":
+            settings = json.loads((ROOT / "cloudrun/settings.json").read_text())
+            for target in settings["targets"]:
+                (ROOT / f"cloudrun/{target}.json").write_text(cloudrun_text(settings, target))
+            print("Rendered Cloud Run configs: " + ", ".join(settings["targets"]))
         else:
             target = provision(args.app, args.budget_usd, args.url)
             print(f"App credentials saved privately to {target}. Set its BASE_URL to your public HTTPS inference URL before deployment.")

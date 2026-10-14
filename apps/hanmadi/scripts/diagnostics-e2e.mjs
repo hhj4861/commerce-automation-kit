@@ -13,13 +13,13 @@ const dir = await mkdtemp(join(resolve(out), "diagnostics-fixture-"));
 const dataFile = join(dir, "store.json"), secret = "diagnostic-fixture-only-auth-secret", cronSecret = "diagnostic-fixture-only-cron-secret-32";
 let calls = 0, mode = "good";
 const phrases = {
-  ja: { text: "氷抜きでコーヒーを一杯ください。", reading: "고오리누키데 코히오 입파이 쿠다사이", meaning: "얼음 없이 커피 한 잔 주세요." },
+  ja: { text: "氷抜きでコーヒーを一杯ください。", reading: "코오리누키데 코오히이오 입파이 쿠다사이", meaning: "얼음 없이 커피 한 잔 주세요." },
   th: { text: "ขอกาแฟหนึ่งแก้ว ไม่ใส่น้ำแข็งครับ", reading: "커 까패 능 깨우 마이 싸이 남캥 캅", meaning: "얼음 없이 커피 한 잔 주세요." },
   en: { text: "One coffee without ice, please.", reading: "원 커피 위다웃 아이스 플리즈", meaning: "얼음 없이 커피 한 잔 주세요." },
   es: { text: "Un café sin hielo, por favor.", reading: "운 카페 신 이에로 포르 파보르", meaning: "얼음 없이 커피 한 잔 주세요." },
 };
 const replies = {
-  ja: { text: "氷抜きのコーヒーですね。", reading: "고오리누키노 코히데스네", meaning: "얼음 없는 커피군요." },
+  ja: { text: "氷抜きのコーヒーですね。", reading: "코오리누키노 코오히이데스네", meaning: "얼음 없는 커피군요." },
   th: { text: "ได้ครับ", reading: "다이 캅", meaning: "알겠습니다." },
   en: { text: "One coffee without ice. Got it!", reading: "원 커피 위다웃 아이스 갓 잇", meaning: "얼음 없는 커피 한 잔이군요. 알겠습니다!" },
   es: { text: "De acuerdo, un café sin hielo.", reading: "데 아쿠에르도 운 카페 신 이에로", meaning: "알겠습니다. 얼음 없는 커피 한 잔이요." },
@@ -36,7 +36,7 @@ const mock = createServer(async (req, res) => {
     if(mode==='recover'){mode='good';res.statusCode=503;res.end('{"error":"fixture-only"}');return;}
     if(mode==='offline'){res.statusCode=503;res.end('{"error":"fixture-only"}');return;}
     const repair=mode==='repair' && name==='hanmadi_roleplay' && !body.messages[0].content.includes('REPAIR:');
-    res.end(JSON.stringify({choices:[{message:{content:mode==='invalid'||repair ? 'invalid fixture' : JSON.stringify(result)}}]}));
+    res.end(JSON.stringify({choices:[{message:{content:mode==='invalid' ? 'invalid fixture' : JSON.stringify(repair ? {...result,reading:'고리누키노 코히데스네'} : result)}}]}));
   } catch {res.statusCode=500;res.end('{}');}
 });
 mock.listen(0,'127.0.0.1');await once(mock,'listening');

@@ -1,0 +1,135 @@
+{
+  "when": "2026-10-03T12:51:36.321Z",
+  "hyperframes": "0.8.114",
+  "gsap": "3.14.2",
+  "node": "v22.23.3",
+  "templates": [
+    {
+      "id": "chapter",
+      "duration": 3.5,
+      "renderSeconds": [
+        5.94,
+        6.25
+      ],
+      "probe": {
+        "width": 1080,
+        "height": 1920,
+        "pix_fmt": "yuv420p",
+        "r_frame_rate": "30/1",
+        "nb_read_frames": "105"
+      },
+      "expectedFrames": 105,
+      "reproducibility": {
+        "framesA": 105,
+        "framesB": 105,
+        "identical": 105,
+        "firstDiffering": []
+      },
+      "captionBandMinGray": 238,
+      "captionProbe": {
+        "width": 1080,
+        "height": 1920,
+        "pix_fmt": "yuv420p",
+        "r_frame_rate": "30/1",
+        "nb_read_frames": "105"
+      },
+      "captionRows": [
+        1705,
+        1773
+      ],
+      "checks": []
+    },
+    {
+      "id": "countup",
+      "duration": 5,
+      "renderSeconds": [
+        9.17,
+        8.74
+      ],
+      "probe": {
+        "width": 1080,
+        "height": 1920,
+        "pix_fmt": "yuv420p",
+        "r_frame_rate": "30/1",
+        "nb_read_frames": "150"
+      },
+      "expectedFrames": 150,
+      "reproducibility": {
+        "framesA": 150,
+        "framesB": 150,
+        "identical": 150,
+        "firstDiffering": []
+      },
+      "captionBandMinGray": 238,
+      "captionProbe": {
+        "width": 1080,
+        "height": 1920,
+        "pix_fmt": "yuv420p",
+        "r_frame_rate": "30/1",
+        "nb_read_frames": "150"
+      },
+      "captionRows": [
+        1705,
+        1773
+      ],
+      "checks": []
+    },
+    {
+      "id": "summary",
+      "duration": 5,
+      "renderSeconds": [
+        8.8,
+        8.38
+      ],
+      "probe": {
+        "width": 1080,
+        "height": 1920,
+        "pix_fmt": "yuv420p",
+        "r_frame_rate": "30/1",
+        "nb_read_frames": "150"
+      },
+      "expectedFrames": 150,
+      "reproducibility": {
+        "framesA": 150,
+        "framesB": 150,
+        "identical": 150,
+        "firstDiffering": []
+      },
+      "captionBandMinGray": 238,
+      "captionProbe": {
+        "width": 1080,
+        "height": 1920,
+        "pix_fmt": "yuv420p",
+        "r_frame_rate": "30/1",
+        "nb_read_frames": "150"
+      },
+      "captionRows": [
+        1705,
+        1773
+      ],
+      "checks": []
+    }
+  ],
+  "baseline": {
+    "renderer": "apps/shopshorts/studio-animation.mjs renderAnimationScene (SVG→resvg→ffmpeg)",
+    "renderSeconds": [
+      4.02,
+      3.91
+    ],
+    "probe": {
+      "width": 1080,
+      "height": 1920,
+      "pix_fmt": "yuv420p",
+      "r_frame_rate": "30/1",
+      "nb_read_frames": "150"
+    },
+    "reproducibility": {
+      "framesA": 150,
+      "framesB": 150,
+      "identical": 150,
+      "firstDiffering": []
+    },
+    "checks": []
+  },
+  "failures": []
+}

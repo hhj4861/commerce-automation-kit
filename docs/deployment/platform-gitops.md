@@ -6,7 +6,7 @@
 | 플랫폼 | 저장소 | 배포 브랜치 | 배포 대상 |
 |---|---|---|---|
 | Shorts 웹 | commerce-automation-kit | `deploy/shopshorts` | Cloudflare Pages `shopshorts-dash` |
-| Hanmadi 웹 | commerce-automation-kit | `deploy/hanmadi` | Vercel `hanmadi` |
+| Hanmadi 웹 | commerce-automation-kit | `deploy/hanmadi` | Vercel `hanmadi`; [학습 앱 활성화 상태](hanmadi-learner.md) |
 | Hanmadi 관리자 | commerce-automation-kit | `deploy/hanmadi-admin` | Vercel `hanmadi-admin`; [분리·활성화 상태](hanmadi-admin.md) |
 | FIRSTFRAME | commerce-automation-kit | `deploy/firstframe` | Cloudflare Pages `firstframe-showcase` |
 | LiteLLM | commerce-automation-kit | `deploy/litellm` | 개인 GCP `replay-live-508202`의 `shared-ai` |
@@ -30,7 +30,7 @@ Festa는 `feature/agent-test`였다. Vercel Git 연결 상태는 API 접근 제�
 
 1. 검증한 이 PR을 사용자 승인 후 `main`에 머지한다. 아직 배포 브랜치가 없으므로 서비스는 배포되지 않는다.
 2. 웹 배포 인증정보를 Cloudflare Secrets Store에 등록하고 broker를 활성화한다.
-3. LiteLLM 배포용 GCP Workload Identity Federation을 적용한다.
+3. LiteLLM 배포용 GCP Workload Identity Federation을 적용한다. (2026-10-09: 적용되지 않은 채 폐기됨. 아래 "LiteLLM의 GCP 인증과 배포" 참고)
 4. 검토된 머지 커밋에서 위 네 배포 브랜치를 만들고 보호한다. PR을 필수로 하고 force push와 삭제를 금지한다.
    `Platform GitOps verification`을 필수 검사로 지정한다. 보호되지 않은 브랜치는 배포 코드가 거부한다.
    `GITHUB_REF_PROTECTED`는 보호 규칙의 존재만 검증하므로 PR 필수 규칙은 관리자가 실제 설정해야 한다.
@@ -41,8 +41,9 @@ Festa는 `feature/agent-test`였다. Vercel Git 연결 상태는 API 접근 제�
 
 Hanmadi의 `vercel.json`은 Vercel 자체 Git 배포를 끄므로 Actions와 중복 배포되지 않는다.
 **이 설정이 머지된 뒤에는 기존 native Git 배포에 의존하지 말고 인증/브랜치 준비 후 첫 Actions 배포까지 확인한다.**
-학습 앱은 Vercel CLI production 환경 pull → production build → prebuilt production deploy 순서다.
-관리자는 프로젝트 전용 토큰을 유지하기 위해 테스트 → 소스 업로드 → Vercel production 원격 빌드·배포를 사용한다. [차이와 검증 상태](hanmadi-admin.md)를 참고한다.
+학습 앱과 관리자는 각각의 프로젝트 전용 토큰으로 테스트 → 소스 업로드 → Vercel production 원격 빌드·배포를 사용한다.
+팀 조회가 필요한 `pull`은 사용하지 않는다. 학습 앱도 운영 SHA·Google 로그인 준비 상태·공개 개인정보처리방침·비로그인 관리자 접근 차단을 확인한 뒤 배포 성공으로 처리한다.
+[학습 앱 활성화 상태](hanmadi-learner.md)와 [관리자 설정](hanmadi-admin.md)을 구분한다.
 
 ## 인증정보
 
@@ -52,10 +53,10 @@ GitHub의 짧은 수명 OIDC 토큰으로 Cloudflare broker에 필요한 키만 
 | Cloudflare Secrets Store 이름 | 용도 |
 |---|---|
 | `CAK_DEPLOY_CLOUDFLARE_API_TOKEN` | 위 Cloudflare 계정의 Pages 편집용 API 토큰 |
-| `CAK_DEPLOY_VERCEL_TOKEN` | Hanmadi 소속 Vercel 팀의 배포용 토큰 |
+| `CAK_DEPLOY_VERCEL_TOKEN` | 학습 앱 Vercel `hanmadi` 프로젝트 전용 배포 토큰 |
 
 로컬 로그인 토큰을 복사하지 말고 CI용 토큰을 발급한다. Cloudflare 토큰은 Pages 편집에 필요한 계정 범위로 제한한다.
-Vercel 토큰의 접근 범위/만료도 발급 시 설정한다. 토큰 값은 Git·로그·채팅에 남기지 않는다.
+Vercel 토큰은 대상 프로젝트만 접근하도록 제한하고 만료를 설정한다. 토큰 값은 Git·로그·채팅에 남기지 않는다.
 권한 `0600`인 비공개 JSON 파일에 필요한 키만 넣어 다음 명령으로 등록한다.
 
 ```sh
@@ -79,31 +80,32 @@ LiteLLM은 broker 배포 키를 사용하지 않는다.
 
 ## LiteLLM의 GCP 인증과 배포
 
+> **2026-10-09 변경:** 원래 설계한 VM 배포 신원(배포 SA, VM OS Admin Login, IAP 터널)은 적용된 적이 없다. WIF pool·배포 SA·STS API·저장소 변수가 모두 없었다. 서버리스 전환으로 VM이 퇴역하므로 이 신원은 만들지 않는다. `gcp-identity`에는 이미지 빌드 신원만 두고, Cloud Run 배포 신원은 전환 계획 Phase 5에서 추가한다(`docs/20261009-shared-ai-serverless-migration-plan.md`, `docs/plans/20261009-serverless-p1-foundation.md` R6). 그때까지 `deploy/litellm`은 GCP 인증 단계에서 멈춘다(이전과 같음).
+
 `gcp-identity/`는 기존 서버 인프라와 분리한 Terraform root module이다.
 회사 계정/프로젝트를 사용하지 않는다. 검증된 개인 계정으로 plan을 검토한 뒤 apply한다.
-기존 Terraform state에 임의로 합치지 않고, 해당 state는 접근 제한된 운영 저장소에 보존한다.
-리소스: 배포용 서비스 계정, WIF pool/provider, VM 조회 권한,
-**shared-ai 인스턴스에만** OS Admin Login, IP `10.78.0.2` 포트 22에 한정한 IAP 터널 권한.
-WIF는 정확한 저장소·배포 브랜치·워크플로의 push/manual 이벤트만 신뢰한다.
-VM의 OS Login이 활성화되어 있어야 한다. VM에 서비스 계정을 연결할 경우 추가 `actAs` 권한을 별도 검토한다.
+state는 GCS `gs://replay-live-508202-tfstate/gcp-identity`에 둔다(서버 인프라와 다른 prefix).
+리소스: WIF pool, main에서 수동 실행한 `shared-ai-images.yml`만 신뢰하는 provider, Artifact Registry `shared-ai` 쓰기만 가진 이미지 빌드 SA.
 
 ```sh
 cd ops/deploy/gcp-identity
-terraform init -lockfile=readonly
+terraform init -input=false -lockfile=readonly
 terraform plan -out=identity.tfplan
 # plan 검토와 적용 승인 이후
 terraform apply identity.tfplan
 ```
 
-출력 `github_provider_variable`, `github_service_account_variable`을 각각 GitHub **Variables**의
-`GCP_DEPLOY_WIF_PROVIDER`, `GCP_DEPLOY_SERVICE_ACCOUNT`에 설정한다. 이 값은 비밀이 아니다.
+출력 `images_provider_variable`, `images_service_account_variable`을 각각 GitHub **Variables**의
+`GCP_IMAGES_WIF_PROVIDER`, `GCP_IMAGES_SERVICE_ACCOUNT`에 설정한다. 이 값은 비밀이 아니다.
 장기 서비스 계정 JSON 키는 생성하지 않는다.
 
 릴리스는 triggering SHA의 소스를 archive해 IAP SSH로 전달하고 `/opt/shared-ai/releases/gitops-litellm-<SHA>`에 설치한다.
-기존 `.env`와 `.runtime`을 공유하며 비밀번호·암호화 키·구독 인증을 재발급하지 않는다.
-`shared-ai-gateway` compose project/DB 볼륨을 유지하고 gateway 및 기존 Codex 계정 워커만 갱신한다.
-DB·Dify·별도 accounts 서비스·edge는 재시작하지 않는다. DB/네트워크/볼륨 구조 변경은 별도 운영 작업이다.
-계정 관리 명령과 같은 lock을 잡고, DB dump와 생성 설정 백업 후 render → Compose 검증 → up → readiness를 확인한다.
+기존 `.env`와 `.runtime`을 공유하며 비밀번호·암호화 키를 재발급하지 않는다.
+`shared-ai-gateway` compose project/DB 볼륨을 유지하고 gateway만 갱신한다.
+DB·edge 등 다른 서비스는 재시작하지 않는다. DB/네트워크/볼륨 구조 변경은 별도 운영 작업이다.
+`gitops/litellm.lock`을 잡고, DB dump와 생성 설정 백업 후 `gateway.py render` → Compose 검증 → up → readiness를 확인한다.
+릴리스 전에 `compose.yaml`의 LiteLLM 이미지가 digest로 고정돼 있는지 확인한다.
+2026-10-13: 계정별 구독 워커(D5)와 accounts v1(#19)이 퇴역해 릴리스 대상에서 빠졌다(#222). 남은 구독 overlay 파일은 무시한다.
 
 실패 시 생성 설정과 이전 컨테이너 구성을 복구한다. **DB 스키마 migration은 자동 되돌리지 않는다.**
 `/opt/shared-ai/backups/gitops-litellm-*`의 비공개 dump로 별도 복구가 필요할 수 있다.
@@ -160,7 +162,7 @@ terraform -chdir=ops/deploy/gcp-identity validate
 
 단위 테스트는 브랜치 격리·수동 실행 불일치·OIDC 권한·서버 백업/복구를 검증한다.
 mock 서버 테스트 통과는 실제 GCP 배포 성공을 의미하지 않는다. 첫 Actions 배포에서 실제 인증과 readiness를 확인해야 한다.
-Shorts 제작 워커, Dify, 독립 accounts, broker bootstrap의 자동 배포는 이 파이프라인에 포함하지 않는다.
+Shorts 제작 워커와 broker bootstrap의 자동 배포는 이 파이프라인에 포함하지 않는다. Dify와 accounts v1은 2026-10-13에 퇴역했다.
 
 공식 근거: [Pages CI Direct Upload](https://developers.cloudflare.com/pages/how-to/use-direct-upload-with-continuous-integration/),
 [Pages branch controls](https://developers.cloudflare.com/pages/configuration/branch-build-controls/),

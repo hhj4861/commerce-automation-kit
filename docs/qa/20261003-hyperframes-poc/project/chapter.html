@@ -1,0 +1,65 @@
+<!doctype html>
+<!-- T1 본문 챕터 전환 (도입부 대체 아님). 지면이 그어지고 단면이 열리며 굴착 링이 돌아 들어온다. -->
+<html lang="ko" data-resolution="portrait" data-composition-variables='[
+  {"id":"chapterNo","type":"string","label":"챕터 번호","default":"02"},
+  {"id":"title","type":"string","label":"챕터 제목(16자 이하)","default":"땅속을 어떻게 파나"},
+  {"id":"accent","type":"color","label":"강조색","default":"#c95d47"},
+  {"id":"showSafe","type":"boolean","label":"안전영역 표시","default":false}
+]'>
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=1080, height=1920" />
+<link rel="stylesheet" href="shared.css" />
+<script src="assets/gsap.min.js"></script>
+<style>
+  #no { position: absolute; left: 0; width: 1080px; top: 330px; text-align: center; font-size: 260px; letter-spacing: -0.04em; color: var(--accent, #c95d47); }
+  #title { position: absolute; left: 90px; width: 900px; top: 640px; text-align: center; font-size: 76px; line-height: 1.25; }
+</style>
+</head>
+<body>
+<div id="root" class="stage" data-composition-id="chapter" data-start="0" data-duration="3.5" data-width="1080" data-height="1920">
+  <svg class="full" viewBox="0 0 1080 1920" aria-hidden="true">
+    <!-- soil layers below the ground line -->
+    <g id="soil">
+      <rect id="l1" x="0" y="820" width="1080" height="170" fill="#e8dfc6" />
+      <rect id="l2" x="0" y="990" width="1080" height="190" fill="#dccfa9" />
+      <rect id="l3" x="0" y="1180" width="1080" height="200" fill="#cdbd92" />
+    </g>
+    <line id="ground" x1="60" y1="820" x2="1020" y2="820" stroke="#3b3932" stroke-width="8" stroke-linecap="round" />
+    <!-- tunnel boring ring -->
+    <g transform="translate(540 1110)"><g id="ring">
+      <circle r="150" fill="#f5efdc" stroke="#3b3932" stroke-width="8" />
+      <g id="cutter">
+        <circle r="112" fill="none" stroke="var(--accent, #c95d47)" stroke-width="18" stroke-dasharray="44 26" />
+        <line x1="-112" y1="0" x2="112" y2="0" stroke="#3b3932" stroke-width="10" stroke-linecap="round" />
+        <line x1="0" y1="-112" x2="0" y2="112" stroke="#3b3932" stroke-width="10" stroke-linecap="round" />
+      </g>
+      <circle r="20" fill="#3b3932" />
+    </g></g>
+  </svg>
+  <div id="no"></div>
+  <div id="title"></div>
+  <div class="safe-box"></div><div class="caption-band"></div>
+</div>
+<script>
+  const v = window.__hyperframes.getVariables();
+  document.getElementById('no').textContent = v.chapterNo;
+  document.getElementById('title').textContent = v.title;
+  document.documentElement.style.setProperty('--accent', v.accent);
+  if (v.showSafe === true || v.showSafe === 'true') document.body.classList.add('show-safe');
+
+  const tl = gsap.timeline({ paused: true, defaults: { ease: 'power3.out' } });
+  tl.fromTo('#ground', { scaleX: 0, transformOrigin: '0% 50%' }, { scaleX: 1, duration: 0.5 }, 0)
+    .fromTo(['#l1', '#l2', '#l3'], { scaleY: 0, transformOrigin: '50% 0%' }, { scaleY: 1, duration: 0.45, stagger: 0.12 }, 0.3)
+    .fromTo('#no', { y: 120, opacity: 0 }, { y: 0, opacity: 1, duration: 0.55 }, 0.25)
+    .fromTo('#title', { y: 60, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5 }, 0.55)
+    .fromTo('#ring', { x: -260, scale: 0.4, opacity: 0 }, { x: 0, scale: 1, opacity: 1, duration: 0.8 }, 0.7)
+    .fromTo('#cutter', { rotation: 0, transformOrigin: '50% 50%' }, { rotation: 300, duration: 2.6, ease: 'none' }, 0.7)
+    // exit: lift everything so the next scene can cut in cleanly
+    .to(['#no', '#title'], { y: -80, opacity: 0, duration: 0.35, ease: 'power2.in' }, 3.1)
+    .to('#ring', { x: 300, opacity: 0, duration: 0.35, ease: 'power2.in' }, 3.1);
+  window.__timelines['chapter'] = tl;
+  tl.seek(0);
+</script>
+</body>
+</html>

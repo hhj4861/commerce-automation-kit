@@ -45,6 +45,20 @@ class GatewayTest(unittest.TestCase):
         self.assertNotIn("private-festa-value", content)
         self.assertFalse(json.loads(content)["general_settings"]["store_prompts_in_spend_logs"])
 
+    def test_shared_process_cannot_use_subscription_tokens(self):
+        self.settings(HANMADI_CHAT_MODEL="chatgpt/gpt-5.4", HANMADI_CHAT_API_KEY="should-not-help")
+        with self.assertRaisesRegex(ValueError, "ChatGPT subscription"):
+            render(self.root)
+
+    def test_leftover_subscription_accounts_are_not_routed(self):
+        # Per-account subscription workers were retired (D5); files an earlier admin CLI
+        # left under .runtime must never become gateway routes again.
+        account = self.root / ".runtime/subscriptions/alice"
+        account.mkdir(parents=True)
+        (account / "account.json").write_text(json.dumps({"id": "alice", "provider": "chatgpt", "model": "gpt-5.4"}))
+        self.assertEqual(render(self.root), [])
+        self.assertNotIn("codex-", (self.root / ".runtime/litellm.json").read_text())
+
     def test_management_rejects_remote_http_and_credentials(self):
         for url in ("http://example.com", "https://user:pw@example.com", "https://example.com?secret=x", "https://example.com/path"):
             with self.assertRaises(ValueError):

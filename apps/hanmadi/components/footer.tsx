@@ -22,6 +22,7 @@ export function Footer() {
             — 한국어 · 태국어 · 일본어 · 한마디씩, 확실하게
           </span>
         </p>
+        <a href="/privacy" className="text-sm text-ink-soft underline underline-offset-4">개인정보 처리방침</a>
         <p className="font-mono text-[11px] text-ink-soft">
           Korean romanization: National Institute of Korean Language (RR)
         </p>

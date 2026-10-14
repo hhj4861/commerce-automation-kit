@@ -3,8 +3,8 @@ import assert from "node:assert/strict";
 import { diagnoseLanguage, diagnosticLanguages, type DiagnosticReport } from "./llm-diagnostics";
 import { diagnosticService, cronAuthorized } from "./llm-diagnostics-store";
 import type { studyCompletion } from "./v2-ai";
-const phrase = { text: "氷抜きでコーヒーを一杯ください。", reading: "고오리누키데 코히오 입파이 쿠다사이", meaning: "얼음 없이 커피 한 잔 주세요." };
-const reply = { text: "氷抜きのコーヒーですね。", reading: "고오리누키노 코히데스네", meaning: "얼음을 뺀 커피군요." };
+const phrase = { text: "氷抜きでコーヒーを一杯ください。", reading: "코오리누키데 코오히이오 입파이 쿠다사이", meaning: "얼음 없이 커피 한 잔 주세요." };
+const reply = { text: "氷抜きのコーヒーですね。", reading: "코오리누키노 코오히이데스네", meaning: "얼음을 뺀 커피군요." };
 const good: typeof studyCompletion = async (_s, _m, _sel, format) => {
   const name = (format as { json_schema: { name: string } }).json_schema.name;
   return JSON.stringify(name === "hanmadi_translation" ? { translated: phrase.text, reading: phrase.reading, practice: phrase } : name === "hanmadi_learner_turn" ? { phrase, reusable: true } : reply);

@@ -43,6 +43,7 @@ export function isOpenPath(pathname: string): boolean {
   if (
     pathname === "/" ||
     pathname === "/api/deployment" ||
+    pathname === "/privacy" ||
     pathname === "/study" ||
     pathname.startsWith("/study/") ||
     pathname === "/api/study" ||

@@ -1,3 +1,4 @@
+import {discoverRecommendations} from './topic-discovery.js';
 import {architectureDiscovery, architectureDiscoveryGuide, parseArchitectureCase, caseHistory, repeatsArchitecture} from './architecture-discovery.js';
 import {productionOptions} from './explainer-production.js';
 import {productionStyle} from './animation-plan.js';
@@ -56,9 +57,10 @@ function repeats(suggestions, previous, focus) {
   return suggestions.some(item => { const value = key(item); if (seen.has(value)) return true; seen.add(value); return false; });
 }
 
-export async function recommendBrief(input,env,{generate,now=new Date(),signal,provider='codex',history=[]}={}) {
+export async function recommendBrief(input,env,{generate,now=new Date(),signal,provider='codex',history=[],subject,requestId,assertConnection,fetch}={}) {
   const brief=recommendationInput(input);
   const previous = previousRecommendations(history, brief);
+  if(env.DISCOVERY_ENABLED==='1') return discoverRecommendations(brief,env,{generate,now,signal,provider,history:previous,subject,requestId,assertConnection,fetch});
   if (!generate) fail('Codex 구독 추천은 Codex에 로그인된 로컬 제작 서버에서 사용할 수 있습니다.',503);
   const end=now.toISOString(),start=new Date(now.getTime()-30*86400000).toISOString();
   const prompt=`한국어 영상 기획 추천 요청입니다. 오늘 ${end.slice(0,10)}. ${architectureDiscovery(brief)?'실제 건축 사례와 설계 이유를 내장 웹 검색으로 반드시 확인하세요. 최근 뉴스가 없어도 근거가 확인되는 오래된 사례를 선정할 수 있습니다. 각 사례의 실재와 핵심 원리를 뒷받침하는 1차 출처가 확보되면 추가적인 행사·뉴스 검색을 멈추고 후보를 작성하세요.':`최근 30일(${start.slice(0,10)} 이후)의 관련 관심사와 흐름을 내장 웹 검색으로 반드시 확인하세요.`}

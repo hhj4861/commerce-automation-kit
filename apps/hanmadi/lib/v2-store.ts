@@ -48,9 +48,10 @@ export async function saveExpression(
   actor: string,
   language: StudyLanguage,
   phrase: Phrase,
-  source: "translation" | "chat" | "vocabulary",
+  source: "translation" | "chat" | "vocabulary" | "music",
   epoch: number,
   automatic = false,
+  inVocabulary = false,
 ) {
   let saved = false;
   const state = await changeStudy(actor, (state) => {
@@ -65,7 +66,7 @@ export async function saveExpression(
     const id = expressionId(language, phrase);
     const existing = state.expressions.find((e) => e.id === id);
     if (existing) {
-      if (source === "vocabulary") existing.inVocabulary = true;
+      if (source === "vocabulary" || inVocabulary) existing.inVocabulary = true;
       saved = true;
       return;
     }
@@ -75,6 +76,7 @@ export async function saveExpression(
       id,
       language,
       source,
+      ...(inVocabulary ? { inVocabulary: true } : {}),
       createdAt: Date.now(),
       dueAt: Date.now(),
     });

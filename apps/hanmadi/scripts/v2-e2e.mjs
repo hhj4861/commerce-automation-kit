@@ -51,14 +51,10 @@ function holdSlow() {
 function releaseSlow() {
   slowRelease?.(); slowPending = undefined; slowStarted = undefined; slowRelease = undefined;
 }
-const connections = new Map();
-let loginFixture = false;
-const claudeState = "s".repeat(43);
-const claudeLoginUrl =
-  "https://claude.com/cai/oauth/authorize?redirect_uri=https%3A%2F%2Fplatform.claude.com%2Foauth%2Fcode%2Fcallback&response_type=code&code_challenge_method=S256&state=" +
-  claudeState;
-const nativeCode = "fixture-code-only#" + claudeState;
+let retiredAccountCalls = 0;
+let upstreamCalls = 0;
 const mock = createServer(async (req, res) => {
+  upstreamCalls++;
   const chunks = [];
   for await (const c of req) chunks.push(c);
   const raw = Buffer.concat(chunks).toString();
@@ -69,42 +65,9 @@ const mock = createServer(async (req, res) => {
   res.setHeader("Content-Type", "application/json");
   if (learningProviderFixture(req, res, raw)) return;
   if (req.url?.includes("/connections")) {
-    const subject = req.headers["x-ai-subject"];
-    const list = connections.get(subject) || [];
-    if (req.method === "GET")
-      return res.end(JSON.stringify({ connections: list }));
-    if (req.method === "DELETE") {
-      connections.set(subject, []);
-      return res.end(JSON.stringify({ ok: true }));
-    }
-    if (req.url.endsWith("/authorize")) {
-      const c = list.find(
-        (c) => req.url === "/connections/" + c.id + "/authorize",
-      );
-      if (
-        !c ||
-        c.provider !== "claude" ||
-        c.state !== "authorizing" ||
-        c.challenge?.submitted ||
-        b.code !== nativeCode
-      ) {
-        res.statusCode = 400;
-        return res.end(JSON.stringify({ error: "invalid_authorization_code" }));
-      }
-      c.challenge.submitted = true;
-      res.statusCode = 202;
-      return res.end(JSON.stringify({ ok: true }));
-    }
-    const c = {
-      id: (b.provider === "claude" ? "b" : "a").repeat(32),
-      provider: b.provider,
-      state: loginFixture ? "authorizing" : "connected",
-      models: loginFixture ? [] : ["test-model"],
-    };
-    if (loginFixture && b.provider === "claude")
-      assert.equal(b.authMethod, "claude-code");
-    connections.set(subject, [c]);
-    return res.end(JSON.stringify(c));
+    retiredAccountCalls++;
+    res.statusCode = 410;
+    return res.end(JSON.stringify({ error: "retired fixture" }));
   }
   if (req.url?.endsWith("/audio/transcriptions")) {
     audioCalls++;
@@ -248,8 +211,10 @@ const app = spawn(
       UPSTASH_REDIS_REST_TOKEN: "",
       KV_REST_API_URL: "",
       KV_REST_API_TOKEN: "",
+      CONVERSATION_PROVIDER: "litellm",
       DIFY_BASE_URL: "",
       DIFY_API_KEY: "",
+      DIFY_USER_SECRET: "",
       YOUTUBE_API_KEY: "e2e-unusable-key",
       LITELLM_BASE_URL: mockBase + "/v1",
       LITELLM_API_KEY: "e2e-only",
@@ -413,7 +378,7 @@ try {
         `header overflow ${width}`,
       );
       const actionBox = await page
-        .getByRole("button", { name: "내 AI", exact: true })
+        .getByRole("button", { name: "AI 설정", exact: true })
         .boundingBox();
       assert(
         actionBox.x > layout.left,
@@ -663,11 +628,15 @@ try {
       await dialog
         .getByRole("heading", { name: plan.title, exact: true })
         .waitFor();
-      assert(
-        (await dialog.locator(".hm-lesson-context").innerText()).includes(
-          plan.context,
-        ),
-      );
+      const lessonDetails = dialog.locator(".hm-lesson-details");
+      const lessonContext = dialog.locator(".hm-lesson-context");
+      assert(!(await lessonContext.isVisible()), "lesson guidance starts collapsed");
+      await lessonDetails.locator("summary").click();
+      assert(await lessonContext.isVisible());
+      assert((await lessonContext.innerText()).includes(plan.context));
+      assert((await dialog.locator(".hm-lesson-goal").innerText()).includes(plan.goal));
+      await lessonDetails.locator("summary").click();
+      assert(!(await lessonContext.isVisible()), "lesson guidance collapses again");
       const navigationBox = await dialog
         .locator(".hm-lesson-navigation")
         .boundingBox();
@@ -1095,60 +1064,29 @@ try {
     (await context.request.get(base + "/api/study/admin")).status(),
     403,
   );
-  const connected = await post(
-    { provider: "codex" },
-    context,
-    "/api/model-connections",
-  );
-  assert.equal(connected.status, 202);
-  await page.getByRole("button", { name: "내 AI", exact: true }).click();
-  await page.getByRole("button", { name: /codex · test-model/ }).click();
-  await page.getByRole("button", { name: /이 AI로 대화하기/ }).click();
-  await page.getByRole("button", { name: "AI가 먼저 말하기 →" }).click();
-  await page.getByRole("button", { name: "이 표현 연습에 추가" }).waitFor();
-  assert.equal(modelCalls.at(-1).model, "a".repeat(32) + ":test-model");
-  await page.getByRole("button", { name: "내 AI", exact: true }).click();
-  await page
-    .getByRole("button", { name: /기본 Gemini 별도 연결 없이 사용/ })
-    .click();
-  await page
-    .getByRole("button", { name: "이전 화면으로", exact: true })
-    .click();
-  console.log(
-    "PASS model cards → selected personal model → conversation → default model",
-  );
-  const otherConnections = await other.request.get(
-    base + "/api/model-connections",
-  );
-  assert.deepEqual((await otherConnections.json()).connections, []);
-  const selected = await post({
-    action: "chat",
-    language: "ja",
-    scene: "smalltalk",
-    messages: [{ role: "user", content: "안녕" }],
-    selection: "a".repeat(32) + ":test-model",
-  });
-  assert.equal(selected.status, 200);
-  assert.equal(modelCalls.at(-1).model, "a".repeat(32) + ":test-model");
-  assert.match(modelCalls.at(-1).subject, /^[a-f0-9]{64}$/);
-  const disconnected = await context.request.delete(
-    base + "/api/model-connections",
-    { headers: { Origin: base }, data: { id: "a".repeat(32) } },
-  );
-  assert.equal(disconnected.status(), 200);
-  const countBefore = calls;
-  const revoked = await post({
-    action: "chat",
-    language: "ja",
-    scene: "smalltalk",
-    messages: [{ role: "user", content: "안녕" }],
-    selection: "a".repeat(32) + ":test-model",
-  });
-  assert.equal(revoked.status, 409);
-  assert.equal(calls, countBefore);
-  console.log(
-    "PASS learner personal AI isolation, selected model routing, revoked selection fails without default fallback",
-  );
+  const beforeRetired = calls;
+  const upstreamBeforeRetired = upstreamCalls;
+  for (const ctx of [context, other]) {
+    assert.equal((await ctx.request.get(base + "/api/model-connections")).status(), 410);
+    for (const data of [{ provider: "codex" }, { provider: "claude", authMethod: "claude-code" },
+      { provider: "claude", apiKey: "synthetic-unused-key" }, { action: "authorize", id: "a".repeat(32), code: "synthetic-unused-code" }]) {
+      const response = await post(data, ctx, "/api/model-connections");
+      assert.equal(response.status, 410);
+      assert.match(response.data.error, /종료/);
+    }
+    assert.equal((await ctx.request.delete(base + "/api/model-connections", { headers: { Origin: base }, data: { id: "a".repeat(32) } })).status(), 410);
+  }
+  for (const method of ["post", "delete"]) {
+    const response = await context.request[method](base + "/api/model-connections", { headers: { Origin: "https://evil.test" }, data: {} });
+    assert.equal(response.status(), 403);
+  }
+  const retired = await post({ action: "chat", language: "ja", scene: "smalltalk",
+    messages: [{ role: "user", content: "안녕" }], selection: "a".repeat(32) + ":test-model" });
+  assert.equal(retired.status, 409);
+  assert.equal(calls, beforeRetired);
+  assert.equal(upstreamCalls, upstreamBeforeRetired, "retired selection cannot consume retrieval, training or provider calls");
+  assert.equal(retiredAccountCalls, 0);
+  console.log("PASS retired account API is 410, cross-origin is 403, stale selection is 409 with no upstream or default fallback");
   const csrf = await context.request.post(base + "/api/study", {
     headers: { Origin: "https://evil.example" },
     data: { action: "delete", id },
@@ -1607,334 +1545,19 @@ try {
       });
     }
   }
-  await page.getByRole("button", { name: "내 AI", exact: true }).click();
-  await page.getByRole("heading", { name: "내 AI 연결" }).waitFor();
-  await page
-    .getByRole("button", { name: "이전 화면으로", exact: true })
-    .click();
+  await page.getByRole("button", { name: "AI 설정", exact: true }).click();
+  await page.getByRole("heading", { name: "AI 대화 설정", exact: true }).waitFor();
+  assert.equal(await page.getByRole("button", { name: "기본 Gemini", exact: true }).getAttribute("aria-pressed"), "true");
+  assert.equal(await page.getByLabel("Claude API 키", { exact: true }).count(), 0);
+  assert.equal(await page.getByRole("button", { name: /계정 연결|API 키로 연결|연결 해제/ }).count(), 0);
+  assert.equal(retiredAccountCalls, 0);
+  await page.getByRole("button", { name: "대화 연습하기", exact: true }).click();
   await page.getByRole("button", { name: "설정", exact: true }).click();
-  assert.equal(await page.getByRole("dialog").count(), 0);
-  await page
-    .getByRole("region", { name: "현재 로그인 계정", exact: true })
-    .getByText("로그인됨", { exact: true })
-    .waitFor();
-  await page
-    .getByRole("button", { name: "연결·모델 선택", exact: true })
-    .click();
-  await page
-    .locator(".hm-provider-row button:enabled")
-    .filter({ hasText: "API 키로 연결" })
-    .waitFor();
-  assert(
-    await page
-      .getByRole("button", { name: "API 키로 연결", exact: true })
-      .isEnabled(),
-  );
-  assert.equal(await page.locator(".hm-provider-card").count(), 2);
-  assert.equal(
-    await page.getByRole("heading", { name: "Codex", exact: true }).count(),
-    1,
-  );
-  assert.equal(
-    await page.getByRole("heading", { name: "Claude", exact: true }).count(),
-    1,
-  );
-  await post({ provider: "codex" }, context, "/api/model-connections");
-  for (const list of connections.values())
-    for (const connection of list) {
-      if (connection.provider === "codex") {
-        connection.state = "error";
-        connection.models = [];
-      }
-    }
-  // Reopen so the connection GET reflects the failed fixture immediately.
-  await page
-    .getByRole("button", { name: "이전 화면으로", exact: true })
-    .click();
-  await page
-    .getByRole("button", { name: "연결·모델 선택", exact: true })
-    .click();
-  const codexCard = page.getByRole("region", {
-    name: "Codex 연결 관리",
-    exact: true,
-  });
-  await codexCard.getByText("연결에 실패했어요", { exact: true }).waitFor();
-  assert.equal(
-    await page.getByRole("heading", { name: "Codex", exact: true }).count(),
-    1,
-  );
-  assert.equal(
-    await page
-      .getByRole("button", { name: "Codex 계정 연결", exact: true })
-      .count(),
-    0,
-  );
-  assert.equal(
-    await codexCard
-      .getByRole("button", { name: "연결 해제", exact: true })
-      .count(),
-    1,
-  );
-  await page.setViewportSize({ width: 390, height: 844 });
-  await codexCard.scrollIntoViewIfNeeded();
-  await page.screenshot({
-    path: resolve(screenshots, "provider-error.png"),
-    fullPage: true,
-  });
-  for (const width of [320, 390, 768, 1440]) {
-    await page.setViewportSize({ width, height: 844 });
-    assert(
-      await codexCard.evaluate((el) => el.scrollWidth <= el.clientWidth),
-      `provider card overflow ${width}`,
-    );
-  }
-  await codexCard
-    .getByRole("button", { name: "연결 해제", exact: true })
-    .click();
-  await codexCard
-    .getByRole("button", { name: "Codex 계정 연결", exact: true })
-    .waitFor();
-  assert.equal(
-    await codexCard.getByText("연결에 실패했어요", { exact: true }).count(),
-    0,
-  );
-  assert.equal(
-    await page.getByRole("heading", { name: "Codex", exact: true }).count(),
-    1,
-  );
-  console.log(
-    "PASS one card per provider; failed Codex → disconnect → connect action without duplicate entry",
-  );
-  // Only provider pages are fixtures; the browser, Hanmadi API and polling run normally.
-  loginFixture = true;
-  await context.route("https://auth.openai.com/codex/device", (route) =>
-    route.fulfill({
-      contentType: "text/html",
-      body: "<h1>Codex device login fixture</h1>",
-    }),
-  );
-  await context.route("https://claude.com/cai/oauth/authorize?**", (route) =>
-    route.fulfill({
-      contentType: "text/html",
-      body: "<h1>Claude login fixture</h1>",
-    }),
-  );
-  await context.grantPermissions(["clipboard-read", "clipboard-write"], {
-    origin: base,
-  });
-  await page.getByRole("checkbox").check();
-  const popupEvent = context.waitForEvent("page");
-  await codexCard
-    .getByRole("button", { name: "Codex 계정 연결", exact: true })
-    .click();
-  const codexPopup = await popupEvent;
-  await codexCard.getByText("공식 인증창을 준비하고 있어요…").waitFor();
-  const currentConnection = () =>
-    [...connections.values()].flat().find((c) => c.state === "authorizing");
-  let authorizing = currentConnection();
-  assert.equal(authorizing.provider, "codex");
-  authorizing.challenge = {
-    url: "https://auth.openai.com/codex/device",
-    code: "TEST-1234",
-    expiresAt: Date.now() / 1000 + 900,
-  };
-  await codexPopup.waitForURL(authorizing.challenge.url);
-  await page.bringToFront();
-  await codexCard.getByLabel("Codex 인증코드", { exact: true }).waitFor();
-  await codexCard
-    .getByRole("button", { name: "인증코드 복사", exact: true })
-    .click();
-  assert.equal(
-    await page.evaluate(() => navigator.clipboard.readText()),
-    "TEST-1234",
-  );
-  await codexCard.getByText("인증코드를 복사했어요.").waitFor();
-  await page.setViewportSize({ width: 390, height: 844 });
-  await codexCard.scrollIntoViewIfNeeded();
-  await page.screenshot({
-    path: resolve(screenshots, "codex-authorizing.png"),
-    fullPage: true,
-  });
-  authorizing.state = "connected";
-  authorizing.models = ["test-model"];
-  delete authorizing.challenge;
-  await codexCard.getByText("연결됨", { exact: true }).waitFor();
-  await page.getByRole("button", { name: /codex · test-model/ }).waitFor();
-  assert.equal(
-    await codexCard.getByRole("button", { name: /확인/ }).count(),
-    0,
-  );
-  await codexPopup.close();
-  await codexCard
-    .getByRole("button", { name: "연결 해제", exact: true })
-    .click();
-  await codexCard
-    .getByRole("button", { name: "Codex 계정 연결", exact: true })
-    .waitFor();
-  console.log(
-    "PASS Codex click → delayed official popup → copy code → automatic connected/model state without confirmation",
-  );
-  const claudeCard = page.getByRole("region", {
-    name: "Claude 연결 관리",
-    exact: true,
-  });
-  const claudePopupEvent = context.waitForEvent("page");
-  await claudeCard
-    .getByRole("button", { name: "Claude 계정 연결", exact: true })
-    .click();
-  const claudePopup = await claudePopupEvent;
-  await claudeCard.getByText("공식 인증창을 준비하고 있어요…").waitFor();
-  authorizing = currentConnection();
-  assert.equal(authorizing.provider, "claude");
-  authorizing.challenge = {
-    kind: "code-entry",
-    url: claudeLoginUrl,
-    code: "",
-    expiresAt: Date.now() / 1000 + 900,
-  };
-  await claudePopup.waitForURL(claudeLoginUrl);
-  await page.bringToFront();
-  await claudeCard.getByLabel("2. Claude 승인코드", { exact: true }).waitFor();
-  await claudeCard.scrollIntoViewIfNeeded();
-  await page.screenshot({
-    path: resolve(screenshots, "claude-authorizing.png"),
-    fullPage: true,
-  });
-  await claudeCard
-    .getByLabel("2. Claude 승인코드", { exact: true })
-    .fill("wrong-code");
-  await claudeCard
-    .getByRole("button", { name: "승인코드로 연결", exact: true })
-    .click();
-  await page
-    .getByRole("alert")
-    .filter({ hasText: "승인코드 전체를 붙여넣어" })
-    .waitFor();
-  assert.equal(
-    await claudeCard
-      .getByLabel("2. Claude 승인코드", { exact: true })
-      .inputValue(),
-    "",
-  );
-  const foreignGrant = await other.request.post(
-    base + "/api/model-connections",
-    {
-      headers: { Origin: base },
-      data: { action: "authorize", id: authorizing.id, code: nativeCode },
-    },
-  );
-  assert.equal(foreignGrant.status(), 400);
-  const grantCsrf = await context.request.post(
-    base + "/api/model-connections",
-    {
-      headers: { Origin: "https://evil.test" },
-      data: { action: "authorize", id: authorizing.id, code: nativeCode },
-    },
-  );
-  assert.equal(grantCsrf.status(), 403);
-  await claudeCard
-    .getByLabel("2. Claude 승인코드", { exact: true })
-    .fill(nativeCode);
-  await claudeCard
-    .getByRole("button", { name: "승인코드로 연결", exact: true })
-    .click();
-  await claudeCard
-    .getByText(
-      "인증 완료를 기다리고 있어요. 연결되면 모델 목록이 자동으로 나타나요.",
-    )
-    .waitFor();
-  assert.equal(authorizing.challenge.submitted, true);
-  assert.equal(
-    await claudeCard
-      .getByRole("button", { name: "승인코드로 연결", exact: true })
-      .count(),
-    0,
-  );
-  for (const width of [320, 390, 768, 1440]) {
-    await page.setViewportSize({ width, height: 844 });
-    assert(
-      await claudeCard.evaluate((el) => el.scrollWidth <= el.clientWidth),
-      `Claude authorization overflow ${width}`,
-    );
-  }
-  authorizing.state = "connected";
-  authorizing.models = ["claude-test"];
-  delete authorizing.challenge;
-  await claudeCard.getByText("연결됨", { exact: true }).waitFor();
-  await page.getByRole("button", { name: /claude · claude-test/ }).waitFor();
-  authorizing.state = "error";
-  authorizing.models = [];
-  await claudeCard
-    .getByRole("alert")
-    .filter({ hasText: "연결에 실패했어요" })
-    .waitFor();
-  await claudePopup.close();
-  await claudeCard
-    .getByRole("button", { name: "연결 해제", exact: true })
-    .click();
-  await claudeCard
-    .getByRole("button", { name: "Claude 계정 연결", exact: true })
-    .waitFor();
-  await page.getByRole("checkbox").uncheck();
-  loginFixture = false;
-  console.log(
-    "PASS Claude native popup → invalid/valid code → automatic success/failure; subject isolation, CSRF, cleared codes",
-  );
-  assert.equal(
-    await page.getByLabel("Claude API 키", { exact: true }).count(),
-    0,
-  );
-  await page
-    .getByRole("button", { name: "API 키로 연결", exact: true })
-    .click();
-  assert.equal(
-    await page
-      .getByRole("link", { name: /Claude Console에서 키 발급하기/ })
-      .getAttribute("href"),
-    "https://platform.claude.com/settings/keys",
-  );
-  assert(
-    await page
-      .getByRole("button", { name: "키 확인하고 연결", exact: true })
-      .isDisabled(),
-  );
-  await page
-    .getByLabel("Claude API 키", { exact: true })
-    .fill("sk-ant-api-e2e-fixture-only");
-  assert(
-    await page
-      .getByRole("button", { name: "키 확인하고 연결", exact: true })
-      .isDisabled(),
-  );
-  await page.getByRole("checkbox").check();
-  assert(
-    await page
-      .getByRole("button", { name: "키 확인하고 연결", exact: true })
-      .isEnabled(),
-  );
-  await page.setViewportSize({ width: 390, height: 844 });
-  await page
-    .getByRole("button", { name: "키 확인하고 연결", exact: true })
-    .scrollIntoViewIfNeeded();
-  await page.screenshot({
-    path: resolve(screenshots, "claude-connect.png"),
-    fullPage: true,
-  });
-  await page.getByRole("button", { name: "취소", exact: true }).click();
-  await page
-    .getByRole("button", { name: "API 키로 연결", exact: true })
-    .click();
-  assert.equal(
-    await page.getByLabel("Claude API 키", { exact: true }).inputValue(),
-    "",
-  );
-  await page.getByRole("button", { name: "취소", exact: true }).click();
-  await page
-    .getByRole("button", { name: "이전 화면으로", exact: true })
-    .click();
-  console.log(
-    "PASS explicit login identity and Claude button → Console/key steps, consent and cancel clearing",
-  );
+  await page.getByRole("region", { name: "현재 로그인 계정", exact: true }).getByText("로그인됨", { exact: true }).waitFor();
+  await page.getByRole("button", { name: "AI 설정 보기", exact: true }).click();
+  await page.getByRole("heading", { name: "AI 대화 설정", exact: true }).waitFor();
+  await page.getByRole("button", { name: "이전 화면으로", exact: true }).click();
+  console.log("PASS default-only AI settings, no credential forms or account polling, conversation/settings return navigation");
   await page.getByRole("button", { name: "15분", exact: true }).click();
   await page.getByText("학습 설정을 저장했어요.", { exact: true }).waitFor();
   assert.equal((await state()).state.profiles.ja.minutes, 15);
@@ -2055,9 +1678,9 @@ try {
         fullPage: true,
       });
     }
-    await page.getByRole("button", { name: "연결·모델 선택" }).click();
+    await page.getByRole("button", { name: "AI 설정 보기" }).click();
     await page
-      .getByRole("heading", { name: "내 AI 연결", exact: true })
+      .getByRole("heading", { name: "AI 대화 설정", exact: true })
       .waitFor();
     assert(
       await page
@@ -2085,6 +1708,7 @@ try {
   await page.getByRole("button", { name: "로그아웃", exact: true }).click();
   await page.getByRole("button", { name: "로그인", exact: true }).waitFor();
   assert.equal((await context.request.get(base + "/api/study")).status(), 401);
+  assert.equal(retiredAccountCalls, 0);
   assert.deepEqual(errors, []);
   console.log(
     "PASS responsive 360/390/768/1440, dialogs, logout, no browser exceptions",

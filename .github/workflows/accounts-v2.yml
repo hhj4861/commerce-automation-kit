@@ -1,0 +1,41 @@
+name: Serverless accounts v2
+on:
+  pull_request:
+    paths: ['services/ai-gateway/accounts_*.py', 'services/ai-gateway/Dockerfile.accounts-v2', 'services/ai-gateway/requirements.accounts-v2.txt', 'services/ai-gateway/tests/*accounts*', 'packages/litellm-client/**', '.github/workflows/accounts-v2.yml']
+  push:
+    branches: [main]
+    paths: ['services/ai-gateway/accounts_*.py', 'services/ai-gateway/Dockerfile.accounts-v2', 'services/ai-gateway/requirements.accounts-v2.txt', 'services/ai-gateway/tests/*accounts*', 'packages/litellm-client/**', '.github/workflows/accounts-v2.yml']
+permissions:
+  contents: read
+jobs:
+  accounts-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: accounts
+          POSTGRES_PASSWORD: synthetic-ci-password
+          POSTGRES_DB: accounts_contract
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U accounts -d accounts_contract"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: pip install -r services/ai-gateway/requirements.accounts-v2.txt
+      - run: python services/ai-gateway/tests/run_accounts_v2_contract.py
+        env:
+          PYTHONDONTWRITEBYTECODE: '1'
+          ACCOUNTS_TEST_DATABASE_URL: postgresql://accounts:synthetic-ci-password@127.0.0.1:5432/accounts_contract
+      - run: node --test packages/litellm-client/test/*.test.mjs
+      - run: docker build -f services/ai-gateway/Dockerfile.accounts-v2 -t cak-accounts-v2:test services/ai-gateway
+      - name: Verify minimal non-root runtime imports
+        run: docker run --rm --read-only --cap-drop ALL --security-opt no-new-privileges cak-accounts-v2:test python -c 'import os, accounts_v2, accounts_store, accounts_provider; assert os.geteuid() != 0'

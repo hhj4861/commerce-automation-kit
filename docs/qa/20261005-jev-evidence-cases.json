@@ -1,0 +1,509 @@
+{
+  "datasetVersion": "jev-evidence-cases-20261005-v1",
+  "createdOn": "2026-10-05",
+  "status": "structurally_validated_reference_draft",
+  "scope": "안양파빌리온 개별 필드 근거 판정; 플랫폼 전체 정확도·ROI 평가 아님",
+  "rubricVersion": "discovery-v2.2",
+  "labelPolicy": {
+    "author": "invoking Codex session",
+    "independentHumanReview": false,
+    "retainOriginalLabels": true,
+    "wholeCandidateAcceptanceLabel": null,
+    "accuracyReportingAllowed": false,
+    "reason": "사실 근거/표현 유형과 편집 가치·보정된 운영 판정을 분리한다. 독립 라벨 검토 전 확정 정확도를 보고하지 않는다."
+  },
+  "sources": [
+    {
+      "id": "ayac-location-20261005",
+      "url": "https://ayac.or.kr/base/contents/view?contentsNo=47&menuLevel=3&menuNo=55",
+      "publisher": "안양문화예술재단",
+      "authority": "facility_operator",
+      "title": "안양파빌리온 | 오시는길 | 재단소개",
+      "checkedOn": "2026-10-05",
+      "publishedAt": null,
+      "locator": "안양파빌리온 > 위치 주소 (본문, 재단 공통 footer 제외)",
+      "excerpt": "안양파빌리온\n위치 주소\n경기도 안양시 만안구 예술공원로 180 (안양동)",
+      "kind": "official_page_excerpt",
+      "retrievalMethod": "web.open rendered text",
+      "supportScope": [
+        "entity",
+        "city",
+        "street_address"
+      ],
+      "limits": "조회한 페이지에 적힌 위치이다. 개관·프로그램·도서관의 현재 이용 가능 여부를 증명하지 않는다.",
+      "excerptSha256": "5b28180f9db576db25e0d5ae1f88502dad1e59199ae8499830abb2992e272e0f"
+    },
+    {
+      "id": "gyeonggi-library-20251028",
+      "url": "https://gnews.gg.go.kr/news/news_detail.do?number=202510280911419187C049&s_code=C049",
+      "publisher": "경기도뉴스포털",
+      "authority": "government_article",
+      "title": "[경기 이색 도서관] ⑤ 안양파빌리온",
+      "checkedOn": "2026-10-05",
+      "publishedAt": "2025-10-28",
+      "locator": "도입부 및 도서관, 그 이상의 경험; 서로 떨어진 짧은 구절 사이 [...] 표시",
+      "excerpt": "국내 최초의 공공예술도서관입니다.\n[...]\n안양 파빌리온 도서관은 단순히 책을 빌리거나 읽는 곳이 아닙니다.",
+      "kind": "official_page_excerpt",
+      "retrievalMethod": "web.open rendered text",
+      "supportScope": [
+        "library_description_as_of_publication",
+        "reading_use_as_of_publication"
+      ],
+      "limits": "2025년 기사의 설명이다. 현재 운영·대출 조건이나 국내 최초 주장 자체를 독립 검증한 것은 아니다. 최초 주장은 테스트 대상에서 제외한다.",
+      "excerptSha256": "fa67c2fe1c2bc1f60fb725f5ce3baeb876d59b78c176567d72b0d3b3c58fe790"
+    },
+    {
+      "id": "ayac-building-20261005",
+      "url": "https://m.ayac.or.kr/base/contents/view?contentsNo=25&menuLevel=3&menuNo=31",
+      "publisher": "안양문화예술재단",
+      "authority": "facility_operator",
+      "title": "안양파빌리온 | 공간소개 | 시설/대관",
+      "checkedOn": "2026-10-05",
+      "publishedAt": null,
+      "locator": "세계적인 건축 거장의 선물 안양파빌리온 > 공간구조 문장",
+      "excerpt": "안양파빌리온은 어느 각도에서도 같은 형태로 읽혀지지 않는 특유의 공간구조와 기하학적 형태를 이룬 시적인 공간으로 설계했다.",
+      "kind": "official_page_excerpt",
+      "retrievalMethod": "web.open rendered text",
+      "supportScope": [
+        "architectural_form"
+      ],
+      "limits": "음향 설계 목적이나 속삭임 전달을 뒷받침하지 않는다.",
+      "excerptSha256": "2a9f32a6def02d9af4d72b3aad1d1455844fb56b398a1c44dedbcb42d7741a71"
+    }
+  ],
+  "atomicCases": [
+    {
+      "id": "location-supported",
+      "evaluationUnit": "single_field_support",
+      "modelInput": {
+        "subject": "안양파빌리온",
+        "profile": "content",
+        "field": "location",
+        "text": "안양",
+        "evidenceIds": [
+          "ayac-location-20261005",
+          "gyeonggi-library-20251028",
+          "ayac-building-20261005"
+        ]
+      },
+      "reference": {
+        "expectedChoice": "pass",
+        "supportingEvidenceIds": [
+          "ayac-location-20261005"
+        ],
+        "rationale": "시설 본문 주소가 안양시를 직접 명시한다.",
+        "reviewStatus": "author_provisional",
+        "humanReviewed": false
+      },
+      "doNotPublishAsContent": false
+    },
+    {
+      "id": "location-contradicted",
+      "evaluationUnit": "single_field_support",
+      "modelInput": {
+        "subject": "안양파빌리온",
+        "profile": "content",
+        "field": "location",
+        "text": "서울",
+        "evidenceIds": [
+          "ayac-location-20261005",
+          "gyeonggi-library-20251028",
+          "ayac-building-20261005"
+        ]
+      },
+      "reference": {
+        "expectedChoice": "reject",
+        "supportingEvidenceIds": [
+          "ayac-location-20261005"
+        ],
+        "rationale": "동일 시설의 명시된 안양시 주소와 서울이라는 주장이 모순된다.",
+        "reviewStatus": "author_provisional",
+        "humanReviewed": false
+      },
+      "doNotPublishAsContent": true
+    },
+    {
+      "id": "historical-library-supported",
+      "evaluationUnit": "single_field_support",
+      "modelInput": {
+        "subject": "안양파빌리온",
+        "profile": "content",
+        "field": "answer",
+        "text": "경기도의 2025년 10월 28일 기사는 안양파빌리온을 공공예술도서관으로 소개했다.",
+        "evidenceIds": [
+          "ayac-location-20261005",
+          "gyeonggi-library-20251028",
+          "ayac-building-20261005"
+        ]
+      },
+      "reference": {
+        "expectedChoice": "pass",
+        "supportingEvidenceIds": [
+          "gyeonggi-library-20251028"
+        ],
+        "rationale": "기사 날짜·제목·본문이 역사적 소개 사실을 뒷받침한다. 현재 운영 주장이 아니다.",
+        "reviewStatus": "author_provisional",
+        "humanReviewed": false
+      },
+      "doNotPublishAsContent": false
+    },
+    {
+      "id": "historical-library-contradicted",
+      "evaluationUnit": "single_field_support",
+      "modelInput": {
+        "subject": "안양파빌리온",
+        "profile": "content",
+        "field": "answer",
+        "text": "경기도의 2025년 10월 28일 기사는 안양파빌리온이 도서관이 아니라고 소개했다.",
+        "evidenceIds": [
+          "ayac-location-20261005",
+          "gyeonggi-library-20251028",
+          "ayac-building-20261005"
+        ]
+      },
+      "reference": {
+        "expectedChoice": "reject",
+        "supportingEvidenceIds": [
+          "gyeonggi-library-20251028"
+        ],
+        "rationale": "같은 기사에서 공공예술도서관이라고 소개한 내용의 명시적 부정이다.",
+        "reviewStatus": "author_provisional",
+        "humanReviewed": false
+      },
+      "doNotPublishAsContent": true
+    },
+    {
+      "id": "acoustic-purpose-missing",
+      "evaluationUnit": "single_field_support",
+      "modelInput": {
+        "subject": "안양파빌리온",
+        "profile": "content",
+        "field": "answer",
+        "text": "안양파빌리온 지붕은 속삭임을 건너편 좌석으로 전달하도록 설계되었다.",
+        "evidenceIds": [
+          "ayac-location-20261005",
+          "gyeonggi-library-20251028",
+          "ayac-building-20261005"
+        ]
+      },
+      "reference": {
+        "expectedChoice": "uncertain",
+        "supportingEvidenceIds": [],
+        "rationale": "선정 발췌에 음향 설계 목적이 없다. 실제로 거짓임을 확인한 것이 아니다.",
+        "reviewStatus": "author_provisional",
+        "humanReviewed": false
+      },
+      "doNotPublishAsContent": true
+    },
+    {
+      "id": "question-hidden-premise",
+      "evaluationUnit": "single_field_support",
+      "modelInput": {
+        "subject": "안양파빌리온",
+        "profile": "content",
+        "field": "question",
+        "text": "안양파빌리온 지붕은 왜 속삭임을 건너편 좌석으로 전달하도록 설계되었을까?",
+        "evidenceIds": [
+          "ayac-location-20261005",
+          "gyeonggi-library-20251028",
+          "ayac-building-20261005"
+        ]
+      },
+      "reference": {
+        "expectedChoice": "uncertain",
+        "supportingEvidenceIds": [],
+        "rationale": "질문 속 설계 목적 전제도 같은 미확인 주장이다.",
+        "reviewStatus": "author_provisional",
+        "humanReviewed": false
+      },
+      "doNotPublishAsContent": true
+    },
+    {
+      "id": "pure-open-question",
+      "evaluationUnit": "single_field_support",
+      "modelInput": {
+        "subject": "안양파빌리온",
+        "profile": "content",
+        "field": "question",
+        "text": "어떤 주제로 영상을 만들면 좋을까?",
+        "evidenceIds": [
+          "ayac-location-20261005",
+          "gyeonggi-library-20251028",
+          "ayac-building-20261005"
+        ]
+      },
+      "reference": {
+        "expectedChoice": "not_applicable",
+        "supportingEvidenceIds": [],
+        "rationale": "특정 실제 사건·물성·소재지를 전제하지 않는 열린 질문이다.",
+        "reviewStatus": "author_provisional",
+        "humanReviewed": false
+      },
+      "doNotPublishAsContent": false
+    },
+    {
+      "id": "pure-production-proposal",
+      "evaluationUnit": "single_field_support",
+      "modelInput": {
+        "subject": "안양파빌리온",
+        "profile": "content",
+        "field": "openingVisual",
+        "text": "검은 화면에 질문 한 줄을 띄우는 도입 연출을 제안한다.",
+        "evidenceIds": [
+          "ayac-location-20261005",
+          "gyeonggi-library-20251028",
+          "ayac-building-20261005"
+        ]
+      },
+      "reference": {
+        "expectedChoice": "not_applicable",
+        "supportingEvidenceIds": [],
+        "rationale": "제작 제안만 있으며 실제 촬영 완료·관객 반응을 주장하지 않는다.",
+        "reviewStatus": "author_provisional",
+        "humanReviewed": false
+      },
+      "doNotPublishAsContent": false
+    },
+    {
+      "id": "proposal-with-supported-location",
+      "evaluationUnit": "single_field_support",
+      "modelInput": {
+        "subject": "안양파빌리온",
+        "profile": "content",
+        "field": "openingVisual",
+        "text": "경기도 안양시에 있는 안양파빌리온을 소개하는 장면을 연출하자.",
+        "evidenceIds": [
+          "ayac-location-20261005",
+          "gyeonggi-library-20251028",
+          "ayac-building-20261005"
+        ]
+      },
+      "reference": {
+        "expectedChoice": "pass",
+        "supportingEvidenceIds": [
+          "ayac-location-20261005"
+        ],
+        "rationale": "연출에 포함된 소재지 주장은 직접 근거가 있어 비사실 면제가 아니라 지지 판정이다.",
+        "reviewStatus": "author_provisional",
+        "humanReviewed": false
+      },
+      "doNotPublishAsContent": false
+    },
+    {
+      "id": "proposal-with-contradicted-location",
+      "evaluationUnit": "single_field_support",
+      "modelInput": {
+        "subject": "안양파빌리온",
+        "profile": "content",
+        "field": "openingVisual",
+        "text": "서울에 있는 안양파빌리온을 소개하는 장면을 연출하자.",
+        "evidenceIds": [
+          "ayac-location-20261005",
+          "gyeonggi-library-20251028",
+          "ayac-building-20261005"
+        ]
+      },
+      "reference": {
+        "expectedChoice": "reject",
+        "supportingEvidenceIds": [
+          "ayac-location-20261005"
+        ],
+        "rationale": "연출 제안이라는 형식이 틀린 소재지 주장을 면제하지 않는다.",
+        "reviewStatus": "author_provisional",
+        "humanReviewed": false
+      },
+      "doNotPublishAsContent": true
+    },
+    {
+      "id": "proposal-with-unsupported-premise",
+      "evaluationUnit": "single_field_support",
+      "modelInput": {
+        "subject": "안양파빌리온",
+        "profile": "content",
+        "field": "direction",
+        "text": "연출 제안: 안양파빌리온 지붕은 속삭임 전달을 위해 설계되었으므로 멀리서 말하는 장면을 넣자.",
+        "evidenceIds": [
+          "ayac-location-20261005",
+          "gyeonggi-library-20251028",
+          "ayac-building-20261005"
+        ]
+      },
+      "reference": {
+        "expectedChoice": "uncertain",
+        "supportingEvidenceIds": [],
+        "rationale": "제안의 근거로 단정한 설계 목적은 근거 부족이다.",
+        "reviewStatus": "author_provisional",
+        "humanReviewed": false
+      },
+      "doNotPublishAsContent": true
+    },
+    {
+      "id": "hypothetical-viewer-expectation",
+      "evaluationUnit": "single_field_support",
+      "modelInput": {
+        "subject": "안양파빌리온",
+        "profile": "content",
+        "field": "expectedAnswer",
+        "text": "시청자는 이 공간이 전시장일 것이라고 예상할 수도 있다.",
+        "evidenceIds": [
+          "ayac-location-20261005",
+          "gyeonggi-library-20251028",
+          "ayac-building-20261005"
+        ]
+      },
+      "reference": {
+        "expectedChoice": "not_applicable",
+        "supportingEvidenceIds": [],
+        "rationale": "명시적인 가상 시청자 기대이며 실제 관객 조사나 공간 용도를 단정하지 않는다.",
+        "reviewStatus": "author_provisional",
+        "humanReviewed": false
+      },
+      "doNotPublishAsContent": false
+    }
+  ],
+  "pairedEvidenceControls": {
+    "baseFixturePath": "docs/qa/20261003-jev-integration-controls.json",
+    "baseFixtureSha256": "0c5012abcfe8bb89eb22dbea32dbecaaefd4fc007912cb835ab426be24b25966",
+    "cases": [
+      {
+        "id": "location-addition-supported",
+        "baseCase": "supported",
+        "variants": [
+          {
+            "id": "original",
+            "addEvidenceIds": []
+          },
+          {
+            "id": "with-explicit-location",
+            "addEvidenceIds": [
+              "ayac-location-20261005"
+            ]
+          }
+        ],
+        "invariants": [
+          "candidate text byte-for-byte unchanged",
+          "original evidence and IDs unchanged",
+          "rubric discovery-v2.2 and thresholds unchanged",
+          "same history and request"
+        ],
+        "scoredTargets": {
+          "with-explicit-location": {
+            "support_location": "pass",
+            "support_answer": "pass"
+          }
+        },
+        "expectedFinalDecision": null,
+        "unscored": [
+          "relevance",
+          "value",
+          "final decision"
+        ],
+        "note": "이전 후보의 당시 근거 기반 고정 회귀 평가다. 현재 방문·운영 안내의 사실 인증이 아니다."
+      },
+      {
+        "id": "location-addition-insufficient",
+        "baseCase": "insufficient",
+        "variants": [
+          {
+            "id": "original",
+            "addEvidenceIds": []
+          },
+          {
+            "id": "with-explicit-location",
+            "addEvidenceIds": [
+              "ayac-location-20261005"
+            ]
+          }
+        ],
+        "invariants": [
+          "candidate text byte-for-byte unchanged",
+          "original evidence and IDs unchanged",
+          "rubric discovery-v2.2 and thresholds unchanged",
+          "same history and request"
+        ],
+        "scoredTargets": {
+          "with-explicit-location": {
+            "support_location": "pass",
+            "support_answer": "uncertain"
+          }
+        },
+        "expectedFinalDecision": null,
+        "unscored": [
+          "relevance",
+          "value",
+          "final decision"
+        ],
+        "note": "이전 후보의 당시 근거 기반 고정 회귀 평가다. 현재 방문·운영 안내의 사실 인증이 아니다."
+      },
+      {
+        "id": "location-addition-contradicted",
+        "baseCase": "contradicted",
+        "variants": [
+          {
+            "id": "original",
+            "addEvidenceIds": []
+          },
+          {
+            "id": "with-explicit-location",
+            "addEvidenceIds": [
+              "ayac-location-20261005"
+            ]
+          }
+        ],
+        "invariants": [
+          "candidate text byte-for-byte unchanged",
+          "original evidence and IDs unchanged",
+          "rubric discovery-v2.2 and thresholds unchanged",
+          "same history and request"
+        ],
+        "scoredTargets": {
+          "with-explicit-location": {
+            "support_location": "pass",
+            "support_answer": "reject"
+          }
+        },
+        "expectedFinalDecision": null,
+        "unscored": [
+          "relevance",
+          "value",
+          "final decision"
+        ],
+        "note": "이전 후보의 당시 근거 기반 고정 회귀 평가다. 현재 방문·운영 안내의 사실 인증이 아니다."
+      }
+    ]
+  },
+  "retrievalNotes": [
+    "기존 news_view URL은 web 도구로 열리지 않아 동일 number의 news_detail 페이지를 열었다.",
+    "기존 시설현황 URL 열기는 timeout. 새 공간소개 페이지와 별도 오시는길 페이지를 확인했다.",
+    "오시는길 본문의 시설 주소를 사용한다. 재단 footer 주소를 시설 주소로 혼동하지 않는다.",
+    "원문 전체 다운로드·콘텐츠 재사용을 수행하지 않고 판정에 필요한 짧은 공식 발췌만 기록했다."
+  ],
+  "liveEvaluation": {
+    "newJevCalls": 0,
+    "newLlmCalls": 0,
+    "activationChanged": false,
+    "plan": "먼저 reference의 12개 라벨과 근거를 독립 검토한 뒤 실행 입력/순서/한도를 고정한다. 실제 모델에는 reference·기대 라벨·다른 모델 결과를 제공하지 않는다. 응답을 본 뒤 라벨·임계값을 바꾼 결과는 새 버전으로 별도 기록한다."
+  },
+  "modelProjection": {
+    "sourceFields": [
+      "id",
+      "url",
+      "title",
+      "excerpt",
+      "kind",
+      "publishedAt",
+      "checkedOn"
+    ],
+    "exclude": [
+      "reference",
+      "supportScope",
+      "limits",
+      "labelPolicy",
+      "scoredTargets",
+      "expectedFinalDecision",
+      "sourceCase"
+    ],
+    "atomicQuestion": "Use the current v2.2 scoped_review support question for modelInput.field; retain full modelInput.text and subject, with projected evidence only. Do not include other candidate fields or answer labels.",
+    "wholeCandidate": "Paired controls run the unchanged original candidate with original evidence, plus only the location excerpt in the added-evidence variant. Do not use whole-candidate decisions as accuracy labels."
+  }
+}

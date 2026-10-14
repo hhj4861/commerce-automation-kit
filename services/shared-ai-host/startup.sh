@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 export DEBIAN_FRONTEND=noninteractive
+# Cap container logs before Docker first starts: the boot disk is 20 GiB.
+install -d -m 0755 /etc/docker
+if ! test -f /etc/docker/daemon.json; then
+  printf '%s\n' '{"log-driver": "json-file", "log-opts": {"max-size": "10m", "max-file": "3"}}' > /etc/docker/daemon.json
+fi
 apt-get update
 apt-get install -y docker.io docker-compose-v2 git curl python3-venv
 systemctl enable --now docker

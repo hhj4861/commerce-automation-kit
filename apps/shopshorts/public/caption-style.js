@@ -1,5 +1,7 @@
+import {defaultCaption} from './video-typography.js';
 // Optional fields preserve existing projects. Coordinates span the available text area.
 export const CAPTION_STYLES = [
+ {id:'modern',name:'모던 · 기본',...defaultCaption()},
  {id:'clean',name:'깔끔한',font:'gothic',size:56,color:'#ffffff',background:false,outlineWidth:2,outlineColor:'#000000',backgroundColor:'#000000',backgroundOpacity:.65},
  {id:'box',name:'또렷한 박스',font:'gothic',size:56,color:'#ffffff',background:true,outlineWidth:0,outlineColor:'#000000',backgroundColor:'#000000',backgroundOpacity:.75},
  {id:'impact',name:'강한 한마디',font:'blackhan',size:76,color:'#ffda55',background:false,outlineWidth:4,outlineColor:'#151515',backgroundColor:'#000000',backgroundOpacity:.65},
@@ -12,6 +14,7 @@ export function captionStyle(c) {
 }
 export function captionExtras(c) {
  const out={};
+ if(c.presentation!==undefined){if(!['modern-v1','modern-header-v1'].includes(c.presentation))throw Error('지원하지 않는 자막 포맷입니다.');out.presentation=c.presentation;}
  for(const [key,min,max] of [['x',0,100],['y',0,100],['outlineWidth',0,8],['backgroundOpacity',0,1]]) {
   if(c[key]===undefined)continue;
   if(!Number.isFinite(c[key])||c[key]<min||c[key]>max)throw Error('자막 위치와 스타일의 범위를 확인하세요.');
@@ -28,7 +31,8 @@ export function applyCaptionStyle(c,id) {
  const preset=CAPTION_STYLES.find(p=>p.id===id);
  if(!preset)throw Error('자막 스타일을 선택하세요.');
  const {id:_,name,...values}=preset;
- return {...c,...values};
+ const next={...c};delete next.presentation;
+ return {...next,...values};
 }
 // Deleting and copying text never changes the underlying video clip.
 export function deleteCaption(edit,id) {

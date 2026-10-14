@@ -1,3 +1,4 @@
+import {mockReview} from './helpers/editorial-review.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {mkdtemp,rm} from 'node:fs/promises';
@@ -14,6 +15,8 @@ import {executeStudioTask} from '../studio-runner.mjs';
 
 function project(){
  const p=createProject({category:'심리학',topic:'결정을 잠시 미루는 순간',direction:'차분한 설명',format:'short',duration:24});
+ // Existing saved projects without the new visual-direction contract remain compatible.
+ delete p.brief.visualQuality;
  p.scenes=[1,2,3].map(i=>({id:`scene-${i}`,narration:`선택지 ${i}를 종이에 적어 비교해 보세요.`,prompt:'책상에서 종이 두 장을 비교하는 사람, 따뜻한 일러스트',duration:8,kind:'image'}));
  return p;
 }
@@ -31,6 +34,7 @@ for(const provider of ['codex','claude'])test(`${provider} recommendation surviv
  const p=project(),value={title:'선택을 적어보는 시간',scenes:p.scenes,voiceRecommendation:picked,
   storyArc:Object.fromEntries(['hook','payoff','ending'].map((k,i)=>[k,{sceneId:p.scenes[i].id,line:p.scenes[i].narration}]))};
  const result=await scenarioBrief(p.brief,{}, {provider,generate:async prompt=>{
+  if(mockReview(prompt))return mockReview(prompt);
   assert.ok(prompt.includes(picked.voiceId));assert.match(prompt,/voiceRecommendation/);return {value};
  }});
  p.task={runner:'llm-account',state:'running',action:'scenario',id:'task',accountOwner:'owner',deadline:Date.now()+10000};
