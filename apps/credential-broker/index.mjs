@@ -3,6 +3,7 @@ import { AUDIENCE, ISSUER, STATIC_KEYS, PAGE_KEYS, GITHUB_KEYS, DEPLOYMENT_KEYS,
 import { readVault, writeVault } from './vault.mjs';
 import { lease } from './leases.mjs';
 import { accountAction, accountRunner } from './llm-accounts.mjs';
+import { huggingFaceAccount } from './huggingface.mjs';
 
 const githubKeys = createRemoteJWKSet(new URL(`${ISSUER}/.well-known/jwks`));
 const response = (value, status = 200) => Response.json(value, { status, headers: { 'cache-control': 'no-store', 'x-content-type-options': 'nosniff' } });
@@ -68,8 +69,9 @@ export async function handleRequest(request, env, verify = { github: verifyGithu
       await writeVault(env, 'migration/github', input.values, 0);
       return response({ ok: true, count: GITHUB_KEYS.length });
     }
-    if (!['/runner/discovery', '/runner/secrets', '/runner/vault', '/runner/lease', '/runner/accounts', '/runner/account-action'].includes(path)) return response({ error: 'not found' }, 404);
+    if (!['/runner/discovery', '/runner/secrets', '/runner/vault', '/runner/lease', '/runner/accounts', '/runner/account-action', '/runner/huggingface'].includes(path)) return response({ error: 'not found' }, 404);
     try { await verify.runner(token, env); } catch { return response({ error: 'unauthorized' }, 403); }
+    if (path === '/runner/huggingface') return response(await huggingFaceAccount(env,input.owner,input.operation,input.input));
     if (path === '/runner/discovery') {
       if (!input || Object.keys(input).length !== 1 || !Object.hasOwn(DISCOVERY_PLATFORM_KEYS, input.platform)) return response({ error: 'invalid platform' }, 400);
       return response({ values: await readSecrets(env, [DISCOVERY_PLATFORM_KEYS[input.platform]]) });
