@@ -1,0 +1,137 @@
+name: Drama tests
+
+on:
+  pull_request:
+    paths:
+      - 'packages/drama-series/**'
+      - 'apps/drama-runner/**'
+      - 'packages/contracts/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/drama.yml'
+  push:
+    branches: [feat/drama-regression-pilot, main]
+    paths:
+      - 'packages/drama-series/**'
+      - 'apps/drama-runner/**'
+      - 'packages/contracts/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/drama.yml'
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  drama-series:
+    # 실제 조립 시험의 AppleSDGothicNeo 글꼴 의존성을 충족한다.
+    runs-on: macos-15
+    timeout-minutes: 20
+    env:
+      HOMEBREW_NO_AUTO_UPDATE: '1'
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          # drama-series의 engines >=20을 충족하며 runner와 같은 버전을 쓴다.
+          node-version: '22.23.3'
+      - name: 미디어 시험 준비
+        run: |
+          export TMPDIR="$RUNNER_TEMP/drama-series"
+          mkdir -p "$TMPDIR"
+          echo "TMPDIR=$TMPDIR" >> "$GITHUB_ENV"
+          # runner의 기본 ffmpeg에는 drawtext가 없을 수 있다.
+          if ! command -v ffmpeg >/dev/null || ! command -v ffprobe >/dev/null ||
+             ! ffmpeg -hide_banner -filters 2>/dev/null | grep -E '[[:space:]]drawtext[[:space:]]' >/dev/null; then
+            brew install ffmpeg-full
+            ffmpeg_bin="$(brew --prefix ffmpeg-full)/bin"
+            export PATH="$ffmpeg_bin:$PATH"
+            echo "$ffmpeg_bin" >> "$GITHUB_PATH"
+          fi
+          ffmpeg -version
+          ffprobe -version
+          ffmpeg -hide_banner -filters | grep -E '[[:space:]]drawtext[[:space:]]'
+          test -f /System/Library/Fonts/AppleSDGothicNeo.ttc
+      - name: 잠금 파일로 시험 의존성 설치
+        run: npm ci --ignore-scripts --workspace @cak/drama-series --workspace @cak/contracts
+      - run: npm test -w @cak/drama-series
+      - run: npm run typecheck -w @cak/drama-series
+
+  drama-runner:
+    runs-on: macos-15
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: commerce-automation-kit-worktrees/drama-ci
+    env:
+      ATOMWORKS_COMMIT: ad94eaef54dbb0babe3b5916ca6122a5cc841545
+      ATOMWORKS_LOCK_SHA: 7bd79fdfbc938f6e4927bb5e371c9b1df9c1689f955caa2e53316f5ad039c446
+    steps:
+      - name: 비공개 의존성 인증 확인
+        working-directory: ${{ github.workspace }}
+        env:
+          ATOMWORKS_READ_TOKEN: ${{ secrets.ATOMWORKS_READ_TOKEN }}
+        run: |
+          if [[ -z "$ATOMWORKS_READ_TOKEN" ]]; then
+            echo '::error::ATOMWORKS_READ_TOKEN이 필요합니다. hhj4861/atomworks만 선택한 fine-grained PAT(contents: read)를 저장소 Actions secret에 설정하세요. fork/Dependabot PR에는 secret이 전달되지 않으므로 이 job은 실패합니다.'
+            exit 1
+          fi
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          path: commerce-automation-kit-worktrees/drama-ci
+          persist-credentials: false
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          repository: hhj4861/atomworks
+          ref: ${{ env.ATOMWORKS_COMMIT }}
+          token: ${{ secrets.ATOMWORKS_READ_TOKEN }}
+          path: atomworks-worktrees/drama-consumer-pin
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22.23.3'
+      - name: README와 고정 소스 대조
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import { readFileSync } from 'node:fs';
+          import { createHash } from 'node:crypto';
+          import { execFileSync } from 'node:child_process';
+          const readme = readFileSync('apps/drama-runner/README.md', 'utf8');
+          assert.equal(readme.match(/atomworks commit: `([a-f0-9]{40})`/)[1], process.env.ATOMWORKS_COMMIT);
+          assert.equal(readme.match(/atomworks lock SHA-256: `([a-f0-9]{64})`/)[1], process.env.ATOMWORKS_LOCK_SHA);
+          const root = '../../atomworks-worktrees/drama-consumer-pin';
+          assert.equal(execFileSync('git', ['-C', root, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(), process.env.ATOMWORKS_COMMIT);
+          assert.equal(createHash('sha256').update(readFileSync(`${root}/package-lock.json`)).digest('hex'), process.env.ATOMWORKS_LOCK_SHA);
+          NODE
+      - name: 고정 SDK 설치 및 빌드
+        working-directory: atomworks-worktrees/drama-consumer-pin
+        run: |
+          npm ci --ignore-scripts
+          npm run build -w @atomworks/contracts
+          npm run build -w @atomworks/kernel
+          npm run build -w @atomworks/state-store
+      - name: commerce와 별도 runtime 설치
+        run: |
+          npm ci --ignore-scripts --workspace @cak/drama-runner --workspace @cak/drama-series --workspace @cak/contracts
+          npm ci --prefix apps/drama-runner/runtime --workspaces=false --ignore-scripts
+      - name: 시험 경로 준비
+        run: |
+          # 동기화 경로 거부 시험용 이름이다. 호스티드 runner에서 실제 iCloud 연결은 하지 않는다.
+          artifacts="$HOME/Library/Mobile Documents/drama-ci"
+          state="$RUNNER_TEMP/drama-state"
+          mkdir -p "$artifacts" "$state"
+          {
+            echo "DRAMA_TEST_ARTIFACTS=$artifacts"
+            echo "DRAMA_TEST_STATE=$state"
+            echo "TMPDIR=$artifacts"
+          } >> "$GITHUB_ENV"
+      - run: npm run preflight -w @cak/drama-runner
+      - run: npm test -w @cak/drama-runner
+      - run: npm run typecheck -w @cak/drama-runner

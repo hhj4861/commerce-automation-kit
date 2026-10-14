@@ -22,7 +22,19 @@ commerce의 일반 `npm ci`는 종전과 같이 실행한다. SDK는 `runtime/`�
 - commerce root에서 `npm ci --ignore-scripts`, 이어 `npm ci --prefix apps/drama-runner/runtime --workspaces=false --ignore-scripts`.
 - `npm run preflight -w @cak/drama-runner`: commit·tracked/untracked clean·lock SHA·실제 SDK resolved 경로(contracts/node, kernel/pure, kernel/node, state-store/node) 확인.
 
-빌드된 dist/node_modules는 로컬 신뢰 영역이다. preflight는 서명 검증·악성 로컬 코드의 실행 격리가 아니다. 설치 전 고정 소스를 확인하고 lockfile로 설치/재빌드해야 한다. CI/배포용 휴대 설치와 private atomworks checkout 자격 증명 주입은 미구현이다. 다른 앱 설치에 이 checkout을 요구하지 않는다.
+빌드된 dist/node_modules는 로컬 신뢰 영역이다. preflight는 서명 검증·악성 로컬 코드의 실행 격리가 아니다. 설치 전 고정 소스를 확인하고 lockfile로 설치/재빌드해야 한다. CI는 아래의 고정 상대 배치를 사용하며, 배포용 휴대 설치는 미구현이다. 다른 앱 설치에 이 checkout을 요구하지 않는다.
+
+## CI
+
+`.github/workflows/drama.yml`은 드라마 두 패키지·contracts·루트 package/lock·워크플로 변경이 있는 PR 및 `feat/drama-regression-pilot`, `main` push에서 실행한다. 두 job은 Node **22.23.3**을 사용한다(drama-series의 `>=20`도 충족). commerce 설치는 같은 루트 lockfile에 `--workspace`를 지정하여 관련 패키지로 한정하고 모두 `--ignore-scripts`를 적용한다.
+
+- `drama-series`: macOS 15에서 FFmpeg/ffprobe 및 `drawtext` 필터를 확인한다. 없으면 Homebrew `ffmpeg-full`을 설치하고 해당 bin을 PATH에 우선 등록한다. AppleSDGothicNeo 존재도 확인한 뒤 시험·타입체크한다. 기존 실제 미디어 조립 시험의 macOS 글꼴 의존성 때문에 이 runner를 사용한다. 기본 runner의 축소된 FFmpeg에 `drawtext`가 없으면 실제 조립 시험이 실패하므로 바이너리 존재만으로 준비 완료로 판단하지 않는다.
+- `drama-runner`: `$GITHUB_WORKSPACE/commerce-automation-kit-worktrees/drama-ci`와 `$GITHUB_WORKSPACE/atomworks-worktrees/drama-consumer-pin`에 각각 checkout한다. 기존 `file:../../../../../atomworks-worktrees/drama-consumer-pin/...`과 preflight 경로를 수정하지 않는다. 위 README의 commit·lock SHA와 실제 checkout을 먼저 대조하고 SDK 3개 빌드 → commerce/runtime 설치 → preflight → 시험·타입체크 순서로 실행한다.
+- runner의 `DRAMA_TEST_ARTIFACTS`는 `$HOME/Library/Mobile Documents/drama-ci`로 설정한다. 호스티드 runner의 일반 로컬 폴더이며, 동기화 위치 거부 시험을 재현하는 이름이다. 실제 SQLite 시험은 별도의 `$RUNNER_TEMP/drama-state`를 쓴다. 실제 iCloud 연결·운영 DB 접근은 없다.
+
+사용자가 commerce 저장소의 Actions secret **`ATOMWORKS_READ_TOKEN`**을 설정해야 한다. fine-grained PAT의 repository access는 **`hhj4861/atomworks`만**, repository permissions는 **Contents: Read-only**로 제한한다. 토큰 주체도 해당 비공개 저장소의 읽기 권한이 있어야 한다. checkout에는 `persist-credentials: false`를 적용한다. 토큰을 다루는 job이므로 외부 action은 태그 대신 커밋 SHA로 고정한다(checkout·setup-node v4.4.0, 주석에 버전 표기). 일반 `GITHUB_TOKEN`은 다른 비공개 저장소의 checkout 자격을 대신하지 못한다([checkout 공식 안내](https://github.com/actions/checkout/tree/v4#checkout-multiple-repos-private)).
+
+secret이 없거나 fork/Dependabot PR처럼 secret이 전달되지 않는 경우 runner job은 이유를 출력하고 **실패**한다. 자동 skip이나 `pull_request_target`으로 우회하지 않는다. 대안은 atomworks 전용 **읽기 전용 deploy key**이며, 선택 시 사용자가 키·secret을 관리하고 checkout을 `ssh-key` 방식으로 변경해야 한다. 현재 워크플로는 PAT 방식이고 이 작업에서는 secret/키를 만들지 않는다. 실제 GitHub Actions 성공 여부는 secret 설정 후 해당 PR 실행에서 별도로 확인한다.
 
 ## 입력과 출력
 
