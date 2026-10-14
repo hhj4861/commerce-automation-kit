@@ -1,3 +1,4 @@
+import { assertDefaultModel } from "@/lib/model-connections";
 import { musicUnits } from "@/lib/v2-music";
 import { StudyTiming } from "@/lib/study-timing";
 import { alignMeaning, lookupVocabulary } from "@/lib/vocabulary";
@@ -335,6 +336,7 @@ export async function POST(req: Request) {
           !/^[a-f0-9]{32}:[a-zA-Z0-9.-]{1,100}$/.test(selection))
       )
         throw new ConversationError(400, "AI 모델을 선택해 주세요.");
+      assertDefaultModel(selection);
       const trace = timing = new StudyTiming(language, started);
       await trace.measure("quota", () => reserveRequest(actor, "chat"));
       const references = await trace.measure("knowledge", () => searchKnowledge({
