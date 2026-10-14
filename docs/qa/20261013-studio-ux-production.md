@@ -173,3 +173,17 @@
 - 각 branch 통합98pass/0fail/0skip. CLI parity, 실제 렌더(유료 공급자는 mock), worker/broker 오류 전달 포함. 긴 소켓 경로로 실패한 앞선 3개 검사도 짧은 iCloud 링크로 해결했다.
 - 실제 Codex 연구 검증: 초기 조사와 검토·추가 조사 완료, 마지막 검토 호출은 CODEX_REQUEST_FAILED. 같은 공개 연구 결과의 마지막 검토만1회 재실행해 정상 완료했고 focus/why/mechanism/example/payoff 미충족으로 거부했다. 구멍을 작게 만든 이유에 대한 근거가 없어, 기존 질문 전체에 답할 수 없다는 결과다. 이는 안전한 중단을 확인한 것이며 성공 영상/운영 E2E로 보고하지 않는다. 로컬 사용자 인증과 운영 격리 인증 환경은 다르다.
 - 인수인계 문서 상단에 최신 PR·검증·제약 갱신. 자세한 구현 카드: 해당 구현 branch의 docs/tasks/20261014-research-answer-gate.md. 다음은 새 PR 명시적 머지 승인과 이후 운영 검증이다.
+
+## 2026-10-14 #236·#237 승인·머지·운영 반영
+
+- main809b8fa / deploy74d66ac 머지 완료. 두 PR의 정확한 head·CI2개 SUCCESS 확인. releasee4afa16과 merge74d66ac tree차이0. 운영 checkout clean.
+- Pages9eec2068-8793-4b20-ba3f-93cbe9190b66, https://9eec2068.shopshorts-dash.pages.dev, 공식 목록 Production/deploy/shopshorts/source74d66ac. CLI exit0.
+- 계정 active0/hasNextfalse, 미디어active0 확인 후 SIGTERM: 계정11138→65268, 제작11115→65271. running/이전exit0. 공용broker 변경 없음.
+- 16:43 KST 같은 수원 프로젝트 대본 재생성1회, 연구 단계 진행 확인. 신규 유료 미디어/TTS/영상렌더 없음. 최종 결과는 아래 기록한다.
+- GitOpsrun38529140123 failure, Cloudflare credential request failed(503). 수동배포 완료를 자동배포 완료로 취급하지 않는다.
+
+### #237 운영 재검증 종료
+
+- 같은 QA 재시도는 자료 확인 단계에서 “Codex 구독 사용 한도에 도달했습니다. 한도가 회복된 뒤 다시 시도해 주세요.”로 종료됐다. 브라우저의 실제 최종 오류와 재시도 버튼, 제작 워커 온라인을 확인했다. 중복 재시도 없음.
+- 이번 결과는 대본 내용 검토 실패가 아니라 구독 공급자 호출 한도다. 내부의 어느 조사/검토 호출인지 UI만으로 단정하지 않는다. 신규 유료 미디어/TTS/렌더/업로드 없으며, 한도 회복 후 전체 실생성 검증이 필요하다.
+- 운영 탭1694574728을 후속 검증용 handoff로 보존. 사용자의 기존 로그인 승인 유지. 별도 계정·토큰 우회나 요금제 변경 없음.

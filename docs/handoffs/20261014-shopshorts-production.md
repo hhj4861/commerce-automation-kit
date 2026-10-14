@@ -1,13 +1,21 @@
 # Shopshorts 운영 제작 파이프라인 인수인계 — 2026-10-14
 
-## 최신 후속 구현 — 조사 답변 검증 (운영 미반영)
+## 최신 상태 — #236·#237 운영 반영 완료, 실생성은 구독 한도로 중단
+
+- 사용자 ‘응 진행해줘’ 승인 후 #236 main `809b8fa8cbb46abe52fc92fccb32108e7778b49f`, #237 deploy/shopshorts `74d66ac94fb732b6820294002d42fa2a964b8d75` 머지 완료. 승인된 source34a5187/releasee4afa16과 최신 CI SUCCESS를 재확인했다. 검증된 release tree와 운영 merge tree 차이0.
+- 운영 checkout clean detached74d66ac. 기존 배포 브랜치의 Kandinsky 변경을 보존했다. Wrangler Pages 배포 exit0, 공식 목록 Production/deploy/shopshorts/source74d66ac 확인. deployment `9eec2068-8793-4b20-ba3f-93cbe9190b66`, https://9eec2068.shopshorts-dash.pages.dev . 공용 broker 재배포 없음.
+- 계정 activeCount0/hasNext=false, 미디어 active0 조회 후 SIGTERM 정상 재시작. 계정 PID11138→65268, 제작11115→65271. 둘 다 running/이전 exit0 확인. 인증정보/작업 식별자 출력 없음.
+- 같은 수원 QA 브라우저에서 16:43 KST 대본 재시도1회 접수 후 자료 확인 단계에서 **“Codex 구독 사용 한도에 도달했습니다. 한도가 회복된 뒤 다시 시도해 주세요.”**로 종료됐다. 내용 불충분 판정/검색 실패/429 장애로 혼동하지 않는다. 상세 형식은 운영 UI에 표시되지 않아 어느 내부 호출에서 한도가 걸렸는지 단정하지 않는다. 기존 기획·54크레딧 상한·Kyle1.1·스타일 유지. 신규 TTS·미디어·렌더 없음. 한도 회복 후 같은 QA를 재검증해야 하므로 전체 실생성 E2E는 미완료다. 추가 계정/토큰 우회·요금제 변경·반복 재시도는 하지 않았다.
+- GitOps run38529140123은 Cloudflare credential request failed(503). 이번 수동 배포 성공과 CI 자격 미등록 문제를 구분한다. #236·#237 재승인/재머지하지 않는다.
+
+## #236·#237 구현 검증 기록 (이후 운영 반영 완료, 최신 기록은 상단)
 
 - 사용자 ‘진행해줘/계속’으로 공통 조사→대본 경로를 보완했다. [#236 main](https://github.com/hhj4861/commerce-automation-kit/pull/236), source `34a5187`; [#237 deploy/shopshorts](https://github.com/hhj4861/commerce-automation-kit/pull/237), release `e4afa16`. 각각 전용 upstream push 완료. **두 새 PR의 명시적 머지 승인은 아직 없으며, 이번 수정의 Pages·워커 배포도 하지 않았다.**
 - 조사 자료가 선택 질문에 답하는지 독립 검토하고, 부족한 항목만 한 번 추가 조사한다. 통과한 답을 대사·최종 검토에 연결한다. 끝내 부족하면 대본 작성 전 중단하며 부족 항목과 검토 형식 오류를 구분한다. 기존 대본 품질 검토·기획·음성·예산·제한 시간은 유지한다.
 - source/release 각각 통합98검사 통과(0fail/0skip). 유료 공급자 시험 응답을 사용한 실제 렌더·CLI 공통 경로·워커/브로커 오류 전달 포함. 긴 테스트 소켓 경로로 앞선 3검사가 실패했지만 동일 iCloud 폴더의 짧은 링크로 재실행해 모두 통과했다. 임시 의존성/출력 링크는 제거했다.
 - 같은 수원 질문으로 공식 로컬 Codex 실호출: 초기 조사→독립 거부→보충 조사까지 완료(호출당360초, 총404초). 마지막 호출은 CODEX_REQUEST_FAILED. 저장한 공개 보충 자료에 대한 마지막 검토만 한 번 재실행해 정상 종료/5항목 불충분 판정을 받았다. 돌출의 측면 공격 원리는 찾았으나 ‘작은 구멍 선택 이유’는 보충 후에도 미확인이었다. **거부 경로를 확인한 것이며 전체 실생성 성공이 아니다.** 운영 격리 계정 대신 로컬 운영자 로그인으로 검증했으므로 환경 동일성도 주장하지 않는다.
 - 실제 자료/로그: iCloud `commerce-automation-kit/research-answer-gate/`의 `live-v2-call-{1,2,3}.json`, `live-v2-final-review.json`, `final-shortpath-tests.log`, `release-tests.log`. 생성된 조사 요약은 원문 전체를 독립 검증한 자료와 구분한다. 토큰/인증정보는 기록하지 않았다.
-- 다음: #236·#237 명시적 승인→정확한 head/CI 재확인→운영 반영. 동일 질문 실생성은 여전히 미완료이며 근거를 추가 확보하거나 사용자가 질문을 좁히도록 승인해야 할 수 있다. 다른 질문으로 몰래 전환하거나 검토를 완화하지 않는다. CI 전용 배포 자격의 기존503 문제도 별개로 남아 있다.
+- 이 절 작성 당시 다음 단계는 새 PR 승인·운영 반영이었다. 이후 완료됐으므로 상단 최신 상태를 따른다. 동일 질문 실생성은 여전히 미완료이며 근거를 추가 확보하거나 사용자가 질문을 좁히도록 승인해야 할 수 있다. 다른 질문으로 몰래 전환하거나 검토를 완화하지 않는다. CI 전용 배포 자격의 기존503 문제도 별개로 남아 있다.
 - 구현 worktree는 `scenario-review-feedback`, branch `fix/shopshorts-research-answer-gate`; 승격은 `studio-workspace-release`, branch `release/studio-research-answer-gate`. 아래 과거 경로 표의 branch/head는 #227 시점 기록이다. source base48d1dfe, release based87324e에 있던 타 세션 Hanmadi/Kandinsky 변경은 보존했다. 운영 현재 head는 반영 전 새로 확인한다.
 
 ## #227 시점 운영 검증 결론
