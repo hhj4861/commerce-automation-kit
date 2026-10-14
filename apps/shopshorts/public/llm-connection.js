@@ -14,6 +14,13 @@ function pause(signal) {
   });
 }
 
+// Refresh account badges when a generation transitions to failure, once per job.
+export function notifyAccountJobFailure(previous, next, target = globalThis.window) {
+  if (next?.state === 'failed' && ['scenario','recommend'].includes(next.action || next.kind)
+      && (previous?.state !== 'failed' || previous?.id !== next.id)) {
+    target?.dispatchEvent(new Event('llm-account-change'));
+  }
+}
 let connection = null;
 export function connectLlm(options = {}) {
   if (connection) return connection;
@@ -142,7 +149,7 @@ export async function waitForRecommendation(id, signal, onProgress = () => {}) {
       const current = await request('llm/status', undefined, signal);
       if (current.job?.id !== id) throw Error('추천 요청이 다른 창에서 변경됐습니다. 다시 시도하세요.');
       if (current.job.state === 'done') { done = true; onProgress({ stage: 'done', provider: current.provider }); return current.job.result; }
-      if (current.job.state === 'failed') { done = true; throw Error(current.job.error); }
+      if (current.job.state === 'failed') { done = true; notifyAccountJobFailure(null, current.job); throw Error(current.job.error); }
       onProgress({ stage: current.job.state === 'queued' ? 'queued' : 'running', provider: current.provider });
       if (!current.available) throw Error('LLM 실행기 연결이 끊겼습니다. 연결 상태를 확인하고 다시 시도하세요.');
     }

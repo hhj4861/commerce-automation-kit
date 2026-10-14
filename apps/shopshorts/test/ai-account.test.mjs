@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {connectLlm} from '../public/llm-connection.js';
+import {connectLlm,notifyAccountJobFailure} from '../public/llm-connection.js';
 import {mountAiAccount,AI_ACCOUNT_PANEL} from '../public/ai-account.js';
 const settle=()=>new Promise(resolve=>setImmediate(resolve));
 function element(){return {hidden:true,disabled:false,textContent:'',dataset:{},addEventListener(type,fn){this[type]=fn;}};}
@@ -54,4 +54,18 @@ test('concurrent connection entry uses one status request and notifies on comple
  globalThis.fetch=async()=>{calls++;await new Promise(resolve=>finish=resolve);return {ok:true,status:200,json:async()=>({connected:true,available:true})};};
  globalThis.window={dispatchEvent:event=>{assert.equal(event.type,'llm-account-change');notifications++;}};
  const first=connectLlm(),second=connectLlm();assert.equal(first,second);assert.equal(calls,1);finish();assert.equal(await first,true);assert.equal(notifications,1);
+});
+
+
+test('failed generation refreshes badges once and exposes automatic disconnect reason',async()=>{
+ const f=fixture({connected:true,available:true,provider:'codex'});await settle();
+ f.set({connected:false,available:true,job:{kind:'scenario',state:'failed',error:'구독 한도에 도달해 연결을 해제했어요.'}});
+ let events=0;const target={dispatchEvent(e){events++;f.events[e.type]();}};
+ const failed={id:'one',action:'scenario',state:'failed'};
+ notifyAccountJobFailure({id:'one',state:'running'},failed,target);await settle();
+ assert.equal(events,1);assert.equal(f.entries[0].textContent,'AI 계정 연결');assert.equal(f.parts.error.hidden,false);assert.match(f.parts.error.textContent,/연결을 해제/);
+ notifyAccountJobFailure(failed,failed,target);assert.equal(events,1);
+ notifyAccountJobFailure(null,{state:'failed',action:'media'},target);assert.equal(events,1);
+ notifyAccountJobFailure(null,{state:'failed',kind:'recommend'},target);assert.equal(events,2);
+ assert.equal(f.connectCalls,0);
 });
