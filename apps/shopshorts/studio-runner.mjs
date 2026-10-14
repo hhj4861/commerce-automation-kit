@@ -1,3 +1,4 @@
+import {assertLocalTask,localCapabilities,generateLocalScene} from './studio-comfy.mjs';
 import {sharedPipeline,requireFinalReview,PIPELINE_VERSION} from './lib/production-pipeline.js';
 import {productionPreflight} from './studio-preflight.mjs';
 import {verifyFinalVideo} from './studio-final-qa.mjs';
@@ -29,7 +30,7 @@ import { FPS, FONTS, normalizeEdit, frameCount, clipSpans } from './public/edito
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const GOOGLE = 'https://generativelanguage.googleapis.com/v1beta';
-export const capabilities = env => ({ workerAt: new Date().toISOString(), scenario: false, metadata: !!(env.GEMINI_API_KEY && env.YOUTUBE_API_KEY), animation: true, hybrid: motionCapability(env) && env.SHOPSHORTS_MEDIA_PROVIDER === 'higgsfield' && !!env.ELEVENLABS_API_KEY, webtoon: env.SHOPSHORTS_MEDIA_PROVIDER === 'higgsfield' && !!env.ELEVENLABS_API_KEY, motion: motionCapability(env), image: env.SHOPSHORTS_MEDIA_PROVIDER === 'higgsfield' || !!env.GEMINI_API_KEY, video: env.SHOPSHORTS_MEDIA_PROVIDER === 'higgsfield' || !!env.GEMINI_API_KEY, mediaProvider: env.SHOPSHORTS_MEDIA_PROVIDER === 'higgsfield' ? 'higgsfield' : 'google', voice: !!env.ELEVENLABS_API_KEY, shortsUpload: !!(env.UPLOAD_POST_API_KEY && env.UPLOAD_POST_USER), longUpload: !!env.YOUTUBE_CLIENT_SECRET });
+export const capabilities = env => ({ localGeneration:localCapabilities(env), workerAt: new Date().toISOString(), scenario: false, metadata: !!(env.GEMINI_API_KEY && env.YOUTUBE_API_KEY), animation: true, hybrid: motionCapability(env) && env.SHOPSHORTS_MEDIA_PROVIDER === 'higgsfield' && !!env.ELEVENLABS_API_KEY, webtoon: env.SHOPSHORTS_MEDIA_PROVIDER === 'higgsfield' && !!env.ELEVENLABS_API_KEY, motion: motionCapability(env), image: env.SHOPSHORTS_MEDIA_PROVIDER === 'higgsfield' || !!env.GEMINI_API_KEY, video: env.SHOPSHORTS_MEDIA_PROVIDER === 'higgsfield' || !!env.GEMINI_API_KEY, mediaProvider: env.SHOPSHORTS_MEDIA_PROVIDER === 'higgsfield' ? 'higgsfield' : 'google', voice: !!env.ELEVENLABS_API_KEY, shortsUpload: !!(env.UPLOAD_POST_API_KEY && env.UPLOAD_POST_USER), longUpload: !!env.YOUTUBE_CLIENT_SECRET });
 export function command(bin, args, env, timeout = 600000) {
   return new Promise((resolveP, reject) => {
     const child = spawn(bin, args, { cwd: ROOT, env: { ...process.env, ...env }, stdio: ['ignore', 'pipe', 'pipe'] });
@@ -55,7 +56,7 @@ export async function googleMediaRequest(path, body, env, fetcher) {
   }
   return response.json();
 }
-async function lintProject(job, work, env, publication = false) {
+async function lintProject(job, work, env, publication = false, runCli = cli) {
   // Reuse the atom via its public CLI; chunking preserves the 12-beat contract for longform.
   const contentScenes = [...job.scenes, ...(job.edit?.captions || []).map(c=>({narration:c.text,prompt:'Original caption overlay',duration:Math.max(1,(c.endFrame-c.startFrame)/FPS)}))];
   for (let offset = 0; offset < contentScenes.length; offset += 12) {
@@ -64,7 +65,7 @@ async function lintProject(job, work, env, publication = false) {
     const script = { briefId: job.id, hookType: 'info-tip', title: publication ? job.publication.title : job.title, description, hashtags: [], beats: contentScenes.slice(offset, offset + 12).map((s, i) => ({ index: i, role: i === 0 ? 'hook' : 'body', durationSec: s.duration, narration: s.narration, caption: s.narration, visualPrompt: s.prompt })) };
     const path = join(work, 'lint.json');
     await writeFile(path, JSON.stringify({ brief, script }));
-    const result = await cli('@cak/shopping-shorts', ['lint', '--job', path], env);
+    const result = await runCli('@cak/shopping-shorts', ['lint', '--job', path], env);
     if (result.ok !== true) throw new Error('대본 검증에 실패했습니다. 과장·효능·가짜 경험 표현을 수정하세요.');
   }
 }
@@ -164,7 +165,8 @@ async function renderProject(job, work, env, io) {
   await io.writeAsset(key, await readFile(final), 'video/mp4');
   return { render: { key, ...(verification?{verification,sha256,pipelineVersion:PIPELINE_VERSION}:{}), type: 'video/mp4', createdAt: new Date().toISOString(), duration: frameCount(timeline)/FPS } };
 }
-export async function executeStudioTask(job, env, io, checkpoint, { fetcher = fetch, runCli = cli, runHiggsfield, preflight=productionPreflight } = {}) {
+export async function executeStudioTask(job, env, io, checkpoint, { fetcher = fetch, runCli = cli, runLintCli = cli, runHiggsfield, preflight=productionPreflight } = {}) {
+  assertLocalTask(job);
   const action = job.task.action;
   if(sharedPipeline(job))env={...env,SHOPSHORTS_WHISPER_CACHE:env.SHOPSHORTS_WHISPER_CACHE||join(io.workDir,'whisper-models')};
   if (action === 'scenario') throw new Error('시나리오는 연결한 Codex·Claude 계정으로 다시 요청하세요.');
@@ -172,7 +174,7 @@ export async function executeStudioTask(job, env, io, checkpoint, { fetcher = fe
   const work = join(io.workDir, job.id);
   await mkdir(work, { recursive: true });
   if(sharedPipeline(job)&&['media','narration','render'].includes(action))await preflight(job,env,{command,fetcher});
-  await lintProject(job, work, env, action === 'publish');
+  await lintProject(job, work, env, action === 'publish', runLintCli);
   if(webtoon(job.brief)&&['media','narration','render'].includes(action))await checkWebtoonReview(job);
   if (action === 'narration') return generateNarration(job, work, env, io, checkpoint, { runCli, command });
   if (action === 'media') {
@@ -186,7 +188,10 @@ export async function executeStudioTask(job, env, io, checkpoint, { fetcher = fe
       if (assets[scene.id] || (job.task.sceneIds && !job.task.sceneIds.includes(scene.id))) continue;
       const mediaPrompt=sceneMediaPrompt(job,scene);
       let data, type, providerInfo = {};
-      if(hybrid){
+      if(job.localCinema){
+        const result=await generateLocalScene(job,{...scene,prompt:mediaPrompt},env,work,checkpoint,{fetcher});
+        ({data,type}=result);providerInfo={provider:result.provider,providerJobId:result.providerJobId,generation:result.generation};
+      } else if(hybrid){
         hybrid.merge(assets);
         const duration=Math.max(scene===job.scenes[0]?6:1,Math.ceil(((narrationAsset({...job,assets},scene,normalizeEdit(job).voice)?.duration||scene.duration)+.3)*FPS)/FPS);
         const result=await hybrid.scene(scene,duration);({data,type}=result);providerInfo={provider:result.provider,providerJobId:result.providerJobId,...(result.qualityProfile?{qualityProfile:result.qualityProfile,renderReport:result.renderReport}:{})};

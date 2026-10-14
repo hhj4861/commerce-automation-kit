@@ -1,3 +1,4 @@
+import {localCinemaOptions} from '../public/local-cinema.js';
 import {PIPELINE_VERSION,requireFinalReview,sharedPipeline} from './production-pipeline.js';
 import {TYPOGRAPHY} from '../public/video-typography.js';
 import {architectureDefaults} from '../public/architecture-quality.js';
@@ -121,14 +122,27 @@ export function changeProject(original, action, body) {
   if (busy(job)) fail('현재 작업이 끝난 뒤 수정하세요.', 409);
   if (job.upload) fail('업로드가 접수된 프로젝트는 변경할 수 없습니다. 새 프로젝트를 만드세요.', 409);
   const invalidate = () => { job.approved = false; job.render = null; job.task = null; delete job.productionPlan; delete job.manualTimeline; };
-  if (action === 'scenes') {
+  if(job.localCinema && ['narration','metadata'].includes(action))fail('무료 로컬 모드에서는 유료 음성·메타데이터 생성을 실행하지 않습니다.');
+  if(job.localCinema && action==='edit' && body.voice!=='none')fail('무료 로컬 모드에서는 내레이션 없음을 선택하세요. 직접 만든 음원은 사용할 수 있습니다.');
+  if (action === 'local-cinema') {
+    if(typeof body.enabled!=='boolean')fail('로컬 생성 사용 여부를 선택하세요.');
+    if(body.enabled && ['webtoon','hybrid','animation'].includes(job.brief.productionStyle))fail('로컬 시네마는 일반·시네마틱 프로젝트에서 선택하세요.');
+    if(body.enabled && job.scenes.some(s=>s.motion))fail('모션 템플릿을 해제한 뒤 로컬 시네마를 선택하세요.');
+    const next=body.enabled?localCinemaOptions(body.options||{}):null;
+    if(JSON.stringify(next)!==JSON.stringify(job.localCinema||null)){
+      for(const scene of job.scenes)if(job.assets[scene.id]?.source==='ai')delete job.assets[scene.id];
+      if(next){job.localCinema=next;job.voicePreference='none';}else delete job.localCinema;
+      job.edit=null;invalidate();
+    }
+  } else if (action === 'scenes') {
     const scenes = validateScenes(body.scenes,{animationStyle:animated(job.brief)});
     if (scenes.reduce((sum, s) => sum + s.duration, 0) > (job.brief.format === 'short' ? 180 : 600)) fail('장면의 전체 길이가 형식의 최대 길이를 넘었습니다.');
+    if(job.localCinema && scenes.some(s=>s.motion))fail('로컬 시네마에서는 모션 템플릿을 함께 사용할 수 없습니다.');
     if(animated(job.brief) && scenes.some(s=>s.kind!=='video'||!s.animation))fail('애니메이션 장면은 영상과 장면별 동작 구성이 필요합니다.');
     if(webtoon(job.brief))webtoonScenes(scenes);
     hybridPlan({...job,scenes});
     const old = Object.fromEntries(job.scenes.map(s => [s.id, s]));
-    for (const s of scenes) if (old[s.id]?.prompt !== s.prompt || old[s.id]?.kind !== s.kind || old[s.id]?.camera !== s.camera || old[s.id]?.shot !== s.shot || JSON.stringify(old[s.id]?.animation)!==JSON.stringify(s.animation) || JSON.stringify(old[s.id]?.hybrid)!==JSON.stringify(s.hybrid) || JSON.stringify(old[s.id]?.webtoon)!==JSON.stringify(s.webtoon) || JSON.stringify(old[s.id]?.motion)!==JSON.stringify(s.motion) || JSON.stringify(old[s.id]?.visualDirection)!==JSON.stringify(s.visualDirection) || ((animated(job.brief)||webtoon(job.brief)||s.motion)&&old[s.id]?.duration!==s.duration) || (old[s.id]?.narration !== s.narration && job.assets[s.id]?.source === 'ai')) delete job.assets[s.id];
+    for (const s of scenes) if (old[s.id]?.prompt !== s.prompt || old[s.id]?.kind !== s.kind || old[s.id]?.camera !== s.camera || old[s.id]?.shot !== s.shot || JSON.stringify(old[s.id]?.animation)!==JSON.stringify(s.animation) || JSON.stringify(old[s.id]?.hybrid)!==JSON.stringify(s.hybrid) || JSON.stringify(old[s.id]?.webtoon)!==JSON.stringify(s.webtoon) || JSON.stringify(old[s.id]?.motion)!==JSON.stringify(s.motion) || JSON.stringify(old[s.id]?.visualDirection)!==JSON.stringify(s.visualDirection) || ((job.localCinema||animated(job.brief)||webtoon(job.brief)||s.motion)&&old[s.id]?.duration!==s.duration) || (old[s.id]?.narration !== s.narration && job.assets[s.id]?.source === 'ai')) delete job.assets[s.id];
     for (const id of Object.keys(old)) if (!scenes.some(s => s.id === id)) delete job.assets[id];
     if(job.edit?.voice!==undefined)job.voicePreference=job.edit.voice;
     job.scenes = scenes; job.title = String(body.title || job.title).slice(0, 100); job.edit = null; invalidate();
