@@ -1,5 +1,6 @@
 import { busy, changeProject, fail } from './studio.js';
 import { llmOwner } from './llm-account-api.js';
+import { readScenarioRejection } from './scenario-rejection.js';
 import { scenarioResult } from './studio-scenario.js';
 
 const changed = project => ({ ...project, revision: project.revision + 1, updatedAt: new Date().toISOString() });
@@ -56,12 +57,16 @@ export async function syncScenario(store, project, call, now = Date.now()) {
   const acknowledge = async () => {
     try { await call(task.accountOwner, 'scenario-ack', input); } catch { /* Retry on the next read. */ }
   };
-  if (!busy(project)) { await acknowledge(); return project; }
-  let job;
-  try { job = (await call(task.accountOwner, 'scenario-status', input)).job; }
+  const legacyFailure=task.state==='failed' && task.reviewAvailable===undefined;
+  if (!busy(project) && !legacyFailure) { await acknowledge(); return project; }
+  let job, received=false;
+  try { const status=await call(task.accountOwner, 'scenario-status', input); if(status&&!status.error&&Object.hasOwn(status,'job')){job=status.job;received=true;} }
   catch { /* Temporary broker outage must not discard a result. */ }
   let next = structuredClone(project);
-  if (job && job.id === task.id && job.projectId === project.id) {
+  if(legacyFailure&&!received)return project;
+  const matches=job && job.id===task.id && job.projectId===project.id;
+  if(legacyFailure)next.task.reviewAvailable=!!(matches&&job.state==='failed'&&await readScenarioRejection(job.rejection));
+  else if (matches) {
     if (job.state === 'done') {
       try {
         Object.assign(next, scenarioResult(job.result, project.brief), { assets: {}, edit: null, approved: false, render: null });
@@ -71,6 +76,7 @@ export async function syncScenario(store, project, call, now = Date.now()) {
       }
     } else if (job.state === 'failed') {
       next.task.state = 'failed'; next.task.error = job.error || '시나리오 생성에 실패했습니다. 다시 시도하세요.';
+      next.task.reviewAvailable=!!await readScenarioRejection(job.rejection);
     } else if (job.state === 'running') {next.task.state = 'running';if(['research','scenario','review','revision'].includes(job.phase))next.task.phase=job.phase;}
   }
   if (busy(next) && now >= task.deadline) {
