@@ -2,7 +2,7 @@
 
 - 목표: 설정에서 HF 읽기 토큰 저장·삭제·상태 조회, 재입력 없는 생성과 연결 오류 진단. 후속 요청으로 Kandinsky UI/UX 개선 포함.
 - 담당: Codex 단독, worker/Claude OFF. 기준 main 48d1dfe. 구현 worktree kandinsky-saved-token.
-- 현재: 사용자 승인으로 PR238 main 머지 및 credential-broker 배포 완료. Pages 운영 승격 PR239는 별도 머지 승인 대기.
+- 현재: 사용자 승인으로 PR238 main 머지, PR239 운영 브랜치 머지, credential-broker 및 Pages 운영 배포 완료. 실제 HF 생성은 사용자 토큰으로 확인 필요.
 
 ## 설계
 - 기존 credential-broker의 AES-256-GCM + Secrets Store VAULT_KEY + D1 credential_vault를 재사용한다. 별도 키/테이블/인프라 생성 없음.
@@ -50,3 +50,12 @@
 - 운영 설정을 iCloud 파일로 저장하려던 요청은 자동 승인 검사에서 거부돼 실행하지 않았다. 이후 설정/키를 파일로 쓰지 않고 메모리에서만 처리했다. 빌드 코드·시험 로그와 운영 설정을 구분했다.
 - 운영 broker 실측: 무인증 `/runner/huggingface` 요청 401, 기존 서명 키로 합성 owner의 읽기 전용 status 조회 성공, configured=false/job 없음/token 필드 없음. HF 토큰 저장·생성·기존 사용자 데이터 수정 없음.
 - Pages는 아직 기존 `9eec2068-8793-4b20-ba3f-93cbe9190b66`, 소스 74d66ac. PR239 머지와 Pages 실배포 확인이 남았다. 로컬 제작 워커 및 사용자 토큰으로 실제 HF 생성은 이번 단계에서 변경/검증하지 않았다.
+
+## 2026-10-14 PR239 머지와 Pages 운영 반영
+- 사용자의 추가 명시 승인 후 PR239를 `1d2faf06f8d41b4387b78ae3cc922b1371788309`로 머지했다. 승인 HEAD 692cd5b의 필수 검사 2개 성공 확인. 머지 후 앱/broker 코드가 검증된 HEAD와 동일함을 확인했다.
+- 자동 배포 [38535911560](https://github.com/hhj4861/commerce-automation-kit/actions/runs/38535911560)은 credential 조회 503으로 실패했다. 기존 CI 전용 Cloudflare 키 부재는 미해결이며 자동 배포 성공으로 기록하지 않는다.
+- 기존 Wrangler 인증을 사용해 동일 머지 커밋을 공식 Pages CLI로 수동 배포했다. production 배포 ID `e5182bc4-fbea-4f98-a346-9819c9d0e2c6`, 2026-10-14 08:34:56 UTC 성공. Cloudflare canonical deployment의 source SHA가 1d2faf0와 일치한다.
+- 운영 URL: https://shopshorts-dash.pages.dev/kandinsky / 설정: https://shopshorts-dash.pages.dev/settings . Pages Functions 컴파일 성공.
+- 운영 HTTP 검증: 비인증 화면 302→login, 비인증 계정 API 401. 인증 후 Kandinsky HTML/JS/CSS와 설정 모듈 HTTP200 및 승인 소스와 내용 일치. 설정 화면에 HF 저장 UI 포함. 계정 API HTTP200, private/no-store, token 필드 없음. 운영자 계정은 configured=false, job 없음.
+- 검증 코드에서 없는 `/auth/session`을 조회해 HTML JSON 파싱 오류가 있었고 실제 구현 경로 `/auth/status`로 바로잡았다. 사용자 토큰 입력·영상 생성은 하지 않았다. 로컬 제작 워커와 58043의 시험 서버는 이 Pages 배포가 갱신하지 않는다.
+- 수정한 인증 조회 `/auth/status`는 HTTP200/authenticated=true, `/api/studio/config`도 HTTP200. 기존 cloud-worker heartbeat `2026-10-14T08:36:35.289Z` 확인. capability 표시는 개별 제공자의 실제 생성 성공 증거로 세지 않는다.
