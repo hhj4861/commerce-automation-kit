@@ -23,14 +23,20 @@ export function providerError(value) {
 }
 export class KandinskyClient {
   constructor({token = '', fetchImpl = (...args) => globalThis.fetch(...args), signal} = {}) {
-    this.token = token.trim(); this.fetch = fetchImpl; this.signal = signal;
+    // Native Workers/browser fetch rejects a client instance as its receiver.
+    this.token = token.trim(); this.fetch = (...args) => fetchImpl(...args); this.signal = signal;
     if (this.token && !/^hf_[A-Za-z0-9]{10,200}$/.test(this.token)) throw new KandinskyError('Hugging Face 읽기 토큰 형식을 확인하세요.');
   }
   async request(url, init = {}, timeout = 30000) {
     const headers = new Headers(init.headers);
     if (this.token) headers.set('authorization', `Bearer ${this.token}`);
     const signal = this.signal ? AbortSignal.any([this.signal, AbortSignal.timeout(timeout)]) : AbortSignal.timeout(timeout);
-    const response = await this.fetch(url, {...init, headers, signal, credentials: 'omit', redirect: 'error', cache: 'no-store'});
+    // Workers does not implement redirect:error. Never forward tokens to a redirect target.
+    const response = await this.fetch(url, {...init, headers, signal, credentials: 'omit', redirect: 'manual', cache: 'no-store'});
+    if ((response.status >= 300 && response.status < 400) || response.type === 'opaqueredirect') {
+      await response.body?.cancel().catch(() => {});
+      throw new KandinskyError('공식 데모가 다른 주소로 연결을 요청해 중단했습니다. 토큰 보호를 위해 자동 이동하지 않습니다.');
+    }
     if (!response.ok) {
       const body = (await response.text()).slice(0, 2000);
       throw new KandinskyError(providerError(`${response.status} ${body}`));

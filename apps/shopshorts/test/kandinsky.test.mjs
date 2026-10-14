@@ -17,7 +17,7 @@ test('input validation rejects empty, oversized, fractional and negative seed', 
 test('official API request, image upload, receipt and chunked UTF8 SSE result', async () => {
   const calls=[];let intent=false;
   const c=new KandinskyClient({fetchImpl:async(u,o)=>{
-    calls.push([u,o]);assert.equal(o.credentials,'omit');assert.equal(o.redirect,'error');
+    calls.push([u,o]);assert.equal(o.credentials,'omit');assert.equal(o.redirect,'manual');
     if(u.endsWith('/info'))return json(schema);
     if(u.endsWith('/upload')) {assert(o.body instanceof FormData);return json(['/tmp/upload/cat.png']);}
     if(u.endsWith('/call/generate')) {assert(intent);assert.deepEqual(JSON.parse(o.body).data,['고양이',false,42,{path:'/tmp/upload/cat.png',meta:{_type:'gradio.FileData'}}]);return json({event_id:'abc123'});}
@@ -34,6 +34,23 @@ test('only verified non-billable personal accounts can submit; no provider secre
   }
   const c=new KandinskyClient({token:'hf_12345678901',fetchImpl:async(u,o)=>{assert.equal(u,'https://huggingface.co/api/whoami-v2');assert.equal(o.headers.get('authorization'),'Bearer hf_12345678901');return json({type:'user',isPro:false,canPay:false,orgs:[],name:'free'});}});
   assert.deepEqual(await c.checkFreeAccount(),{anonymous:false,name:'free'});
+});
+test('injected native fetch is invoked without a client receiver', async () => {
+  const c=new KandinskyClient({fetchImpl:async function(){assert.equal(this,undefined);return json({ok:true});}});
+  assert.deepEqual(await (await c.request(`${HOST}/gradio_api/info`)).json(),{ok:true});
+});
+test('redirect responses are closed without following or exposing their body/location', async () => {
+  for(const status of [301,302,303,307,308]) {
+    let calls=0,cancelled=false;
+    const c=new KandinskyClient({token:'hf_12345678901',fetchImpl:async(u,init)=>{
+      calls++;assert.equal(init.redirect,'manual');
+      return new Response(new ReadableStream({cancel(){cancelled=true;}}),{status,headers:{location:'https://untrusted.test/private'}});
+    }});
+    await assert.rejects(()=>c.checkFreeAccount(),error=>/자동 이동하지 않습니다/.test(error.message)&&!error.message.includes('untrusted'));
+    assert.equal(calls,1);assert.equal(cancelled,true);
+  }
+  const c=new KandinskyClient({fetchImpl:async()=>({status:0,type:'opaqueredirect'})});
+  await assert.rejects(()=>c.checkSchema(),/자동 이동하지 않습니다/);
 });
 test('schema drift blocks upload and generation', async () => {
   let calls=0;const c=new KandinskyClient({fetchImpl:async()=>{calls++;return json({named_endpoints:{}});}});
