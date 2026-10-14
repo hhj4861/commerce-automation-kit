@@ -1,6 +1,8 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { studyLanguages, type StudyLanguage } from "@/lib/v2";
+import { MusicVideoCollection } from "./music-video-collection";
+import type { MusicCollectedVideo } from "@/lib/music-collection";
 import { MusicTimingEditor } from "./music-timing-editor";
 import type { OwnedMusic } from "@/lib/owned-music";
 async function api(body?: unknown) {
@@ -15,12 +17,15 @@ const labels: Record<OwnedMusic["status"], string> = { draft: "원문 등록됨"
 const blank = { title: "", artist: "", videoId: "", source: "", rights: "", language: "ja" as StudyLanguage, rightsConfirmed: false };
 export function MusicAdmin() {
   const [songs, setSongs] = useState<OwnedMusic[] | null>(null), [form, setForm] = useState(blank);
+  const [collection, setCollection] = useState<MusicCollectedVideo[] | null>(null), [youtube, setYoutube] = useState({ search: false, captions: false });
+  const [adding, setAdding] = useState(false);
+  const editor = useRef<HTMLDetailsElement>(null);
   const [now, setNow] = useState(() => Date.now());
   const [editing, setEditing] = useState<OwnedMusic | null>(null);
   const [busy, setBusy] = useState(false), [error, setError] = useState(""), [notice, setNotice] = useState("");
   const pending = useRef(false), fileEpoch = useRef(0);
-  const load = useCallback(async () => { const data = await api(); setSongs(data.songs); setNow(Date.now()); }, []);
-  useEffect(() => { let live = true; void api().then(data => { if (live) { setSongs(data.songs); setNow(Date.now()); } }).catch(e => { if (live) setError(e.message); }); return () => { live = false; }; }, []);
+  const load = useCallback(async () => { const data = await api(); setSongs(data.songs); setCollection(data.collection); setYoutube(data.youtube); setNow(Date.now()); }, []);
+  useEffect(() => { let live = true; void api().then(data => { if (live) { setSongs(data.songs); setCollection(data.collection); setYoutube(data.youtube); setNow(Date.now()); } }).catch(e => { if (live) setError(e.message); }); return () => { live = false; }; }, []);
   const active = songs?.some(s => ["generating", "evaluating"].includes(s.status) && (s.job?.until ?? 0) > now);
   useEffect(() => {
     if (!active && !busy) return;
@@ -34,7 +39,7 @@ export function MusicAdmin() {
     catch (e) { setNotice(""); setError(e instanceof Error ? e.message : "처리하지 못했어요. 목록에서 상태를 확인해 주세요."); try { await load(); } catch {} return false; }
     finally { pending.current = false; setBusy(false); }
   }
-  function reset() { fileEpoch.current++; setEditing(null); setForm(blank); }
+  function reset() { fileEpoch.current++; setEditing(null); setAdding(false); setForm(blank); }
   function videoId(value: string) {
     try { const url = new URL(value); return url.hostname === "youtu.be" ? url.pathname.slice(1) : ["youtube.com", "www.youtube.com", "m.youtube.com"].includes(url.hostname) ? url.searchParams.get("v") ?? value : value; }
     catch { return value; }
@@ -42,10 +47,19 @@ export function MusicAdmin() {
   return <section className="music-admin" aria-label="음악 자료 관리">
     <div className="la-heading"><div><h2>좋아하는 노래가, 나만의 한마디로.</h2><p>원문은 관리자가 한 번만 연결해요. 학습자는 곡을 고르면 바로 듣고, 단어와 회화를 연습할 수 있어요.</p></div>
       <button onClick={() => void load().catch(e => setError(e.message))}>음악 목록 새로고침</button></div>
-    <ol className="hm-song-steps"><li>원문 등록</li><li>AI 자료·JEV 평가</li><li>검수 후 앱 게시</li></ol>
+    <ol className="hm-song-steps"><li>영상 수집·자막 연결</li><li>원문 등록</li><li>AI 자료·JEV 평가</li><li>검수 후 앱 게시</li></ol>
     {error && <p role="alert" className="hm-alert">{error}</p>}
     {notice && <p role="status" className="hm-notice">{notice}</p>}
-    <details className="hm-panel" open={!songs?.length || !!editing}><summary>{editing ? `곡 수정 · ${editing.title}` : "새 곡 등록"}</summary>
+    <MusicVideoCollection items={collection} youtube={youtube} songs={songs ?? []} disabled={busy} onReload={load} onUse={item => {
+      if ((form.title || form.source) && !window.confirm("작성 중인 등록 폼을 선택한 영상의 자료로 바꿀까요?")) return;
+      fileEpoch.current++; setError("");
+      const existing = songs?.find(s => s.videoId === item.video.id && s.language === item.language);
+      setEditing(existing ?? null); setAdding(true);
+      setForm(existing ? { ...existing, rightsConfirmed: false } : { ...blank, title: item.video.title, videoId: item.video.id, language: item.language, source: item.source ?? "" });
+      setNotice(existing ? "기존 학습 원문을 열었어요. 수집함의 새 자막을 자동으로 덮어쓰지 않아요." : "영상과 자막을 불러왔어요. 곡 제목·아티스트·사용권을 확인하고 원문을 등록해 주세요.");
+      requestAnimationFrame(() => editor.current?.scrollIntoView({ behavior: "smooth", block: "start" }));
+    }} />
+    <details ref={editor} className="hm-panel" open={!songs?.length || !!editing || adding}><summary>{editing ? `곡 수정 · ${editing.title}` : "새 곡 등록"}</summary>
       <form onSubmit={async e => { e.preventDefault(); if (await work({ action: "save", ...form, ...(editing ? { id: editing.id, revision: editing.revision } : {}) }, "원문을 보관했어요. 곡 카드에서 ‘AI 자료 만들기’를 눌러 주세요.")) reset(); }}>
         <fieldset disabled={busy} className="music-fields">
           <div className="hm-grid"><label>곡 제목<input required maxLength={100} value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} /></label>
