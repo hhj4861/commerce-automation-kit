@@ -16,6 +16,7 @@ export function mountAiAccount({document=globalThis.document, window=globalThis.
     const connected=status?.connected===true, pending=status?.job?.kind==='connect'&&['queued','running'].includes(status.job.state);
     const provider=status?.provider==='claude'?'Claude':status?.provider==='codex'?'Codex':'AI';
     const offline=status?.available===false;
+    const disconnectedReason=!connected&&!pending&&status?.job?.state==='failed'?status.job.error:'';
     const label=error?'AI · 확인 필요':loading&&!status?'AI 확인 중…':pending?'AI · 연결 중':connected?`${provider} · ${offline?'일시 중단':'연결됨'}`:'AI 계정 연결';
     for (const entry of entries) {entry.textContent=label;entry.disabled=managing||(loading&&!status);entry.dataset.state=error?'error':connected?'connected':'disconnected';}
     panel.hidden=dismissed||(!error&&!pending&&connected&&!offline&&!justConnected)||(loading&&!status);
@@ -27,8 +28,8 @@ export function mountAiAccount({document=globalThis.document, window=globalThis.
     el('connect').disabled=managing||loading;
     el('retry').hidden=!error&&!offline;
     el('retry').disabled=loading||managing;
-    el('error').hidden=!error;
-    el('error').textContent=error;
+    el('error').hidden=!error&&!disconnectedReason;
+    el('error').textContent=error||disconnectedReason||'';
   }
   async function refresh() {
     const current=++revision;loading=true;render();

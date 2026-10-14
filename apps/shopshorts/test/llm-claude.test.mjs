@@ -121,7 +121,8 @@ test('Claude refresh persistence failure retains private cache without returning
 test('CLI failures expose a fixed actionable reason, never raw output or credentials', async () => {
   for (const [diagnostic, code] of [
     ['authentication_error: token expired', 'CLAUDE_AUTH_FAILED'],
-    ['rate_limit_error: usage limit reached', 'CLAUDE_RATE_LIMITED'],
+    ['rate_limit_error: usage limit reached', 'CLAUDE_QUOTA_EXHAUSTED'],
+    ['429 rate_limit_error', 'CLAUDE_RATE_LIMITED'],
     ['keychain: user interaction is not allowed', 'CLAUDE_KEYCHAIN_FAILED'],
     ['fetch failed ECONNRESET', 'CLAUDE_NETWORK_FAILED'],
     ['unrecognized private diagnostic', 'CLAUDE_REQUEST_FAILED'],

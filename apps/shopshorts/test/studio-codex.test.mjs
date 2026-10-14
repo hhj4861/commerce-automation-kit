@@ -4,7 +4,7 @@ import { EventEmitter } from 'node:events';
 import { PassThrough, Writable } from 'node:stream';
 import { existsSync } from 'node:fs';
 import { codexArgs, codexEnvironment, disabledMcpArgs, parseCodexEvents, createCodexGenerator } from '../studio-codex.mjs';
-import { accountFailureCode, accountFailureMessage, classifyCodexFailure } from '../lib/llm-account-errors.js';
+import { accountFailureCode, accountFailureMessage, classifyCodexFailure, classifyClaudeFailure, shouldDisconnectAccount } from '../lib/llm-account-errors.js';
 import { openAccountServer } from '../studio-account-codex.mjs';
 
 const events=(search=true)=>[
@@ -45,7 +45,7 @@ test('requires completed turn, uses actual search events, and rejects malformed 
 });
 
 test('Codex failures retain actionable categories without exposing credential-bearing diagnostics',async()=>{
- const cases=[['invalid_grant refresh_token_reused','CODEX_AUTH_FAILED'],['usage_limit_reached 429','CODEX_RATE_LIMITED'],['stream disconnected: error sending request','CODEX_NETWORK_FAILED'],['unexpected argument --old-option','CODEX_RUNTIME_FAILED'],['request timed out','CODEX_TIMEOUT'],['unrecognized provider failure','CODEX_REQUEST_FAILED']];
+ const cases=[['invalid_grant refresh_token_reused','CODEX_AUTH_FAILED'],['usage_limit_reached 429','CODEX_QUOTA_EXHAUSTED'],['rate limit 429','CODEX_RATE_LIMITED'],['stream disconnected: error sending request','CODEX_NETWORK_FAILED'],['unexpected argument --old-option','CODEX_RUNTIME_FAILED'],['request timed out','CODEX_TIMEOUT'],['unrecognized provider failure','CODEX_REQUEST_FAILED']];
  for(const [diagnostic,code] of cases){
   const f=fixture(),generate=createCodexGenerator({prepare:async()=>[],spawnProcess:f.spawn});
   const pending=generate('prompt');await f.ready();
@@ -53,7 +53,7 @@ test('Codex failures retain actionable categories without exposing credential-be
   await assert.rejects(pending,error=>{
    assert.equal(accountFailureCode(error),code);
    assert.doesNotMatch(accountFailureMessage('codex',error),/private-secret|auth\.example/);
-   if(code!=='CODEX_AUTH_FAILED')assert.doesNotMatch(error.message,/다시 연결/);
+   if(!['CODEX_AUTH_FAILED','CODEX_QUOTA_EXHAUSTED'].includes(code))assert.doesNotMatch(error.message,/다시 연결/);
    return true;
   });
  }
@@ -64,7 +64,7 @@ test('structured turn errors win over generic stderr and missing executable is d
  const f=fixture(),generate=createCodexGenerator({prepare:async()=>[],spawnProcess:f.spawn});
  const pending=generate('prompt');await f.ready();f.diagnostic('generic failure');
  f.finish(JSON.stringify({type:'turn.failed',error:{message:'usage_limit_reached private-token'}}),1);
- await assert.rejects(pending,error=>error.code==='CODEX_RATE_LIMITED'&&!error.message.includes('private-token'));
+ await assert.rejects(pending,error=>error.code==='CODEX_QUOTA_EXHAUSTED'&&!error.message.includes('private-token'));
  const missing=fixture(),run=createCodexGenerator({prepare:async()=>[],spawnProcess:missing.spawn});
  const absent=run('prompt');await missing.ready();missing.failSpawn('ENOENT');
  await assert.rejects(absent,error=>error.code==='CODEX_NOT_INSTALLED'&&error.status===503);
@@ -120,4 +120,24 @@ test('shared discovery draft disables native web search in actual spawn argument
  const pending=generate('server evidence only',{draftOnly:true});await f.ready();
  assert.ok(f.args.includes('web_search="disabled"'));assert.ok(!f.args.includes('web_search="live"'));
  f.finish(events(false));assert.equal((await pending).searched,false);
+});
+
+
+test('only explicit subscription exhaustion disconnects; generic throttles and unrelated limits do not',()=>{
+ for(const [provider,classify] of [['codex',classifyCodexFailure],['claude',classifyClaudeFailure]]){
+  const prefix=provider.toUpperCase();
+  for(const raw of ['usage_limit_reached','usage limit reached','You have hit your limit','weekly limit exceeded']){
+   const code=classify(raw);assert.equal(code,`${prefix}_QUOTA_EXHAUSTED`);assert.equal(shouldDisconnectAccount(provider,{code}),true);
+  }
+  for(const raw of ['HTTP 429','rate_limit_exceeded','too many requests']){
+   const code=classify(raw);assert.equal(code,`${prefix}_RATE_LIMITED`);assert.equal(shouldDisconnectAccount(provider,{code}),false);
+   assert.doesNotMatch(accountFailureMessage(provider,{code}),/구독 사용 한도|연결을 해제/);
+  }
+  for(const raw of ['context length exceeded maximum token limit','output exceeded size limit','model 429-not-found']){
+   assert.notEqual(classify(raw),`${prefix}_QUOTA_EXHAUSTED`);
+  }
+  assert.equal(shouldDisconnectAccount(provider,{code:`${prefix}_AUTH_FAILED`}),true);
+  assert.equal(shouldDisconnectAccount(provider,{code:'UNKNOWN'}),false);
+ }
+ assert.equal(shouldDisconnectAccount('codex',{code:'CLAUDE_QUOTA_EXHAUSTED'}),false);
 });
