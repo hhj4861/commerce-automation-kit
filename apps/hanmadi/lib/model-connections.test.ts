@@ -14,7 +14,7 @@ test("retired selections fail before any model, account or training request", as
   let calls = 0;
   globalThis.fetch = async () => { calls++; throw new Error("unexpected network call"); };
   try {
-    for (const selection of ["a".repeat(32) + ":gpt-test", "b".repeat(32) + ":claude-test", "", "unknown"]) {
+    for (const selection of ["codex-personal", "a".repeat(32) + ":gpt-test", "b".repeat(32) + ":claude-test", "", "unknown"]) {
       const retired = (e: unknown) => e instanceof ConversationError && e.status === 409 && e.message.includes("기본 Gemini");
       assert.throws(() => assertDefaultModel(selection), retired);
       await assert.rejects(studyCompletion("test", [{ role: "user", content: "hello" }], selection,
