@@ -3,6 +3,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync, renameSync } from '
 import { resolve, join, dirname, extname, sep } from 'node:path';
 import { accountBroker } from './studio-account-worker.mjs';
 import { llmAccountApi } from './lib/llm-account-api.js';
+import { kandinskyApi } from './lib/kandinsky-service.js';
 import { studioApi } from './lib/studio-api.js';
 import { executeStudioTask, capabilities } from './studio-runner.mjs';
 import {createAudioAccountReader} from './lib/audio-account.js';
@@ -88,6 +89,15 @@ export async function handleLocalStudio(req, res, origin, env, store) {
   res.once('close', abort);
   const request = new Request(new URL(req.url, origin), { method: req.method, headers: req.headers, signal: controller.signal, ...(['GET', 'HEAD'].includes(req.method) ? {} : { body: Buffer.concat(chunks) }) });
   try {
+    const kandinskyResponse=await kandinskyApi(request,env,(owner,operation,input)=>accountBroker(env)('/runner/huggingface',{owner,operation,input}));
+    if(kandinskyResponse){
+      res.writeHead(kandinskyResponse.status,Object.fromEntries(kandinskyResponse.headers));
+      for await(const chunk of kandinskyResponse.body || []) {
+        if(res.destroyed)break;
+        if(!res.write(Buffer.from(chunk)))await new Promise(resolve=>{const done=()=>{res.off('drain',done);res.off('close',done);resolve();};res.once('drain',done);res.once('close',done);});
+      }
+      res.end();return;
+    }
     const result = await llmAccountApi(request, env, (owner, operation, input) => accountBroker(env)('/runner/account-action', { owner, operation, input })) || await studioApi(request, env, store, { recommendationAccounts: true, scenarioAccounts: (owner, operation, input) => accountBroker(env)('/runner/account-action', { owner, operation, input }) });
     if (!res.destroyed) await sendResponse(res, result);
   } finally { res.off('close', abort); }
