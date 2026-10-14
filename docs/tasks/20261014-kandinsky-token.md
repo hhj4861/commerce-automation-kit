@@ -33,3 +33,10 @@
 - 기존 Shopshorts 팔레트 유지: canvas #f7f7f4, white #ffffff, ink #242622, mint #277e64, line #e5e6df, error #b54b42. Noto Sans KR/DM Sans 기존 서체.
 - 상단 계정 상태 → 왼쪽 입력/예시/옵션 → 오른쪽 미리보기/진행/다운로드. 좁은 화면은 단일 열, 왼쪽 정렬. 장식보다 장면 작성과 결과 확인에 공간을 배분.
 - 일반 카드 나열을 피하고, 미리보기 한 곳에 시각적 비중을 둠. 임의 진행률은 표시하지 않으며 실제 상태에 따라 안내. 입력 덮어쓰기 전 확인, 빈 입력/미연결/기존 접수 상태에서는 생성 비활성화.
+
+## 제출 결과와 재현
+- 구현 커밋: 9ab0dd28e0c563c449ffdcb43730e3e5c76e0b15. 작업 브랜치 정상 push, PR https://github.com/hhj4861/commerce-automation-kit/pull/238 (OPEN).
+- GitHub Platform GitOps verification 및 Shared topic discovery/contract 성공. 운영은 미반영. 다음은 사용자 PR 머지/배포 승인 후 broker→Pages 순서 적용과 실제 HF 연결 확인.
+- 이 변경부터 kandinsky-browser.mjs는 외부 브라우저 제어 스크립트가 아니라 로컬 fixture 서버다. 앞선 20261014-kandinsky.md의 PLAYWRIGHT_ENTRY/CHROME_PATH 절차는 이전 버전 기록이다.
+- 브라우저 재현: KANDINSKY_TEST_DIR에 시험 MP4 fixture.mp4를 준비하고 KANDINSKY_TEST_PORT=58043 node apps/shopshorts/test/kandinsky-browser.mjs 실행. 출력 /test/login으로 진입하여 합성 토큰 hf_SyntheticFixture12345만 입력. 실제 토큰/외부 HF 호출 없음. 종료 시 메모리 상태는 사라짐.
+- 최종 관련 시험 로그: tests-final.log (124 pass, 0 fail, 0 skip). Pages 빌드 pages-build.log, broker dry-run broker-build.log.
