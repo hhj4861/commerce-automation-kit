@@ -14,3 +14,10 @@
 - 시험 서버를 처음 만들 때 모듈 상수까지 Worker entrypoint로 합쳐 런타임 시작이 실패했다. 실제 배포처럼 클라이언트와 entrypoint를 별도 모듈로 나눈 후 위 결과 확인. 실행 실패를 시험 통과로 세지 않았다.
 - Wrangler 4.143.0 Pages Functions 빌드 성공. 로그는 공용 iCloud 작업 루트의 `shopshorts/kandinsky-token-20261014/runtime-fix-{tests,workerd,build}.log`.
 - 운영/사용자 계정 값 변경 없음. PR 승인·배포 후 사용자가 저장/생성을 재확인해야 실제 HF 성공 여부를 알 수 있다. 계정 저장 버튼 자체가 오류로 끝났던 경우에는 기존 값이 저장되지 않았을 수 있으므로 재등록 불필요를 단정하지 않는다.
+
+## 사용자 승인 후 운영 적용
+- 수정 PR243 → main `cb28f2e8326df102f4ce444c6d8779c31d9a6a89`, 배포 PR244 → deploy/shopshorts `ab77a7a2cab43ebb2de9778421fcd911373b52c2` 머지 완료. 각각 승인 HEAD의 필수 검사 성공 확인. 운영 머지 커밋과 시험한 소스가 동일하다.
+- 자동 배포 [38570102849](https://github.com/hhj4861/commerce-automation-kit/actions/runs/38570102849)는 기존 credential 조회 503으로 실패. CI 키/권한을 임의 변경하지 않고 같은 SHA를 기존 Wrangler 인증으로 수동 배포했다.
+- Pages production 배포 `398dba76-fa09-4162-900d-c87f81e2dd45`, canonical deployment SHA ab77a7a 및 success 확인. https://shopshorts-dash.pages.dev/kandinsky 에 반영됐다. broker 코드/데이터 및 로컬 제작 워커는 이 배포에서 변경하지 않았다.
+- 운영 실측: 인증된 kandinsky-api.js 내용이 승인 소스와 일치. 명백한 합성 무효 HF 토큰으로 계정 저장의 사전 검증을 요청하자 기존 TypeError 연결 오류 대신 Hugging Face 권한 오류를 반환했다. 실제 HF 인증 서버와 HTTP 왕복한 증거이며 실제 사용자 토큰/영상 생성은 사용하지 않았다.
+- 시험 전후 계정 status 메타데이터 완전 동일, token 필드 없음, 무인증 API 401 확인. 기존 토큰 저장값을 변경하거나 삭제하지 않았다. 실제 사용자 계정의 GPU 한도·영상 생성 성공은 별도 미검증이다.
