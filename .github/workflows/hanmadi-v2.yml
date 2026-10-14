@@ -49,6 +49,9 @@ jobs:
       - run: npm run test:music
         env:
           HANMADI_E2E_ARTIFACTS: ${{ runner.temp }}/hanmadi-music
+      - run: npm run test:owned-music
+        env:
+          HANMADI_E2E_ARTIFACTS: ${{ runner.temp }}/hanmadi-owned-music
       - run: npm run test:diagnostics
         env:
           HANMADI_E2E_SCREENSHOTS: ${{ runner.temp }}/hanmadi-diagnostics
@@ -66,4 +69,7 @@ jobs:
             ${{ runner.temp }}/hanmadi-vocabulary/result.json
             ${{ runner.temp }}/hanmadi-music/*.png
             ${{ runner.temp }}/hanmadi-music/result.json
+            ${{ runner.temp }}/hanmadi-owned-music/*.png
+            ${{ runner.temp }}/hanmadi-owned-music/result.json
+            ${{ runner.temp }}/hanmadi-owned-music/server.log
           retention-days: 7

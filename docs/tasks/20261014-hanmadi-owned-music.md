@@ -21,3 +21,5 @@
 - 로컬 산출물: `/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/hanmadi-owned-music-20261014/`. Next dev가 생성한 AGENTS/CLAUDE 파일은 기존 소스가 아니며 서버 종료 후 본인 생성분만 제거.
 - JEV 의미 비교는 게시한 음악·교재 표현 중 최대 120개를 요청에 포함하며, 동일 문장 비교는 수집한 전체 참조에서 확인. 신규 자료의 모든 의미 중복을 보장하는 기능은 아님.
 - 실모델 생성 품질·실제 Pretender 내용·운영 배포는 이번 fixture 검증의 범위가 아님. 별도 검수·머지 및 운영 승격 필요.
+
+- PR #225: https://github.com/hhj4861/commerce-automation-kit/pull/225. 신규 음악 E2E를 기존 Hanmadi CI에 포함하고 runner 임시 폴더의 검증 산출물을 업로드하도록 연결. 로컬은 설치된 Chrome, CI는 Playwright Chromium을 사용. 운영 미반영.

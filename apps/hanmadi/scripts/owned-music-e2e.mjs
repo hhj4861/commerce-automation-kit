@@ -48,7 +48,7 @@ try {
     if (i >= 120 || app.exitCode !== null) throw new Error('Test server did not start');
     await new Promise(r => setTimeout(r, 500));
   }
-  browser = await chromium.launch({ channel: process.env.PLAYWRIGHT_CHANNEL || 'chrome', headless: true });
+  browser = await chromium.launch({ ...(process.env.PLAYWRIGHT_CHANNEL ? { channel: process.env.PLAYWRIGHT_CHANNEL } : {}), headless: true });
   const owner = await browser.newContext({ viewport: { width: 390, height: 844 } });
   const learner = await browser.newContext({ viewport: { width: 390, height: 844 } });
   const payload = Buffer.from(JSON.stringify({ n: 'owner', tid: 'owner:owner', r: 'owner', t: Date.now() })).toString('base64url');
