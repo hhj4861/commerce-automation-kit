@@ -320,19 +320,19 @@ test('transient broker outage has a bounded retry count',async()=>{
 test('slow renewal does not build a backlog ahead of completion', async t => {
  const {env,db}=fixture(); t.after(()=>db.close());
  await accountRunner(env,{operation:'poll'});await accountAction(env,a,'connect',{provider:'codex'});
- let releaseRead,finishWork,entered=false,done=false,reads=0;
+ let releaseRead,finishWork,entered=false,done=false,reads=0,readsAtCompletion=0;
  const gate=new Promise(r=>{releaseRead=r;}),work=new Promise(r=>{finishWork=r;});
  const worker=startAccountWorker({intervalMs:100000,renewIntervalMs:5,log(){},
   call:async(_path,input)=>{
    if(input.operation==='read'){reads++;if(!entered){entered=true;await gate;}}
    return accountRunner(env,input);
   },
-  execute:async(_,{update})=>{await work;await update({job:{state:'done'}});done=true;}
+  execute:async(_,{update})=>{await work;await update({job:{state:'done'}});readsAtCompletion=reads;done=true;}
  });
  try{
   await waitFor(()=>entered);await new Promise(r=>setTimeout(r,55));
   finishWork();await Promise.resolve();releaseRead();await waitFor(()=>done);
-  assert.equal(reads,2,'one renewal and one completion, regardless of elapsed ticks');
+  assert.equal(readsAtCompletion,2,'one renewal and one completion, regardless of elapsed ticks');
   assert.equal((await accountAction(env,a,'status')).job.state,'done');
  }finally{releaseRead();finishWork();await worker.stop();}
 });
@@ -349,4 +349,47 @@ test('extended scenario call budget still stops at the persisted whole-job deadl
  });
  try{await waitFor(()=>aborted);assert.equal((await accountAction(env,a,'status')).job.state,'failed');}
  finally{await worker.stop();}
+});
+
+
+test('worker atomically disconnects exhausted/invalid accounts, preserves history and blocks new generation',async t=>{
+ for(const provider of ['codex','claude'])for(const kind of ['scenario','recommend'])for(const reason of ['QUOTA_EXHAUSTED','AUTH_FAILED','RATE_LIMITED','NETWORK_FAILED']){
+  const {env,db}=fixture();
+  const name=`llm/account/${a}`,code=`${provider.toUpperCase()}_${reason}`,disconnect=['QUOTA_EXHAUSTED','AUTH_FAILED'].includes(reason);
+  const id=crypto.randomUUID(), projectId=crypto.randomUUID();
+  const saved={id:'previous',state:'done',input:brief,result:{suggestions:[]}};
+  await writeVault(env,name,{provider,account:'fixture@example.test',credential:auth,recommendations:[saved],job:{id,kind,provider,state:'queued',projectId,input:brief,deadline:Date.now()+60000}},0);
+  const worker=startAccountWorker({intervalMs:100000,retryDelayMs:1,log:()=>{},call:(_,input)=>accountRunner(env,input),execute:async(_,{update})=>{
+   await update({credential:{...auth,tokens:{...auth.tokens,refresh_token:'rotated-private'}}});
+   throw Object.assign(Error('private provider diagnostic'),{code});
+  }});
+  try{
+   await waitFor(async()=> (await accountAction(env,a,'status')).job?.state==='failed');
+   const view=await accountAction(env,a,'status'),record=await readVault(env,name);
+   assert.equal(view.connected,!disconnect);assert.equal(record.value.job.errorCode,code);
+   assert.ok(record.value.recommendations.some(r=>r.id==='previous'));
+   assert.doesNotMatch(JSON.stringify(view),/rotated-private|fixture-refresh|private provider diagnostic/);
+   if(disconnect){
+    assert.equal(record.value.credential,null);assert.equal(record.value.account,null);
+    assert.equal((await accountAction(env,a,'recommend',{brief})).status,428);
+    assert.equal((await accountAction(env,a,'scenario',{id:crypto.randomUUID(),projectId,brief})).status,428);
+    if(reason==='QUOTA_EXHAUSTED')assert.match(view.job.error,/연결을 자동 해제/);
+    if(kind==='scenario')assert.equal((await accountAction(env,a,'scenario-status',{id,projectId})).job.state,'failed');
+    const reconnect=await accountAction(env,a,'connect',{provider});assert.equal(reconnect.connected,false);assert.equal(reconnect.job.state,'queued');
+   }else assert.equal(record.value.credential.tokens.refresh_token,'rotated-private');
+  }finally{await worker.stop();db.close();}
+ }
+});
+
+test('stale quota failure cannot clear a newly connected account',async()=>{
+ const {env,db}=fixture();let failOld,started=false,staleRead=false;
+ await writeVault(env,`llm/account/${a}`,{provider:'codex',credential:auth,job:{id:'old',kind:'recommend',provider:'codex',input:brief,state:'queued',deadline:Date.now()+60000}},0);
+ const worker=startAccountWorker({intervalMs:100000,log:()=>{},call:async(_,input)=>{const result=await accountRunner(env,input);if(input.operation==='read'&&result.record?.value.job?.id==='new')staleRead=true;return result;},execute:async()=>{started=true;await new Promise(resolve=>failOld=resolve);throw Object.assign(Error('old quota'),{code:'CODEX_QUOTA_EXHAUSTED'});}});
+ try{
+  await waitFor(()=>started);await accountAction(env,a,'disconnect');
+  const fresh=await readVault(env,`llm/account/${a}`);
+  await writeVault(env,`llm/account/${a}`,{provider:'claude',account:'new',credential:{newCredential:true},job:{id:'new',kind:'connect',state:'done'}},fresh.revision);
+  failOld();await waitFor(()=>staleRead);await worker.stop();
+  const view=await accountAction(env,a,'status');assert.equal(view.connected,true);assert.equal(view.provider,'claude');
+ }finally{await worker.stop();db.close();}
 });

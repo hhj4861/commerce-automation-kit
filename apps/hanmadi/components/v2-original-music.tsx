@@ -3,6 +3,8 @@ import { useEffect, useRef, useState } from "react";
 import { studyLanguages, type StudyLanguage, type StudyState, type Expression } from "@/lib/v2";
 import type { PracticeSong, SongProgress, SongAction } from "@/lib/original-music";
 import { MusicLanguagePractice } from "./v2-music-language";
+import { MusicPlayback, type MusicPlaybackHandle } from "./music-playback";
+import { activeMusicLine } from "@/lib/music-playback";
 import { Speaker } from "./v2-speaker";
 import { LicensedMusicStudy } from "./v2-music";
 import { pretender } from "@/lib/v2-music";
@@ -49,36 +51,17 @@ function SongPractice({ song, initial, onProgress, expressions, onSaved, onConve
   const [feedback, setFeedback] = useState<"correct" | "wrong" | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const [segment, setSegment] = useState<number | null>(null);
-  const [video, setVideo] = useState<{ start?: number; end?: number; key: number } | null>(null);
-  const [loop, setLoop] = useState(false);
-  const [audioError, setAudioError] = useState(false);
-  const [audioAttempt, setAudioAttempt] = useState(0);
   const [audioEpoch, setAudioEpoch] = useState(0);
-  const player = useRef<HTMLAudioElement>(null);
+  const [playhead, setPlayhead] = useState(-1);
+  const [showReading, setShowReading] = useState(true);
+  const [showTranslation, setShowTranslation] = useState(true);
+  const player = useRef<MusicPlaybackHandle>(null);
   const pending = useRef(false);
   const index = progress.index, line = song.lines[index];
   const total = song.lines.length;
-  // Stop the current song when leaving music, switching language/source or starting pronunciation.
-  useEffect(() => { const audio = player.current; return () => audio?.pause(); }, [stage, audioAttempt]);
-  function pause() { player.current?.pause(); setVideo(null); }
-  async function playSong(onlyLine = false) {
-    if (song.videoId) { setVideo({ ...(onlyLine ? { start: line.startSeconds, end: line.endSeconds } : {}), key: Date.now() }); setAudioEpoch(v => v + 1); return; }
-    const audio = player.current;
-    if (!audio) return;
-    setSegment(onlyLine ? index : null);
-    audio.currentTime = onlyLine ? line.startSeconds : 0;
-    setAudioError(false);
-    try { await audio.play(); } catch { setAudioError(true); }
-  }
-  function timeUpdate() {
-    const audio = player.current;
-    if (!audio || segment === null) return;
-    const part = song.lines[segment];
-    if (audio.currentTime >= part.endSeconds) {
-      if (loop) audio.currentTime = part.startSeconds;
-      else audio.pause();
-    }
+  function pause() { player.current?.pause(); }
+  function playSong(onlyLine = false) {
+    player.current?.play(onlyLine ? line.startSeconds : 0, onlyLine ? line.endSeconds : undefined);
   }
   async function save(action: SongAction["action"], target = index, answer?: string, confidence?: "help" | "alone"): Promise<{ progress: SongProgress; correct?: boolean } | null> {
     if (pending.current) return null;
@@ -95,11 +78,11 @@ function SongPractice({ song, initial, onProgress, expressions, onSaved, onConve
     finally { pending.current = false; setBusy(false); }
   }
   async function move(target: number) {
-    pause(); setSegment(null); setAudioEpoch(v => v + 1);
+    pause(); setAudioEpoch(v => v + 1);
     if (await save("move", target)) { setFeedback(null); setShowMeaning(true); }
   }
   async function review() {
-    pause(); setSegment(null); setAudioEpoch(v => v + 1);
+    pause(); setAudioEpoch(v => v + 1);
     if (await save("review", 0)) { setFeedback(null); setStage("review"); }
   }
   // Fixed shuffled order keeps each correct answer in a different slot across the lesson questions.
@@ -113,20 +96,22 @@ function SongPractice({ song, initial, onProgress, expressions, onSaved, onConve
     <p>짧은 노래 한 곡으로 듣고, 뜻을 익히고, 단어와 회화로 연습해요.</p>
     <ol className="hm-song-steps" aria-label="음악 학습 순서"><li>노래 듣기</li><li>한 줄씩 따라 부르기</li><li>단어·회화에 활용하기</li><li>뜻 떠올리기</li></ol>
     {stage !== "complete" && <section className="hm-song-player" aria-label="연습곡 듣기">
-      {song.videoId ? <>
-        <a href={`https://www.youtube.com/watch?v=${song.videoId}`} target="_blank" rel="noopener noreferrer">YouTube에서 공식 영상 듣기 ↗</a>
-        <button onClick={() => void playSong()}>앱에서 원곡 듣기</button>
-        {video && <><iframe key={video.key} title={`${song.title} 공식 영상`} src={`https://www.youtube-nocookie.com/embed/${song.videoId}?playsinline=1${video.start !== undefined ? `&start=${Math.floor(video.start)}&end=${Math.ceil(video.end!)}` : ""}`} allow="encrypted-media; picture-in-picture; fullscreen" allowFullScreen referrerPolicy="strict-origin-when-cross-origin" style={{ width: "100%", aspectRatio: "16/9", border: 0 }} /><button onClick={pause}>영상 닫기</button></>}
-        <small>공식 영상으로 원곡을 들어요. 발음 듣기는 별도의 학습 음성이에요. 재생이 제한되면 YouTube 링크를 이용해 주세요.</small>
-      </> : <>
-      <label htmlFor={`audio-${song.id}`}>노래 전체 듣기 · 반복 재생 가능</label>
-      <audio key={audioAttempt} id={`audio-${song.id}`} ref={player} controls preload="metadata" loop={loop && segment === null} src={song.audio} onTimeUpdate={timeUpdate}
-        onPlay={() => setAudioEpoch(v => v + 1)} onError={() => setAudioError(true)} onLoadedData={() => setAudioError(false)} />
-      <button disabled={busy} onClick={() => void playSong()}>처음부터 노래 전체 듣기</button>
-      <label className="hm-song-loop"><input type="checkbox" checked={loop} onChange={e => setLoop(e.target.checked)} /> {segment === null ? "노래 반복" : "현재 줄 반복"}</label>
-      {audioError && <div role="alert"><p>노래를 재생하지 못했어요. 연결을 확인하고 다시 시도해 주세요.</p><button onClick={() => { setAudioError(false); setAudioAttempt(v => v + 1); }}>노래 다시 불러오기</button></div>}
-      <small>한마디가 직접 쓴 가사로 만든 AI 연습곡이에요. 발음 듣기는 노래와 별도의 학습 음성이에요.</small>
-      </>}
+      <MusicPlayback ref={player} audio={song.audio} videoId={song.videoId} title={song.title}
+        onTime={(seconds, playing) => setPlayhead(playing ? activeMusicLine(song.lines, seconds) : -1)} onPlay={() => setAudioEpoch(v => v + 1)} />
+      <small>{song.managed ? "검수된 학습 구간만 표시해요. 발음 듣기는 별도의 학습 음성이에요." : "한마디가 직접 쓴 가사로 만든 AI 연습곡이에요. 발음 듣기는 노래와 별도의 학습 음성이에요."}</small>
+    </section>}
+    {stage === "practice" && <section className="hm-synced-lyrics" aria-label="재생과 함께 보는 가사">
+      <div className="hm-row"><h2>노래를 따라 읽어요</h2><span>{playhead >= 0 ? `${playhead + 1}번 줄 재생 중` : "전주·간주 또는 재생 전"}</span></div>
+      <div className="hm-row"><button aria-pressed={showReading} onClick={() => setShowReading(v => !v)}>발음 표시</button><button aria-pressed={showTranslation} onClick={() => setShowTranslation(v => !v)}>번역 표시</button></div>
+      <ol>{song.lines.map((l, i) => <li key={l.id} aria-current={playhead === i ? "true" : undefined}>
+        <button className="hm-lyric-seek" disabled={l.endSeconds <= l.startSeconds} aria-label={`${i + 1}번 가사 구간 듣기`} onClick={() => player.current?.play(l.startSeconds, l.endSeconds)}>
+          <span className="hm-muted">{i + 1}</span><span lang={song.language}>{l.text}</span>
+          {showReading && <span className="hm-lyrics-reading">{l.reading}</span>}{showTranslation && <span className="hm-lyrics-meaning">{l.meaning}</span>}
+        </button>
+        {l.endSeconds <= l.startSeconds && <small>재생 시간이 등록되지 않은 줄이에요.</small>}
+        <button disabled={busy} onClick={() => void move(i)}>{index === i ? "지금 연습하는 줄" : `${i + 1}번 줄 단어·회화 연습`}</button>
+      </li>)}</ol>
+      <p className="hm-muted">줄을 누르면 해당 구간을 들어요. 단어·회화 연습을 누르면 아래 학습 카드가 바뀌어요.</p>
     </section>}
     {stage === "practice" && <section className="hm-lyrics" aria-label="연습곡 한 줄 연습">
       <div className="hm-row"><h2>듣고, 따라 불러요</h2><span role="status">연습 {index + 1} / {total}</span></div>

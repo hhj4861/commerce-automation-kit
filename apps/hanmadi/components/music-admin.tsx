@@ -1,6 +1,7 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { studyLanguages, type StudyLanguage } from "@/lib/v2";
+import { MusicTimingEditor } from "./music-timing-editor";
 import type { OwnedMusic } from "@/lib/owned-music";
 async function api(body?: unknown) {
   const response = await fetch("/api/study/admin/music", { method: body ? "POST" : "GET", cache: "no-store",
@@ -51,13 +52,14 @@ export function MusicAdmin() {
             <label>아티스트<input required maxLength={100} value={form.artist} onChange={e => setForm({ ...form, artist: e.target.value })} /></label>
             <label>학습 언어<select value={form.language} onChange={e => setForm({ ...form, language: e.target.value as StudyLanguage })}>{Object.entries(studyLanguages).map(([id, l]) => <option key={id} value={id}>{l.name}</option>)}</select></label>
             <label>공식 YouTube 영상 링크 또는 ID<input required value={form.videoId} onChange={e => setForm({ ...form, videoId: videoId(e.target.value.trim()) })} placeholder="https://www.youtube.com/watch?v=…" /></label></div>
-          <label>가사·자막 파일 연결 (선택)<input type="file" accept=".txt,.srt,.vtt,text/plain" onChange={async e => {
+          <label>가사·자막 파일 연결 (선택)<input type="file" accept=".txt,.srt,.vtt,.lrc,text/plain" onChange={async e => {
             const file = e.target.files?.[0], epoch = ++fileEpoch.current; if (!file) return;
-            if (file.size > 64000 || !/\.(txt|srt|vtt)$/i.test(file.name)) { setError("64KB 이하의 TXT·SRT·VTT 파일을 선택해 주세요."); return; }
+            if (file.size > 64000 || !/\.(txt|srt|vtt|lrc)$/i.test(file.name)) { setError("64KB 이하의 TXT·SRT·VTT·LRC 파일을 선택해 주세요."); return; }
             try { const source = await file.text(); if (epoch === fileEpoch.current) setForm(f => ({ ...f, source })); } catch { setError("원문 파일을 읽지 못했어요."); }
           }} /></label>
-          <label>학습에 사용할 원문<textarea required rows={7} maxLength={12000} value={form.source} onChange={e => { fileEpoch.current++; setForm({ ...form, source: e.target.value }); }} placeholder="가사는 한 줄씩, 또는 SRT/VTT 자막을 붙여 넣어 주세요." /></label>
+          <label>학습에 사용할 원문<textarea required rows={7} maxLength={12000} value={form.source} onChange={e => { fileEpoch.current++; setForm({ ...form, source: e.target.value }); }} placeholder="가사는 한 줄씩, 또는 SRT/VTT/LRC 자막을 붙여 넣어 주세요." /></label>
           <small>2~100줄 · 최대 12,000자. AI가 2~8개 학습 구간을 골라요. 자막 시간이 있으면 원곡의 해당 구간을 바로 들을 수 있어요.</small>
+          <MusicTimingEditor key={form.source} source={form.source} videoId={form.videoId} onApply={source => { fileEpoch.current++; setForm(f => ({ ...f, source })); setNotice("시간을 원문에 적용했어요. 원문 저장을 눌러 보관해 주세요."); }} />
           <label>사용권 근거<textarea required minLength={10} maxLength={1000} rows={2} value={form.rights} onChange={e => setForm({ ...form, rights: e.target.value })} placeholder="예: 직접 작사한 곡. AI 처리·가사 표시·번역·발음 음성·학습 자료 저장 및 재사용 권한 보유." /></label>
           <label className="music-check"><input required type="checkbox" checked={form.rightsConfirmed} onChange={e => setForm({ ...form, rightsConfirmed: e.target.checked })} />원문을 AI에 제공하고, 가사·번역·발음 음성 및 학습 자료로 저장·재사용할 권한을 확인했어요.</label>
           {editing?.status === "published" && <p>원문을 수정해 저장하면 게시가 내려가고 새 자료를 만들어 검수해야 해요.</p>}

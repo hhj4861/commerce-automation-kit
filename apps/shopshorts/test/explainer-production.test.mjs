@@ -34,7 +34,7 @@ test('selected topic is researched before script, evidence is retained, missing 
   calls++;if(mockReview(prompt))return mockReview(prompt);if(calls===1){assert.match(prompt,/내장 웹 검색/);assert.match(prompt,/초고층/);return {searched:true,value:research};}
   assert.match(prompt,/source-1/);assert.match(prompt,/실제 측정값/);return {value:generated};
  }});
- assert.deepEqual(phases,['research','scenario','review']);assert.equal(calls,3);assert.deepEqual(result.research.facts,research.facts);
+ assert.deepEqual(phases,['research','scenario','review']);assert.equal(calls,4);assert.deepEqual(result.research.facts,research.facts);
  assert.deepEqual(scenarioResult(result,brief).research,result.research);
  assert.equal(result.scenes[0].animation.presentation,'illustrated');
  assert.equal(result.scenes[1].animation.presentation,'diagram');

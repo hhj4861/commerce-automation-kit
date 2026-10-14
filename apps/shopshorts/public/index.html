@@ -6,7 +6,7 @@
 <title>Shopshorts — Content Studio</title>
 <link rel="stylesheet" href="/app-shell.css">
 <link rel="stylesheet" href="/notifications.css">
-<link rel="stylesheet" href="/automatic-creation.css"><link rel="stylesheet" href="/workspace.css"><link rel="stylesheet" href="/llm-connection.css"><link rel="stylesheet" href="/ai-account.css"><script type="module" src="/ai-account.js"></script>
+<link rel="stylesheet" href="/automatic-creation.css"><link rel="stylesheet" href="/workspace.css"><link rel="stylesheet" href="/llm-connection.css"><link rel="stylesheet" href="/ai-account.css"><script type="module" src="/ai-account.js"></script><script type="module" src="/huggingface-settings.js"></script>
 <style>
   .view[hidden], .account-actions[hidden], [data-signin][hidden] { display: none; }
   .account-actions { display: flex; align-items: center; gap: 10px; }
@@ -477,7 +477,7 @@
 </div>
 <nav class="mobile-nav" aria-label="모바일 메뉴">
   <button class="nav-item active" data-nav="dashboard">홈</button>
-  <a class="nav-item" href="/studio" data-studio-nav data-icon-before="play">영상 제작실</a><a class="nav-item" href="/metadata">게시 문구 추천</a><button class="nav-item" data-nav="content">콘텐츠</button>
+  <a class="nav-item" href="/studio" data-studio-nav data-icon-before="play">영상 제작실</a><a class="nav-item" href="/kandinsky">Kandinsky 영상 생성</a><a class="nav-item" href="/metadata">게시 문구 추천</a><button class="nav-item" data-nav="content">콘텐츠</button>
   <button class="nav-item" data-nav="trends">트렌드</button>
   <button class="nav-item" data-nav="blog">블로그 POC</button>
   <button class="nav-item" data-nav="links">제휴 링크</button>
@@ -494,7 +494,7 @@
     <nav>
       <button class="nav-item active" data-icon-before="grid" data-nav="dashboard">홈</button>
       <a class="nav-item" href="/studio" data-studio-nav data-icon-before="play">영상 제작실</a>
-      <a class="nav-item" href="/metadata" data-icon-before="play">게시 문구 추천</a><button class="nav-item" data-icon-before="layers" data-nav="content">콘텐츠</button>
+      <a class="nav-item" href="/kandinsky">Kandinsky 영상 생성</a><a class="nav-item" href="/metadata" data-icon-before="play">게시 문구 추천</a><button class="nav-item" data-icon-before="layers" data-nav="content">콘텐츠</button>
     </nav><div class="nav-label" style="margin-top:22px">탐색과 실험</div><nav>
       <button class="nav-item" data-icon-before="trend" data-nav="trends">트렌드 탐색</button>
       <button class="nav-item" data-icon-before="layers" data-nav="blog">블로그 POC</button>
@@ -1516,7 +1516,7 @@ function renderPage(name) {
   if (name === 'settings') {
     const autoRefresh = localStorage.getItem('shopshorts:autoRefresh') !== 'off';
     body = `<article class="page-card settings-panel">
-      <h2>계정과 제작 연결</h2><div class="setting-row"><div><strong>AI 계정</strong><small>아이디어 추천과 시나리오 생성에 사용하는 계정입니다.</small></div><button type="button" class="workspace-link" data-open-ai>연결 관리</button></div>
+      <h2>계정과 제작 연결</h2><hf-account-settings></hf-account-settings><div class="setting-row"><div><strong>AI 계정</strong><small>아이디어 추천과 시나리오 생성에 사용하는 계정입니다.</small></div><button type="button" class="workspace-link" data-open-ai>연결 관리</button></div>
       <div class="setting-row"><div><strong>Google 로그인</strong><small>계정 등록과 OAuth 설정 상태를 확인합니다.</small></div><a class="tool-btn" href="/login">계정 관리</a></div>
       <div class="setting-row"><div><strong>자동 새로고침</strong><small>12초마다 작업 상태를 확인합니다.</small></div><button class="toggle ${autoRefresh ? 'on' : ''}" data-setting="autoRefresh" role="switch" aria-checked="${autoRefresh}" aria-label="자동 새로고침"></button></div>
       <div class="setting-row"><div><strong>새 알림 숫자 표시</strong><small>메뉴와 종 버튼에 안 읽은 알림 수를 표시합니다. 꺼도 알림함에 기록은 남습니다.</small></div><button class="toggle" data-notification-preference role="switch" aria-checked="false" aria-label="새 알림 숫자 표시" disabled></button></div>

@@ -211,7 +211,7 @@ try {
     await page.getByText("음성 테스트 응답", { exact: true }).waitFor();
     assert(await page.locator(".hm-song-player audio").evaluate(a => a.paused));
     await page.getByRole("button", { name: "뜻 가리기", exact: true }).click();
-    assert.equal(await page.locator(".hm-lyrics-meaning").count(), 0);
+    assert.equal(await page.locator(".hm-lyrics .hm-lyrics-meaning").count(), 0);
     await page.getByRole("button", { name: "뜻 보기", exact: true }).click();
     await page.locator(".hm-lyrics-line").scrollIntoViewIfNeeded();
     await page.screenshot({ path: resolve(dir, `original-${song.language}-lyrics.png`) });

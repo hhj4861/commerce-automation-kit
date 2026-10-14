@@ -69,5 +69,5 @@ test('terminal scenario uses shared research and review, retains evidence and re
   assert.match(prompt,/연산에는 데이터가 필요하다/);return {value};
  };
  await runHybridCli(['--project',file,'--action','scenario','--assets',join(dir,'assets'),'--work',join(dir,'work')],{}, {scenarioGenerate});
- const saved=JSON.parse(await readFile(file));assert.deepEqual(phases,['research','scenario','review']);assert.equal(saved.task.state,'done');assert.equal(saved.approved,false);assert.equal(saved.assets&&Object.keys(saved.assets).length,0);assert.equal(saved.research.sources[0].id,'source-1');
+ const saved=JSON.parse(await readFile(file));assert.deepEqual(phases,['research','research','scenario','review']);assert.equal(saved.task.state,'done');assert.equal(saved.approved,false);assert.equal(saved.assets&&Object.keys(saved.assets).length,0);assert.equal(saved.research.sources[0].id,'source-1');
 });
