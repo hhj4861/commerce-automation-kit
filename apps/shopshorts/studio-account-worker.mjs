@@ -8,7 +8,7 @@ import { runnerRequest } from '../credential-broker/runner-client.mjs';
 import { executeAccountJob } from './studio-account-codex.mjs';
 import { executeClaudeAccountJob } from './studio-account-claude.mjs';
 import { discoveryRuntimeEnv } from '../../services/topic-discovery/runtime-config.mjs';
-import { accountFailureCode, accountFailureMessage } from './lib/llm-account-errors.js';
+import { accountFailureCode, accountFailureMessage, shouldDisconnectAccount } from './lib/llm-account-errors.js';
 
 export async function executeProviderJob(value, context) {
   let env = context.env;
@@ -94,8 +94,9 @@ export function startAccountWorker({ env = process.env, call = accountBroker(env
       catch (error) {
         if (!controller.signal.aborted) {
           log(`[llm-accounts] ${initial.job.provider === 'claude' ? 'claude' : 'codex'} ${['connect', 'recommend', 'scenario'].includes(initial.job.kind) ? initial.job.kind : 'unknown'} ${accountFailureCode(error)}`);
+          const disconnect = shouldDisconnectAccount(initial.job.provider, error);
           const rejection = initial.job.kind === 'scenario' && error.code === 'SCENARIO_DEPTH_INVALID' ? await readScenarioRejection(error.rejection) : null;
-          await update({ job: { state: 'failed', device: null, manual: null, code: null, rejection, error: accountFailureMessage(initial.job.provider, error) + (error.code === 'SCENARIO_DEPTH_INVALID' && !rejection ? ' 상세 검토 자료를 보관하지 못했습니다.' : '') } }).catch(() => {});
+          await update({ ...(disconnect ? { credential: null, account: null } : {}), job: { state: 'failed', errorCode: accountFailureCode(error), device: null, manual: null, code: null, rejection, error: (disconnect ? '연결을 자동 해제했어요. ' : '') + accountFailureMessage(initial.job.provider, error) + (error.code === 'SCENARIO_DEPTH_INVALID' && !rejection ? ' 상세 검토 자료를 보관하지 못했습니다.' : '') } }).catch(() => {});
         }
       } finally { clearTimeout(deadline); clearInterval(renew); await serial; tasks.delete(owner); }
     })();

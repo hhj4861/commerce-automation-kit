@@ -4,7 +4,7 @@ import {executionStatus,renderExecutionStatus,resumeStep} from './studio-status.
 import {mediaProgress,mediaSceneStatus,renderMediaProgress,renderMediaPlaceholder} from './studio-media.js';
 import {kindOptionsHTML,motionFormHTML,readMotionForm,sceneWithKind,sceneWithTemplate} from './studio-motion-ui.js';
 import {createEditor} from './editor.js';
-import {connectLlm,recommendWithAccount,waitForRecommendation} from './llm-connection.js';
+import {connectLlm,recommendWithAccount,waitForRecommendation,notifyAccountJobFailure} from './llm-connection.js';
 import {createNotificationInbox} from './notifications.js';
 import {createRecommendationFocus} from './recommendation-focus.js';
 import {frameCount,FPS} from './editor-model.js';
@@ -222,6 +222,6 @@ window.addEventListener('beforeunload',e=>{if(state.dirty){e.preventDefault();e.
  }catch(e){$('#notice').innerHTML=`<div class="status-note error">${esc(e.message)}</div>`;}
 })();
 let checkingExecution=false;
-setInterval(async()=>{if(!state.config||state.pending||checkingExecution||document.hidden)return;checkingExecution=true;try{await refreshConnection();if(state.project&&taskBusy()&&!state.dirty){const p=(await api('/'+state.project.id)).project;if(p.revision!==state.project.revision){const previous=state.project.task;state.project=p;if(p.task?.state==='done'&&previous?.state!=='done'){if(p.task.action==='scenario')state.step=2;if(p.task.action==='render'||p.task.action==='publish')state.step=5;}render();}}}catch{state.connectionUnknown=true;note();}finally{checkingExecution=false;}},4000);
+setInterval(async()=>{if(!state.config||state.pending||checkingExecution||document.hidden)return;checkingExecution=true;try{await refreshConnection();if(state.project&&taskBusy()&&!state.dirty){const p=(await api('/'+state.project.id)).project;if(p.revision!==state.project.revision){const previous=state.project.task;notifyAccountJobFailure(previous,p.task);state.project=p;if(p.task?.state==='done'&&previous?.state!=='done'){if(p.task.action==='scenario')state.step=2;if(p.task.action==='render'||p.task.action==='publish')state.step=5;}render();}}}catch{state.connectionUnknown=true;note();}finally{checkingExecution=false;}},4000);
 
 setInterval(()=>{if(!document.hidden)recommendationInbox.poll();},5000);
