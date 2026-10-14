@@ -4,27 +4,29 @@ import {architectureQuality,architectureParts,validateArchitectureScene} from '.
 export const HYBRID_VERSION = 'hybrid-v1';
 export const isHybrid = brief => brief?.productionStyle === 'hybrid' || (architectureQuality(brief) && brief.productionStyle === 'webtoon');
 export const HYBRID_LABELS = {higgsfield:'Higgsfield 도입',webtoon:'웹툰 상황·사례',motion:'모션으로 원리 설명','3d':'3D 구조도'};
-const invalid = message => {throw Object.assign(Error(message),{status:400,code:'HYBRID_PLAN_INVALID'});};
+const invalid = (message,path,rule) => {throw Object.assign(Error(message),{status:400,code:'HYBRID_PLAN_INVALID',validationIssue:{path,rule}});};
 export function hybridScene(value, scene) {
   if (value === undefined) return undefined;
-  if (!value || !['auto','webtoon','motion','3d'].includes(value.renderer)) invalid('혼합 장면의 제작 방식을 확인해 주세요.');
-  if(value.authored!==undefined){if(value.renderer!=='3d')invalid('등록 장면은 3D로 렌더합니다.');return {renderer:'3d',authored:authoredSpec(value.authored,scene)};}
+  if (!value || !['auto','webtoon','motion','3d'].includes(value.renderer)) invalid('혼합 장면의 제작 방식을 확인해 주세요.','hybrid.renderer','auto, webtoon, motion or 3d');
+  if(value.authored!==undefined){if(value.renderer!=='3d')invalid('등록 장면은 3D로 렌더합니다.','hybrid.renderer','3d required for authored scenes');try{return {renderer:'3d',authored:authoredSpec(value.authored,scene)};}catch(error){if(error.status===400&&!error.validationIssue)error.validationIssue={path:'hybrid.authored',rule:'use an allowed registered recipe, shot and matching duration'};throw error;}}
   const focus=value.focus??scene.webtoon?.layers?.[0]?.id;
-  if (!scene.webtoon?.layers?.some(l=>l.id===focus)) invalid('확대할 대상이 장면에 없습니다.');
+  if (!scene.webtoon?.layers?.some(l=>l.id===focus)) invalid('확대할 대상이 장면에 없습니다.','hybrid.focus','must reference an id in this scene webtoon.layers');
   const depth=value.depth??8;
-  if (!Number.isFinite(depth)||depth<1||depth>24) invalid('3D 구조도의 깊이는 1~24입니다.');
+  if (!Number.isFinite(depth)||depth<1||depth>24) invalid('3D 구조도의 깊이는 1~24입니다.','hybrid.depth','number in 1..24');
   const parts=architectureParts(value.parts,scene);
   return {renderer:value.renderer,focus,depth,...(parts?{parts}:{})};
 }
 export function sceneRoute(scene,index,brief) {
   if(index===0)return {renderer:'higgsfield',reason:'질문의 대상을 첫 장면부터 보여줍니다.'};
+  try {
   const spec=hybridScene(scene.hybrid,scene);
   const renderer=spec?.renderer&&spec.renderer!=='auto'?spec.renderer:(architectureQuality(brief)&&brief.productionStyle==='webtoon'&&scene.visualDirection?.treatment!=='cutaway'?'webtoon':({scene:'webtoon',cutaway:'3d',comparison:'motion',process:'motion',summary:'motion'}[scene.visualDirection?.treatment]));
-  if(!renderer)invalid('자동 혼합에는 장면별 상황·단면·비교·흐름 구성이 필요합니다.');
-  if(spec?.authored&&(!architectureQuality(brief)||brief.aspect!=='9:16'))invalid('등록 장면은 건축학 세로 영상에서 사용하세요.');
+  if(!renderer)invalid('자동 혼합에는 장면별 상황·단면·비교·흐름 구성이 필요합니다.','visualDirection.treatment','scene, cutaway, comparison, process or summary');
+  if(spec?.authored&&(!architectureQuality(brief)||brief.aspect!=='9:16'))invalid('등록 장면은 건축학 세로 영상에서 사용하세요.','hybrid.authored','registered scenes require architecture quality and 9:16 aspect');
   if(renderer==='3d'&&architectureQuality(brief)&&!spec?.authored)validateArchitectureScene(scene);
-  if(renderer==='3d'&&!architectureQuality(brief)&&!scene.webtoon?.layers?.some(l=>l.shape==='rect'))invalid('3D 구조도에는 두께를 보여줄 사각형 부품이 필요합니다. 다른 형태는 모션을 선택해 주세요.');
+  if(renderer==='3d'&&!architectureQuality(brief)&&!scene.webtoon?.layers?.some(l=>l.shape==='rect'))invalid('3D 구조도에는 두께를 보여줄 사각형 부품이 필요합니다. 다른 형태는 모션을 선택해 주세요.','webtoon.layers','non-architecture 3d needs a rect layer; otherwise use motion');
   return {renderer,reason:({webtoon:'사례와 상황을 원화와 움직임으로 연결합니다.',motion:'같은 대상의 변화와 흐름을 확대해 보여줍니다.','3d':'부품의 두께와 공간 관계를 구조도로 보여줍니다.'})[renderer]};
+  }catch(error){if(error.validationIssue)error.validationIssue={...error.validationIssue,path:`scenes[${index}].${error.validationIssue.path}`};throw error;}
 }
 export function hybridPlan(project) {
   if(!isHybrid(project.brief))return null;

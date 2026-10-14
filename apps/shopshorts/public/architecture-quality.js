@@ -2,7 +2,7 @@
 export const ARCHITECTURE_QUALITY = 'architecture-cycles-v1';
 export const architectureQuality = brief => brief?.category === '건축학' && brief.architectureQuality === ARCHITECTURE_QUALITY;
 export const ARCHITECTURE_RENDER = Object.freeze({engine:'CYCLES',samples:48,denoise:true,fps:24,width:1080,height:1920});
-const invalid = message => {throw Object.assign(Error(message),{status:400,code:'ARCHITECTURE_PLAN_INVALID'});};
+const invalid = (message,path,rule) => {throw Object.assign(Error(message),{status:400,code:'ARCHITECTURE_PLAN_INVALID',...(path?{validationIssue:{path,rule}}:{})});};
 export function architectureDefaults(input, {apply=true}={}) {
  if(input.architectureQuality !== undefined && (input.category !== '건축학' || input.architectureQuality !== ARCHITECTURE_QUALITY))invalid('건축학 품질 설정을 확인하세요.');
  if(input.category !== '건축학' || !apply)return input;
@@ -10,15 +10,16 @@ export function architectureDefaults(input, {apply=true}={}) {
 }
 export function architectureParts(value, scene) {
  if(value===undefined)return undefined;
- if(!Array.isArray(value)||value.length>12)invalid('건축 부품은 최대 12개입니다.');
+ if(!Array.isArray(value)||value.length>12)invalid('건축 부품은 최대 12개입니다.','hybrid.parts','array of at most 12 parts');
  const ids=new Set();
- return value.map(p=>{
-  if(!p || ids.has(p.layerId) || !scene.webtoon?.layers?.some(l=>l.id===p.layerId) || !['glass','metal','fabric','concrete'].includes(p.material))invalid('건축 부품의 대상과 재질을 확인하세요.');
-  if(p.offset!==undefined&&(!Number.isFinite(p.offset)||Math.abs(p.offset)>100))invalid('부품 깊이 위치는 -100~100입니다.');
+ return value.map((p,i)=>{
+  if(!p || ids.has(p.layerId) || !scene.webtoon?.layers?.some(l=>l.id===p.layerId))invalid('건축 부품의 대상과 재질을 확인하세요.',`hybrid.parts[${i}].layerId`,'unique reference to an id in this scene webtoon.layers');
+  if(!['glass','metal','fabric','concrete'].includes(p.material))invalid('건축 부품의 대상과 재질을 확인하세요.',`hybrid.parts[${i}].material`,'glass, metal, fabric or concrete');
+  if(p.offset!==undefined&&(!Number.isFinite(p.offset)||Math.abs(p.offset)>100))invalid('부품 깊이 위치는 -100~100입니다.',`hybrid.parts[${i}].offset`,'number in -100..100');
   ids.add(p.layerId);let hinge;
   if(p.hinge!==undefined){
    const h=p.hinge;
-   if(!h||!['x','y','z'].includes(h.axis)||!Array.isArray(h.pivot)||h.pivot.length!==2||h.pivot.some(v=>!Number.isFinite(v)||v<0||v>100)||!Number.isFinite(h.from)||!Number.isFinite(h.to)||Math.abs(h.from)>150||Math.abs(h.to)>150||h.from===h.to)invalid('힌지 축·회전 범위·고정점을 확인하세요.');
+   if(!h||!['x','y','z'].includes(h.axis)||!Array.isArray(h.pivot)||h.pivot.length!==2||h.pivot.some(v=>!Number.isFinite(v)||v<0||v>100)||!Number.isFinite(h.from)||!Number.isFinite(h.to)||Math.abs(h.from)>150||Math.abs(h.to)>150||h.from===h.to)invalid('힌지 축·회전 범위·고정점을 확인하세요.',`hybrid.parts[${i}].hinge`,'axis x/y/z, pivot [0..100,0..100], distinct from/to angles in -150..150');
    hinge={axis:h.axis,pivot:h.pivot,from:h.from,to:h.to};
   }
   return {layerId:p.layerId,material:p.material,...(p.offset!==undefined?{offset:p.offset}:{}),...(hinge?{hinge}:{})};
@@ -26,8 +27,8 @@ export function architectureParts(value, scene) {
 }
 export function validateArchitectureScene(scene) {
  const parts=architectureParts(scene.hybrid?.parts,scene);
- if(!parts?.length || scene.webtoon.layers.some(l=>!parts.some(p=>p.layerId===l.id)))invalid('Blender 구조 장면의 모든 부품에 재질을 지정하세요.');
- if(scene.webtoon.layers.some(l=>l.motion==='scale'))invalid('건축 부품은 크기 변화 대신 이동·힌지 회전·흐름으로 설명하세요.');
+ if(!parts?.length || scene.webtoon.layers.some(l=>!parts.some(p=>p.layerId===l.id)))invalid('Blender 구조 장면의 모든 부품에 재질을 지정하세요.','hybrid.parts','provide one part with layerId and allowed material for every webtoon layer');
+ if(scene.webtoon.layers.some(l=>l.motion==='scale'))invalid('건축 부품은 크기 변화 대신 이동·힌지 회전·흐름으로 설명하세요.','webtoon.layers.motion','scale is not allowed in architecture 3d; use movement, hinge rotation or flow');
  return parts;
 }
 export function architectureGuide(brief) {
