@@ -1213,3 +1213,20 @@
 .music-card details { margin-top:1rem; }
 .music-review-unit { margin:1rem 0; padding:1rem; border:1px solid var(--hm-line,#deded9); border-radius:16px; }
 .music-publish { display:grid; gap:1rem; padding-top:1rem; border-top:1px solid #deded9; }
+
+/* Music intake remains separate from reviewed learning materials. */
+.music-collection { min-width:0; }
+.music-collection h3 { margin: .5rem 0; }
+.music-search { display:flex; align-items:end; gap:.75rem; flex-wrap:wrap; }
+.music-search>label { flex:1 1 220px; }
+.music-search .music-check { flex-basis:100%; }
+.music-search-results { display:grid; gap:1rem; padding-top:.5rem; }
+.music-video-result { display:grid; grid-template-columns:120px minmax(0,1fr); gap:1rem; padding:.75rem; border:1px solid #deded9; border-radius:12px; }
+.music-video-result img { width:100%; height:auto; border-radius:8px; }
+.music-video-result h4,.music-collected h4 { margin:.4rem 0; overflow-wrap:anywhere; }
+.music-video-result p,.music-collected p { overflow-wrap:anywhere; }
+.music-collected { padding:1.2rem 0; border-top:1px solid #deded9; min-width:0; }
+.music-source-connect { margin-top:1rem; }
+.music-source-connect summary { cursor:pointer; padding:.6rem 0; font-weight:650; }
+.music-collection-actions { margin-top:1rem; }
+@media(max-width:480px) { .music-video-result { grid-template-columns:minmax(0,1fr); } .music-video-result img { max-width:200px; } .music-search>label { flex-basis:100%; } }
