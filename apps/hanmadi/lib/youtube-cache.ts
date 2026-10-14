@@ -18,11 +18,13 @@ export async function cachedYoutubeSearch(
     query: input.query.trim().replace(/\s+/g, " "),
     language: input.language || "",
     pageToken: input.pageToken || "",
+    music: input.music === true,
+    captionsOnly: input.captionsOnly === true,
   };
   return cachedSearch(normalized, key, deps);
 }
 async function cachedSearch(
-  input: { query: string; language: string; pageToken: string },
+  input: { query: string; language: string; pageToken: string; music: boolean; captionsOnly: boolean },
   apiKey: string,
   {
     store,
