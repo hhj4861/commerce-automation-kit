@@ -2,7 +2,7 @@ import {rejectionMarkup} from './scenario-rejection.js';
 import {hybridPlanMarkup} from './hybrid-plan-ui.js';
 import {SHORTS_DEFAULT_SECONDS} from './shorts-policy.js';
 import {architectureCaseMarkup} from './architecture-case.js';
-import {connectLlm} from './llm-connection.js';
+import {connectLlm,notifyAccountJobFailure} from './llm-connection.js';
 export function draftPayload(topic,memo='') {
   const clean=String(topic).trim();
   if(!clean || clean.length>100)throw Error('주제를 1~100자로 입력해 주세요.');
@@ -115,6 +115,7 @@ export function mountAutomaticCreation(host,{fetcher=fetch,connect=connectLlm,se
     const {projects:items}=await api('');const automatic=items.filter(p=>p.automation);
     if(selectedOnly&&selectedProject&&!automatic.some(p=>p.id===selectedProject))feedback.textContent='선택한 작업을 찾을 수 없어요. 목록에서 다른 작업을 선택해 주세요.';
     automatic.sort((a,b)=>{const attention=p=>!busy(p)&&!p.upload;return Number(attention(b))-Number(attention(a))||b.updatedAt.localeCompare(a.updatedAt);});
+    for(const p of automatic)notifyAccountJobFailure(projects.get(p.id)?.task,p.task);
     projects=new Map(automatic.map(p=>[p.id,p]));if(selectedProject&&projects.has(selectedProject)&&!pending&&!recommendationId)step(projectStep(projects.get(selectedProject)));const next=JSON.stringify([selectedProject,automatic.map(p=>[p.id,p.revision])]);if(next===signature)return;
     const activeCard=document.activeElement?.closest('[data-project]');
     if(activeCard&&activeCard.dataset.revision===String(projects.get(activeCard.dataset.project)?.revision))return;

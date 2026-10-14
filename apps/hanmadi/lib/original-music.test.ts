@@ -74,3 +74,13 @@ test("vocabulary/conversation progress is independent, retry-safe and preserves 
   const legacy = songProgress(song, { revision: song.revision, index: 2, practiced: ["line-2"], reviewed: [] });
   assert.deepEqual(legacy.wordsReviewed, []); assert.deepEqual(legacy.conversations, {}); assert.deepEqual(legacy.practiced, ["line-2"]);
 });
+
+import { activeMusicLine, segmentAction } from "./music-playback";
+test("sync follows the clock through boundaries and gaps without changing study progress", () => {
+  const lines = [{startSeconds:1,endSeconds:3},{startSeconds:5,endSeconds:8},{startSeconds:0,endSeconds:0}];
+  assert.deepEqual([0,1,2.9,3,4,5,8,NaN].map(t => activeMusicLine(lines,t)), [-1,0,0,-1,-1,1,-1,-1]);
+  assert.equal(segmentAction(3,lines[0],true), "repeat");
+  assert.equal(segmentAction(3,lines[0],false), "pause");
+  assert.equal(segmentAction(2.9,lines[0],false), "continue");
+  assert.equal(segmentAction(9,null,true), "continue");
+});

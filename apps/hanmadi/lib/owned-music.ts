@@ -4,7 +4,8 @@ import { parseRoleplay } from "./v2-ai";
 import type { MusicLanguageLesson } from "./music-language";
 import type { PracticeSong } from "./original-music";
 
-export type SourceLine = { text: string; startSeconds?: number; endSeconds?: number };
+import { parseMusicSource as parseSource, type SourceLine } from "./music-source";
+export type { SourceLine } from "./music-source";
 export type MusicInput = { title: string; artist: string; language: StudyLanguage; videoId: string; source: string; rights: string; rightsConfirmed: true };
 export type MusicUnit = { sourceIndex: number; line: Phrase; lesson: MusicLanguageLesson };
 export type MusicJudgment = { disposition: "accepted" | "review" | "excluded"; confidence: number; reason: string };
@@ -29,30 +30,8 @@ export function musicInput(value: unknown): MusicInput {
     rights: b.rights.trim(), source: b.source.trim(), rightsConfirmed: true };
 }
 export function parseMusicSource(source: string): SourceLine[] {
-  if (typeof source !== "string" || source.length > 12000) throw new ConversationError(400, "원문은 12,000자까지 등록할 수 있어요.");
-  const text = source.replace(/^\uFEFF/, "").replace(/\r/g, "").trim();
-  const timed = text.includes("-->");
-  let lines: SourceLine[];
-  if (timed) {
-    const seconds = (v: string) => v.replace(",", ".").split(":").reduce((sum, n) => sum * 60 + Number(n), 0);
-    const cue = /^(?:(?:\d{2}:)?\d{2}:\d{2}[.,]\d{3})$/;
-    lines = text.split(/\n\s*\n/).flatMap(block => {
-      const rows = block.split("\n");
-      const i = rows.findIndex(r => r.includes("-->"));
-      if (i < 0) {
-        if (/^(WEBVTT|NOTE|STYLE|REGION)(\s|$)/.test(block)) return [];
-        throw new ConversationError(400, "자막의 시간 형식을 확인해 주세요.");
-      }
-      const [a, rest] = rows[i].split(/\s*-->\s*/);
-      const b = rest?.split(/\s/)[0];
-      if (!cue.test(a) || !cue.test(b ?? "")) throw new ConversationError(400, "자막 시간을 읽지 못했어요.");
-      return [{ text: rows.slice(i + 1).join(" ").replace(/<[^>]*>/g, "").trim(), startSeconds: seconds(a), endSeconds: seconds(b) }];
-    });
-  } else lines = text.split(/\n/).map(t => ({ text: t.trim() })).filter(l => l.text);
-  if (lines.length < 2 || lines.length > 100 || lines.some((l, i) => !l.text || l.text.length > 250 ||
-    (l.startSeconds !== undefined && (!Number.isFinite(l.startSeconds) || !Number.isFinite(l.endSeconds) || l.startSeconds < 0 || l.endSeconds! <= l.startSeconds || l.endSeconds! > 3600 || l.endSeconds! - l.startSeconds > 120 || (i > 0 && l.startSeconds < lines[i - 1].startSeconds!)))))
-    throw new ConversationError(400, "원문은 2~100줄, 한 줄 250자 이내로 나눠 주세요. 자막은 순서대로 2분 이하 구간이어야 해요.");
-  return lines;
+  try { return parseSource(source); }
+  catch (error) { throw new ConversationError(400, error instanceof Error ? error.message : "원문을 확인해 주세요."); }
 }
 export function parseMusicUnits(value: unknown, input: MusicInput): MusicUnit[] {
   const source = parseMusicSource(input.source);
