@@ -38,18 +38,21 @@ export function validateBrief(input) {
 }
 // Strip untrusted raw template requests; the validated direction compiler may derive an allow-listed summary.
 export function validateScenes(scenes, {animationStyle = false, stripMotion = false} = {}) {
-  if (!Array.isArray(scenes) || !scenes.length || scenes.length > 100) fail('장면은 1~100개 필요합니다.');
+  const invalid = (path,rule,message) => {throw Object.assign(new Error(message),{status:400,validationIssue:{path,rule}});};
+  if (!Array.isArray(scenes) || !scenes.length || scenes.length > 100) invalid('scenes','array of 1..100 scenes','장면은 1~100개 필요합니다.');
   const ids = new Set();
   return scenes.map((scene, i) => {
     try {
+    if(!scene || typeof scene!=='object' || Array.isArray(scene))invalid('scene','scene object required','장면 형식을 확인하세요.');
     const id = scene.id || `scene-${i + 1}`;
-    if (!/^[a-z0-9-]{1,60}$/.test(id) || ids.has(id)) fail('장면 ID가 중복되거나 잘못되었습니다.');
+    if (!/^[a-z0-9-]{1,60}$/.test(id) || ids.has(id)) invalid('id','unique lowercase letters, digits or hyphens, 1..60 characters','장면 ID가 중복되거나 잘못되었습니다.');
     ids.add(id);
-    if (!text(scene.narration, 1200) || !text(scene.prompt, 2000)) fail(`장면 ${i + 1}의 대사와 장면 설명을 입력하세요.`);
-    if (!Number.isFinite(scene.duration) || scene.duration < 1 || scene.duration > 30) fail('장면 길이는 1~30초입니다.');
-    if (!['image', 'video'].includes(scene.kind)) fail('이미지 또는 영상을 선택하세요.');
-    if(scene.camera!==undefined&&!CAMERAS.includes(scene.camera))fail('지원하지 않는 카메라 움직임입니다.');
-    if(scene.shot!==undefined&&!SHOTS.includes(scene.shot))fail('지원하지 않는 장면 구도입니다.');
+    if (!text(scene.narration, 1200)) invalid('narration','nonempty text, max 1200 characters',`장면 ${i + 1}의 대사와 장면 설명을 입력하세요.`);
+    if (!text(scene.prompt, 2000)) invalid('prompt','nonempty text, max 2000 characters',`장면 ${i + 1}의 대사와 장면 설명을 입력하세요.`);
+    if (!Number.isFinite(scene.duration) || scene.duration < 1 || scene.duration > 30) invalid('duration','number in 1..30','장면 길이는 1~30초입니다.');
+    if (!['image', 'video'].includes(scene.kind)) invalid('kind','image or video','이미지 또는 영상을 선택하세요.');
+    if(scene.camera!==undefined&&!CAMERAS.includes(scene.camera))invalid('camera',`one of ${CAMERAS.join(', ')}`,'지원하지 않는 카메라 움직임입니다.');
+    if(scene.shot!==undefined&&!SHOTS.includes(scene.shot))invalid('shot',`one of ${SHOTS.join(', ')}`,'지원하지 않는 장면 구도입니다.');
     const motion=stripMotion?undefined:validateMotionScene(scene,i,{animationStyle});
     return { ...(scene.hybrid!==undefined?{hybrid:hybridScene(scene.hybrid,scene)}:{}), id, narration: scene.narration.trim(), prompt: scene.prompt.trim(), duration: scene.duration, kind: scene.kind, ...(scene.camera?{camera:scene.camera}:{}), ...(scene.shot?{shot:scene.shot}:{}), ...(scene.animation!==undefined?{animation:animationPlan(scene.animation)}:{}), ...(motion?{motion}:{}), ...(scene.webtoon!==undefined?{webtoon:webtoonPlan(scene.webtoon)}:{}), ...(scene.visualDirection!==undefined?{visualDirection:visualDirection(scene.visualDirection)}:{}) };
     } catch(error) {
