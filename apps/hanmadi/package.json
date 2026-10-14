@@ -24,7 +24,8 @@
     "test:practice-music": "node --import tsx scripts/practice-music-http-test.mjs",
     "test:language-live": "node --import tsx scripts/language-live-check.mjs",
     "test:music-audio-live": "node --import tsx scripts/music-audio-live-check.mjs",
-    "test:owned-music": "node --import tsx scripts/owned-music-e2e.mjs"
+    "test:owned-music": "node --import tsx scripts/owned-music-e2e.mjs",
+    "test:word-study": "node --import tsx --test lib/word-study.test.ts && node --import tsx scripts/word-study-e2e.mjs"
   },
   "dependencies": {
     "@cak/litellm-client": "file:vendor/cak-litellm-client-0.4.0.tgz",

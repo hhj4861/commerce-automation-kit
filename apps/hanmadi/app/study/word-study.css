@@ -1,0 +1,72 @@
+.hm-study-modes { display: flex; gap: 6px; border-bottom: 1px solid var(--line); margin-bottom: 22px; }
+.hm .hm-study-modes button { display: inline-flex; justify-content: center; align-items: center; gap: 8px; flex: 1; max-width: 180px; border: 0; border-bottom: 3px solid transparent; border-radius: 0; background: transparent; padding: 12px 8px; color: var(--muted); font-size: 16px; }
+.hm .hm-study-modes button[aria-pressed="true"] { border-bottom-color: var(--blue); color: var(--blue); font-weight: 700; }
+.hm-word-study-heading { margin: 28px 0; }
+.hm-word-study-heading p { color: var(--muted); }
+.hm-word-mobile-break { display: inline; }
+.hm-word-start { background: #edf3fc; border-radius: 22px; padding: 24px 20px; word-break: keep-all; overflow-wrap: break-word; }
+.hm-word-start h2 { margin: 12px 0; }
+.hm-word-tag { color: #2447a5; font-size: 12px; font-weight: 600; }
+.hm-word-start .hm-primary, .hm-word-step-actions button, .hm-word-step > .hm-primary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+.hm-word-start .hm-primary { width: 100%; }
+.hm-word-flow { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 8px; font-size: 12px; color: var(--muted); padding: 8px 0 14px; }
+.hm-word-flow .hm-icon { width: 14px; height: 14px; }
+.hm-word-packs { display: grid; gap: 0; margin-bottom: 30px; border-top: 1px solid var(--line); }
+.hm .hm-word-pack { display: flex; align-items: center; gap: 16px; text-align: left; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; padding: 20px 8px; background: transparent; }
+.hm-word-pack > span:nth-child(2) { flex: 1; min-width: 0; }
+.hm-word-pack strong { display: block; font-size: 17px; margin-bottom: 4px; }
+.hm-word-pack-icon { width: 48px; height: 48px; display: grid; place-items: center; border-radius: 15px; background: #edf3fc; color: #3157d5; flex-shrink: 0; }
+.hm-word-pack:nth-child(2) .hm-word-pack-icon { background: #eaf5f1; color: #18705d; }
+.hm-word-pack:nth-child(3) .hm-word-pack-icon { background: #fcf1e6; color: #925014; }
+.hm-word-personal { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; border: 1px solid var(--line); border-radius: 18px; padding: 24px; }
+.hm-word-personal > div { flex: 1 1 260px; }
+.hm-word-personal h2 { font-size: 18px; margin: 0 0 6px; }
+.hm-word-personal p { margin: 0; font-size: 13px; color: var(--muted); }
+.hm .hm-wordbook-link { border: 0; background: transparent; color: var(--blue); display: flex; gap: 5px; align-items: center; }
+.hm-word-session { max-width: 560px; margin: auto; }
+.hm-word-session-progress { position: sticky; top: -18px; z-index: 1; background: #fff; padding: 12px 0; }
+.hm-word-session-top { display: flex; justify-content: space-between; font-size: 13px; color: #5a6980; gap: 12px; }
+.hm-word-session progress { width: 100%; height: 5px; accent-color: #3157d5; display: block; margin-top: 12px; }
+.hm-dialog .hm-word-instruction { text-align: center; color: #5a6980; font-size: 14px; margin: 10px 0; }
+.hm-word-face { text-align: center; padding: 6px 0 18px; }
+.hm-dialog .hm-word-face h3 { font-size: clamp(32px, 6vw, 44px); line-height: 1.5; overflow-wrap: anywhere; margin: 0 0 8px; letter-spacing: 0; }
+.hm-dialog .hm-word-face .hm-reading { margin: 0 0 12px; }
+.hm-word-reveal { background: #f2f7f5; border-radius: 16px; padding: 18px; margin-bottom: 14px; }
+.hm-word-reveal > strong { display: block; font-size: 24px; color: #185f50; text-align: center; }
+.hm-word-example { margin-top: 14px; padding-top: 12px; border-top: 1px solid #d4e5df; }
+.hm-dialog .hm-word-example p { margin: 6px 0; font-size: 14px; line-height: 1.55; overflow-wrap: anywhere; }
+.hm-word-example .hm-audio { margin-top: 6px; display: inline-block; }
+.hm-word-step-actions { display: flex; gap: 10px; flex-wrap: wrap; margin: 18px 0; }
+.hm-word-step-actions > button { flex: 1 1 150px; }
+.hm-word-choices { display: grid; gap: 10px; }
+.hm-dialog .hm-word-skip { display: block; margin: 14px auto 0; background: transparent; border: 0; color: #5a6980; text-decoration: underline; text-underline-offset: 4px; }
+.hm-dialog .hm-word-choices button { text-align: left; padding: 15px 18px; display: flex; align-items: center; justify-content: space-between; gap: 10px; overflow-wrap: anywhere; }
+.hm-word-choices button > span { font-size: 12px; display: inline-flex; align-items: center; gap: 5px; flex-shrink: 0; }
+.hm-dialog .hm-word-choices button:disabled { opacity: 1; }
+.hm-dialog .hm-word-choices .is-correct { border-color: #18705d; background: #edf8f3; color: #145844; }
+.hm-dialog .hm-word-choices .is-wrong { border-color: #b87831; background: #fff5e9; color: #80430f; }
+.hm-word-feedback { padding: 18px; border-radius: 12px; margin: 18px 0; }
+.hm-word-feedback.is-correct { background: #edf8f3; color: #145844; }
+.hm-word-feedback.is-wrong { background: #fff5e9; color: #80430f; }
+.hm-word-feedback p { margin: 6px 0; overflow-wrap: anywhere; }
+.hm-word-error { color: #a12c27; margin-top: 16px; }
+.hm-word-result { text-align: center; padding: 12px 0; }
+.hm-word-result-icon { display: inline-grid; place-items: center; height: 60px; width: 60px; background: #edf8f3; color: #18705d; border-radius: 50%; }
+.hm-dialog .hm-word-result h3 { font-size: 23px; line-height: 1.5; }
+.hm-word-recap { list-style: none; padding: 0; margin: 24px 0; text-align: left; }
+.hm-word-recap li { display: flex; justify-content: space-between; gap: 16px; padding: 12px 0; border-bottom: 1px solid #e2e7f0; overflow-wrap: anywhere; }
+@media (max-width: 600px) {
+  .hm .hm-study-modes button { font-size: 15px; max-width: none; }
+  .hm-word-study-heading { margin: 20px 0; }
+  .hm-word-study-heading h1 { font-size: 32px; }
+  .hm-word-mobile-break { display: inline; }
+  .hm-word-start h2 { font-size: 22px; }
+  .hm-word-start .hm-primary { width: 100%; }
+  .hm-word-personal { padding: 20px; }
+  .hm .hm-word-pack { padding: 18px 0; gap: 12px; }
+  .hm-word-pack strong { font-size: 16px; }
+  .hm-word-step-actions > button { flex-basis: 130px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hm-word-study button, .hm-word-session button, .hm-study-modes button { transition: none; }
+}
