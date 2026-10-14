@@ -57,7 +57,7 @@ test('failed evidence survives worker, project ACK, later job and disconnect, wi
  const queued={...project,task:{id,action:'scenario',runner:'llm-account',accountOwner:owner,state:'running',deadline:Date.now()+60000}};
  let saved;const store={cas:async next=>{saved=next;return true;}};
  const result=await syncScenario(store,queued,(o,op,data)=>accountAction(env,o,op,data));
- assert.equal(result.task.state,'failed');assert.equal(result.scenes.length,0);assert.equal(result.approved,false);
+ assert.equal(result.task.state,'failed');assert.equal(result.task.reviewAvailable,true);assert.equal(result.scenes.length,0);assert.equal(result.approved,false);
  assert.doesNotMatch(JSON.stringify(saved),/한 번 더|변환 단계/);
  const afterAck=await accountAction(env,owner,'scenario-status',input);
  assert.deepEqual(afterAck.job.rejection,before.job.rejection);
@@ -89,4 +89,39 @@ test('rejection screen quotes the scenes and reasons as text, not executable HTM
  assert.match(html,/&lt;img/);assert.match(html,/&lt;script/);assert.doesNotMatch(html,/<img|<script/);
  assert.doesNotMatch(html,/data-auto-action|data-approve/);
  assert.match(rejectionMarkup(null),/보관되지/);
+});
+
+test('review availability follows matching validated evidence, including legacy failures and outages',async()=>{
+ const evidence=await rejection();
+ for(const state of ['running','failed'])for(const kind of ['valid','missing','corrupt','other-project','outage','error-response']){
+  const project=createProject(brief);project.task={id:crypto.randomUUID(),action:'scenario',runner:'llm-account',accountOwner:'owner',state,deadline:Date.now()+60000};
+  let saved,acks=0;
+  const store={cas:async next=>{saved=next;return true;}};
+  const job={id:project.task.id,projectId:kind==='other-project'?'different':project.id,state:'failed',error:'format fixture',...(kind==='valid'?{rejection:evidence}:kind==='corrupt'?{rejection:{...evidence,review:{}}}:{})};
+  const result=await syncScenario(store,project,async(_owner,operation)=>{
+   if(operation==='scenario-ack'){acks++;return {};}
+   if(kind==='outage')throw Error('temporary transport');
+   if(kind==='error-response')return {error:'temporary transport',status:503};
+   return {job};
+  });
+  if(['outage','error-response'].includes(kind)||(state==='running'&&kind==='other-project')){assert.equal(result,project);assert.equal(saved,undefined);assert.equal(acks,0);}
+  else{assert.equal(result.task.reviewAvailable,kind==='valid');assert.equal(result.task.state,'failed');assert.equal(acks,1);assert.equal(result.scenes.length,0);assert.equal(result.approved,false);assert.ok(!JSON.stringify(saved).includes('변환 단계'));}
+ }
+});
+
+test('format field survives worker and broker transport without exposing raw diagnostics or a false review button',async t=>{
+ const {env,db}=fixture();t.after(()=>db.close());const owner='a'.repeat(64),name=`llm/account/${owner}`;
+ const project=createProject(brief);const id=crypto.randomUUID();
+ await writeVault(env,name,{provider:'codex',credential:{fixture:true}},0);
+ await accountRunner(env,{operation:'poll',scenario:true});
+ await accountAction(env,owner,'scenario',{id,projectId:project.id,brief});
+ let logs='';
+ const worker=startAccountWorker({intervalMs:100000,call:(_path,input)=>accountRunner(env,input),log:x=>{logs+=x;},execute:async()=>{
+  throw Object.assign(Error('private diagnostic'),{code:'SCENARIO_FORMAT_INVALID',validationIssue:{path:'scenes[1].hybrid.parts[0].material',rule:'private diagnostic'}});
+ }});
+ try{await waitFor(async()=> (await readVault(env,name)).value.job.state==='failed');}finally{await worker.stop();}
+ const queued={...project,task:{id,action:'scenario',runner:'llm-account',accountOwner:owner,state:'running',deadline:Date.now()+60000}};
+ const result=await syncScenario({cas:async()=>true},queued,(o,op,data)=>accountAction(env,o,op,data));
+ assert.equal(result.task.state,'failed');assert.equal(result.task.reviewAvailable,false);assert.match(result.task.error,/2번 장면의 건축 부품 재질/);
+ assert.doesNotMatch(logs+JSON.stringify(result),/private diagnostic/);assert.equal(result.scenes.length,0);assert.equal(result.approved,false);
 });

@@ -20,9 +20,10 @@ const raw=mockReview(await reviewPrompt(brief,draft),['mechanism','example']).va
 raw.checks.mechanism.reason='돌출되기 전과 후의 시야를 같은 위치에서 비교해야, 가려진 곳이 어떻게 보이는지 이해할 수 있습니다.';
 raw.checks.example.reason='한 사람이 성벽 아래로 이동하는 예를 따라가며, 관측자가 볼 수 있는 구간의 변화를 보여 주세요.';
 const evidence=await rejectedScenario(brief,draft,raw),owner=await llmOwner(new Request(origin,{headers:{cookie:'ss=local-rejection-fixture'}}),env);
-const p=createProject(brief);p.automation={keyword:'서북공심돈'};p.task={id:crypto.randomUUID(),action:'scenario',state:'failed',runner:'llm-account',accountOwner:owner,error:'대본 검토에서 작동 과정과 구체적 예시를 보완해야 합니다.'};
+const p=createProject(brief);p.automation={keyword:'서북공심돈'};p.task={id:crypto.randomUUID(),action:'scenario',state:'failed',reviewAvailable:true,runner:'llm-account',accountOwner:owner,error:'대본 검토에서 작동 과정과 구체적 예시를 보완해야 합니다.'};
 await writeVault(env,`llm/account/${owner}`,{job:{id:p.task.id,projectId:p.id,kind:'scenario',state:'failed',rejection:evidence}},0);
-const store={execution:'fixture',capabilities:async()=>({}),list:async()=>[structuredClone(p)],get:async id=>id===p.id?structuredClone(p):null};
+const formatFailure=structuredClone(p);formatFailure.id=crypto.randomUUID();formatFailure.title='장면 형식 실패 · 검토 자료 없음';formatFailure.task={...formatFailure.task,id:crypto.randomUUID(),reviewAvailable:false,error:'대본의 장면 형식 또는 목표 길이를 맞추지 못했어요. 확인 항목: 2번 장면의 건축 부품 재질.'};
+const store={execution:'fixture',capabilities:async()=>({}),list:async()=>structuredClone([p,formatFailure]),get:async id=>structuredClone([p,formatFailure].find(item=>item.id===id)||null)};
 const call=(owner,operation,input)=>accountAction(env,owner,operation,input);
 const server=createServer(async(req,res)=>{try{
  const url=new URL(req.url,origin),chunks=[];for await(const part of req)chunks.push(part);const body=Buffer.concat(chunks).toString();
@@ -34,5 +35,5 @@ const server=createServer(async(req,res)=>{try{
  else{const file=resolve(root,['/','/studio/automatic'].includes(url.pathname)?'index.html':url.pathname.slice(1));if(!file.startsWith(root+sep))throw Error('path');response=new Response(await readFile(file),{headers:{'content-type':file.endsWith('.js')?'text/javascript':file.endsWith('.css')?'text/css':'text/html'}});}
  res.writeHead(response.status,Object.fromEntries(response.headers));res.end(Buffer.from(await response.arrayBuffer()));
  }catch(error){res.writeHead(500);res.end('fixture error');console.error(error.message);}});
-await new Promise(r=>server.listen(5227,'127.0.0.1',r));console.log(`${origin}/studio/automatic?project=${p.id}`);
+await new Promise(r=>server.listen(5227,'127.0.0.1',r));console.log(`${origin}/studio/automatic?project=${p.id}`);console.log(`${origin}/studio/automatic?project=${formatFailure.id}`);
 for(const signal of ['SIGINT','SIGTERM'])process.once(signal,()=>server.close(()=>{db.close();process.exit(0);}));
