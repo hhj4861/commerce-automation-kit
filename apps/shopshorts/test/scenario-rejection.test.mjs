@@ -109,7 +109,12 @@ test('review availability follows matching validated evidence, including legacy 
  }
 });
 
-test('format field survives worker and broker transport without exposing raw diagnostics or a false review button',async t=>{
+test('format and research errors survive worker/broker transport without raw diagnostics or false review buttons',async t=>{
+ for(const [code,details,label] of [
+  ['SCENARIO_FORMAT_INVALID',{validationIssue:{path:'scenes[1].hybrid.parts[0].material',rule:'private diagnostic'}},/2번 장면의 건축 부품 재질/],
+  ['SCENARIO_RESEARCH_INCOMPLETE',{failedChecks:['mechanism','private diagnostic']},/작동 과정/],
+  ['SCENARIO_RESEARCH_REVIEW_INVALID',{},/근거 부족 판정과는 다른 오류/],
+ ]){
  const {env,db}=fixture();t.after(()=>db.close());const owner='a'.repeat(64),name=`llm/account/${owner}`;
  const project=createProject(brief);const id=crypto.randomUUID();
  await writeVault(env,name,{provider:'codex',credential:{fixture:true}},0);
@@ -117,11 +122,12 @@ test('format field survives worker and broker transport without exposing raw dia
  await accountAction(env,owner,'scenario',{id,projectId:project.id,brief});
  let logs='';
  const worker=startAccountWorker({intervalMs:100000,call:(_path,input)=>accountRunner(env,input),log:x=>{logs+=x;},execute:async()=>{
-  throw Object.assign(Error('private diagnostic'),{code:'SCENARIO_FORMAT_INVALID',validationIssue:{path:'scenes[1].hybrid.parts[0].material',rule:'private diagnostic'}});
+  throw Object.assign(Error('private diagnostic'),{code,...details});
  }});
  try{await waitFor(async()=> (await readVault(env,name)).value.job.state==='failed');}finally{await worker.stop();}
  const queued={...project,task:{id,action:'scenario',runner:'llm-account',accountOwner:owner,state:'running',deadline:Date.now()+60000}};
  const result=await syncScenario({cas:async()=>true},queued,(o,op,data)=>accountAction(env,o,op,data));
- assert.equal(result.task.state,'failed');assert.equal(result.task.reviewAvailable,false);assert.match(result.task.error,/2번 장면의 건축 부품 재질/);
+ assert.equal(result.task.state,'failed');assert.equal(result.task.reviewAvailable,false);assert.match(result.task.error,label);
  assert.doesNotMatch(logs+JSON.stringify(result),/private diagnostic/);assert.equal(result.scenes.length,0);assert.equal(result.approved,false);
+ }
 });

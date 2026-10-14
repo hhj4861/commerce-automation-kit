@@ -38,7 +38,7 @@ test('research then scenario then independent review; receipt survives scenario 
  let calls=0;const value={title:'왜 가운데?',visualStyle:'앰버 청록 웹툰',scenes,storyArc:{hook:{sceneId:'scene-1',line:scenes[0].narration},payoff:{sceneId:'scene-2',line:'먼저 있던 선로를 피해서 설계했어요.'},ending:{sceneId:'scene-2',line:'그래서 폭포와 열차 길이 겹치지 않죠.'}}};
  const b=createProject(input).brief;
  const result=await scenarioBrief(b,{}, {generate:async p=>{calls++;if(mockReview(p))return mockReview(p);if(calls===1)return {searched:true,value:research};assert.match(p,/웹툰 혼합 제작/);return {value};}});
- assert.equal(calls,3);assert.ok(result.depthReview.passed);const saved=scenarioResult(result,b);await checkWebtoonReview({...saved,brief:b});
+ assert.equal(calls,4);assert.ok(result.depthReview.passed);const saved=scenarioResult(result,b);await checkWebtoonReview({...saved,brief:b});
  await assert.rejects(checkWebtoonReview({...saved,brief:b,scenes:saved.scenes.map(s=>({...s,narration:s.narration+' 바뀐 대사'}))}),/대본/);
 });
 test('budget and stale review fail before any paid create; successful intro uses original reference',async t=>{
