@@ -15,4 +15,4 @@
 - 환경 보정: iCloud 빌드 산출물이 CSS 의존성을 찾도록 작업 폴더에 전용 node_modules 링크 추가. 설치된 Chrome으로 검증. 첫 테스트는 앱이 로그인 필수라는 기존 구조와 음악 선택기가 여러 곡일 때만 나온다는 조건에 맞춰 진입 확인을 보정했다. Chrome 실행 제한시간 초과 1회는 실패로 보존했으며, 이후 최종 코드의 전체 E2E와 빌드가 통과했다. Next dev 자동 안내 파일과 로컬 `.next` 링크는 검증 후 제거하고 산출물은 iCloud에 보존한다.
 - 근거: `/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/hanmadi-word-study-20261014/`의 `e2e-release/result.json`, `word-study-{320,390,1024}.png`, `word-card-*.png`, `word-study-result.png`; 기존 회귀 결과는 `regression-vocabulary/result.json`.
 - 한계: Chrome 화면 크기/터치 에뮬레이션이며 실제 iOS 기기 시험은 아니다. 새 UI의 음성 오류 안내는 HTTP fixture, 실제 유료 TTS/AI 호출·운영 자료 쓰기는 없다. 입문 단어의 영구 완료 진도는 추가하지 않으며 저장한 단어의 기존 복습 기록만 유지한다.
-- 현재: 구현·로컬 검증 완료. 작업 브랜치 커밋·push·PR 준비. main 머지·운영 배포는 이번 요청에서 수행하지 않는다.
+- 현재: 구현·로컬 검증 완료. 구현 커밋 `b09262d`, 전용 upstream `origin/feat/hanmadi-word-study` push 완료. main 머지·운영 배포는 이번 요청에서 수행하지 않는다.
