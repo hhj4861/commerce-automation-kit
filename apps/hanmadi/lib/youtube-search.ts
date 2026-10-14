@@ -40,7 +40,7 @@ function record(value: unknown): Record<string, unknown> {
     ? (value as Record<string, unknown>)
     : {};
 }
-function titleText(value: unknown): string {
+export function titleText(value: unknown): string {
   if (typeof value !== "string") return "";
   const entities: Record<string, string> = {
     amp: "&",
@@ -66,7 +66,7 @@ function titleText(value: unknown): string {
 }
 
 export async function searchYoutubeVideos(
-  input: { query: string; language?: string; pageToken?: string },
+  input: { query: string; language?: string; pageToken?: string; music?: boolean; captionsOnly?: boolean },
   apiKey: string,
   fetcher: typeof fetch = fetch,
 ): Promise<YoutubeSearchPage> {
@@ -77,6 +77,8 @@ export async function searchYoutubeVideos(
     type: "video",
     maxResults: String(YOUTUBE_PAGE_SIZE),
     ...(input.language ? { relevanceLanguage: input.language } : {}),
+    ...(input.music ? { videoEmbeddable: "true", videoCategoryId: "10" } : {}),
+    ...(input.captionsOnly ? { videoCaption: "closedCaption" } : {}),
     q: input.query,
     ...(input.pageToken ? { pageToken: input.pageToken } : {}),
   }).toString();
