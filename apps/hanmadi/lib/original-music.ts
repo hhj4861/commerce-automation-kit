@@ -1,10 +1,10 @@
-import { musicLanguageLessons } from "./music-language";
+import { musicLanguageLessons, type MusicLanguageLesson } from "./music-language";
 import { ConversationError } from "./conversation";
 import type { Phrase, StudyLanguage } from "./v2";
 
 export type PracticeSong = {
   id: string; language: StudyLanguage; title: string; subtitle: string; revision: string;
-  audio: string; lines: (Phrase & { id: string; startSeconds: number; endSeconds: number })[];
+  audio: string; videoId?: string; managed?: boolean; lessons?: MusicLanguageLesson[]; lines: (Phrase & { id: string; startSeconds: number; endSeconds: number })[];
 };
 export type SongProgress = {
   revision: string; index: number; practiced: string[]; reviewed: string[];
@@ -55,9 +55,9 @@ export function songProgress(song: PracticeSong, saved?: SongProgress): SongProg
     wordsReviewed: unique(saved.wordsReviewed), conversations: Object.fromEntries(Object.entries(saved.conversations ?? {}).filter(([id, confidence]) => valid.has(id) && ["help", "alone"].includes(confidence))) };
 }
 export type SongAction = { trackId: string; revision: string; index: number; action: "move" | "practice" | "review" | "answer" | "word-answer" | "conversation" | "save-word" | "save-expression"; answer?: string; confidence?: "help" | "alone" };
-export function parseSongAction(value: unknown): { song: PracticeSong; input: SongAction } {
+export function parseSongAction(value: unknown, catalog: PracticeSong[] = practiceSongs): { song: PracticeSong; input: SongAction } {
   const b = value as Partial<SongAction> | null;
-  const song = practiceSongs.find(song => song.id === b?.trackId);
+  const song = catalog.find(song => song.id === b?.trackId);
   if (!song || !b || !Number.isInteger(b.index) || Number(b.index) < 0 || Number(b.index) >= song.lines.length ||
     !["move", "practice", "review", "answer", "word-answer", "conversation", "save-word", "save-expression"].includes(b.action ?? "")) throw new ConversationError(400, "연습할 곡과 줄을 다시 선택해 주세요.");
   if (b.revision !== song.revision) throw new ConversationError(409, "연습곡이 바뀌었어요. 다시 불러와 주세요.");
@@ -78,11 +78,11 @@ export function updateSongProgress(song: PracticeSong, previous: SongProgress | 
   if (input.action === "practice" && !progress.practiced.includes(line.id)) progress.practiced = [...progress.practiced, line.id];
   if (input.action === "review") {
     progress.phase = "review";
-    if (progress.practiced.length !== song.lines.length) throw new ConversationError(409, "먼저 네 줄을 따라 불러 주세요.");
+    if (progress.practiced.length !== song.lines.length) throw new ConversationError(409, "먼저 모든 구간을 따라 불러 주세요.");
     if (progress.reviewed.length === song.lines.length) progress.reviewed = [];
   }
   if (input.action === "answer") {
-    if (progress.practiced.length !== song.lines.length) throw new ConversationError(409, "먼저 네 줄을 따라 불러 주세요.");
+    if (progress.practiced.length !== song.lines.length) throw new ConversationError(409, "먼저 모든 구간을 따라 불러 주세요.");
     progress.phase = "review";
     const alreadyComplete = progress.reviewed.length === song.lines.length;
     correct = input.answer === line.id;
@@ -95,6 +95,6 @@ export function updateSongProgress(song: PracticeSong, previous: SongProgress | 
 }
 
 export function songLearningPhrase(song: PracticeSong, index: number, kind: "save-word" | "save-expression") {
-  const lesson = musicLanguageLessons[song.language][index];
+  const lesson = (song.lessons ?? musicLanguageLessons[song.language])[index];
   return kind === "save-word" ? lesson.word : lesson.answer;
 }

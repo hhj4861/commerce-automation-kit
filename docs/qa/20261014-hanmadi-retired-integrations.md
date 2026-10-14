@@ -5,9 +5,9 @@
 - 기준: origin/main 1d9c69e, fix/hanmadi-retired-integrations.
 - 완료 기준: 개인 모델·옛 대화 ID 거부, 기본 대화/언어/음악 흐름 회귀 검증, 커밋·push·PR.
 - 검증: 단위 252개, typegen/tsc, lint/build, 교실·스터디·음악 E2E 통과. 아래 표 참조.
-- 현재: 구현 및 로컬 검증 완료. 작업 브랜치 PR로 제출하며 운영 배포·머지는 미실행. 실제 운영 튜터 화면 (c)는 PIN 로그인 미확인으로 별도 잔여 항목이다.
+- 현재: 사용자에게 PR #228 머지 승인을 받았고, 먼저 머지된 음악 PR #225를 통합해 검증했다. 갱신된 CI 통과 후 main에 머지한다. 운영 배포는 미실행. 실제 운영 튜터 화면 (c)는 PIN 로그인 미확인으로 별도 잔여 항목이다.
 - 제출: [PR #228](https://github.com/hhj4861/commerce-automation-kit/pull/228). 첫 구현 커밋 b50f0f5는 CI 2종(study/GitOps) 통과. 마지막 개인정보 문구 보완 커밋의 CI는 PR에서 확인한다.
-- 다음: 최종 PR CI 확인과 사용자 머지 승인. 운영 배포는 별도 절차를 따른다.
+- 다음: 최종 통합 PR CI 확인 후 승인된 #228 머지. 운영 배포는 별도 절차를 따른다.
 
 ## 검증 경과
 
@@ -51,5 +51,12 @@
 - Claude의 12:11 관찰 이후 최신 커밋을 재확인했다. upstream은 `origin/fix/hanmadi-retired-integrations`이며 main으로 push하지 않았다. Next가 생성한 미추적 AGENTS.md/CLAUDE.md도 PR에 포함되지 않는다.
 - v2-e2e의 옛 Codex 화면 단언은 이미 기본 AI 설정·퇴역 경로 무호출 확인으로 교체됐다. 태국어 단위 테스트의 모의 성공 입력에 남아 있던 `codex-personal`은 `default`로 보정하고, 실제 completion의 옛 선택값 409·네트워크 0건 검증에 명시적으로 추가했다. 런타임 변경은 없다.
 - 음악·단어장 E2E의 빈 AI_ACCOUNTS_URL/DIFY_* 값은 외부 환경을 시험 프로세스에서 비우는 격리 설정이므로 유지한다. 운영 연결 사용을 뜻하지 않는다.
-- 음악 PR #225도 아직 OPEN이며 package.json test 줄을 수정한다. #228의 인접 test:dify 삭제와 충돌할 수 있어 나중에 통합되는 브랜치에서 음악 테스트 등록과 퇴역 스크립트 삭제를 모두 보존해야 한다. 다른 작업 브랜치는 수정하지 않았다.
+- 당시 음악 PR #225도 OPEN이었으며 package.json test 줄을 수정한다. #228의 인접 test:dify 삭제와 충돌할 수 있어 나중에 통합되는 브랜치에서 음악 테스트 등록과 퇴역 스크립트 삭제를 모두 보존해야 한다. 다른 작업 브랜치는 수정하지 않았다.
 - 보정 후 단위 252/252, 변경 테스트 ESLint, 전체 TypeScript 검사 통과. `unit-peer-followup.log`에 결과를 보존했다. 기존 브라우저 E2E·빌드 증거는 런타임 소스가 동일하며, 새 커밋의 CI 결과는 PR #228에서 확인한다.
+
+## 승인 후 main 통합 검증
+
+- PR #228의 `cab994e` CI 2종 통과 후 음악 PR #225가 먼저 머지됐다. `origin/main`의 `62758a8`을 정상 merge해 package.json 한 곳의 충돌을 해결했다. `lib/owned-music.test.ts`와 `test:owned-music`은 유지하고 `test:dify`만 제거했다. 이미 main에 반영된 다른 세션의 변경은 그대로 보존했다.
+- 통합 상태에서 단위 260/260, Next route typegen, 전체 TypeScript 검사, lint, build가 모두 exit 0이다. 기록: `merge-unit.log`, `merge-lint.log`, `merge-build.log`.
+- 새 소유 음악의 관리자 등록·권리 확인·AI 생성·JEV 재검수·게시·학습·숨김 흐름도 로컬 브라우저 E2E exit 0, `passed: true`다. AI 생성 1회·검수 2회는 모의 응답이며 공급자 유료 호출은 없다. 기록: `merge-owned-music.log`, `merge-owned-music/`.
+- Next가 이번 시험에서 만든 AGENTS.md/CLAUDE.md는 배포된 Next 생성 코드와 같은 내용임을 확인해 정리했다. 사용자 지침 파일이나 다른 세션 산출물은 변경하지 않았다. 최신 CI·실제 main 머지 여부는 PR #228 상태에서 확인한다.

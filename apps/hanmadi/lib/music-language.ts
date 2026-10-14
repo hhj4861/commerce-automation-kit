@@ -52,5 +52,5 @@ export const musicLanguageLessons: Record<StudyLanguage, MusicLanguageLesson[]> 
   ],
 };
 export function musicConversationPrompt(title: string, lesson: MusicLanguageLesson) {
-  return `한마디 연습곡 「${title}」에서 ${lesson.word.text}(${lesson.word.meaning})를 배웠어요. ${lesson.situation} 상황을 친구 역할로 연습해 주세요. 예시 답변은 ${lesson.answer.text}(${lesson.answer.meaning})예요. 짧은 질문부터 시작하고, 제가 답하면 자연스럽게 이어가 주세요.`;
+  return `음악 학습 「${title}」에서 ${lesson.word.text}(${lesson.word.meaning})를 배웠어요. ${lesson.situation} 상황을 친구 역할로 연습해 주세요. 예시 답변은 ${lesson.answer.text}(${lesson.answer.meaning})예요. 짧은 질문부터 시작하고, 제가 답하면 자연스럽게 이어가 주세요.`;
 }

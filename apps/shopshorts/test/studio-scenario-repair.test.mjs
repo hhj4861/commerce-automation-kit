@@ -119,3 +119,37 @@ test('format diagnostics reject untrusted path and rule text at the public bound
   assert.ok(!message.includes('private-token'));assert.ok(!message.includes('확인 항목'));
  }
 });
+
+const hybridGood={...webtoonGood,scenes:webtoonGood.scenes.map(s=>({...s,hybrid:{renderer:'motion',focus:'building',depth:8}}))};
+const hybridBrief={...brief,category:'건축학',productionStyle:'hybrid',architectureQuality:'architecture-cycles-v1'};
+test('basic and hybrid/architecture violations give the exact field to one repair before review',async()=>{
+ const cases=[
+  [v=>{v.scenes[1].narration='';},'scenes[1].narration','nonempty text, max 1200 characters','대사'],
+  [v=>{v.scenes[1].prompt='private'.repeat(300);},'scenes[1].prompt','nonempty text, max 2000 characters','화면 설명'],
+  [v=>{v.scenes[1].duration=31;},'scenes[1].duration','number in 1..30','장면 길이'],
+  [v=>{v.scenes[1].hybrid.focus='private';},'scenes[1].hybrid.focus','must reference an id in this scene webtoon.layers','확대할 대상'],
+  [v=>{v.scenes[1].hybrid.depth=25;},'scenes[1].hybrid.depth','number in 1..24','구조도 깊이'],
+  [v=>{v.scenes[1].hybrid.parts=[{layerId:'building',material:'private'}];},'scenes[1].hybrid.parts[0].material','glass, metal, fabric or concrete','건축 부품 재질'],
+  [v=>{v.scenes[1].hybrid.renderer='3d';},'scenes[1].hybrid.parts','provide one part with layerId and allowed material for every webtoon layer','건축 부품 구성'],
+ ];
+ for(const [mutate,path,rule,label] of cases){
+  const malformed=structuredClone(hybridGood);mutate(malformed);
+  for(const repairSucceeds of [true,false]){
+   let calls=0,drafts=0,reviews=0;
+   const promise=scenarioBrief(hybridBrief,{}, {generate:async prompt=>{
+    if(++calls===1)return {searched:true,value:research};
+    const review=mockReview(prompt);if(review){reviews++;return review;}
+    drafts++;
+    if(drafts===2){const hint=JSON.parse(prompt.split('실패한 필드와 제약: ')[1].split('. 목표 길이')[0]);assert.deepEqual(hint,{path,rule});}
+    return {value:repairSucceeds&&drafts===2?hybridGood:malformed};
+   }});
+   if(repairSucceeds){const result=await promise;assert.equal(result.scenes.length,3);assert.equal(reviews,1);}
+   else{await assert.rejects(promise,e=>{
+    assert.equal(e.code,'SCENARIO_FORMAT_INVALID');assert.deepEqual(e.validationIssue,{path,rule});
+    for(const provider of ['codex','claude']){const message=accountFailureMessage(provider,e);assert.ok(message.includes(`2번 장면의 ${label}`));assert.ok(!message.includes('private'));}
+    return true;
+   });assert.equal(reviews,0);}
+   assert.equal(drafts,2);
+  }
+ }
+});

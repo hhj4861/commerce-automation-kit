@@ -17,7 +17,9 @@ export function MusicLanguagePractice({ song, index, progress, expressions, busy
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
   const pending = useRef(false);
-  const lesson = musicLanguageLessons[song.language][index], lineId = song.lines[index].id;
+  const lessons = song.lessons ?? musicLanguageLessons[song.language];
+  const lesson = lessons[index], lineId = song.lines[index].id;
+  const choices = song.lines.length === 4 ? [2, 0, 3, 1] : song.lines.map((_, i) => (i + Math.ceil(song.lines.length / 2)) % song.lines.length);
   const confidence = progress.conversations?.[lineId];
   const reviewed = progress.wordsReviewed?.includes(lineId);
   const normalize = (text: string) => text.normalize("NFKC").toLowerCase().replace(/[\s\p{P}]/gu, "");
@@ -47,10 +49,10 @@ export function MusicLanguagePractice({ song, index, progress, expressions, busy
       <h3 lang={song.language}>{lesson.word.text}</h3><p className="hm-reading">{lesson.word.reading}</p>
       <span onClickCapture={onPause}><Speaker key={`${audioEpoch}:word`} language={song.language} text={lesson.word.text} label="단어 발음 듣기" /></span>
       <p>이 단어의 뜻을 골라 보세요.</p>
-      <div className="hm-song-choices">{[2, 0, 3, 1].map(i => <button key={i} disabled={busy || saving || feedback === "correct"} onClick={async () => {
+      <div className="hm-song-choices">{choices.map(i => <button key={i} disabled={busy || saving || feedback === "correct"} onClick={async () => {
         const result = await onAction("word-answer", index, song.lines[i].id);
         if (result) setFeedback(result.correct ? "correct" : "wrong");
-      }}>{musicLanguageLessons[song.language][i].word.meaning}</button>)}</div>
+      }}>{lessons[i].word.meaning}</button>)}</div>
       <p role="status">{feedback === "wrong" ? "아직 아니에요. 가사 속 뜻을 다시 떠올려 보세요." : feedback === "correct" ? "맞았어요! 이제 대화에 써 볼까요?" : reviewed ? "이전에 맞힌 단어예요. 다시 떠올려 보세요." : ""}</p>
       <details open={feedback === "correct" || undefined}><summary>뜻과 쓰임 확인</summary><p><b>{lesson.word.meaning}</b> — {lesson.note}</p></details>
       <button className="hm-soft" disabled={busy || saving || isSaved("save-word")} onClick={() => void save("save-word")}>
@@ -78,7 +80,7 @@ export function MusicLanguagePractice({ song, index, progress, expressions, busy
       <button className="hm-primary" disabled={busy || saving} onClick={() => { onPause(); onConversation(musicConversationPrompt(song.title, lesson)); }}>새 AI 대화로 연습</button>
       <small>AI 대화 입력창에 연습 상황을 준비해요. 보내기를 누르면 대화가 시작돼요.</small>
     </div>}
-    <p className="hm-muted">단어 {progress.wordsReviewed?.length ?? 0} / 4개 · 회화 {Object.keys(progress.conversations ?? {}).length} / 4개 연습</p>
+    <p className="hm-muted">단어 {progress.wordsReviewed?.length ?? 0} / {song.lines.length}개 · 회화 {Object.keys(progress.conversations ?? {}).length} / {song.lines.length}개 연습</p>
     {saveError && <p role="alert">{saveError}</p>}
   </section>;
 }

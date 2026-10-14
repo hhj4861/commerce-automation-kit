@@ -1200,3 +1200,16 @@
 .ks .vs-settings-toggle strong { font-size: 14px; }
 .ks .vs-settings-toggle span { color: #536158; font-size: 12px; line-height: 1.7; }
 .ks .vs-settings-toggle:focus-visible { outline: 2px solid #3157d5; outline-offset: 4px; }
+
+.music-admin { display:grid; gap:1.2rem; }
+.music-fields { border:0; padding:1rem 0 0; display:grid; gap:1rem; min-width:0; }
+.music-fields label { display:grid; gap:.5rem; }
+.music-fields input,.music-fields textarea,.music-fields select { width:100%; min-width:0; }
+.music-admin .music-check { display:flex; align-items:flex-start; gap:.65rem; line-height:1.65; }
+.music-admin .music-check input { width:1.2rem; height:1.2rem; margin-top:.2rem; flex-shrink:0; }
+.music-catalog { display:grid; gap:1rem; }
+.music-card { min-width:0; overflow-wrap:anywhere; }
+.music-card summary,.music-admin>details>summary { cursor:pointer; font-weight:700; padding:.4rem 0; }
+.music-card details { margin-top:1rem; }
+.music-review-unit { margin:1rem 0; padding:1rem; border:1px solid var(--hm-line,#deded9); border-radius:16px; }
+.music-publish { display:grid; gap:1rem; padding-top:1rem; border-top:1px solid #deded9; }
