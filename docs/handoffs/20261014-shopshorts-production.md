@@ -1,6 +1,17 @@
 # Shopshorts 운영 제작 파이프라인 인수인계 — 2026-10-14
 
-## 최신 상태 — #236·#237 운영 반영 완료, 실생성은 구독 한도로 중단
+## 최신 상태 — #240·#241 한도 오류 구분·자동 연결 해제 운영 반영 완료
+
+- 사용자 승인으로 #240 main `f5d42f0302a51b4db81021cf78abd9ffe0fa3d01`, #241 deploy/shopshorts `3744873ca92f245bd6ab10f274233b0246ae6196` 머지 완료. source `14b8113`, release `92865f3`; release와 운영 merge tree 차이0. 기존 #239 Kandinsky 변경 보존. 운영 checkout clean detached3744873.
+- Wrangler Pages 배포 실제 exit0. 공식 목록에서 Production/deploy/shopshorts/source3744873 확인. deployment `04cbf59f-e402-47b0-b1dd-dd381d42c1ad`, https://04cbf59f.shopshorts-dash.pages.dev . 운영 URL https://shopshorts-dash.pages.dev . 공용 broker 재배포 없음.
+- 재시작 직전 계정 활성0/hasNext=false·미디어 활성0 확인. SIGTERM 후 계정 PID65268→67564, 제작65271→67582. 두 서비스 running/이전 exit0 확인. 로그인된 운영 페이지 새로고침 후 제작 워커 온라인, 기존 작업 조회 및 계정 관리 열기/닫기 정상 확인. 인증정보나 작업 상태를 임의 변경하지 않았다.
+- 확정된 Codex/Claude `QUOTA_EXHAUSTED` 또는 인증 실패는 실패 작업 기록과 함께 해당 연결 자격을 CAS로 제거한다. 일반429/일시적 RATE_LIMITED는 연결을 유지하고 별도 안내한다. 오래된 실패 작업이 새로 연결한 자격을 제거하지 못하게 한다. 추천·시나리오 실패 시 계정 상태 UI도 갱신한다. 입력·기존 프로젝트는 보존하며 재연결이 공급자 한도를 초기화하지는 않는다.
+- **이전 16:47 오류의 실제 원인은 미확정**이다. 종전 코드가 구독 한도와 일반429를 같은 메시지로 분류했고 원본 진단은 저장하지 않았다. 아래 과거 기록의 ‘구독 한도로 중단’은 당시 UI 문구이며 실제 구독 소진을 확정한 것이 아니다. 과거 애매한 실패를 소급 적용해 연결을 끊지 않았다. 새 배포 후에도 기존 ‘연결됨’과 과거 오류 이력이 함께 보이는 것은 보존된 기록이다.
+- 검증: source/release 각각 운영 Node20·동일 의존성에서 87검사 통과(0fail/0skip). 실제 브라우저+HTTP+암호화 저장소+워커 통합으로 Codex/Claude 한도 해제, 일시적429 연결 유지, 입력 보존 확인. **공급자 오류는 시험 응답이며 실제 유료 생성/실한도 소진 시험은 아니다.** 두 PR의 CI 성공 후 머지. 운영 비인증 JS 조회는 로그인 HTML로 리디렉션되어 파일 해시 비교 근거로 쓰지 않았다. 배포 source 확인과 로그인된 UI 검증을 구분한다.
+- GitOps run [38553151937](https://github.com/hhj4861/commerce-automation-kit/actions/runs/38553151937)은 `Cloudflare credential request failed (503)`로 실패. 이번 운영 반영은 Wrangler 수동 배포 성공이며 CI 전용 자격 부재 문제는 미완료다. #240·#241 승인을 다시 요청하지 않는다.
+- 전체 영상 실생성 E2E는 여전히 미완료. 이번 배포 검증에서는 기존 수원 QA의 재시도·새 유료 생성·강제 한도 오류를 발생시키지 않았다. 다음 단계는 CI용 Cloudflare 자격 설정과 별도 승인 범위의 실제 생성 재검증이다. 구현/승격 worktree는 `account-quota-state` / `account-quota-release`; 상세 구현 카드는 `docs/tasks/20261014-account-quota-state.md`. 테스트 로그는 iCloud `commerce-automation-kit/account-quota-state/`에 있다.
+
+## 이전 상태 — #236·#237 운영 반영, 당시 한도 안내로 중단 (원인 해석은 상단 정정 참고)
 
 - 사용자 ‘응 진행해줘’ 승인 후 #236 main `809b8fa8cbb46abe52fc92fccb32108e7778b49f`, #237 deploy/shopshorts `74d66ac94fb732b6820294002d42fa2a964b8d75` 머지 완료. 승인된 source34a5187/releasee4afa16과 최신 CI SUCCESS를 재확인했다. 검증된 release tree와 운영 merge tree 차이0.
 - 운영 checkout clean detached74d66ac. 기존 배포 브랜치의 Kandinsky 변경을 보존했다. Wrangler Pages 배포 exit0, 공식 목록 Production/deploy/shopshorts/source74d66ac 확인. deployment `9eec2068-8793-4b20-ba3f-93cbe9190b66`, https://9eec2068.shopshorts-dash.pages.dev . 공용 broker 재배포 없음.
