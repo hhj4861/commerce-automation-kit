@@ -89,3 +89,17 @@ test("daily generation cap fails visibly and retains source", async () => {
   await assert.rejects(buildMusic(song.id, 1, { ...f.deps, db: { ...f.db, count: async () => 21 } }), /한도/);
   assert.equal((await readMusic(f.db))[0].source, input.source); assert.deepEqual(f.counts(), { generated: 0, evaluated: 0 });
 });
+
+import { timedSource } from "./music-source";
+test("LRC retains repeated choruses, offset and explicit last boundary without guessing", () => {
+  const rows = parseMusicSource("[ar:Fixture]\n[offset:200]\n[00:01.20][00:08.00]Hello\n[00:04.00]Morning\n[00:10.00]");
+  assert.deepEqual(rows.map(l => [l.text, l.startSeconds, l.endSeconds]), [["Hello", 1.4, 4.2], ["Morning", 4.2, 8.2], ["Hello", 8.2, 10.2]]);
+  assert.deepEqual(parseMusicSource(timedSource(rows)), rows);
+  const unknown = parseMusicSource("[00:01]Hello\n[00:04]Morning");
+  assert.equal(unknown[1].endSeconds, undefined);
+  assert.throws(() => timedSource(unknown), /끝 시간/);
+});
+test("bad timing never becomes a plausible lyric cue", () => {
+  for (const source of ["[00:61]One\n[00:65]Two", "[00:01]One\n[00:01]Two", "[offset:-5000]\n[00:01]One\n[00:04]Two", "[00:01]One\nuntimed", "00:00:01.000 --> 00:00:05.000\nOne\n\n00:00:04.000 --> 00:00:08.000\nTwo"]) assert.throws(() => parseMusicSource(source));
+  assert.throws(() => timedSource([{text:"One",startSeconds:0,endSeconds:5},{text:"Two",startSeconds:4,endSeconds:8}]));
+});
