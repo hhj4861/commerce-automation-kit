@@ -12,7 +12,7 @@ export function fixture() {
   const token='hf_SyntheticFixture12345',calls=[],media=`${HOST}/gradio_api/file=/tmp/result.mp4`;
   let mode='ok';
   const fetcher=async(url,init)=>{
-    calls.push({url,method:init.method||'GET'});assert.equal(init.headers.get('authorization'),`Bearer ${token}`);assert.equal(init.redirect,'error');
+    calls.push({url,method:init.method||'GET'});assert.equal(init.headers.get('authorization'),`Bearer ${token}`);assert.equal(init.redirect,'manual');
     if(url.endsWith('whoami-v2'))return Response.json({type:'user',isPro:mode==='paid',canPay:false,orgs:[],name:'fixture-free'});
     if(url.endsWith('/info')){
       if(mode==='tls')throw new TypeError('fetch failed',{cause:{code:'UNABLE_TO_VERIFY_LEAF_SIGNATURE'}});
