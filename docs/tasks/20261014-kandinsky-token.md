@@ -2,7 +2,7 @@
 
 - 목표: 설정에서 HF 읽기 토큰 저장·삭제·상태 조회, 재입력 없는 생성과 연결 오류 진단. 후속 요청으로 Kandinsky UI/UX 개선 포함.
 - 담당: Codex 단독, worker/Claude OFF. 기준 main 48d1dfe. 구현 worktree kandinsky-saved-token.
-- 현재: 구현과 관련 시험 통과, 작업 브랜치 PR 준비. 머지·운영 배포는 별도 승인 뒤. 기존 PR230/231 배포 승인과 별개.
+- 현재: 사용자 승인으로 PR238 main 머지 및 credential-broker 배포 완료. Pages 운영 승격 PR239는 별도 머지 승인 대기.
 
 ## 설계
 - 기존 credential-broker의 AES-256-GCM + Secrets Store VAULT_KEY + D1 credential_vault를 재사용한다. 별도 키/테이블/인프라 생성 없음.
@@ -40,3 +40,13 @@
 - 이 변경부터 kandinsky-browser.mjs는 외부 브라우저 제어 스크립트가 아니라 로컬 fixture 서버다. 앞선 20261014-kandinsky.md의 PLAYWRIGHT_ENTRY/CHROME_PATH 절차는 이전 버전 기록이다.
 - 브라우저 재현: KANDINSKY_TEST_DIR에 시험 MP4 fixture.mp4를 준비하고 KANDINSKY_TEST_PORT=58043 node apps/shopshorts/test/kandinsky-browser.mjs 실행. 출력 /test/login으로 진입하여 합성 토큰 hf_SyntheticFixture12345만 입력. 실제 토큰/외부 HF 호출 없음. 종료 시 메모리 상태는 사라짐.
 - 최종 관련 시험 로그: tests-final.log (124 pass, 0 fail, 0 skip). Pages 빌드 pages-build.log, broker dry-run broker-build.log.
+
+## 2026-10-14 승인 후 적용
+- PR238은 사용자 승인 후 main `221cbce58495678f0d522fdccbbf6e51e2fb857d`로 머지. 승인 HEAD `7bde33a8a61515116ca470f33db1932a82e44bfa`의 GitHub 필수 검사 2개 성공 확인.
+- 기존 운영 `74d66ac`(PR237)을 보존하고 승인 변경만 cherry-pick한 `release/kandinsky-saved-token` 준비. [운영 승격 PR239](https://github.com/hhj4861/commerce-automation-kit/pull/239)는 OPEN, 머지 승인 대기. Shopshorts/broker 소스는 main 221cbce와 동일.
+- 운영 브랜치 위 Node20 관련 시험 140/140 통과, 실패·생략 0 (`release-tests.log`). PR239 최초 HEAD 13eeb7d의 Platform GitOps verification과 contract 성공.
+- broker 먼저 배포 완료: `4bc3e711-668d-4879-ad57-91cb6c825ad4`, 2026-10-14 08:06:33 UTC. 배포 모듈 SHA256 `ccba53c3ab1760b30e4fcd3e5e02e312284e715b3f3717f407331a3036f0625e`.
+- 로컬 wrangler 설정에 운영에 없는 `SS_DEPLOY_CLOUDFLARE_API_TOKEN` 참조가 있어 CLI 업로드는 Cloudflare 10182로 실패했다. 키를 새로 만들거나 정책을 바꾸지 않았다. 공식 [Worker 모듈 업로드 API](https://developers.cloudflare.com/api/resources/workers/subresources/scripts/methods/update/)에 실제 운영 bindings를 메모리로 전달해 배포했고, 전후 36개 binding이 동일함을 확인했다. 따라서 Cloudflare CI 배포 키 부재는 여전히 해결되지 않았다.
+- 운영 설정을 iCloud 파일로 저장하려던 요청은 자동 승인 검사에서 거부돼 실행하지 않았다. 이후 설정/키를 파일로 쓰지 않고 메모리에서만 처리했다. 빌드 코드·시험 로그와 운영 설정을 구분했다.
+- 운영 broker 실측: 무인증 `/runner/huggingface` 요청 401, 기존 서명 키로 합성 owner의 읽기 전용 status 조회 성공, configured=false/job 없음/token 필드 없음. HF 토큰 저장·생성·기존 사용자 데이터 수정 없음.
+- Pages는 아직 기존 `9eec2068-8793-4b20-ba3f-93cbe9190b66`, 소스 74d66ac. PR239 머지와 Pages 실배포 확인이 남았다. 로컬 제작 워커 및 사용자 토큰으로 실제 HF 생성은 이번 단계에서 변경/검증하지 않았다.
