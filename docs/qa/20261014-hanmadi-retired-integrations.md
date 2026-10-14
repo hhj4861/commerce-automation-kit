@@ -6,7 +6,8 @@
 - 완료 기준: 개인 모델·옛 대화 ID 거부, 기본 대화/언어/음악 흐름 회귀 검증, 커밋·push·PR.
 - 검증: 단위 252개, typegen/tsc, lint/build, 교실·스터디·음악 E2E 통과. 아래 표 참조.
 - 현재: 구현 및 로컬 검증 완료. 작업 브랜치 PR로 제출하며 운영 배포·머지는 미실행. 실제 운영 튜터 화면 (c)는 PIN 로그인 미확인으로 별도 잔여 항목이다.
-- 다음: PR CI 확인과 사용자 머지 승인. 운영 배포는 별도 절차를 따른다.
+- 제출: [PR #228](https://github.com/hhj4861/commerce-automation-kit/pull/228). 첫 구현 커밋 b50f0f5는 CI 2종(study/GitOps) 통과. 마지막 개인정보 문구 보완 커밋의 CI는 PR에서 확인한다.
+- 다음: 최종 PR CI 확인과 사용자 머지 승인. 운영 배포는 별도 절차를 따른다.
 
 ## 검증 경과
 
@@ -34,10 +35,13 @@
 산출물 위치: `/Users/admin/Library/Mobile Documents/com~apple~CloudDocs/gpt 작업/commerce-automation-kit/hanmadi-retired-integrations-20261014/`.
 최종 로그: `unit.log`, `typecheck-final.log`, `lint-final.log`, `build-final.log`, `language-flow-final.log`, `v2-final.log`, `music.log`; 화면: `language-flow/`, `v2/`, `music/`.
 
+개인정보 안내의 마지막 문구 보완 후 해당 페이지 ESLint, 앱 빌드, 격리된 Next 서버의 실제 `/privacy` HTTP 200과 렌더 본문을 확인했다. 옛 연결·앱 내 해제 안내는 없고 현재 동작 설명이 표시된다. 처음에는 루트에서 ESLint 설정을 찾지 못했고 정적 HTML 경로도 존재하지 않아, 앱 디렉터리에서 검사하고 동적 HTTP 응답으로 확인했다. 기록: `build-privacy.log`, `privacy-http.log`.
+
 ## 동작과 범위
 
 - accounts v1의 로그인·키 입력·승인·연결 조회/해제 UI와 중계 구현을 제거했다. 구형 클라이언트의 `/api/model-connections`는 410이며 body의 자격정보를 읽거나 전달하지 않는다. POST/DELETE의 origin 검사는 403으로 유지한다.
 - 두 회화 API는 옛 개인 모델 선택값을 409로 거부한다. 스터디는 사용량 예약·자료 검색보다 먼저 확인한다. 기본 Gemini로 자동 전환하지 않는다.
 - Dify 설정은 실패로 알리고, 옛 저장 대화 ID를 새 공급자에 옮기지 않는다. 같은 탭의 기존 LiteLLM 대화와 입력은 유지한다. 대화 저장 동의 UI는 제거하고 공급자 전송 안내는 유지한다.
+- 개인정보 안내에서도 종료된 연결·대화 보관 기능과 앱 내 해제 안내를 정정했다. 현재 탭 임시 보관과 이전 자료의 운영자 문의 경로를 설명하며, 과거 자료가 삭제됐다고 주장하지 않는다.
 - 서버·accounts v2·공통 LiteLLM 계약·워크플로·운영 환경변수·운영 데이터는 변경하지 않았다.
 - 모든 AI·상용 가사 공급자 응답은 fixture다. 라이브 모델 품질·실제 마이크 발음 채점·운영 튜터 PIN 로그인 (c)을 검증한 것이 아니다.
