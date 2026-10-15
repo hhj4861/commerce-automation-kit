@@ -69,7 +69,8 @@ if(mode==='review'){
   const {renderCaptionArtwork}=await mod('apps/shopshorts/studio-typography.mjs');
   const layers=[];let offset=0;
   for(const b of tl.beats){
-   const video=join(root,'render',b.id+'.mp4'),audio=join(root,b.id+'.mp3'),clip=join(root,b.id+'-av.mp4');
+   let video=join(resolve(arg('--render-dir',join(root,'render'))),b.id+'.mp4');if(!await exists(video)&&arg('--secondary-render-dir'))video=join(resolve(arg('--secondary-render-dir')),b.id+'.mp4');
+   const audio=join(root,b.id+'.mp3'),clip=join(root,b.id+'-av.mp4');
    const visualDuration=Number(await command('ffprobe',['-v','error','-show_entries','format=duration','-of','default=nw=1:nk=1',video]));
    await command('ffmpeg',['-v','error','-y','-i',video,'-i',audio,'-map','0:v','-map','1:a','-vf',`setpts=${b.duration/visualDuration}*PTS,fps=24,tpad=stop_mode=clone:stop_duration=0.1`,'-c:v','libx264','-crf','17','-preset','fast','-af','apad','-c:a','aac','-b:a','192k','-t',String(b.duration),clip]);
    layers.push(clip);
@@ -85,7 +86,7 @@ if(mode==='review'){
     overlays.push({file:f,x:Math.round((1080-art.width)/2),y:Math.round(1920*(b.id==='hook'?.86:.74)-art.height/2),start:offset+c.start,end:offset+c.end});
    }offset+=b.duration;
   }
-  const hf=join(root,'header.png');await renderCaptionArtwork({...defaultCaption(),presentation:'modern-header-v1',text:'콘크리트 구조물을\n바다에 띄웠다고?',size:88},'9:16',hf);overlays.push({file:hf,x:0,y:0,start:0,end:3.5});
+  const hf=join(root,'header.png');await renderCaptionArtwork({...defaultCaption(),presentation:'modern-header-v1',text:'472m 구조물을\n바다에 띄웠다고?',size:88},'9:16',hf);overlays.push({file:hf,x:0,y:0,start:0,end:3.5});
   const lf=join(root,'label.png');const label=await renderCaptionArtwork({...defaultCaption(),text:'AI 3D 재현 · 원리 설명',size:24,backgroundOpacity:.5},'9:16',lf);overlays.push({file:lf,x:Math.round((1080-label.width)/2),y:1820,start:0,end:offset});
   // One intermediate per 12 overlays keeps file descriptors/memory bounded.
   let input=join(root,'joined.mp4');
@@ -94,7 +95,7 @@ if(mode==='review'){
    await command('ffmpeg',['-v','error','-y','-i',input,...batch.flatMap(c=>['-i',c.file]),'-filter_complex',filter,'-map',`[v${batch.length}]`,'-map','0:a','-c:v','libx264','-crf','17','-preset','fast','-c:a','copy',out],process.env,3600000);input=out;
   }
   const out=resolve(arg('--out',join(root,'troll-a-blender-short.mp4')));await mkdir(dirname(out),{recursive:true});
-  await command('ffmpeg',['-v','error','-y','-i',input,'-c:v','copy','-af','loudnorm=I=-16:TP=-1.5:LRA=9','-c:a','aac','-b:a','192k','-movflags','+faststart',out]);
+  await command('ffmpeg',['-v','error','-y','-i',input,'-c:v','copy','-af','loudnorm=I=-16:TP=-1.5:LRA=9','-ar','48000','-c:a','aac','-b:a','192k','-movflags','+faststart',out]);
   await save('delivery.json',{file:out,duration:offset,sourceHash:hash,reviewDigest:review.digest,voice:tl.voice,speed:tl.speed,higgsfieldCalls:0});console.log(JSON.stringify({file:out,duration:offset}));
  }else throw Error('Unknown action');
 }

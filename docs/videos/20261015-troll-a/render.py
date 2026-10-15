@@ -1,10 +1,10 @@
 import bpy, math, json, argparse, random, hashlib, subprocess, time
 from pathlib import Path
 from mathutils import Vector
-p=argparse.ArgumentParser();p.add_argument('--out',type=Path,required=True);p.add_argument('--timeline',type=Path);p.add_argument('--preview',action='store_true');p.add_argument('--shot',default='all');p.add_argument('--engine',choices=['CYCLES','EEVEE'],default='CYCLES');p.add_argument('--percent',type=int,default=100);a=p.parse_args(__import__('sys').argv[__import__('sys').argv.index('--')+1:]);a.out.mkdir(parents=True,exist_ok=True)
-bpy.ops.wm.read_factory_settings(use_empty=True);S=bpy.context.scene;S.render.engine='CYCLES' if a.engine=='CYCLES' else 'BLENDER_EEVEE_NEXT';S.cycles.samples=48;S.cycles.use_denoising=True
+p=argparse.ArgumentParser();p.add_argument('--out',type=Path,required=True);p.add_argument('--timeline',type=Path);p.add_argument('--preview',action='store_true');p.add_argument('--shot',default='all');p.add_argument('--samples',type=int,choices=[32,64,128,256]);p.add_argument('--engine',choices=['CYCLES','EEVEE'],default='CYCLES');p.add_argument('--percent',type=int,default=100);a=p.parse_args(__import__('sys').argv[__import__('sys').argv.index('--')+1:]);a.out.mkdir(parents=True,exist_ok=True)
+bpy.ops.wm.read_factory_settings(use_empty=True);S=bpy.context.scene;S.render.engine='CYCLES' if a.engine=='CYCLES' else 'BLENDER_EEVEE_NEXT';S.cycles.samples=a.samples or 48;S.cycles.use_denoising=True
 if a.engine=='EEVEE':
- S.eevee.taa_render_samples=128
+ S.eevee.taa_render_samples=a.samples or 128
  S.eevee.use_raytracing=True
 try:
  pref=bpy.context.preferences.addons['cycles'].preferences;pref.compute_device_type='METAL';pref.get_devices()
@@ -128,7 +128,7 @@ def pose(shot,u):
  for o in [vessels,*vessels.children_recursive]:o.hide_render=near or installed
  if near:
   # Isolate a representative cell without implying the actual whole caisson is open.
-  target=rig.location+Vector((0,-13,3.2));cam.location=target+Vector((11-1.5*u,-20,7));cam.data.lens=40
+  target=rig.location+Vector((0,-13,3.2));cam.location=target+Vector((11-1.5*u,-20,7));cam.data.lens=35 if shot=='buoyancy' else 40
  else:
   views={'hook':((46,-82,13),(0,0,0),36),'harbour':((53,-100,30),(0,0,8),36),'tow':((52,-93,16),(0,0,-1),34),'ballast':((28,-45,-9),(0,0,-24),36),'foundation':((28,-45,-9),(0,0,-24),36),'payoff':((42,-77,24),(0,0,7),36)}
   cp,tp,l=views[shot];cam.location=Vector(cp)+Vector((-3*u,2*u,0));target=Vector(tp);cam.data.lens=l
@@ -136,9 +136,9 @@ def pose(shot,u):
  bpy.context.view_layer.update()
  assert abs(rig.rotation_euler.x)<1e-8 and abs(rig.rotation_euler.y)<1e-8,'platform must remain upright'
  assert rig.location.z>=-30.3-1e-6,'no free fall through seabed'
-shots=['hook','harbour','buoyancy','tow','ballast','foundation','payoff'];manifest={'sourceHash':hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),'engine':S.render.engine,'samples':48 if a.engine=='CYCLES' else 128,'percent':a.percent,'device':S.cycles.device,'illustrativeGeometry':True,'uprightTow':True,'shots':[]}
+shots=['hook','harbour','buoyancy','tow','ballast','foundation','payoff'];manifest={'sourceHash':hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),'engine':S.render.engine,'samples':S.cycles.samples if a.engine=='CYCLES' else S.eevee.taa_render_samples,'percent':a.percent,'device':S.cycles.device,'illustrativeGeometry':True,'uprightTow':True,'shots':[]}
 if a.preview:
- for sh in shots if a.shot=='all' else [a.shot]:
+ for sh in shots if a.shot=='all' else [sh for sh in shots if sh in a.shot.split(',')]:
   pose(sh,.5);S.render.filepath=str(a.out/(sh+'.png'));bpy.ops.render.render(write_still=True)
  (a.out/'preview-manifest.json').write_text(json.dumps(manifest,indent=2));raise SystemExit()
 tl=json.loads(a.timeline.read_text());mp=a.out/'render-manifest.json'
@@ -148,7 +148,7 @@ if mp.exists():
 started=time.time()
 for beat in tl['beats']:
  sh=beat['id']
- if a.shot!='all' and sh!=a.shot:continue
+ if a.shot!='all' and sh not in a.shot.split(','):continue
  n=round(beat['duration']*24);out=a.out/(sh+'.mp4')
  if any(v['id']==sh and v['frames']==n for v in manifest['shots']) and out.exists():continue
  temp=a.out/(sh+'-current.png');S.render.filepath=str(temp)
