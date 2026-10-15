@@ -12,52 +12,59 @@ class StudyTabs extends StatelessWidget {
   const StudyTabs({super.key, required this.m, this.inMusic = false});
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(bottom: 24),
-    child: Row(
-      children: [
-        for (final entry in {
-          'conversation': '회화',
-          'words': '단어',
-          'music': '음악',
-        }.entries)
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 3),
-              child: TextButton(
-                style: TextButton.styleFrom(
-                  backgroundColor:
-                      (inMusic
-                          ? entry.key == 'music'
-                          : m.studyMode == entry.key)
-                      ? soft
-                      : Colors.transparent,
-                  foregroundColor:
-                      (inMusic
-                          ? entry.key == 'music'
-                          : m.studyMode == entry.key)
-                      ? brand
-                      : muted,
-                  minimumSize: const Size(0, 46),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(13),
+    padding: const EdgeInsets.only(bottom: 22),
+    child: Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: soft,
+        borderRadius: BorderRadius.circular(19),
+      ),
+      child: Row(
+        children: [
+          for (final entry in {
+            'conversation': '회화',
+            'words': '단어',
+            'music': '음악',
+          }.entries)
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 3),
+                child: TextButton(
+                  style: TextButton.styleFrom(
+                    backgroundColor:
+                        (inMusic
+                            ? entry.key == 'music'
+                            : m.studyMode == entry.key)
+                        ? Colors.white
+                        : Colors.transparent,
+                    foregroundColor:
+                        (inMusic
+                            ? entry.key == 'music'
+                            : m.studyMode == entry.key)
+                        ? brand
+                        : muted,
+                    minimumSize: const Size(0, 46),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(13),
+                    ),
                   ),
-                ),
-                onPressed: m.busy
-                    ? null
-                    : () {
-                        if (entry.key != 'music') m.lastStudyMode = entry.key;
-                        m.studyMode = entry.key;
-                        m.changed();
-                        if (inMusic) context.go('/study');
-                      },
-                child: Text(
-                  entry.value,
-                  style: const TextStyle(fontWeight: FontWeight.w600),
+                  onPressed: m.busy
+                      ? null
+                      : () {
+                          if (entry.key != 'music') m.lastStudyMode = entry.key;
+                          m.studyMode = entry.key;
+                          m.changed();
+                          if (inMusic) context.go('/study');
+                        },
+                  child: Text(
+                    entry.value,
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
                 ),
               ),
             ),
-          ),
-      ],
+        ],
+      ),
     ),
   );
 }
@@ -75,7 +82,18 @@ class StudyScreen extends StatelessWidget {
     final selected = lessons.isNotEmpty ? lessons : allLessons;
     return PageBody(
       children: [
-        const Heading('오늘도, 한마디 가까이', '외운 말이 나의 말이 되는 작은 연습.'),
+        Heading(
+          m.studyMode == 'words'
+              ? '아는 단어가, 쓰는 단어로'
+              : m.studyMode == 'music'
+              ? '좋아하는 리듬으로 배우기'
+              : '오늘도, 한마디 가까이',
+          m.studyMode == 'words'
+              ? '뜻을 떠올리고 문장 속에서 익혀요.'
+              : m.studyMode == 'music'
+              ? '한 줄을 듣고, 단어를 익히고, 대화로 이어가요.'
+              : '외운 말이 나의 말이 되는 작은 연습.',
+        ),
         StudyTabs(m: m),
         if (m.profile.isEmpty)
           Sheet(
@@ -83,10 +101,7 @@ class StudyScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  '어디서 시작할까요?',
-                  style: TextStyle(fontSize: 21, fontWeight: FontWeight.w600),
-                ),
+                const Text('어디서 시작할까요?', style: sectionTitle),
                 const SizedBox(height: 8),
                 const Text('먼저 가볍게 시작하고, 설정에서 레벨을 바꿀 수 있어요.'),
                 const SizedBox(height: 18),
@@ -106,10 +121,7 @@ class StudyScreen extends StatelessWidget {
         if (m.profile.isNotEmpty && m.studyMode == 'conversation') ...[
           Row(
             children: [
-              const Text(
-                '오늘의 회화',
-                style: TextStyle(fontSize: 19, fontWeight: FontWeight.w600),
-              ),
+              const Text('오늘의 회화', style: sectionTitle),
               const Spacer(),
               Text(
                 '레벨 ${m.level}',
@@ -118,21 +130,19 @@ class StudyScreen extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 16),
-          DropdownButtonFormField<String>(
-            initialValue: m.scene,
-            decoration: const InputDecoration(labelText: '어떤 상황을 연습할까요?'),
-            items: objects(m.catalog['scenes'])
-                .map(
-                  (s) => DropdownMenuItem<String>(
-                    value: s['id'],
-                    child: Text(s['title']),
-                  ),
-                )
-                .toList(),
-            onChanged: (v) {
-              m.scene = v!;
-              m.changed();
+          AppSelect<String>(
+            label: '어떤 상황을 연습할까요?',
+            value: m.scene,
+            choices: {
+              for (final scene in objects(m.catalog['scenes']))
+                scene['id'] as String: scene['title'] as String,
             },
+            onChanged: m.busy
+                ? null
+                : (v) {
+                    m.scene = v;
+                    m.changed();
+                  },
           ),
           const SizedBox(height: 18),
           if (selected.isEmpty)
@@ -153,13 +163,7 @@ class StudyScreen extends StatelessWidget {
                       style: const TextStyle(color: brand, fontSize: 12),
                     ),
                     const SizedBox(height: 12),
-                    Text(
-                      unit.title,
-                      style: const TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
+                    Text(unit.title, style: sectionTitle),
                     const SizedBox(height: 18),
                     PhraseView(unit.phrases.first, compact: true),
                     const SizedBox(height: 22),
@@ -224,7 +228,6 @@ class StudyScreen extends StatelessWidget {
           ),
         ],
         if (m.studyMode == 'words') ...[
-          const Heading('아는 단어가, 쓰는 단어로', '뜻을 떠올리고 문장 속에서 익혀요.'),
           if (m.words.isNotEmpty)
             _Pack(
               m: m,
@@ -243,7 +246,6 @@ class StudyScreen extends StatelessWidget {
             ),
         ],
         if (m.studyMode == 'music') ...[
-          const Heading('좋아하는 리듬으로 배우기', '한 줄을 듣고, 단어를 익히고, 대화로 이어가요.'),
           for (final song in m.songs)
             Padding(
               padding: const EdgeInsets.only(bottom: 16),
@@ -270,13 +272,7 @@ class StudyScreen extends StatelessWidget {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                song['title'],
-                                style: const TextStyle(
-                                  fontSize: 23,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
+                              Text(song['title'], style: sectionTitle),
                               const SizedBox(height: 5),
                               Text(
                                 song['subtitle'],
@@ -351,10 +347,7 @@ class _Pack extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            title,
-            style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w600),
-          ),
+          Text(title, style: sectionTitle),
           const SizedBox(height: 8),
           Text(description, style: const TextStyle(color: muted)),
           const SizedBox(height: 18),
