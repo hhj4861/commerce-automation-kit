@@ -39,7 +39,7 @@ const server=createServer(async(req,res)=>{
     } else if(path.startsWith('/api/'))response=Response.json({items:[],requests:[],dates:[]});
     else {
       const routes=['/studio/dashboard', '/studio/dashboard/', '/studio/automatic','/studio/automatic/', '/','/contents','/trends','/blog','/performance','/affiliate-links','/settings','/notifications'];
-      const file=resolve(root,routes.includes(path)?'index.html':path==='/studio'?'studio.html':path==='/metadata'?'metadata.html':path.slice(1));
+      const file=resolve(root,routes.includes(path)?'index.html':path==='/studio'?'studio.html':path==='/metadata'?'metadata.html':path==='/kandinsky'?'kandinsky.html':path.slice(1));
       if(!file.startsWith(root+sep))throw Error('invalid path');
       response=new Response(await readFile(file),{headers:{'content-type':file.endsWith('.js')?'text/javascript':file.endsWith('.css')?'text/css':file.endsWith('.html')?'text/html':'application/octet-stream'}});
     }
