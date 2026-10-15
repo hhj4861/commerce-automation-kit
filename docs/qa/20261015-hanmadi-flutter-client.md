@@ -22,7 +22,7 @@
 | Next 운영 빌드 | 통과 | 신규 app-login/catalog/client-auth 포함 |
 | 실제 API 공유 기록 | 통과 | 로컬 Next + synthetic 계정: 앱 세션 저장 → 같은 웹 계정에서 확인, 토큰 로그아웃 → 401, Origin 없는 쿠키 POST → 403 |
 | 웹 사용자 전체 흐름 | 통과 | 실제 로그인 폼 → Flutter release → 음악 진입/스터디 복귀 → AI 대화 → 번역 → 보관함, 모바일 390px/PC 1440px 화면, JS 오류 없음. AI는 local fixture |
-| iOS 컴파일 | 미검증 | 이 Mac은 Xcode CLT만 있고 전체 Xcode/CocoaPods가 없다. macOS CI 무서명 빌드 추가 |
+| iOS 컴파일 | 통과 | GitHub macos-latest, run 38693905446/job 116285914030, release --no-codesign 성공. 로컬 Mac은 CLT만 존재 |
 | 실제 단말·Google 계정 | 미검증 | 마이크 권한·오디오 장치·앱 링크 복귀·스토어 서명은 실제 단말 확인이 필요 |
 
 ## 발견·수정
@@ -48,3 +48,5 @@ PR별 사용자 승인 전 main/배포 브랜치 머지·운영 활성화를 하
 최종 브라우저 결과: `e2e/result.json` pass=true, CLI 정상 exit 0. 이전 실패 화면·로그는 실패로 보존하며 성공 캡처와 혼동하지 않는다. Flutter의 탭 전환 후 의미 구조 편집기 포커스/프레임 초기화와 읽기 전용 textbox 역할을 실제 DOM에 맞춰 검증했다.
 
 CI 첫 실행(38693562574)은 shallow SHA checkout에 릴리스 태그가 없어 Flutter가 `0.0.0-unknown`으로 판정되어 의존성 단계에서 실패했다. 로컬 HEAD의 공식 태그 `3.47.7`과 해시 일치를 직접 확인했고, workflow를 해당 태그 checkout + 정확한 HEAD SHA 검증으로 변경했다. 버전·의존성을 바꾸거나 검증을 끄지 않는다. 수정 후 CI 결과는 별도 확인한다.
+
+66daa7b CI에서 웹 분석/테스트·실제 서버 브라우저·release와 iOS 무서명 컴파일을 확인했다. 모바일→PC 전환 캡처는 하단 탭이 사라지고 두 렌더 프레임이 지난 뒤 수행하도록 보완했으며 로컬 전체 E2E가 다시 정상 exit 0으로 통과했다.

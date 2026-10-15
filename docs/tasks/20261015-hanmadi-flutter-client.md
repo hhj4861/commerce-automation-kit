@@ -33,3 +33,5 @@
 - GitOps 보완: deploy/hanmadi에만 고정 SDK 빌드/stage → 기존 Vercel 원격 빌드, 명시적 `.vercelignore`로 산출물 포함/비밀 제외. 관리자 불변. 기존 GitOps 테스트 39개/YAML 파싱 통과. 초기 구현 커밋 7c9b2e3은 작업 upstream에 푸시 완료.
 
 - PR #265: https://github.com/hhj4861/commerce-automation-kit/pull/265 (draft). CI 초기 실패는 Flutter SHA-only shallow checkout의 릴리스 태그 부재 → 0.0.0-unknown. 로컬 tag 3.47.7의 HEAD=고정 SHA 확인. 태그 checkout + SHA 대조로 수정 후 재검증한다.
+
+- 원격 검증: 66daa7b의 Flutter 웹 CI(분석/테스트/release/실제 브라우저)와 iOS 무서명 release 컴파일 통과. Android/기존 사용자 흐름 결과 추적 중. PC 캡처는 반응형 전환 완료 후 렌더를 기다려 잔상이 없는 정상 화면 확인, 로컬 E2E 재통과. PR은 아직 draft이며 운영·머지 없음.
