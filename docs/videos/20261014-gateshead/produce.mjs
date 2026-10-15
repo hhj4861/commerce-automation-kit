@@ -36,7 +36,7 @@ if(mode==='review'){
     const text=await response.clone().text();
     const diagnostic={status:response.status,contentType:response.headers.get('content-type'),retryAfter:response.headers.get('retry-after'),cloudflareError:(text.match(/(?:Error|error code)\s*(?:code:?)?\s*(1\d{3})/i)||[])[1]||null,temporarilyRateLimited:text.includes('temporarily rate limited')};
     await save('credential-failure.json',{...diagnostic,time:new Date().toISOString()});console.error(JSON.stringify(diagnostic));
-   }return response;
+   }else{await save('credential-status.json',{status:response.status,time:new Date().toISOString()});}return response;
   };
   const {values}=await runnerRequest(process.env.CAK_SECRETS_URL||'https://cak-credential-broker.guswhd1085.workers.dev',process.env.CAK_RUNNER_KEY_FILE||join(runtime,'apps/shopshorts/data/credential-runner.jwk'),'/runner/secrets',{},fetchDiagnostic);
   if(!values.ELEVENLABS_API_KEY)throw Error('Voice credentials unavailable');
@@ -51,7 +51,7 @@ if(mode==='review'){
     if(saved.signature!==signature||saved.state!=='complete'||!await exists(raw))throw Error('Voice receipt requires reconciliation: '+s.id);
    }else{
     await writeFile(receipt,JSON.stringify({signature,state:'requested'}),{flag:'wx'});
-    await command(process.execPath,[join(runtime,'node_modules/tsx/dist/cli.mjs'),join(runtime,'packages/tts-narration/src/cli/index.ts'),'generate','--text',s.narration,'--out',raw],env);
+    await command(process.execPath,['--import',join(runtime,'node_modules/tsx/dist/loader.mjs'),join(runtime,'packages/tts-narration/src/cli/index.ts'),'generate','--text',s.narration,'--out',raw],env);
     await writeFile(receipt,JSON.stringify({signature,state:'complete'}));
    }
    const audio=join(root,s.id+'.mp3');
