@@ -24,11 +24,12 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: flutter/flutter
-          ref: abaf9c523780a608bd46686fd5e53740a07077f8
+          ref: refs/tags/3.47.7
           path: .flutter-sdk
           persist-credentials: false
       - name: Flutter SDK
         run: |
+          test "$(git -C .flutter-sdk rev-parse HEAD)" = "abaf9c523780a608bd46686fd5e53740a07077f8"
           echo "$GITHUB_WORKSPACE/.flutter-sdk/bin" >> "$GITHUB_PATH"
           .flutter-sdk/bin/flutter --suppress-analytics --version
       - uses: actions/setup-java@v4

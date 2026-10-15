@@ -46,3 +46,5 @@
 PR별 사용자 승인 전 main/배포 브랜치 머지·운영 활성화를 하지 않는다. 승인된 deploy/hanmadi GitOps에 고정 SDK Flutter 빌드·stage를 추가하고 `.vercelignore`로 산출물 업로드/로컬 비밀 제외를 명시했다. 관리자 배포에는 이 단계를 실행하지 않는다. 이 구성은 소스 준비이며 실제 배포 성공과 구분한다. iOS/실제 단말 검증과 배포 서명은 별도 확인 대상이다.
 
 최종 브라우저 결과: `e2e/result.json` pass=true, CLI 정상 exit 0. 이전 실패 화면·로그는 실패로 보존하며 성공 캡처와 혼동하지 않는다. Flutter의 탭 전환 후 의미 구조 편집기 포커스/프레임 초기화와 읽기 전용 textbox 역할을 실제 DOM에 맞춰 검증했다.
+
+CI 첫 실행(38693562574)은 shallow SHA checkout에 릴리스 태그가 없어 Flutter가 `0.0.0-unknown`으로 판정되어 의존성 단계에서 실패했다. 로컬 HEAD의 공식 태그 `3.47.7`과 해시 일치를 직접 확인했고, workflow를 해당 태그 checkout + 정확한 HEAD SHA 검증으로 변경했다. 버전·의존성을 바꾸거나 검증을 끄지 않는다. 수정 후 CI 결과는 별도 확인한다.
