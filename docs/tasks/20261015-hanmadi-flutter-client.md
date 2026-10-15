@@ -35,3 +35,5 @@
 - PR #265: https://github.com/hhj4861/commerce-automation-kit/pull/265 (draft). CI 초기 실패는 Flutter SHA-only shallow checkout의 릴리스 태그 부재 → 0.0.0-unknown. 로컬 tag 3.47.7의 HEAD=고정 SHA 확인. 태그 checkout + SHA 대조로 수정 후 재검증한다.
 
 - 원격 검증: 66daa7b의 Flutter 웹 CI(분석/테스트/release/실제 브라우저)와 iOS 무서명 release 컴파일 통과. Android/기존 사용자 흐름 결과 추적 중. PC 캡처는 반응형 전환 완료 후 렌더를 기다려 잔상이 없는 정상 화면 확인, 로컬 E2E 재통과. PR은 아직 draft이며 운영·머지 없음.
+
+- 66daa7b의 웹/Android/iOS 및 기존 전체 사용자 흐름 CI가 모두 성공. 관리자 배포 공통 테스트의 env 간섭을 방지하는 test-only 격리 추가 후 admin 모드 전체 279개 재통과. 제품 권한/차단은 변경하지 않는다. 마지막 검증 커밋을 푸시하고 CI 확인 후 draft 해제한다.

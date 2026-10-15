@@ -6,6 +6,8 @@ import { memoryTransientStore } from "./transient-store";
 import { assertStudyClientOrigin } from "./study-client-origin";
 process.env.AUTH_SECRET = "test-mobile-secret-never-use-in-production-012345";
 process.env.HANMADI_NATIVE_CLIENT_ENABLED = "true";
+// npm test also runs from the admin deployment job; isolate this fixture process.
+delete process.env.HANMADI_DEPLOYMENT;
 const verifier = "a".repeat(43), state = "b".repeat(43), challenge = createHash("sha256").update(verifier).digest("base64url");
 async function code(store = memoryTransientStore()) { const r = await authorizeMobile({ id: "learner-one", name: "테스트" }, challenge, state, store); return { store, code: new URL(r.callback).searchParams.get("code")! }; }
 test("PKCE binds the account, verifier and state; concurrent replay has one winner", async () => {
