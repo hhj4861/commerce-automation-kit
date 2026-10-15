@@ -71,26 +71,22 @@ class _ChatScreenState extends State<ChatScreen> {
         child: Column(
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(22, 20, 22, 8),
+              padding: const EdgeInsets.fromLTRB(20, 18, 20, 8),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Heading('틀려도 괜찮은 대화', '조금 천천히, 오늘 배운 말부터 꺼내 봐요.'),
-                  DropdownButtonFormField<String>(
-                    initialValue: m.scene,
-                    decoration: const InputDecoration(labelText: '대화할 상황'),
-                    items: objects(m.catalog['scenes'])
-                        .map(
-                          (s) => DropdownMenuItem<String>(
-                            value: s['id'],
-                            child: Text(s['title']),
-                          ),
-                        )
-                        .toList(),
+                  AppSelect<String>(
+                    label: '대화할 상황',
+                    value: m.scene,
+                    choices: {
+                      for (final scene in objects(m.catalog['scenes']))
+                        scene['id'] as String: scene['title'] as String,
+                    },
                     onChanged: m.busy
                         ? null
                         : (v) => setState(() {
-                            m.scene = v!;
+                            m.scene = v;
                             m.chatDraft = '';
                             input.clear();
                           }),
@@ -109,7 +105,7 @@ class _ChatScreenState extends State<ChatScreen> {
             Expanded(
               child: ListView.builder(
                 controller: scroll,
-                padding: const EdgeInsets.fromLTRB(22, 15, 22, 16),
+                padding: const EdgeInsets.fromLTRB(20, 15, 20, 16),
                 itemCount: m.chat.length + (m.chat.isEmpty ? 1 : 0),
                 itemBuilder: (context, i) {
                   if (m.chat.isEmpty) {
@@ -118,13 +114,7 @@ class _ChatScreenState extends State<ChatScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text(
-                            '어떤 말부터 해 볼까요?',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
+                          const Text('어떤 말부터 해 볼까요?', style: sectionTitle),
                           const SizedBox(height: 10),
                           const Text(
                             '인사를 건네거나 궁금한 것을 물어보세요.\n한마디가 자연스럽게 답해 줄 거예요.',
@@ -280,7 +270,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   const SizedBox(height: 8),
                   const Text(
                     'AI 답변에 오류가 있을 수 있어요. 대화 내용은 이 화면을 벗어나도 유지돼요.',
-                    style: TextStyle(color: muted, fontSize: 11),
+                    style: TextStyle(color: muted, fontSize: 12),
                   ),
                 ],
               ),
@@ -340,18 +330,15 @@ class _TranslateScreenState extends State<TranslateScreen> {
           children: [
             Expanded(
               flex: 2,
-              child: DropdownButtonFormField<String>(
-                initialValue: m.from,
-                decoration: const InputDecoration(labelText: '입력 언어'),
-                items: [
-                  const DropdownMenuItem(value: 'auto', child: Text('자동 감지')),
-                  const DropdownMenuItem(value: 'ko', child: Text('한국어')),
-                  DropdownMenuItem(
-                    value: m.language,
-                    child: Text(languageNames[m.language]!),
-                  ),
-                ],
-                onChanged: m.busy ? null : (v) => setState(() => m.from = v!),
+              child: AppSelect<String>(
+                label: '입력 언어',
+                value: m.from,
+                choices: {
+                  'auto': '자동 감지',
+                  'ko': '한국어',
+                  m.language: languageNames[m.language]!,
+                },
+                onChanged: m.busy ? null : (v) => setState(() => m.from = v),
               ),
             ),
             const SizedBox(width: 12),
@@ -421,15 +408,18 @@ class _TranslateScreenState extends State<TranslateScreen> {
                 SelectableText(
                   result['translated'],
                   style: const TextStyle(
-                    fontSize: 26,
-                    height: 1.6,
+                    fontFamily: 'NotoSansKR',
+                    fontFamilyFallback: uiFallback,
+                    letterSpacing: 0,
+                    fontSize: 25,
+                    height: 1.55,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
                 const SizedBox(height: 14),
                 Text(
                   result['reading'] ?? '',
-                  style: const TextStyle(color: muted, height: 1.6),
+                  style: const TextStyle(color: muted, height: 1.55),
                 ),
                 const SizedBox(height: 16),
                 ListenButton(

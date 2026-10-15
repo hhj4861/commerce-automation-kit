@@ -97,6 +97,12 @@ flutter:
   # see https://flutter.dev/to/font-from-package
 
   fonts:
+    - family: GowunDodum
+      fonts:
+        - asset: assets/fonts/GowunDodum-Regular.ttf
+    - family: Jua
+      fonts:
+        - asset: assets/fonts/Jua-Regular.ttf
     - family: NotoSansKR
       fonts:
         - asset: assets/fonts/NotoSansKR-Regular.ttf
