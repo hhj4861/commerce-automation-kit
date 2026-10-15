@@ -56,3 +56,20 @@
  .studio-workspace .workspace-section-head{align-items:flex-start;flex-wrap:wrap}.studio-workspace .production-actions{align-items:flex-start;flex-wrap:wrap}.studio-workspace .production-switchbar{margin-top:20px}.studio-workspace .inbox-actions{flex-wrap:wrap}
 }
 @media(prefers-reduced-motion:reduce){.studio-workspace *, .studio-workspace *::before, .studio-workspace *::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+
+/* Creation and continuation have different homes; secondary tools remain accessible. */
+.studio-workspace .workspace-nav-tools{margin:14px 0 4px;color:#c0ccd4}
+.studio-workspace .workspace-nav-tools>summary{cursor:pointer;min-height:44px;display:flex;align-items:center;justify-content:space-between;padding:10px 13px;font-size:13px;list-style:none}
+.studio-workspace .workspace-nav-tools>summary::after{content:'+';font-size:18px}.studio-workspace .workspace-nav-tools[open]>summary::after{content:'−'}
+.studio-workspace .workspace-nav-tools>summary::-webkit-details-marker{display:none}
+.studio-workspace .workspace-nav-tools nav{padding-left:8px}.studio-workspace .workspace-nav-tools .nav-item{font-size:13px}
+.studio-workspace .production-existing{margin-top:32px;border-top:1px solid var(--line);padding-top:16px}
+.studio-workspace .production-existing>summary{cursor:pointer;padding:12px 0;font-weight:600;font-size:14px;color:var(--muted)}
+.studio-workspace .production-manual-start{max-width:720px;background:#fff;padding:32px;border-radius:12px;border:1px solid var(--line)}
+.studio-workspace .production-manual-start h2{margin:0 0 10px;font-size:22px}.studio-workspace .production-manual-start p{color:var(--muted);margin:0 0 24px}
+.studio-workspace #automaticCreation>.production-create[open]{margin-top:8px}
+.studio-workspace #automaticCreation>.production-create[open]>summary{display:none}
+.studio-workspace .auto-management[data-empty=true]{padding:0;margin:0;border:0;background:transparent}
+.studio-workspace .auto-management[data-empty=true]>header,.studio-workspace .auto-management[data-empty=true]>[data-projects],.studio-workspace .auto-management[data-empty=true]>[data-management-message]:empty{display:none}
+.studio-workspace ::selection{background:#c4e5dc;color:#173c33}.studio-workspace input,.studio-workspace textarea{caret-color:var(--mint)}
+@media(max-width:820px){.studio-workspace .production-manual-start{padding:24px}.studio-workspace .production-switchbar{flex-wrap:wrap;gap:14px}.studio-workspace .production-toggle{max-width:100%}}

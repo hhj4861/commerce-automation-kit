@@ -546,7 +546,7 @@
         <h1>이야기를 영상으로 만들어보세요</h1>
         <p id="heroCopy">새 영상을 시작하거나 저장한 콘텐츠를 이어서 완성하세요.</p>
       </div>
-      <a class="new-btn" href="/studio" data-icon-before="plus"><span>새 영상 만들기</span></a>
+      <a class="new-btn" href="/studio/dashboard" data-icon-before="plus"><span>새 영상 만들기</span></a>
     </section>
 
     <section data-ai-onboarding hidden></section>
@@ -557,12 +557,12 @@
     </section>
     </div>
     <div class="view production-dashboard" id="automaticView" hidden>
-    <header class="production-heading"><h1>영상 제작 관리</h1><p>제작 방식을 선택하고, 저장한 작업을 이어서 완성하세요.</p></header>
-    <div class="production-switchbar"><div class="production-toggle" role="group" aria-label="제작 방식"><button type="button" data-production-mode="auto" aria-pressed="true">자동 제작</button><button type="button" data-production-mode="manual" aria-pressed="false">수동 제작</button></div><a class="workspace-link" href="/contents">전체 콘텐츠</a></div>
-    <section id="manualProduction" aria-label="수동 제작 관리" hidden></section>
+    <header class="production-heading"><h1>새 영상 만들기</h1><p>AI와 함께 만들거나, 대본부터 직접 구성하세요.</p></header>
+    <div class="production-switchbar"><div class="production-toggle" role="group" aria-label="제작 방식"><button type="button" data-production-mode="auto" aria-pressed="true">자동 제작</button><button type="button" data-production-mode="manual" aria-pressed="false">수동 제작</button></div><a class="workspace-link" href="/contents">내 영상 · 이어하기</a></div>
+    <section id="manualProduction" aria-label="수동 제작" hidden><div class="production-manual-start"><h2>내 이야기로 직접 만들기</h2><p>기획, 대본, 장면, 편집을 단계별로 조절합니다.</p><a class="new-btn" href="/studio?new=1">수동 영상 시작하기</a></div><details class="production-existing"><summary>기존 수동 작업 관리</summary><div id="manualDashboard"></div></details></section>
     <section id="autoProduction" aria-label="자동 제작 관리">
-    <div id="autoDashboard"></div>
     <div id="automaticCreation"></div>
+    <details class="production-existing"><summary>기존 자동 작업 관리</summary><div id="autoDashboard"></div></details>
     <section id="legacyWorkspace" class="legacy-workspace" aria-label="기존 쇼핑쇼츠 작업" hidden>
     <h2>기존 쇼핑쇼츠 작업 · 대본 승인과 발행 검수</h2>
     <div id="automaticErrors" role="status"></div>
@@ -1350,7 +1350,7 @@ function navigate(name, push=true) {
     link.classList.toggle('active',name==='automatic');
     if(name==='automatic')link.setAttribute('aria-current','page');else link.removeAttribute('aria-current');
   });
-  document.querySelector('.breadcrumb strong').textContent = {dashboard:'홈',automatic:'영상 제작실',content:'콘텐츠',trends:'트렌드 탐색',blog:'블로그 POC',performance:'성과',links:'제휴 링크',settings:'설정',notifications:'알림함'}[name] || '홈';
+  document.querySelector('.breadcrumb strong').textContent = {dashboard:'홈',automatic:'새 영상 만들기',content:'내 영상',trends:'트렌드 탐색',blog:'블로그 POC',performance:'성과',links:'제휴 링크',settings:'설정',notifications:'알림함'}[name] || '홈';
   document.getElementById('dashboardView').hidden = name!=='dashboard';
   document.getElementById('automaticView').hidden = name!=='automatic';
   document.getElementById('pageView').hidden = ['dashboard','automatic'].includes(name);
@@ -1360,7 +1360,7 @@ function navigate(name, push=true) {
     state.filter='all';state.search='';state.requestFocus=null;applyRequestedDraft();
     renderSummary();renderPipeline();renderJobs();renderDetail();
   } else if(name!=='dashboard')renderPage(name);
-  document.title=(name==='automatic'?'영상 제작 관리':name==='dashboard'?'홈':document.querySelector('.breadcrumb strong').textContent)+' · Shopshorts';
+  document.title=(name==='automatic'?'새 영상 만들기':name==='dashboard'?'홈':document.querySelector('.breadcrumb strong').textContent)+' · Shopshorts';
   window.scrollTo({top:0, behavior:'smooth'});
 }
 function renderPage(name) {
@@ -1370,7 +1370,7 @@ function renderPage(name) {
     window.notificationInbox?.mount(view);
     return;
   }
-  const title = {content:'콘텐츠',trends:'트렌드 탐색',blog:'블로그 POC',performance:'성과',links:'제휴 링크',settings:'설정'}[name];
+  const title = {content:'내 영상',trends:'트렌드 탐색',blog:'블로그 POC',performance:'성과',links:'제휴 링크',settings:'설정'}[name];
   const copy = {
     content:'자동·수동으로 만든 모든 영상을 확인하고, 멈춘 단계부터 이어서 만드세요.',
     trends:'검색 데이터를 살펴보고 제작할 소재를 선택하세요. 점수는 참고용입니다.',
@@ -1543,7 +1543,7 @@ function renderPage(name) {
       <div class="setting-row"><div><strong>작업 저장 위치</strong><small id="settingsStorage">${state.isCloud ? '클라우드에 작업을 저장합니다.' : '현재 기기의 제작 서버에 연결합니다.'}</small></div></div><div class="setting-row"><div><strong>영상 제작 서버</strong><small>제작실의 생성·합성을 처리합니다. Kandinsky 계정 연결과는 별도입니다.</small></div><div class="setting-actions"><span id="settingsWorkerState" class="connection-state" data-tone="${state.studioConnectionError?'error':state.studioOnline?'ready':'waiting'}">${state.studioConnectionError?'확인 필요':state.studioOnline?'연결됨':state.studioOnline===false?'연결 대기':'확인 중'}</span><button class="workspace-link" data-check-worker>다시 확인</button></div></div></div></section>
     </div>`;
   }
-  view.innerHTML = `<div class="page-head"><div><h1>${title}</h1><p>${copy}</p></div>${name==='content'?'<a class="workspace-page-action" href="/studio">새 영상 만들기</a>':''}</div>${body}`;
+  view.innerHTML = `<div class="page-head"><div><h1>${title}</h1><p>${copy}</p></div>${name==='content'?'<a class="workspace-page-action" href="/studio/dashboard">새 영상 만들기</a>':''}</div>${body}`;
   if (name === 'content') window.workspaceContent?.mount(document.getElementById('contentLibrary'));
   if(name==='performance')window.renderProductionOverview?.();
   bindPageActions(name);
@@ -1998,10 +1998,16 @@ import {mountAutomaticCreation} from '/automatic-creation.js';
 import {createProductionDashboard} from '/manual-dashboard.js';
 const productionDashboards=new Map(),modeLocations=new Map();
 const productionMode=()=>new URLSearchParams(location.search).get('mode')==='manual'?'manual':'auto';
+function updateProductionHeading(){
+  const params=new URLSearchParams(location.search),resuming=['project','job','request'].some(key=>params.has(key));
+  document.querySelector('.production-heading h1').textContent=resuming?'영상 이어 만들기':'새 영상 만들기';
+  document.querySelector('.production-heading p').textContent=resuming?'대본을 확인하고, 멈춘 단계부터 이어가세요.':'AI와 함께 만들거나, 대본부터 직접 구성하세요.';
+}
+
 function openAutomaticProject(href){
   const params=new URL(href,location.origin).searchParams;params.set('mode','auto');
   history.replaceState(null,'','/studio/dashboard?'+params);
-  updateLegacyVisibility();
+  updateProductionHeading();updateLegacyVisibility();
   if(params.has('project'))window.automaticCreationController?.selectProject(params.get('project'));
   else{
     window.automaticCreationController?.selectProject(null,{scroll:false});
@@ -2010,20 +2016,24 @@ function openAutomaticProject(href){
   }
 }
 window.syncProductionMode=()=>{
+  updateProductionHeading();
   const mode=productionMode();
   document.querySelectorAll('[data-production-mode]').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.productionMode===mode)));
   document.getElementById('manualProduction').hidden=mode!=='manual';document.getElementById('autoProduction').hidden=mode!=='auto';
   if(mode==='auto'){
-    if(!window.automaticCreationController)window.automaticCreationController=mountAutomaticCreation(document.getElementById('automaticCreation'),{selectedOnly:true});
+    if(!window.automaticCreationController)window.automaticCreationController=mountAutomaticCreation(document.getElementById('automaticCreation'),{selectedOnly:true,plannerFirst:true});
     else window.automaticCreationController.selectProject(new URLSearchParams(location.search).get('project'),{scroll:false});
     updateLegacyVisibility();
   }
+  const dashboardHost=document.getElementById(mode==='manual'?'manualDashboard':'autoDashboard');
+  if(!dashboardHost.closest('details').open)return;
   if(!productionDashboards.has(mode)){
     const dashboard=createProductionDashboard({mode,...(mode==='auto'?{onOpen:openAutomaticProject,onCreate:()=>window.automaticCreationController.openPlanner()}: {})});
-    productionDashboards.set(mode,dashboard);dashboard.mount(document.getElementById(mode==='manual'?'manualProduction':'autoDashboard'));
+    productionDashboards.set(mode,dashboard);dashboard.mount(dashboardHost);
   }else productionDashboards.get(mode).refresh();
 };
-window.refreshProductionDashboard=()=>{if(currentRoute()==='automatic'&&!document.hidden)productionDashboards.get(productionMode())?.refresh();};
+window.refreshProductionDashboard=()=>{if(currentRoute()==='automatic'&&!document.hidden&&document.getElementById(productionMode()==='manual'?'manualDashboard':'autoDashboard').closest('details').open)productionDashboards.get(productionMode())?.refresh();};
+document.querySelectorAll('.production-existing').forEach(fold=>fold.addEventListener('toggle',()=>{if(fold.open&&currentRoute()==='automatic')window.syncProductionMode();}));
 document.querySelectorAll('[data-production-mode]').forEach(button=>button.addEventListener('click',()=>{
   const mode=button.dataset.productionMode;if(mode===productionMode())return;
   modeLocations.set(productionMode(),location.pathname+location.search);
