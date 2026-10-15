@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 
-const brand = Color(0xff6355b5),
-    ink = Color(0xff343047),
-    muted = Color(0xff716c83),
-    paper = Color(0xfffaf9fd),
-    soft = Color(0xffefeafa),
+const brand = Color(0xff3157d5),
+    ink = Color(0xff182b49),
+    muted = Color(0xff5a6980),
+    paper = Color(0xfff7fbff),
+    soft = Color(0xffeaf4ff),
     mint = Color(0xffe5f3ed),
-    outline = Color(0xffe6e1ef);
+    outline = Color(0xffdbe9f3);
 const uiFallback = ['NotoSansKR', 'NotoSansThai', 'sans-serif'];
 const sectionTitle = TextStyle(
   color: ink,
