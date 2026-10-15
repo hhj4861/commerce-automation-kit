@@ -1,3 +1,4 @@
+import {fileURLToPath} from 'node:url';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
@@ -54,7 +55,7 @@ export async function hybridFixture(){
 test('CLI/web share routes; edited choreography invalidates its media and previous review',async t=>{
  const p=await hybridFixture(),d=await mkdtemp(join(tmpdir(),'hybrid-cli-'));t.after(()=>rm(d,{recursive:true,force:true}));
  await writeFile(join(d,'project.json'),JSON.stringify(p));
- execFileSync(process.execPath,['apps/shopshorts/studio-visual-plan.mjs','--project',join(d,'project.json'),'--out',join(d,'plan.json')]);
+ execFileSync(process.execPath,[fileURLToPath(new URL('../studio-visual-plan.mjs',import.meta.url)),'--project',join(d,'project.json'),'--out',join(d,'plan.json')]);
  const cli=JSON.parse(await readFile(join(d,'plan.json'),'utf8'));assert.deepEqual(cli.hybridPlan,hybridPlan(p));assert.equal(p.brief.narrationSpeed,1.1);
  p.assets={'scene-2':{source:'ai'},'scene-3':{source:'ai'}};
  const changed=structuredClone(p.scenes);changed[2].hybrid.depth=12;
