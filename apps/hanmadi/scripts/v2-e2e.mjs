@@ -1,3 +1,4 @@
+import { openAdminTool } from "./admin-navigation.mjs";
 import assert from "node:assert/strict";
 import { createServer } from "node:http";
 import { spawn } from "node:child_process";
@@ -1231,9 +1232,7 @@ try {
     "duplicate",
   );
   await adminPage.reload();
-  await adminPage
-    .getByRole("button", { name: "번역 후보 (1)", exact: true })
-    .click();
+  await openAdminTool(adminPage, "번역 후보 (1)");
   await adminPage
     .getByRole("button", { name: "교재 초안으로 가져오기", exact: true })
     .click();
@@ -1303,9 +1302,7 @@ try {
     modelCalls.findLast((c) => c.system.includes("speaking coach")).system,
     /추가 수업 표현/,
   );
-  await adminPage
-    .getByRole("button", { name: "앱 반영 확인", exact: true })
-    .click();
+  await openAdminTool(adminPage, "앱 반영 확인");
   await adminPage
     .getByRole("button", { name: "적용 자료 확인", exact: true })
     .click();
@@ -1381,11 +1378,9 @@ try {
     "PASS shared consent → candidate → admin browser review/publish → learner lesson + actual model context → owner-scoped withdrawal",
   );
   await adminPage.goto(base + "/study/admin");
+  await openAdminTool(adminPage, "자료 만들기");
   await adminPage
-    .getByRole("button", { name: "자료 만들기", exact: true })
-    .click();
-  await adminPage
-    .getByRole("heading", { name: "좋은 대화를, 좋은 수업으로." })
+    .getByRole("heading", { name: "자료 만들기", exact: true, level: 1 })
     .waitFor();
   await adminPage
     .getByLabel("수업 제목", { exact: true })

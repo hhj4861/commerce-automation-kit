@@ -1,3 +1,4 @@
+import { openAdminTool } from "./admin-navigation.mjs";
 import assert from "node:assert/strict";
 import { resolve } from "node:path";
 // Browser uses external search/analysis fixtures. Server orchestration and provider
@@ -286,7 +287,7 @@ export async function verifyYoutubeSearch({
     assert.match(await page.locator("details").filter({ hasText: "저장 당시 JEV·교차 검수 보기" }).innerText(), /평가 분류: 근거·내용 불확실/);
     assert(await page.getByRole("button", { name: "검수 완료 · 학습에 게시", exact: true }).isDisabled());
     await page.getByRole("button", { name: "새 초안", exact: true }).click();
-    await page.getByRole("navigation", { name: "관리자 메뉴" }).getByRole("button", { name: "영상 찾기", exact: true }).click();
+    await openAdminTool(page, "영상 찾기");
     assert.deepEqual(errors, []);
     await queue.getByRole("button", { name: "전체 해제", exact: true }).click();
     // Reproduce the user's single unsupported video, then a network-unknown outcome.

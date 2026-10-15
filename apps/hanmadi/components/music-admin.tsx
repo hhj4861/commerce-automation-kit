@@ -47,7 +47,7 @@ export function MusicAdmin() {
     catch { return value; }
   }
   return <section className="music-admin" aria-label="음악 자료 관리">
-    <div className="la-heading"><div><h2>좋아하는 노래가, 나만의 한마디로.</h2><p>원문은 관리자가 한 번만 연결해요. 학습자는 곡을 고르면 바로 듣고, 단어와 회화를 연습할 수 있어요.</p></div>
+    <div className="la-heading"><div><h2>음악 학습 자료</h2><p>원문은 관리자가 한 번만 연결해요. 학습자는 곡을 고르면 바로 듣고, 단어와 회화를 연습할 수 있어요.</p></div>
       <button onClick={() => void load().catch(e => setError(e.message))}>음악 목록 새로고침</button></div>
     <ol className="hm-song-steps"><li>영상 수집·자막 연결</li><li>원문 등록</li><li>AI 자료·JEV 평가</li><li>검수 후 앱 게시</li></ol>
     {error && <p role="alert" className="hm-alert">{error}</p>}

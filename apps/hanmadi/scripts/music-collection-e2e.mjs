@@ -1,3 +1,4 @@
+import { openAdminTool } from "./admin-navigation.mjs";
 // Local integration: real Next routes/store/UI; official YouTube HTTP responses are fixtures.
 import assert from 'node:assert/strict';
 import { createHmac } from 'node:crypto';
@@ -81,7 +82,7 @@ try {
     getAvailablePlaybackRates(){return [1];}setPlaybackRate(){}getPlaybackRate(){return 1;}seekTo(){}getCurrentTime(){return 0;}getPlayerState(){return 2;}playVideo(){}pauseVideo(){}destroy(){this.frame.remove();}
   }};window.onYouTubeIframeAPIReady();` }));
   page = await owner.newPage(); const errors = []; page.on('pageerror', e => errors.push(e.message));
-  await page.goto(base + '/study/admin'); await page.getByRole('button', { name: '음악 관리', exact: true }).click();
+  await page.goto(base + '/study/admin'); await openAdminTool(page, '음악 관리');
   await page.getByLabel('수집할 학습 언어').selectOption('en'); await page.getByLabel('노래·아티스트 검색').fill('Morning');
   await page.getByRole('button', { name: '음악 영상 검색', exact: true }).click();
   await page.getByRole('button', { name: '수집함에 담기', exact: true }).click();
@@ -104,7 +105,7 @@ try {
   denied = false; await card.getByRole('button', { name: 'YouTube 자막 확인', exact: true }).click();
   await card.getByRole('button', { name: '선택한 자막 가져오기', exact: true }).click();
   await card.getByText('자막 확보 · 학습 등록 전', { exact: true }).waitFor(); assert.equal(downloads, 1);
-  await page.reload(); await page.getByRole('button', { name: '음악 관리', exact: true }).click();
+  await page.reload(); await openAdminTool(page, '음악 관리');
   card = page.getByRole('article', { name: 'Morning original song 수집 정보', exact: true }); await card.waitFor();
   assert.equal((await (await owner.request.get(endpoint)).json()).collection.find(v => v.video.id === id).source, subtitle);
   await card.getByText('자막 연결 · YouTube에서 확보', { exact: true }).click();
