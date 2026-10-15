@@ -25,6 +25,7 @@ test("admin deployment exposes only login, release identity and owner endpoints"
     "/study/admin",
     "/api/study/admin",
     "/api/study/admin/learning",
+    "/api/study/admin/media",
     "/api/study/admin/videos",
     "/api/study/admin/diagnostics",
   ])
@@ -38,6 +39,7 @@ test("admin deployment exposes only login, release identity and owner endpoints"
     "/api/register",
     "/api/auth/extra",
     "/study/admin-other",
+    "/api/study/admin/media/extra",
     "/admin/tutors",
     "/trial",
   ])
