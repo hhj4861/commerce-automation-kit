@@ -90,13 +90,7 @@ class _MusicScreenState extends State<MusicScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    song['title'],
-                    style: const TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
+                  Text(song['title'], style: sectionTitle),
                   Text(
                     song['subtitle'],
                     style: const TextStyle(color: muted, fontSize: 13),
@@ -202,10 +196,7 @@ class _MusicScreenState extends State<MusicScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  '내 목소리로 한 번 더',
-                  style: TextStyle(fontSize: 21, fontWeight: FontWeight.w600),
-                ),
+                const Text('내 목소리로 한 번 더', style: sectionTitle),
                 const SizedBox(height: 10),
                 const Text(
                   '소리를 들은 뒤 따라 말해 보세요. 녹음은 선택이에요.',

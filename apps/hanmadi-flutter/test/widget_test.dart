@@ -8,6 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hanmadi/api.dart';
 import 'package:hanmadi/app.dart';
 import 'package:hanmadi/study_model.dart';
+import 'package:hanmadi/widgets.dart';
 
 StudyModel fixture([StudyApi? api]) =>
     StudyModel(api ?? StudyApi(base: Uri.parse('https://test.example')))
@@ -74,6 +75,36 @@ StudyModel fixture([StudyApi? api]) =>
         },
       };
 void main() {
+  testWidgets('all four menus share friendly typography at large text size', (
+    t,
+  ) async {
+    t.view.physicalSize = const Size(320, 800);
+    t.view.devicePixelRatio = 1;
+    t.platformDispatcher.textScaleFactorTestValue = 1.3;
+    addTearDown(t.view.resetPhysicalSize);
+    addTearDown(t.view.resetDevicePixelRatio);
+    addTearDown(t.platformDispatcher.clearTextScaleFactorTestValue);
+    await t.pumpWidget(HanmadiApp(model: fixture(), initialize: false));
+    await t.pumpAndSettle();
+    for (final label in ['스터디', 'AI 대화', '번역', '보관함']) {
+      await t.tap(find.text(label).last);
+      await t.pumpAndSettle();
+      final heading = t.widget<Text>(
+        find
+            .descendant(
+              of: find.byType(Heading).first,
+              matching: find.byType(Text),
+            )
+            .first,
+      );
+      expect(heading.style!.fontFamily, 'Jua');
+      expect(heading.style!.letterSpacing, 0);
+      expect(heading.style!.fontSize, 25);
+      expect(t.takeException(), isNull, reason: label);
+    }
+    await t.pumpWidget(const SizedBox.shrink());
+  });
+
   testWidgets('a new AI reply is brought into view after layout', (t) async {
     t.view.physicalSize = const Size(390, 700);
     t.view.devicePixelRatio = 1;
