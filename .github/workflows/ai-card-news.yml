@@ -5,6 +5,8 @@ name: AI Card News (Telegram)
 # - Until repository variable CARD_NEWS_CUTOVER_DATE (YYYY-MM-DD, KST) is reached, or while it is
 #   unset, every run is a shadow run: cards are generated and the bot/chat and the legacy
 #   wp-auto-blog ledger are checked read-only. Nothing is sent and no ledger tag is written.
+# - Editorial uses a dedicated ChatGPT login through the Codex CLI (same method as
+#   wp-auto-blog): the login is restored from a secret and saved back when Codex refreshes it.
 # Cutover and rollback steps: apps/shopshorts/card-news/README.md
 on:
   schedule:
@@ -15,11 +17,6 @@ on:
         description: Generate cards only (no Telegram, ledger or legacy checks)
         type: boolean
         default: true
-      force_provider:
-        description: Editorial provider for dry-run or shadow verification
-        type: choice
-        options: [auto, gemini]
-        default: auto
   pull_request:
     paths:
       - apps/shopshorts/card-news/**
@@ -27,11 +24,13 @@ on:
 
 permissions: {}
 
-# Only runs that can touch the ledger or the chat share the 'deliver' group, so a manual
-# dry run can never displace a pending scheduled delivery.
+# Every non-PR run uses the same dedicated Codex login, and two runs refreshing it at once can
+# invalidate it, so they all share one lane. queue: max (as in wp-auto-blog) keeps a pending
+# scheduled delivery from being replaced by a later manual run.
 concurrency:
-  group: ai-card-news-${{ github.event_name == 'pull_request' && github.ref || (inputs.dry_run && format('dry-{0}', github.run_id) || 'deliver') }}
+  group: ai-card-news-${{ github.event_name == 'pull_request' && github.ref || 'codex' }}
   cancel-in-progress: false
+  queue: max
 
 jobs:
   test:
@@ -68,7 +67,7 @@ jobs:
       (github.event_name == 'workflow_dispatch' ||
        (github.event_name == 'schedule' && vars.CARD_NEWS_SCHEDULE == 'on'))
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30 # editorial may take two Codex calls of up to 7 minutes each
     permissions:
       contents: write # delivery ledger tags refs/tags/ai-card-* only; no file is committed
     defaults:
@@ -92,33 +91,52 @@ jobs:
           python -m pip install --require-hashes --no-build-isolation -r requirements.txt
       - name: Unit and layout tests
         run: python -m unittest -v test_main
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "22"
+      - name: Install Codex CLI
+        run: npm install -g @openai/codex@0.153.4
+      - name: Restore card-news Codex login
+        id: codex_auth
+        env:
+          CODEX_AUTH_JSON: ${{ secrets.CARD_NEWS_CODEX_AUTH_JSON }}
+          SECRET_WRITE_TOKEN: ${{ secrets.CARD_NEWS_SECRET_WRITE_TOKEN }}
+          GH_TOKEN: ${{ secrets.CARD_NEWS_SECRET_WRITE_TOKEN }} # proves secret write access before Codex runs
+        run: python codex_auth.py restore
       - name: Generate and deliver
         id: deliver
         env:
           GITHUB_TOKEN: ${{ github.token }}
-          OPENAI_API_KEY: ${{ secrets.CARD_NEWS_OPENAI_API_KEY }}
-          GOOGLE_AI_API_KEY: ${{ secrets.CARD_NEWS_GEMINI_API_KEY }}
+          CARD_NEWS_CODEX_MODEL: ${{ vars.CARD_NEWS_CODEX_MODEL }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.CARD_NEWS_TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.CARD_NEWS_TELEGRAM_CHAT_ID }}
           CARD_NEWS_CUTOVER_DATE: ${{ vars.CARD_NEWS_CUTOVER_DATE }}
           CARD_NEWS_LEGACY_REPOSITORY: ${{ vars.CARD_NEWS_LEGACY_REPOSITORY }} # empty = default; 'off' after wp deletion
           DRY_RUN: ${{ inputs.dry_run && '1' || '0' }}
-          FORCE_PROVIDER: ${{ inputs.force_provider || 'auto' }}
         run: python main.py
+      - name: Save refreshed Codex login and clean up
+        id: persist
+        if: always() && steps.codex_auth.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ secrets.CARD_NEWS_SECRET_WRITE_TOKEN }}
+        run: python codex_auth.py persist
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:
           name: ai-card-news-${{ github.run_id }}-${{ github.run_attempt }}
           path: apps/shopshorts/card-news/output/
           retention-days: 14
-      - name: Alert operator on live failure
+      - name: Alert operator
         # Standard library only, so it also covers setup, install and test failures.
-        # An artifact upload failure after a successful delivery does not alert.
-        if: failure() && steps.deliver.outcome != 'success'
+        # Delivery failures alert in live mode; a failed login save alerts in every mode.
+        # An artifact upload failure after a successful delivery and save does not alert.
+        if: failure() && (steps.deliver.outcome != 'success' || steps.persist.outcome == 'failure')
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.CARD_NEWS_TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.CARD_NEWS_TELEGRAM_CHAT_ID }}
           CARD_NEWS_CUTOVER_DATE: ${{ vars.CARD_NEWS_CUTOVER_DATE }}
           DRY_RUN: ${{ inputs.dry_run && '1' || '0' }}
+          DELIVER_OUTCOME: ${{ steps.deliver.outcome }}
+          PERSIST_OUTCOME: ${{ steps.persist.outcome }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: python3 alert.py

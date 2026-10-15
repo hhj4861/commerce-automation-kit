@@ -11,9 +11,10 @@ from unittest.mock import patch, Mock
 from PIL import Image, ImageDraw
 import main as bot
 import alert
+import codex_auth
 
 TODAY = bot.NOW.date()
-LIVE = {'OPENAI_API_KEY': 'test', 'TELEGRAM_BOT_TOKEN': 'sensitive-token', 'TELEGRAM_CHAT_ID': 'test',
+LIVE = {'CARD_NEWS_CODEX_HOME': '/restored/codex', 'TELEGRAM_BOT_TOKEN': 'sensitive-token', 'TELEGRAM_CHAT_ID': 'test',
         'GITHUB_TOKEN': 'test', 'GITHUB_REPOSITORY': 'test/test', 'GITHUB_SHA': 'test',
         'GITHUB_REF': 'refs/heads/main', 'CARD_NEWS_CUTOVER_DATE': TODAY.isoformat()}
 SHADOW = {k: v for k, v in LIVE.items() if k != 'CARD_NEWS_CUTOVER_DATE'}
@@ -107,46 +108,6 @@ class EditorialTests(unittest.TestCase):
         for changes in [dict(url='https://wrong.example'), dict(index=1), dict(summary='x'*120), dict(importance='critical')]:
             with self.assertRaises(ValueError): bot.validate_edits([dict(edit(), **changes)], [item()])
 
-    @patch.dict(os.environ, {'OPENAI_API_KEY':'test', 'GOOGLE_AI_API_KEY':'test'})
-    def test_existing_provider_fallback_is_recorded(self):
-        limited = Mock(status_code=429, json=lambda: {'error': {'code':'insufficient_quota'}})
-        success = Mock(status_code=200, json=lambda: {'candidates':[{'content':{'parts':[{'text':json.dumps({'cards':[edit()]})}]}}]})
-        with patch.object(bot.session, 'post', side_effect=[limited, success]) as post:
-            self.assertEqual(bot.editorial([item()]), ([edit()], 'gemini-fallback'))
-            self.assertEqual(post.call_count, 2)
-            self.assertNotIn('key=', post.call_args.args[0])
-        with patch.object(bot.session, 'post', side_effect=[limited, Mock(status_code=403)]):
-            with self.assertRaisesRegex(RuntimeError, 'Gemini fallback HTTP 403'):
-                bot.editorial([item()])
-
-    @patch.dict(os.environ, {'OPENAI_API_KEY':'test', 'GOOGLE_AI_API_KEY':'test'})
-    def test_fallback_on_any_5xx_even_with_html_body(self):
-        success = Mock(status_code=200, json=lambda: {'candidates':[{'content':{'parts':[{'text':json.dumps([edit()])}]}}]})
-        for status in (502, 504):
-            html_error = Mock(status_code=status, json=Mock(side_effect=ValueError('Expecting value')))
-            with patch.object(bot.session, 'post', side_effect=[html_error, success]):
-                self.assertEqual(bot.editorial([item()]), ([edit()], 'gemini-fallback'))
-        with patch.object(bot.session, 'post', return_value=Mock(status_code=400, json=lambda: {'error': {'code': 'bad_request'}})):
-            with self.assertRaisesRegex(RuntimeError, 'OpenAI HTTP 400 code=bad_request'):
-                bot.editorial([item()])
-
-    @patch.dict(os.environ, {'OPENAI_API_KEY':'sk-secret\n'})
-    def test_transport_and_header_errors_hide_details_and_do_not_retry(self):
-        for error in (ValueError("Invalid header value b'Bearer sk-secret\\n'"), bot.requests.ConnectionError('https://api.openai.com sk-secret')):
-            with patch.object(bot.session, 'post', side_effect=error) as post:
-                with self.assertRaises(RuntimeError) as raised:
-                    bot.editorial([item()])
-            self.assertEqual(post.call_count, 1)
-            self.assertNotIn('sk-secret', str(raised.exception))
-
-    @patch.dict(os.environ, {'GOOGLE_AI_API_KEY':'test'}, clear=True)
-    def test_forced_gemini_skips_openai(self):
-        success = Mock(status_code=200, json=lambda: {'candidates':[{'content':{'parts':[{'text':json.dumps([edit()])}]}}]})
-        with patch.object(bot.session, 'post', return_value=success) as post:
-            self.assertEqual(bot.editorial([item()], 'gemini'), ([edit()], 'gemini'))
-        self.assertEqual(post.call_count, 1)
-        self.assertIn('generativelanguage.googleapis.com', post.call_args.args[0])
-
     def test_model_envelopes_and_product_only_headline(self):
         for envelope in ([edit()], {'cards':[edit()]}):
             self.assertEqual(bot.parse_cards(json.dumps(envelope)), [edit()])
@@ -219,20 +180,12 @@ class ModeTests(unittest.TestCase):
 
     @patch.dict(os.environ, {}, clear=True)
     def test_missing_config_names_only(self):
-        with self.assertRaisesRegex(ValueError, 'Missing required configuration: OPENAI_API_KEY, TELEGRAM_BOT_TOKEN'):
+        with self.assertRaisesRegex(ValueError, 'Missing required configuration: CARD_NEWS_CODEX_HOME, TELEGRAM_BOT_TOKEN'):
             bot.main()
         with patch.dict(os.environ, {'DRY_RUN': '1'}):
-            with self.assertRaisesRegex(ValueError, 'Missing required configuration: OPENAI_API_KEY$'):
+            with self.assertRaisesRegex(ValueError, 'Missing required configuration: CARD_NEWS_CODEX_HOME$'):
                 bot.main()
 
-    @patch.dict(os.environ, LIVE, clear=True)
-    def test_forced_provider_is_verification_only(self):
-        with patch.dict(os.environ, {'FORCE_PROVIDER': 'gemini'}):
-            with self.assertRaisesRegex(ValueError, 'only for dry-run or shadow'):
-                bot.main()
-        with patch.dict(os.environ, {'FORCE_PROVIDER': 'claude'}):
-            with self.assertRaisesRegex(ValueError, 'auto or gemini'):
-                bot.main()
 
 
 class LegacyLedgerTests(unittest.TestCase):
@@ -304,13 +257,13 @@ class LiveTests(OutputDir):
         receipt = {'date': 'd', 'message_ids': [1, 2, 3], 'cards': 3, 'status': 'delivered'}
         order = []
         with patch.object(bot, 'delivery_exists', return_value=False), patch.object(bot, 'legacy_status', return_value='none'), \
-                patch.object(bot, 'fetch', return_value=fetched()), patch.object(bot, 'editorial', return_value=([edit()], 'gemini-fallback')), \
+                patch.object(bot, 'fetch', return_value=fetched()), patch.object(bot, 'editorial', return_value=([edit()], 'codex-subscription')), \
                 patch.object(bot, 'render', return_value=['a', 'b', 'c']), \
                 patch.object(bot, 'send_telegram', side_effect=lambda *a: order.append('send') or dict(receipt)), \
                 patch.object(bot, 'write_stories', side_effect=lambda *a: order.append('stories')):
             bot.main()
         self.assertEqual(order, ['send', 'stories'])
-        self.assertEqual(json.loads((self.out/'delivery.json').read_text())['provider'], 'gemini-fallback')
+        self.assertEqual(json.loads((self.out/'delivery.json').read_text())['provider'], 'codex-subscription')
         self.assertEqual(self.status()['status'], 'delivered')
 
     def test_album_and_uncertain_delivery(self):
@@ -373,6 +326,200 @@ class ShadowTests(OutputDir):
             self.assertNotIn(method, source)
 
 
+class FakeCodex:
+    """Stands in for the Codex CLI: records the call and writes the final message file."""
+    calls, text, stderr, returncode, hang = [], '', '', 0, False
+
+    def __init__(self, command, **kwargs):
+        FakeCodex.calls.append((command, kwargs))
+        self.command, self.pid, self.returncode = command, 4242, FakeCodex.returncode
+
+    def communicate(self, prompt=None, timeout=None):
+        if FakeCodex.hang and timeout:
+            raise subprocess.TimeoutExpired(self.command, timeout)
+        if prompt is not None:
+            self.prompt = prompt
+            Path(self.command[self.command.index('--output-last-message') + 1]).write_text(FakeCodex.text)
+        return None, FakeCodex.stderr
+
+
+class CodexTests(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.home = Path(self.tmp.name) / 'codex'
+        self.home.mkdir()
+        (self.home / 'auth.json').write_text('{}')
+        FakeCodex.calls, FakeCodex.text, FakeCodex.stderr, FakeCodex.returncode, FakeCodex.hang = [], json.dumps({'cards': [edit()]}), '', 0, False
+        env = patch.dict(os.environ, {'CARD_NEWS_CODEX_HOME': str(self.home), 'PATH': '/usr/bin', 'HOME': '/home/runner',
+                                      'TELEGRAM_BOT_TOKEN': 'sensitive-token', 'GITHUB_TOKEN': 'ghs_secret'}, clear=True)
+        env.start(); self.addCleanup(env.stop)
+        for target, value in ((bot.shutil, 'which'), (bot.subprocess, 'Popen')):
+            patcher = patch.object(target, value, return_value='/usr/local/bin/codex') if value == 'which' else patch.object(target, value, FakeCodex)
+            patcher.start(); self.addCleanup(patcher.stop)
+
+    def test_subscription_only_command_and_filtered_environment(self):
+        self.assertEqual(bot.editorial([item()]), ([edit()], 'codex-subscription'))
+        command, kwargs = FakeCodex.calls[0]
+        self.assertIn('forced_login_method="chatgpt"', command)
+        self.assertIn('web_search="disabled"', command)
+        self.assertIn('features.shell_tool=false', command)
+        for flag in ('--ephemeral', '--ignore-user-config', '--skip-git-repo-check'):
+            self.assertIn(flag, command)
+        self.assertEqual(command[command.index('--sandbox') + 1], 'read-only')
+        self.assertEqual(set(kwargs['env']), {'PATH', 'HOME', 'CODEX_HOME'})
+        self.assertEqual(kwargs['env']['CODEX_HOME'], str(self.home.resolve()))
+        self.assertTrue(kwargs['start_new_session'])
+
+    def test_fenced_json_and_model_override(self):
+        FakeCodex.text = '```json\n' + json.dumps([edit()]) + '\n```'
+        with patch.dict(os.environ, {'CARD_NEWS_CODEX_MODEL': 'gpt-5.5'}):
+            self.assertEqual(bot.editorial([item()])[0], [edit()])
+        command = FakeCodex.calls[0][0]
+        self.assertEqual(command[command.index('--model') + 1], 'gpt-5.5')
+
+    def test_failure_is_classified_without_cli_output_and_not_retried(self):
+        FakeCodex.returncode, FakeCodex.stderr = 1, 'error: refresh_token_reused for sk-secret-value'
+        with self.assertRaises(RuntimeError) as raised:
+            bot.editorial([item()])
+        self.assertIn('reason=refresh_token_reused', str(raised.exception))
+        self.assertNotIn('sk-secret-value', str(raised.exception))
+        self.assertEqual(len(FakeCodex.calls), 1)
+        self.assertEqual(bot.codex_failure_reason('invalid ID token format at line 1 column 105'), 'auth_file_invalid')
+        self.assertEqual(bot.codex_failure_reason('stream error: error sending request for url'), 'network_or_service')
+
+    def test_echoed_prompt_does_not_drive_the_failure_reason(self):
+        # Release notes often mention refresh tokens or rate limits; the CLI echoes the prompt to stderr.
+        noisy = item(body='Fix refresh token rotation, rate limit handling and context window display')
+        FakeCodex.returncode = 1
+        original = FakeCodex.communicate
+        def echo(process, prompt=None, timeout=None):
+            return None, f'user\n{prompt}\nERROR: You\'ve hit your usage limit'
+        with patch.object(FakeCodex, 'communicate', echo):
+            with self.assertRaisesRegex(RuntimeError, 'reason=usage_limit'):
+                bot.codex_cards('prompt with ' + json.dumps([noisy]), [noisy])
+        self.assertIs(FakeCodex.communicate, original)
+        self.assertEqual(bot.codex_failure_reason('something else'), 'unclassified')
+
+    def test_timeout_kills_the_process_group(self):
+        FakeCodex.hang = True
+        with patch.object(bot.os, 'killpg') as killpg:
+            with self.assertRaisesRegex(RuntimeError, 'timed out'):
+                bot.editorial([item()])
+        killpg.assert_called_once_with(4242, bot.signal.SIGKILL)
+
+    def test_invalid_output_is_retried_once_then_fails(self):
+        FakeCodex.text = 'not json'
+        with self.assertRaises(ValueError):
+            bot.editorial([item()])
+        self.assertEqual(len(FakeCodex.calls), 2)
+
+    def test_rejects_unsafe_or_missing_login_directory(self):
+        default = Path.home() / '.codex'
+        for value in ('relative/codex', str(default), str(bot.ROOT / 'output' / 'codex'), str(Path(self.tmp.name) / 'missing')):
+            with patch.dict(os.environ, {'CARD_NEWS_CODEX_HOME': value}):
+                with self.assertRaises(ValueError):
+                    bot.codex_home()
+        with patch.object(bot.shutil, 'which', return_value=None):
+            with self.assertRaisesRegex(RuntimeError, 'not installed'):
+                bot.editorial([item()])
+
+
+class CodexAuthTests(unittest.TestCase):
+    LOGIN = json.dumps({'auth_mode': 'chatgpt', 'tokens': {'refresh_token': 'r1', 'access_token': 'a1'}})
+    COMMAND = ['gh', 'secret', 'set', 'CARD_NEWS_CODEX_AUTH_JSON', '--repo', 'hhj4861/commerce-automation-kit']
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.github_env = Path(self.tmp.name) / 'github_env'
+        env = patch.dict(os.environ, {'RUNNER_TEMP': self.tmp.name, 'CODEX_AUTH_JSON': self.LOGIN, 'SECRET_WRITE_TOKEN': 'pat',
+                                      'GITHUB_ENV': str(self.github_env), 'GITHUB_REPOSITORY': codex_auth.REPOSITORY}, clear=True)
+        env.start(); self.addCleanup(env.stop)
+        self.home = Path(self.tmp.name) / 'card-news-codex'
+        for target, name, value in ((codex_auth.subprocess, 'run', Mock()), (codex_auth.time, 'sleep', Mock())):
+            patcher = patch.object(target, name, value)
+            patcher.start(); self.addCleanup(patcher.stop)
+        self.run = codex_auth.subprocess.run
+
+    def test_only_a_chatgpt_login_is_accepted(self):
+        for raw in ('', '{"OPENAI_API_KEY": "sk-x"}', json.dumps({'auth_mode': 'apikey', 'tokens': {'refresh_token': 'r'}}),
+                    json.dumps({'auth_mode': 'chatgpt', 'tokens': {}})):
+            with self.assertRaises(ValueError) as raised:
+                codex_auth.validate_auth(raw)
+            self.assertNotIn('sk-x', str(raised.exception))
+
+    def test_restore_proves_write_access_then_writes_private_login(self):
+        codex_auth.restore()
+        self.assertEqual(self.run.call_args.args[0], self.COMMAND)
+        self.assertEqual(self.run.call_args.kwargs['input'], self.LOGIN)
+        self.assertEqual((self.home / 'auth.json').read_text(), self.LOGIN)
+        self.assertEqual(self.home.stat().st_mode & 0o777, 0o700)
+        self.assertEqual((self.home / 'auth.json').stat().st_mode & 0o777, 0o600)
+        self.assertEqual(self.github_env.read_text(), f'CARD_NEWS_CODEX_HOME={self.home}\n')
+
+    def test_restore_stops_before_codex_when_token_cannot_write(self):
+        self.run.side_effect = subprocess.CalledProcessError(1, ['gh'])
+        with self.assertRaisesRegex(RuntimeError, 'cannot write repository secrets'):
+            codex_auth.restore()
+        self.assertEqual(self.run.call_count, 3)
+        self.assertFalse(self.home.exists())
+        self.run.reset_mock(side_effect=True)
+        with patch.dict(os.environ, {'SECRET_WRITE_TOKEN': ''}):
+            with self.assertRaisesRegex(RuntimeError, 'CARD_NEWS_SECRET_WRITE_TOKEN'):
+                codex_auth.restore()
+        self.run.assert_not_called()
+
+    def test_untrusted_actions_runs_cannot_restore(self):
+        event = Path(self.tmp.name) / 'event.json'
+        event.write_text(json.dumps({'repository': {'full_name': codex_auth.REPOSITORY, 'default_branch': 'main'}}))
+        base = {'GITHUB_ACTIONS': 'true', 'GITHUB_EVENT_PATH': str(event), 'GITHUB_EVENT_NAME': 'schedule', 'GITHUB_REF': 'refs/heads/main'}
+        for change in ({'GITHUB_EVENT_NAME': 'pull_request'}, {'GITHUB_REF': 'refs/heads/feat/x'}, {'GITHUB_REPOSITORY': 'fork/repo'}):
+            with patch.dict(os.environ, dict(base, **change)):
+                with self.assertRaisesRegex(RuntimeError, 'default branch'):
+                    codex_auth.restore()
+        self.run.assert_not_called()
+        event.write_text(json.dumps({'schedule': '47 22 * * *'}))  # payload without repository
+        with patch.dict(os.environ, base):
+            codex_auth.restore()
+        self.assertTrue((self.home / 'auth.json').exists())
+
+    def test_persist_skips_unchanged_and_always_cleans_up(self):
+        codex_auth.restore()
+        self.run.reset_mock()
+        codex_auth.persist()
+        self.run.assert_not_called()
+        self.assertFalse(self.home.exists())
+
+    def test_persist_saves_refreshed_login_with_retries(self):
+        codex_auth.restore()
+        self.run.reset_mock()
+        refreshed = self.LOGIN.replace('r1', 'r2')
+        (self.home / 'auth.json').write_text(refreshed)
+        self.run.side_effect = [subprocess.TimeoutExpired(['gh'], 60), None]
+        codex_auth.persist()
+        self.assertEqual(self.run.call_count, 2)
+        self.assertEqual(self.run.call_args.kwargs['input'], refreshed)
+        self.assertFalse(self.home.exists())
+
+    def test_persist_failure_is_reported_without_details(self):
+        codex_auth.restore()
+        (self.home / 'auth.json').write_text(self.LOGIN.replace('r1', 'r2'))
+        self.run.reset_mock()
+        self.run.side_effect = subprocess.CalledProcessError(1, ['gh'], 'r2')
+        with self.assertRaisesRegex(RuntimeError, 'could not be saved') as raised:
+            codex_auth.persist()
+        self.assertEqual(self.run.call_count, 3)
+        self.assertNotIn('r2', str(raised.exception))
+        self.assertFalse(self.home.exists())
+        self.run.side_effect = None
+        codex_auth.restore()
+        (self.home / 'auth.json').write_text('{"auth_mode": "apikey"}')
+        self.run.reset_mock()
+        with self.assertRaises(ValueError): codex_auth.persist()
+        self.run.assert_not_called()
+        self.assertFalse(self.home.exists())
+
 class AlertTests(unittest.TestCase):
     NOW = dt.datetime(2026, 10, 20, 7, 50, tzinfo=bot.KST)
 
@@ -408,6 +555,19 @@ class AlertTests(unittest.TestCase):
         code, urlopen = self.send(env)
         text = alert.urllib.parse.parse_qs(urlopen.call_args.args[0].data.decode())['text'][0]
         self.assertEqual(code, 0); self.assertIn('설정 오류', text)
+
+    def test_login_save_failure_alerts_in_every_mode(self):
+        for env in ({}, {'DRY_RUN': '1'}, {'CARD_NEWS_CUTOVER_DATE': '2026-10-20', 'DELIVER_OUTCOME': 'success'}):
+            code, urlopen = self.send(dict(env, PERSIST_OUTCOME='failure', TELEGRAM_BOT_TOKEN='t', TELEGRAM_CHAT_ID='1'))
+            text = alert.urllib.parse.parse_qs(urlopen.call_args.args[0].data.decode())['text'][0]
+            self.assertEqual(code, 0)
+            self.assertIn('Codex 로그인 갱신 내용을 저장하지 못했습니다', text)
+            self.assertNotIn('보내지 못했습니다', text)
+
+    def test_successful_delivery_and_save_do_not_alert(self):
+        code, urlopen = self.send({'CARD_NEWS_CUTOVER_DATE': '2026-10-20', 'DELIVER_OUTCOME': 'success',
+                                   'PERSIST_OUTCOME': 'success', 'TELEGRAM_BOT_TOKEN': 't', 'TELEGRAM_CHAT_ID': '1'})
+        self.assertEqual(code, 0); urlopen.assert_not_called()
 
     def test_alert_runs_without_third_party_packages(self):
         tree = ast.parse(Path(alert.__file__).read_text())
