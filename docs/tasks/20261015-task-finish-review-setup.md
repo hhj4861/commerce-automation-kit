@@ -10,4 +10,7 @@
 - 실제 로그 대조: 수정 코드를 메모리에서만 실행해 해당 호출을 `not_started`, `exit_code=null`로 판정했다. 원본 증거 해시 `ab4315262207e7582ef45a230f70dc2ad66053e1f65651cafe554f04ec2844e6`. 선행 배포 감시의 `completed/0`과 구분한다.
 - 기존 커밋·원격 push·소유권·보류 검사와 reconcile 본체는 바이트 단위로 변경이 없다. 상태 DB와 원본 로그는 직접 수정하지 않는다.
 - 적용 전 전역 훅 SHA-256: `1e13e36f6e4902e68f6ca365d02a10b0b58c7e5e5cd5f53bf95587683710dcf5`.
-- 현재: 수정안 검증 완료. 아직 전역 적용·실제 복구하지 않았다.
+- 설치 전후 신규 13개 + 기존 복구 23개 = 36개 회귀 테스트 통과. 재실행은 `Already repaired`로 멱등성을 확인했다.
+- 적용: 수정 커밋 `c0aaced`를 작업 브랜치 `fix/task-finish-review-setup`의 upstream에 push한 뒤 해시 고정 설치했다. 원본 백업은 `/Users/admin/.codex/hooks/task-finish/backups/review-setup-failure-20261015T003214383952Z.py`이며, 적용본 SHA-256은 `c61cd38b7f825e3fe6630ed2833869eeab05c4d00da4bf188bac3e81545d4220`이다.
+- 공식 `reconcile` 단독 실행으로 기존 미종료 호출을 정리했다. 실행 중이던 복구 명령 자체를 제외한 pending 호출이 없어졌고 해당 명령도 이후 exit 0으로 종료했다. 사용자 보류는 실제 사용자 재개 요청으로 해제됐다. 다른 세션의 수신·복구까지 주장하지 않는다.
+- 현재: 설치 및 해당 호출 복구 완료. 소스는 작업 브랜치에 보존하며 main 머지는 수행하지 않았다. Hanmadi 운영 앱 변경이나 재배포는 없다.
