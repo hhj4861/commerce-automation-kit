@@ -247,6 +247,7 @@ src/
 
 | 날짜 | 내용 |
 |---|---|
+| 2026-10-15 (AI 카드뉴스 이전) | **wp-auto-blog AI 기술 카드뉴스를 `apps/shopshorts/card-news`로 이전** — 콘텐츠 생성을 shopshorts 한 플랫폼으로 모으는 첫 단계. Python 봇을 옮기되 발송·원장·선택·검증·레이아웃 함수는 원본과 AST 동일, render는 TOP 3 정렬 추출만 다르다. 수집·편집에는 소스 실패 기록, 전 소스 실패 오류, 제공자 기록, HTML/504 오류의 Gemini 대체를 더했다. 추가: 섀도/라이브 모드(`CARD_NEWS_CUTOVER_DATE`), wp-auto-blog 발송 태그 상호 확인(저장소 접근 확인 후 fail-closed), main 전용 발송, 표준 라이브러리 전용 실패 경보(`alert.py`), setuptools까지 해시 고정한 설치, 9:16 릴스 슬라이드(artifact 전용). 키는 저장소 시크릿 `CARD_NEWS_*`(브로커 이관은 정책 변경이 필요해 별도 결정). 테스트 38, 적대적 검토 3관점 확인 9건 반영. 결정 기록: QUESTION-MINING.md §8 부칙. 전환 전까지 wp-auto-blog가 계속 발송한다 |
 | 2026-09-14 (공통 영상 생성기) | **광고 품질을 광고·쇼츠에 공통 적용** — `@cak/ad-video-gen`의 기존 기획 게이트·`buildSpotPrompt`·티어 정책을 단일 `video:plan`/`video:estimate` 경로로 조합. 계약 `VideoGenerationRequest/Plan`, 쇼츠 `videoDirection/videoTier/videoGeneration` append. 로컬 승인/클라우드 워커가 계획 생성, 입력 지문으로 수정된 기획의 이전 계획 거부, 계획·클립 수 검증 후 생성 완료 기록. 승인 중 동시 수정/다른 잡 추가 보존, CLI 실패 시 이전 출력 계획 교체. Codex·Claude 광고/쇼츠 스킬 4개는 `docs/VIDEO-GENERATION.md`의 같은 MCP 실행 절차를 참조한다. 검증: ad-video-gen 71·shopshorts 15 테스트, contracts/ad-video-gen 타입 검사, 클라우드 라우터 브라우저 번들·UI 스크립트 문법·스킬 4개 검증 통과. **실제 영상 생성/과금/배포/운영 재시작 없음**. 다음 운영 반영은 클라우드 Functions 배포와 로컬 워커 재시작을 함께 적용한 뒤 승인된 샘플로 실영상 비교 |
 | 2026-07-23 | D1 실측(D1-1~4 확정) · Phase 1(zod 검증·상수 확정) · Phase 2(store/budget/obs·analyze/dlq CLI) · G1·G2 실호출 통과 · 시드 182개 확정 · 일일 자동화+텔레그램 리포트 구축 · 리뷰 3회 31건 수정 |
 | 2026-07-24 | 저장소 경로 이동(TCC 대응) · 첫 자동실행 DNS 실패 진단 → 결함 4건 수정(DNS 재시도·**예산 환불**·네트워크 대기·타임아웃 완화+재시도코드 보강) · 다른 세션 산출물 조사·통합 · 이 문서 작성 |
