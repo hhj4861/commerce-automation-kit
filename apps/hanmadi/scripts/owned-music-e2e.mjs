@@ -196,7 +196,7 @@ try {
     await learnerPage.reload();
     await learnerPage.getByRole('combobox', { name:'학습 언어', exact:true }).selectOption(authored.language);
     await learnerPage.getByRole('button', { name:'음악', exact:true }).click();
-    const select=learnerPage.getByLabel('학습할 곡', {exact:true}); if (await select.count()) await select.selectOption(authored.id);
+    await learnerPage.getByLabel('학습할 곡', {exact:true}).selectOption(authored.id); // Wait for the catalog before choosing the original song; managed songs are first.
     await learnerPage.getByRole('heading', {name:authored.title, exact:true}).waitFor();
     await learnerPage.locator('audio').evaluate(el => { el.muted=true; });
     await learnerPage.getByRole('button', {name:'2번 가사 구간 듣기',exact:true}).click();

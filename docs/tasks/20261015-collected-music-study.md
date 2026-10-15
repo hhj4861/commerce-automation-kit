@@ -10,4 +10,5 @@
 - 범위: 외부 YouTube/플레이어/LLM/JEV는 로컬 fixture, 앱 API·영구 저장·브라우저 UI는 실제 실행. 기존 음악 E2E는 네 언어 오리지널 연습곡과 공급자 가사 fixture의 저장·복습·오류·계정 격리 회귀 통과. 실제 상용곡 자막 확보/품질·운영 관리자의 게시 실행을 검증한 것은 아니다.
 - 증적: 지정 iCloud `commerce-automation-kit/20261015-collected-music-study/e2e-verified/result.json`, `music-regression/`, `unit.log`.
 - 자체 검토: Next 설치 문서의 async params·서버/클라이언트 경계 및 React 체크리스트 확인. 관리자 링크는 기존 `learningAppHref()`로 학습자 도메인을 사용하고, 새 경로는 공개 학습자료를 서버 렌더링하지 않으며 기존 학습자 인증 뒤 카탈로그를 읽는다.
-- 운영: 신규 변경 미반영. 검증 후 커밋·push·PR을 준비한다.
+- CI 보완: 최초 PR 검사에서 기존 owned-music E2E가 목록 로딩 전에 `select.count()`로 곡 선택을 건너뛰어 실패했다. 등록곡 우선 표시를 반영해 선택 컨트롤을 기다린 뒤 원래 연습곡을 명시적으로 고른다. 수정 후 owned-music 로컬 E2E 통과(생성 1회, 실패 후 평가 재시도 2회, 실제 네 언어 오리지널 오디오 재생 포함).
+- 운영: 신규 변경 미반영. PR #256에 커밋·push했고, PR별 머지·배포 승인 대기.
