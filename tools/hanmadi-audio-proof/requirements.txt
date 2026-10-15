@@ -1,0 +1,4 @@
+# Research baseline; Python 3.14.0 on macOS arm64 was exercised.
+librosa==0.11.0
+numpy==2.3.5
+scipy==1.16.3
