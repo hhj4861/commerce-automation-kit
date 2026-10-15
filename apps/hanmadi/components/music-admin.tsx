@@ -1,6 +1,7 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { studyLanguages, type StudyLanguage } from "@/lib/v2";
+import { musicStudyHref } from "@/lib/music-study-link";
 import { MusicVideoCollection } from "./music-video-collection";
 import type { MusicCollectedVideo } from "@/lib/music-collection";
 import { MusicTimingEditor } from "./music-timing-editor";
@@ -18,14 +19,15 @@ const blank = { title: "", artist: "", videoId: "", source: "", rights: "", lang
 export function MusicAdmin() {
   const [songs, setSongs] = useState<OwnedMusic[] | null>(null), [form, setForm] = useState(blank);
   const [collection, setCollection] = useState<MusicCollectedVideo[] | null>(null), [youtube, setYoutube] = useState({ search: false, captions: false });
+  const [learningHref, setLearningHref] = useState("/study");
   const [adding, setAdding] = useState(false);
   const editor = useRef<HTMLDetailsElement>(null);
   const [now, setNow] = useState(() => Date.now());
   const [editing, setEditing] = useState<OwnedMusic | null>(null);
   const [busy, setBusy] = useState(false), [error, setError] = useState(""), [notice, setNotice] = useState("");
   const pending = useRef(false), fileEpoch = useRef(0);
-  const load = useCallback(async () => { const data = await api(); setSongs(data.songs); setCollection(data.collection); setYoutube(data.youtube); setNow(Date.now()); }, []);
-  useEffect(() => { let live = true; void api().then(data => { if (live) { setSongs(data.songs); setCollection(data.collection); setYoutube(data.youtube); setNow(Date.now()); } }).catch(e => { if (live) setError(e.message); }); return () => { live = false; }; }, []);
+  const load = useCallback(async () => { const data = await api(); setSongs(data.songs); setCollection(data.collection); setYoutube(data.youtube); setLearningHref(data.learningAppHref); setNow(Date.now()); }, []);
+  useEffect(() => { let live = true; void api().then(data => { if (live) { setSongs(data.songs); setCollection(data.collection); setYoutube(data.youtube); setLearningHref(data.learningAppHref); setNow(Date.now()); } }).catch(e => { if (live) setError(e.message); }); return () => { live = false; }; }, []);
   const active = songs?.some(s => ["generating", "evaluating"].includes(s.status) && (s.job?.until ?? 0) > now);
   useEffect(() => {
     if (!active && !busy) return;
@@ -50,7 +52,7 @@ export function MusicAdmin() {
     <ol className="hm-song-steps"><li>영상 수집·자막 연결</li><li>원문 등록</li><li>AI 자료·JEV 평가</li><li>검수 후 앱 게시</li></ol>
     {error && <p role="alert" className="hm-alert">{error}</p>}
     {notice && <p role="status" className="hm-notice">{notice}</p>}
-    <MusicVideoCollection items={collection} youtube={youtube} songs={songs ?? []} disabled={busy} onReload={load} onUse={item => {
+    <MusicVideoCollection items={collection} youtube={youtube} songs={songs ?? []} learningHref={learningHref} disabled={busy} onReload={load} onUse={item => {
       if ((form.title || form.source) && !window.confirm("작성 중인 등록 폼을 선택한 영상의 자료로 바꿀까요?")) return;
       fileEpoch.current++; setError("");
       const existing = songs?.find(s => s.videoId === item.video.id && s.language === item.language);
@@ -84,13 +86,13 @@ export function MusicAdmin() {
     {!songs ? <p role="status">등록한 곡을 불러오고 있어요…</p> : <>
       <p>{songs.filter(s => s.status === "published").length}곡 게시 · 전체 {songs.length}/100곡</p>
       {!songs.length && <p className="la-empty">첫 곡을 등록해 보세요. 등록한 곡은 검수 후 앱의 음악 목록에 나타나요.</p>}
-      <div className="music-catalog">{songs.slice().reverse().map(song => <MusicCard key={`${song.id}:${song.revision}:${song.status}`} song={song} busy={busy} now={now}
+      <div className="music-catalog">{songs.slice().reverse().map(song => <MusicCard key={`${song.id}:${song.revision}:${song.status}`} song={song} busy={busy} now={now} learningHref={learningHref}
         onEdit={() => { fileEpoch.current++; setEditing(song); setForm({ ...song, rightsConfirmed: false }); }}
         onWork={work} />)}</div>
     </>}
   </section>;
 }
-function MusicCard({ song, busy, now, onEdit, onWork }: { song: OwnedMusic; busy: boolean; now: number; onEdit: () => void; onWork: (b: Record<string, unknown>, message: string) => Promise<boolean | undefined> }) {
+function MusicCard({ song, busy, now, learningHref, onEdit, onWork }: { learningHref: string; song: OwnedMusic; busy: boolean; now: number; onEdit: () => void; onWork: (b: Record<string, unknown>, message: string) => Promise<boolean | undefined> }) {
   const [selected, setSelected] = useState(() => song.units?.flatMap((_, i) => song.judgments?.[i]?.disposition !== "excluded" ? [i] : []) ?? []);
   const [reviewed, setReviewed] = useState(false);
   const running = ["generating", "evaluating"].includes(song.status) && (song.job?.until ?? 0) > now;
@@ -101,7 +103,7 @@ function MusicCard({ song, busy, now, onEdit, onWork }: { song: OwnedMusic; busy
     {running && <p role="status">{song.status === "generating" ? "가사에서 단어와 일상 대화를 만들고 있어요…" : "자료 생성 완료. JEV가 정확성과 학습 가치를 평가하고 있어요…"}</p>}
     {song.error && <p role="alert">{song.error}</p>}
     {interrupted && <p>완료 응답을 받지 못했어요. 보관된 자료가 있으면 평가부터 다시 이어갈 수 있어요.</p>}
-    {song.status === "published" && <p>학습 앱에서 {song.publishedIndices?.length}개 구간을 이용할 수 있어요.</p>}
+    {song.status === "published" && <p>학습 앱에서 {song.publishedIndices?.length}개 구간을 이용할 수 있어요. <a href={musicStudyHref(learningHref, song)} target="_blank" rel="noopener noreferrer">앱에서 이 곡 학습 ↗</a></p>}
     <div className="hm-row">{["draft", "error"].includes(song.status) || interrupted ? <button className="hm-primary" disabled={busy || running} onClick={() => void action("generate", "생성과 JEV 평가를 마쳤어요. 아래 구간을 검수한 후 게시해 주세요.")}>{song.units ? "JEV 평가 다시 시도" : "AI 자료 만들기"}</button> : null}
       <button disabled={busy || running} onClick={onEdit}>원문·곡 정보 수정</button>
       {song.status === "published" && <button disabled={busy} onClick={() => void action("unpublish", "앱에서 곡을 내렸어요. 새 학습과 저장 요청은 차단돼요. 이미 개인 보관함에 저장한 표현은 유지돼요.")}>앱에서 게시 내리기</button>}</div>

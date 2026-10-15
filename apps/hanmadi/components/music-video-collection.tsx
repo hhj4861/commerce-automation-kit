@@ -6,6 +6,7 @@ import type { MusicCollectedVideo } from "@/lib/music-collection";
 import type { MusicCaptionTrack } from "@/lib/youtube-music";
 import type { YoutubeSearchPage, YoutubeVideo } from "@/lib/youtube-search";
 import type { OwnedMusic } from "@/lib/owned-music";
+import { musicStudyHref } from "@/lib/music-study-link";
 import { MusicPlayback } from "./music-playback";
 async function api(body: Record<string, unknown>) {
   const response = await fetch("/api/study/admin/music", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body), signal: AbortSignal.timeout(45000) });
@@ -14,8 +15,8 @@ async function api(body: Record<string, unknown>) {
   return data;
 }
 type Work = (body: Record<string, unknown>, message: string) => Promise<Awaited<ReturnType<typeof api>> | undefined>;
-export function MusicVideoCollection({ items, youtube, songs, disabled, onReload, onUse }: {
-  items: MusicCollectedVideo[] | null; youtube: { search: boolean; captions: boolean }; songs: OwnedMusic[]; disabled: boolean;
+export function MusicVideoCollection({ items, youtube, songs, learningHref, disabled, onReload, onUse }: {
+  learningHref: string; items: MusicCollectedVideo[] | null; youtube: { search: boolean; captions: boolean }; songs: OwnedMusic[]; disabled: boolean;
   onReload: () => Promise<void>; onUse: (item: MusicCollectedVideo) => void;
 }) {
   const [query, setQuery] = useState(""), [language, setLanguage] = useState<StudyLanguage>("ja"), [captionOnly, setCaptionOnly] = useState(false);
@@ -67,22 +68,25 @@ export function MusicVideoCollection({ items, youtube, songs, disabled, onReload
     </fieldset>
     <h4>수집한 영상 {items?.length ?? 0}/100</h4>
     {!items ? <p role="status">수집함을 불러오고 있어요…</p> : !items.length ? <p className="la-empty">아직 수집한 영상이 없어요. 검색하거나 영상 주소를 넣어 시작해 보세요.</p> : <div className="music-catalog">{items.slice().reverse().map(item => <CollectedVideo key={`${item.id}:${item.revision}`} item={item} disabled={blocked} canImport={youtube.captions}
-      registered={songs.some(s => s.videoId === item.video.id && s.language === item.language)} onUse={() => onUse(item)} work={work} />)}</div>}
+      song={songs.find(s => s.videoId === item.video.id && s.language === item.language)} learningHref={learningHref} onUse={() => onUse(item)} work={work} />)}</div>}
   </section>;
 }
-function CollectedVideo({ item, disabled, canImport, registered, onUse, work }: { item: MusicCollectedVideo; disabled: boolean; canImport: boolean; registered: boolean; onUse: () => void; work: Work }) {
+function CollectedVideo({ item, disabled, canImport, song, learningHref, onUse, work }: { item: MusicCollectedVideo; disabled: boolean; canImport: boolean; song?: OwnedMusic; learningHref: string; onUse: () => void; work: Work }) {
   const [tracks, setTracks] = useState<MusicCaptionTrack[] | null>(null), [trackId, setTrackId] = useState("");
   const [source, setSource] = useState(item.source ?? ""), [fileError, setFileError] = useState(""), [reading, setReading] = useState(false), [preview, setPreview] = useState(false);
   const epoch = useRef(0);
   const blocked = disabled || reading;
   const body = { id: item.id, revision: item.revision };
+  const registered = !!song;
+  const status = song ? ({ draft: "학습 원문 등록됨 · 자료 생성 필요", generating: "학습 자료 생성 중", evaluating: "학습 자료 평가 중", review: "학습 자료 검수·게시 대기", published: "앱에서 학습 가능", error: "학습 자료 처리 실패 · 재시도 필요" } as const)[song.status] : item.source ? "자막 확보 · 학습 등록 전" : "영상 수집됨 · 자막 필요";
   const unsaved = source !== (item.source ?? "");
   return <article className="music-collected" aria-label={`${item.video.title} 수집 정보`}>
-    <div className="hm-row"><div><span className="ks-tag">{registered ? "학습 원문 등록됨" : item.source ? "자막 확보 · 학습 등록 전" : "영상 수집됨 · 자막 필요"}</span>
+    <div className="hm-row"><div><span className="ks-tag">{status}</span>
       <h4>{item.video.title}</h4><p>{item.video.channel} · {studyLanguages[item.language].name} · {Math.floor(item.video.seconds / 60)}분 {item.video.seconds % 60}초</p>
       <p className="hm-muted">{item.video.captionsAvailable ? "YouTube 자막 있음 · 가져오기 권한은 별도 확인" : "YouTube 자막 표시 없음 · 파일로 등록 가능"}</p></div></div>
     <div className="hm-row"><button type="button" onClick={() => setPreview(!preview)}>{preview ? "미리보기 닫기" : "원곡 미리보기"}</button>
       <a href={item.video.url} target="_blank" rel="noopener noreferrer">YouTube에서 열기 ↗</a></div>
+    {song && <p>{song.status === "published" ? <a className="hm-primary" href={musicStudyHref(learningHref, song)} target="_blank" rel="noopener noreferrer">앱에서 이 곡 학습 ↗</a> : <>아래 ‘{song.title} 관리’ 카드에서 {song.status === "review" ? "학습 구간을 검수하고 게시해 주세요." : "자료 생성·검수를 마치면 앱에서 이 곡을 학습할 수 있어요."}</>}</p>}
     {preview && <MusicPlayback title={item.video.title} videoId={item.video.id} />}
     <details className="music-source-connect"><summary>자막 연결{item.source ? ` · ${item.sourceOrigin === "youtube" ? "YouTube에서 확보" : "파일·직접 등록"}` : ""}</summary>
       <fieldset disabled={blocked} className="music-fields">

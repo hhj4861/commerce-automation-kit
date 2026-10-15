@@ -121,12 +121,18 @@
   .settings-section{display:grid;grid-template-columns:220px minmax(0,1fr);gap:32px;padding:28px 0;border-top:1px solid var(--line)}
   .settings-heading h2{margin:0 0 8px;font-size:17px;letter-spacing:-.03em}.settings-heading p{margin:0;color:#62685e;font-size:13px;line-height:1.7}
   .settings-content{min-width:0;background:var(--surface);padding:24px;border:1px solid var(--line);border-radius:12px}
-  .settings-other{margin-top:24px;padding-top:4px;border-top:1px solid var(--line)}
+  .settings-other{margin:0;padding:0}
   .settings-content .setting-row strong{font-size:14px}.settings-content .setting-row small{display:block;line-height:1.7;margin-top:5px;color:#62685e}
   .settings-content .setting-row:first-child{padding-top:0}.settings-content .setting-row:last-child{padding-bottom:0}
   .setting-actions{display:flex;align-items:center;gap:10px;flex-shrink:0}.settings-content .toggle{flex-shrink:0}
   @media(max-width:850px){.settings-section{grid-template-columns:1fr;gap:16px}.settings-content{padding:20px}}
   @media(max-width:560px){.settings-content .setting-row{gap:16px;flex-wrap:wrap}.setting-actions{flex-wrap:wrap}.settings-content{padding:16px}}
+  .settings-content .setting-row.account-row{display:grid;grid-template-columns:minmax(0,1fr) 104px;align-items:center;gap:20px;min-height:96px;padding:18px 0}
+  .settings-content .account-row strong{font-size:14px;font-weight:700;line-height:22px;letter-spacing:0}
+  .settings-content .account-row small{font-size:13px;line-height:22px;margin-top:5px}
+  .settings-content .account-action{display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box;width:104px;height:42px;min-height:42px;margin:0;padding:10px 12px;font:inherit;font-size:13px;font-weight:600;line-height:20px;letter-spacing:0;white-space:nowrap;text-decoration:none;border:1px solid #d4d8d1;border-radius:8px;color:#242622;background:#fff;cursor:pointer}
+  .settings-content .account-action:focus-visible{outline:3px solid #277e64;outline-offset:3px}
+  @media(max-width:560px){.settings-content .setting-row.account-row{gap:12px}}
   .setting-row { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 16px 0; border-bottom: 1px solid var(--line); }
   .setting-row:last-child { border-bottom: 0; }
   .setting-row strong { display: block; font-size: 12px; }
@@ -1528,8 +1534,8 @@ function renderPage(name) {
     const autoRefresh = localStorage.getItem('shopshorts:autoRefresh') !== 'off';
     body = `<div class="settings-layout">
       <section class="settings-section" aria-labelledby="settings-connections"><div class="settings-heading"><h2 id="settings-connections">제작 계정 연결</h2><p>영상 생성에 사용할 계정을 관리하세요.</p></div><div class="settings-content"><hf-account-settings></hf-account-settings>
-      <div class="settings-other"><div class="setting-row"><div><strong>AI 계정</strong><small>아이디어 추천과 시나리오 생성에 사용하는 계정입니다.</small></div><button type="button" class="workspace-link" data-open-ai>연결 관리</button></div>
-      <div class="setting-row"><div><strong>Google 로그인</strong><small>로그인 계정과 연결 상태를 확인합니다.</small></div><a class="tool-btn" href="/login">계정 관리</a></div></div></div></section>
+      <div class="settings-other"><div class="setting-row account-row"><div><strong>AI 계정</strong><small>아이디어 추천과 시나리오 생성에 사용하는 계정입니다.</small></div><button type="button" class="account-action" data-open-ai>연결 관리</button></div>
+      <div class="setting-row account-row"><div><strong>Google 로그인</strong><small>로그인 계정과 연결 상태를 확인합니다.</small></div><a class="account-action" href="/login">계정 관리</a></div></div></div></section>
       <section class="settings-section" aria-labelledby="settings-display"><div class="settings-heading"><h2 id="settings-display">화면과 알림</h2><p>작업 상태를 확인하는 방식을 설정하세요.</p></div><div class="settings-content">
       <div class="setting-row"><div><strong>자동 새로고침</strong><small>12초마다 작업 상태를 확인합니다. 작성 중인 입력은 유지됩니다.</small></div><button class="toggle ${autoRefresh ? 'on' : ''}" data-setting="autoRefresh" role="switch" aria-checked="${autoRefresh}" aria-label="자동 새로고침"></button></div>
       <div class="setting-row"><div><strong>새 알림 숫자 표시</strong><small>메뉴에 안 읽은 알림 수를 표시합니다. 꺼도 알림함에 기록은 남습니다.</small></div><button class="toggle" data-notification-preference role="switch" aria-checked="false" aria-label="새 알림 숫자 표시" disabled></button></div></div></section>
