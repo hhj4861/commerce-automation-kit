@@ -13,7 +13,7 @@ if(!args.includes('--project'))throw Error('--project is required');
 const file=resolve(get('--project')),action=args.includes('--action')?get('--action'):'plan';
 if(action==='create'){
  try{await access(file);throw Error('기존 프로젝트를 덮어쓰지 않습니다.');}catch(e){if(e.code!=='ENOENT')throw e;}
- const p=createAuthoredProject('sapporo-hovering-v1');
+ const p=createAuthoredProject(args.includes('--recipe')?get('--recipe'):'sapporo-hovering-v1');
  const review=await validateDepthReview(p.depthReview,p.brief,p);if(!review.passed)throw Error('검토를 통과하지 못했습니다.');
  await mkdir(dirname(file),{recursive:true});await writeFile(file,JSON.stringify(p,null,2),{flag:'wx'});console.log(JSON.stringify({id:p.id,project:file,paidCalls:0}));
 }else if(action==='import'){

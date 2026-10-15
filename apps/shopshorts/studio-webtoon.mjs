@@ -1,3 +1,4 @@
+import {fullBlender} from './public/full-blender.js';
 import {architectureQuality} from './public/architecture-quality.js';
 import {checkArchitectureRuntime} from './studio-architecture-blender.mjs';
 import {isHybrid,sceneRoute,hybridPlan} from './public/hybrid-plan.js';
@@ -42,7 +43,7 @@ export function webtoonSvg(scene,aspect,time,art){
  return `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}"><rect width="${w}" height="${h}" fill="#091d29"/><image href="${art}" width="${portrait?w:w*.46}" height="${portrait?h*.44:h*.78}" preserveAspectRatio="xMidYMid slice"/><rect x="${px-15}" y="${py-18}" width="${pw+30}" height="${ph+65}" rx="20" fill="#122d37" opacity=".92" stroke="#d5af78"/>${body}<text x="${px+pw/2}" y="${py-33}" text-anchor="middle" font-family="NanumGothic" font-size="17" fill="#fff3db">원리 설명용 재구성 · 실제 비율과 다를 수 있음</text></svg>`;
 }
 export async function checkWebtoonReview(job){
- webtoonScenes(job.scenes);
+ webtoonScenes(job.scenes,job.brief);
  hybridPlan(job);
  const review=await validateDepthReview(job.depthReview,job.brief,job);
  if(!review.passed)throw depthFailure();
@@ -51,7 +52,7 @@ export async function checkWebtoonReview(job){
 export async function prepareWebtoon(job,env,work,io,checkpoint,{run=args=>higgsfieldCommand(args,env),fetcher=fetch,generate=generateHiggsfieldScene,render=renderSvgScene,renderHybrid=renderHybridScene,hybridReady=checkHybridRuntime,blenderReady=checkArchitectureRuntime}={}){
  await checkWebtoonReview(job);
  const cap=job.brief.maxCredits;
- if(!Number.isInteger(cap)||cap<1||cap>1000)throw Error('웹툰 제작의 총 크레딧 상한을 먼저 설정해 주세요.');
+ if(!fullBlender(job.brief)&&(!Number.isInteger(cap)||cap<1||cap>1000))throw Error('웹툰 제작의 총 크레딧 상한을 먼저 설정해 주세요.');
  const wanted=job.scenes.filter(s=>!job.assets[s.id]&&(!job.task.sceneIds||job.task.sceneIds.includes(s.id)));
  const route=s=>isHybrid(job.brief)?sceneRoute(s,job.scenes.indexOf(s),job.brief).renderer:'webtoon';
  const needsArt=s=>!isHybrid(job.brief)||['higgsfield','webtoon'].includes(route(s));
@@ -60,7 +61,7 @@ export async function prepareWebtoon(job,env,work,io,checkpoint,{run=args=>higgs
  const plans=[];
  for(const s of wanted){
   if(needsArt(s)&&job.assets[s.id+'-art']?.signature!==signature(job,s))plans.push({scene:paidArt(job,s),job});
-  if(s===job.scenes[0])plans.push({scene:paidOpening(job,s),job});
+  if(s===job.scenes[0]&&!fullBlender(job.brief))plans.push({scene:paidOpening(job,s),job});
  }
  let additional=0;const estimates=new Map();
  for(const item of plans){
@@ -72,9 +73,9 @@ export async function prepareWebtoon(job,env,work,io,checkpoint,{run=args=>higgs
   if(!old?.id)additional+=cost.credits;
  }
  const spent=Object.values(job.mediaJobs||{}).reduce((n,r)=>n+(Number.isFinite(r.credits)?r.credits:0),0);
- if(spent+additional>cap)throw Error(`웹툰 제작은 원화 포함 약 ${spent+additional}크레딧으로, 설정한 ${cap}크레딧을 초과합니다. 새 기획에서 예산 또는 장면 수를 조정해 주세요. 아직 새 생성은 시작하지 않았습니다.`);
+ if(!fullBlender(job.brief)&&spent+additional>cap)throw Error(`웹툰 제작은 원화 포함 약 ${spent+additional}크레딧으로, 설정한 ${cap}크레딧을 초과합니다. 새 기획에서 예산 또는 장면 수를 조정해 주세요. 아직 새 생성은 시작하지 않았습니다.`);
  if(additional){const status=await run(['account','status']);if(!Number.isFinite(status.credits)||status.credits<additional)throw Error('Higgsfield 크레딧 잔액이 부족하거나 확인되지 않았습니다.');}
- if(isHybrid(job.brief))await checkpoint({productionPlan:{...hybridPlan(job),cost:{...hybridPlan(job).cost,status:'quoted',credits:spent+additional,additionalCredits:additional,spentCredits:spent,checkedAt:new Date().toISOString()}}});
+ if(isHybrid(job.brief))await checkpoint({productionPlan:{...hybridPlan(job),cost:{...hybridPlan(job).cost,status:fullBlender(job.brief)?'local-render':'quoted',credits:fullBlender(job.brief)?0:spent+additional,additionalCredits:additional,spentCredits:spent,checkedAt:new Date().toISOString()}}});
  let assets={...job.assets};
  const persist=async delta=>{if(delta.mediaJobs)job.mediaJobs=delta.mediaJobs;await checkpoint(delta);};
  // Recheck each individual estimate and never automatically retry a failed paid job.

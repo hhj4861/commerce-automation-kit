@@ -1,3 +1,4 @@
+import {fullBlender} from './public/full-blender.js';
 import {sharedPipeline,requireFinalReview,PIPELINE_VERSION} from './lib/production-pipeline.js';
 import {productionPreflight} from './studio-preflight.mjs';
 import {verifyFinalVideo} from './studio-final-qa.mjs';
@@ -29,7 +30,7 @@ import { FPS, FONTS, normalizeEdit, frameCount, clipSpans } from './public/edito
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const GOOGLE = 'https://generativelanguage.googleapis.com/v1beta';
-export const capabilities = env => ({ workerAt: new Date().toISOString(), scenario: false, metadata: !!(env.GEMINI_API_KEY && env.YOUTUBE_API_KEY), animation: true, hybrid: motionCapability(env) && env.SHOPSHORTS_MEDIA_PROVIDER === 'higgsfield' && !!env.ELEVENLABS_API_KEY, webtoon: env.SHOPSHORTS_MEDIA_PROVIDER === 'higgsfield' && !!env.ELEVENLABS_API_KEY, motion: motionCapability(env), image: env.SHOPSHORTS_MEDIA_PROVIDER === 'higgsfield' || !!env.GEMINI_API_KEY, video: env.SHOPSHORTS_MEDIA_PROVIDER === 'higgsfield' || !!env.GEMINI_API_KEY, mediaProvider: env.SHOPSHORTS_MEDIA_PROVIDER === 'higgsfield' ? 'higgsfield' : 'google', voice: !!env.ELEVENLABS_API_KEY, shortsUpload: !!(env.UPLOAD_POST_API_KEY && env.UPLOAD_POST_USER), longUpload: !!env.YOUTUBE_CLIENT_SECRET });
+export const capabilities = env => ({ workerAt: new Date().toISOString(), scenario: false, metadata: !!(env.GEMINI_API_KEY && env.YOUTUBE_API_KEY), animation: true, blender: !!env.SHOPSHORTS_BLENDER_BIN && !!env.ELEVENLABS_API_KEY, hybrid: motionCapability(env) && env.SHOPSHORTS_MEDIA_PROVIDER === 'higgsfield' && !!env.ELEVENLABS_API_KEY, webtoon: env.SHOPSHORTS_MEDIA_PROVIDER === 'higgsfield' && !!env.ELEVENLABS_API_KEY, motion: motionCapability(env), image: env.SHOPSHORTS_MEDIA_PROVIDER === 'higgsfield' || !!env.GEMINI_API_KEY, video: env.SHOPSHORTS_MEDIA_PROVIDER === 'higgsfield' || !!env.GEMINI_API_KEY, mediaProvider: env.SHOPSHORTS_MEDIA_PROVIDER === 'higgsfield' ? 'higgsfield' : 'google', voice: !!env.ELEVENLABS_API_KEY, shortsUpload: !!(env.UPLOAD_POST_API_KEY && env.UPLOAD_POST_USER), longUpload: !!env.YOUTUBE_CLIENT_SECRET });
 export function command(bin, args, env, timeout = 600000) {
   return new Promise((resolveP, reject) => {
     const child = spawn(bin, args, { cwd: ROOT, env: { ...process.env, ...env }, stdio: ['ignore', 'pipe', 'pipe'] });
@@ -42,7 +43,11 @@ export function command(bin, args, env, timeout = 600000) {
   });
 }
 async function cli(workspace, args, env) {
-  const result = await command('npm', ['run', '--silent', 'cli', '-w', workspace, '--', ...args], env);
+  const atom={'@cak/shopping-shorts':'shopping-shorts','@cak/tts-narration':'tts-narration','@cak/youtube-upload':'youtube-upload','@cak/shorts-publish':'shorts-publish'}[workspace];
+  if(!atom)throw Error('지원하지 않는 제작 CLI입니다.');
+  // Keep the atom's public CLI, without tsx's IPC socket (macOS limits socket
+  // paths; the user-selected iCloud TMPDIR can exceed that limit).
+  const result = await command(process.execPath, ['--import','tsx',join(ROOT,'packages',atom,'src/cli/index.ts'),...args], env);
   try { return JSON.parse(result); } catch { throw new Error(`${workspace}: 결과를 읽을 수 없습니다.`); }
 }
 export async function googleMediaRequest(path, body, env, fetcher) {
@@ -188,7 +193,7 @@ export async function executeStudioTask(job, env, io, checkpoint, { fetcher = fe
       let data, type, providerInfo = {};
       if(hybrid){
         hybrid.merge(assets);
-        const duration=Math.max(scene===job.scenes[0]?6:1,Math.ceil(((narrationAsset({...job,assets},scene,normalizeEdit(job).voice)?.duration||scene.duration)+.3)*FPS)/FPS);
+        const duration=Math.max(scene===job.scenes[0]&&!fullBlender(job.brief)?6:1,Math.ceil(((narrationAsset({...job,assets},scene,normalizeEdit(job).voice)?.duration||scene.duration)+.3)*FPS)/FPS);
         const result=await hybrid.scene(scene,duration);({data,type}=result);providerInfo={provider:result.provider,providerJobId:result.providerJobId,...(result.qualityProfile?{qualityProfile:result.qualityProfile,renderReport:result.renderReport}:{})};
         assets=hybrid.merge(assets);
       } else if (scene.motion) {
