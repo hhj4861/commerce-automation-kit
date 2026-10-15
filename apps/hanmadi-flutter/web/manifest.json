@@ -1,0 +1,35 @@
+{
+    "name": "한마디",
+    "short_name": "한마디",
+    "start_url": ".",
+    "display": "standalone",
+    "background_color": "#fafaf9",
+    "theme_color": "#fafaf9",
+    "description": "회화, 단어, 음악으로 배우는 한마디",
+    "orientation": "portrait-primary",
+    "prefer_related_applications": false,
+    "icons": [
+        {
+            "src": "icons/Icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png"
+        },
+        {
+            "src": "icons/Icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        },
+        {
+            "src": "icons/Icon-maskable-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "maskable"
+        },
+        {
+            "src": "icons/Icon-maskable-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "maskable"
+        }
+    ]
+}

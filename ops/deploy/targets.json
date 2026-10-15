@@ -8,7 +8,11 @@
       "output": "public",
       "project": "shopshorts-dash",
       "account": "8707f7095965c1c134cd93e0b68248ca",
-      "paths": ["apps/shopshorts/", "package.json", "package-lock.json"]
+      "paths": [
+        "apps/shopshorts/",
+        "package.json",
+        "package-lock.json"
+      ]
     },
     "hanmadi": {
       "branch": "deploy/hanmadi",
@@ -20,7 +24,10 @@
       "deploymentMode": "learner",
       "productionUrl": "https://hanmadi-lake.vercel.app",
       "googleClientId": "929788436284-lba8th8rsk71krahee3vhssq1m2nt1kj.apps.googleusercontent.com",
-      "paths": ["apps/hanmadi/"]
+      "paths": [
+        "apps/hanmadi/",
+        "apps/hanmadi-flutter/"
+      ]
     },
     "hanmadi-admin": {
       "branch": "deploy/hanmadi-admin",
@@ -32,7 +39,9 @@
       "deploymentMode": "admin",
       "productionUrl": "https://hanmadi-admin.vercel.app",
       "learningAppUrl": "https://hanmadi-lake.vercel.app",
-      "paths": ["apps/hanmadi/"]
+      "paths": [
+        "apps/hanmadi/"
+      ]
     },
     "firstframe": {
       "branch": "deploy/firstframe",
@@ -41,7 +50,13 @@
       "output": "dist",
       "project": "firstframe-showcase",
       "account": "8707f7095965c1c134cd93e0b68248ca",
-      "paths": ["apps/firstframe/", "packages/showcase-site/", "packages/contracts/", "package.json", "package-lock.json"]
+      "paths": [
+        "apps/firstframe/",
+        "packages/showcase-site/",
+        "packages/contracts/",
+        "package.json",
+        "package-lock.json"
+      ]
     },
     "litellm": {
       "branch": "deploy/litellm",
@@ -50,7 +65,11 @@
       "project": "replay-live-508202",
       "instance": "shared-ai",
       "zone": "us-central1-a",
-      "paths": ["services/ai-gateway/gateway.py", "services/ai-gateway/compose.yaml", "services/ai-gateway/.env.example"]
+      "paths": [
+        "services/ai-gateway/gateway.py",
+        "services/ai-gateway/compose.yaml",
+        "services/ai-gateway/.env.example"
+      ]
     }
   },
   "external": {
@@ -60,7 +79,10 @@
       "integration": "feat/* -> develop -> main -> deploy/replay",
       "directory": ".",
       "webDirectory": "web",
-      "projects": ["replay-live-poc", "replay-live-api"],
+      "projects": [
+        "replay-live-poc",
+        "replay-live-api"
+      ],
       "deployment": "Vercel web and API; workflow belongs in that repository; activation pending"
     },
     "festa": {

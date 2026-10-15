@@ -3,6 +3,7 @@ import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { YoutubeVideoSearch } from "./youtube-video-search";
 import dynamic from "next/dynamic";
+const MediaAdmin = dynamic(() => import("./media-admin").then(m => m.MediaAdmin), { loading: () => <p role="status">원문·작업 관리를 불러오는 중이에요.</p> });
 const MusicAdmin = dynamic(() => import("./music-admin").then(m => m.MusicAdmin), { loading: () => <p role="status">음악 관리를 불러오는 중이에요.</p> });
 const DiagnosticsAdmin = dynamic(
   () => import("./diagnostics-admin").then(m => m.DiagnosticsAdmin),
@@ -40,7 +41,7 @@ async function api(body?: unknown) {
 }
 export function V2Admin({ appHref = "/study" }: { appHref?: string }) {
   const [tab, setTab] = useState<
-    "videos" | "editor" | "inbox" | "preview" | "learning" | "diagnostics" | "music"
+    "videos" | "editor" | "inbox" | "preview" | "learning" | "diagnostics" | "music" | "media"
   >("videos");
   const [contributions, setContributions] = useState<PublicContribution[]>([]);
   const [events, setEvents] = useState<KnowledgeEvent[]>([]);
@@ -210,6 +211,7 @@ export function V2Admin({ appHref = "/study" }: { appHref?: string }) {
           {(
             [
               ["videos", "영상 찾기"],
+              ["media", "원문·작업"],
               ["editor", "자료 만들기"],
               [
                 "inbox",
@@ -238,6 +240,7 @@ export function V2Admin({ appHref = "/study" }: { appHref?: string }) {
         {loading && <p role="status">자료를 불러오는 중이에요.</p>}
         {tab === "learning" && <LearningAdmin />}
         {tab === "music" && <MusicAdmin />}
+        {tab === "media" && <MediaAdmin />}
         {tab === "diagnostics" && <DiagnosticsAdmin />}
         {error && (
           <p className="hm-alert" role="alert">

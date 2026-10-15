@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "node --import tsx --test lib/conversation.test.ts lib/conversation-provider.test.ts scripts/litellm.test.mjs scripts/video-jev-live-check.test.mjs scripts/video-jev-quality-evaluation.test.mjs lib/learning-language.test.ts lib/adaptive-learning.test.ts lib/v2.test.ts lib/v2-music.test.ts lib/music-lyrics.test.ts lib/original-music.test.ts lib/v2-ai.test.ts lib/model-connections.test.ts lib/knowledge.test.ts lib/youtube-search.test.ts lib/youtube-cache.test.ts lib/video-ingestion.test.ts lib/video-language-review.test.ts lib/video-context-review.test.ts lib/learning-pipeline.test.ts lib/learning-provider.test.ts lib/deployment.test.ts lib/study-audio-client.test.ts lib/study-audio-response.test.ts lib/vocabulary.test.ts lib/llm-diagnostics.test.ts lib/google-learner-auth.test.ts lib/owned-music.test.ts lib/music-collection.test.ts",
+    "test": "node --import tsx --test lib/conversation.test.ts lib/conversation-provider.test.ts scripts/litellm.test.mjs scripts/video-jev-live-check.test.mjs scripts/video-jev-quality-evaluation.test.mjs lib/learning-language.test.ts lib/adaptive-learning.test.ts lib/v2.test.ts lib/v2-music.test.ts lib/music-lyrics.test.ts lib/original-music.test.ts lib/v2-ai.test.ts lib/model-connections.test.ts lib/knowledge.test.ts lib/youtube-search.test.ts lib/youtube-cache.test.ts lib/video-ingestion.test.ts lib/video-language-review.test.ts lib/video-context-review.test.ts lib/learning-pipeline.test.ts lib/learning-provider.test.ts lib/deployment.test.ts lib/study-audio-client.test.ts lib/study-audio-response.test.ts lib/vocabulary.test.ts lib/llm-diagnostics.test.ts lib/google-learner-auth.test.ts lib/owned-music.test.ts lib/music-collection.test.ts lib/mobile-auth.test.ts lib/media-source.test.ts",
     "test:conversation": "node scripts/conversation-smoke.mjs",
     "ai:setup": "node scripts/litellm.mjs setup",
     "ai:start": "node scripts/litellm.mjs start",
@@ -26,7 +26,9 @@
     "test:music-audio-live": "node --import tsx scripts/music-audio-live-check.mjs",
     "test:music-collection": "node --import tsx scripts/music-collection-e2e.mjs",
     "test:owned-music": "node --import tsx scripts/owned-music-e2e.mjs",
-    "test:word-study": "node --import tsx --test lib/word-study.test.ts && node --import tsx scripts/word-study-e2e.mjs"
+    "test:word-study": "node --import tsx --test lib/word-study.test.ts && node --import tsx scripts/word-study-e2e.mjs",
+    "test:flutter-client": "node scripts/flutter-client-e2e.mjs",
+    "test:media-foundation": "node scripts/media-foundation-e2e.mjs"
   },
   "dependencies": {
     "@cak/litellm-client": "file:vendor/cak-litellm-client-0.4.0.tgz",

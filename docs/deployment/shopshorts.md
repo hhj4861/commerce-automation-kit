@@ -29,3 +29,21 @@ GitHub에는 기존 `CAK_SECRETS_URL` 변수만 사용하며 장기 토큰을 Gi
 이 Actions 파이프라인은 Pages 배포다. 로컬 `com.cak.studio-production` 워커나 공용 broker의 자동 배포를 포함하지 않는다. 워커 업데이트는 큐 상태 확인 후 별도로 수행한다.
 
 2026-10-06 ElevenLabs 요청은 HTTP 이전 TLS 인증서 검증에서 실패했다. 네트워크 검사 인증서의 발급자는 Fortinet `FG200ETK20904320`이며, 이 Mac에서 해당 공식 신뢰 체인을 확인하지 못했다. API 키·사용 한도 오류로 단정하지 않는다. 네트워크 관리자가 제공한 공식 CA/정책을 확인한 뒤 재검증하며 TLS 검증을 끄거나 출처 불명의 인증서를 신뢰하지 않는다.
+
+## 공용 Cloudflare 배포 토큰 연결 — 2026-10-15
+
+사용자가 공용 API 토큰을 Secrets Store의 `CAK_DEPLOY_API_TOKEN`으로 등록했다. 2026-10-15 메타데이터 조회에서 `active`, scope `workers`를 확인했다. 값은 조회·출력·Git/로컬 파일에 복제하지 않았다. 기존 `CAK_DEPLOY_CLOUDFLARE_API_TOKEN`은 운영 저장소에 없으며, 운영 브로커에도 해당 배포 바인딩이 없어서 GitHub의 시크릿 조회가 503으로 실패했다.
+
+- 계정/저장소: 기존 `cak-secrets` (`de2c8d7c3e9c4067acc22212522c0fc4`).
+- 저장 이름: `CAK_DEPLOY_API_TOKEN`을 유지한다. 토큰을 다른 이름으로 중복 등록하지 않는다.
+- 브로커 바인딩: `SS_DEPLOY_CLOUDFLARE_API_TOKEN` → `CAK_DEPLOY_API_TOKEN`.
+- 호환성: GitHub 응답/배포 스크립트의 `DEPLOY_CLOUDFLARE_API_TOKEN`과 Wrangler의 `CLOUDFLARE_API_TOKEN`은 유지한다. 범용 토큰 보관이 다른 저장소/브랜치의 접근을 자동 허용하지 않는다.
+- 운영 적용: 승인된 변경을 머지한 뒤 기존 운영 Worker 코드와 다른 바인딩·변수를 보존하면서 배포 바인딩만 추가한다. 공용 브로커 전체를 다른 소스로 덮어쓰지 않는다.
+- 검증: `deploy/shopshorts`의 기존 승인된 SHA를 대상으로 Actions 시크릿 조회와 실제 Pages 배포 성공, Pages production SHA/URL을 확인한다. 수동 Wrangler 배포로 성공을 대체하지 않는다.
+- 현재 단계: 이름 매핑 준비. 운영 연결/Actions 검증 결과는 실제 실행 뒤 기록한다.
+
+### 시크릿 연결 후 실검증 — 2026-10-15
+
+PR #268(`d7578ef`)의 이름 매핑은 승인·머지됐으며 운영 브로커에 적용했다. 코드 etag와 기존 바인딩 36개를 보존했고 배포 바인딩 1개만 추가했다. GitHub Actions [38705722600](https://github.com/hhj4861/commerce-automation-kit/actions/runs/38705722600)의 시크릿 조회는 성공했다. 이후 전체 앱 테스트가 FFmpeg/FFprobe 미설치 및 workspace cwd에 의존한 CLI 경로 때문에 19건 실패하여 Pages 배포 전 중단됐다.
+
+배포용 Ubuntu 실행기에 FFmpeg를 설치하고, CLI 검사는 현재 폴더 대신 테스트 파일 위치로 실행 파일을 찾는다. PR에서도 같은 Node 22/Ubuntu 전체 앱 검사를 수행한다. 토큰의 실제 Pages 배포 권한과 전체 자동 배포 완료는 후속 성공 실행에서 확인해야 한다.

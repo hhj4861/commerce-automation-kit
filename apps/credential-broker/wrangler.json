@@ -168,7 +168,7 @@
     {
       "binding": "SS_DEPLOY_CLOUDFLARE_API_TOKEN",
       "store_id": "de2c8d7c3e9c4067acc22212522c0fc4",
-      "secret_name": "CAK_DEPLOY_CLOUDFLARE_API_TOKEN"
+      "secret_name": "CAK_DEPLOY_API_TOKEN"
     }
   ]
 }

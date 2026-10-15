@@ -24,3 +24,10 @@ test('all eleven menu destinations are available in the compact menu, with exact
  assert.equal(navigationRoute('/studio/automatic/'),'/studio/dashboard');assert.equal(navigationRoute('/studio'),'/studio/dashboard');
  assert.equal(navigationRoute('/contents/'),'/contents');
 });
+
+test('primary navigation follows creating and continuing, with optional tools grouped separately',()=>{
+ const primary=studioNavigation.filter(item=>item.group==='영상 작업');
+ assert.deepEqual(primary.map(item=>item.href),['/','/studio/dashboard','/contents','/performance']);
+ assert.equal(studioNavigation.find(item=>item.href==='/contents').label,'내 영상');
+ assert.equal(studioNavigation.find(item=>item.href==='/metadata').group,'제작 도구');
+});

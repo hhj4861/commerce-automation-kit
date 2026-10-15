@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
-import {collectContent,filterContent,fetchContent,renderContentRows} from '../public/content-library.js';
+import {collectContent,filterContent,fetchContent,renderContentRows,contentFilterParams} from '../public/content-library.js';
 import {draftPayload,requestAutomaticDraft} from '../public/automatic-creation.js';
 
 const project={id:'same',title:'수동 심리학',brief:{category:'심리학',format:'long'},scenes:[],assets:{},updatedAt:'2026-09-27T10:00:00Z'};
@@ -13,7 +13,7 @@ test('content route can render before module initialization even when browser ex
   const host={innerHTML:''},window={contentLibrary:host};
   const context={window,document:{getElementById:()=>host},bindPageActions(){}};
   vm.runInNewContext(fn+';renderPage("content");',context);
-  assert.match(host.innerHTML,/전체 콘텐츠/);
+  assert.match(host.innerHTML,/내 영상/);
   let mounted=false;window.workspaceContent={mount:node=>{assert.equal(node,host);mounted=true;}};
   vm.runInNewContext(fn+';renderPage("content");',context);assert.equal(mounted,true);
 });
@@ -68,3 +68,10 @@ test('automatic request exposes authentication and service failures and accepts 
   assert.equal(automatic.mode,'auto');assert.equal(automatic.href,'/studio/automatic?project=auto-project');
   assert.equal(items.find(item=>item.id===project.id).mode,'manual');
  });
+
+test('planner query does not silently filter the shared library; library deep links still do',()=>{
+ assert.equal(contentFilterParams({pathname:'/studio/dashboard',search:'?mode=auto&q=AI'}).toString(),'');
+ assert.equal(contentFilterParams({pathname:'/',search:'?mode=manual'}).toString(),'');
+ assert.equal(contentFilterParams({pathname:'/contents',search:'?mode=manual&status=working'}).get('mode'),'manual');
+ assert.equal(contentFilterParams({pathname:'/contents/',search:'?status=attention'}).get('status'),'attention');
+});

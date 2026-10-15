@@ -295,6 +295,28 @@ source="cak_keyword_intel" / source_questions=[실질문…] 로 append
 
 ---
 
+### 부칙: AI 카드뉴스 소유권 이전 (2026-10-15)
+
+wp-auto-blog의 AI 기술 카드뉴스 봇(`wp-post/ai-news-card-bot`)을 이 저장소
+`apps/shopshorts/card-news`로 **이전**한다. 위 "코드·저장·게이트 통합 금지"의 예외가 아니다.
+두 저장소가 코드를 공유하는 것이 아니라, 소유권을 옮긴 뒤 wp-auto-blog 쪽 코드를 삭제한다.
+
+- 범위: 비커머스 콘텐츠(AI 개발 도구 소식)도 shopshorts 플랫폼 범위에 넣는다. shopshorts가 이미
+  심리학·건축학·역사·과학 영상을 다루므로 콘텐츠 생성을 한 플랫폼으로 모은다.
+- 공식 소스: GitHub Releases REST와 OpenAI 공식 RSS만 쓴다. 공식 RSS는 공식 API와 같은 지위로 본다.
+- 발행 판단: 운영자 본인 1:1 채팅으로의 일일 브리핑은 keyword-intel 텔레그램 리포트와 같은 내부 보고이며
+  공개 발행이 아니다(섀도 실행이 `getChat` 종류를 기록해 확인). 릴스·쇼츠 공개 업로드는 스튜디오 사람 게이트 2개를 거친다.
+- 실패 투명화: 소스별 실패와 OpenAI→Gemini 대체 여부를 산출물에 기록한다. 전 소스 실패는 장애로 처리한다.
+- 전환 기간 한정 상호 확인: 두 저장소가 같은 날짜에 둘 다 보내지 않도록 서로의 발송 기록 태그를 읽는다.
+  이는 데이터·게이트 공유가 아니라 이관용 인터록이다. wp-auto-blog 코드를 삭제하면 그쪽 확인은 사라지고,
+  CAK 쪽도 `CARD_NEWS_LEGACY_REPOSITORY=off`로 끈 뒤 코드에서 지운다.
+- 렌더러 언어: Actions에서만 도는 카드 렌더는 Python(Pillow)을 유지한다. 렌더가 Pages나 Mac 워커에서
+  돌아야 하거나 slide-renderer(#2)를 착수할 때 Node로 옮길지 다시 판단한다.
+- 이 이전은 "콘텐츠 조회 중복" 해소가 아니다. 카드봇은 wp-auto-blog의 발굴 모듈을 쓰지 않는다. 실제 중복
+  (검색광고 API 2벌, 발굴 클라이언트 2벌, 검색 백엔드 2종, OpenAI RSS 이중 수집)은 별도 과제로 다룬다.
+
+운영 절차와 전환·롤백: `apps/shopshorts/card-news/README.md`.
+
 ## 9. 착수 조건 (지금 구현하지 않는 이유)
 
 **지금 병목은 소재가 아니라 검증이다.** G3(스코어 유용성)가 대기 중이고, 소비 원자는

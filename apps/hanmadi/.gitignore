@@ -50,3 +50,6 @@ next-env.d.ts
 
 # 숏폼 생성 산출물 (재생성 가능한 미디어)
 ops/shorts/out/
+
+# Reproducible Flutter web output (built separately; never a source of truth).
+/public/app
