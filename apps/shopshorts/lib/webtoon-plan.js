@@ -1,7 +1,8 @@
+import {fullBlender,fullBlenderGuide} from '../public/full-blender.js';
 import {authoredSpec} from '../public/authored-recipes.js';
 import {isHybrid} from '../public/hybrid-plan.js';
 // Data-only choreography. Never execute model-provided code, SVG, URLs or filters.
-export const webtoon=brief=>['webtoon','hybrid'].includes(brief?.productionStyle);
+export const webtoon=brief=>['webtoon','hybrid','blender'].includes(brief?.productionStyle);
 export const KYLE='RU7aSi6lT4uQBXMLgDxK';
 const bad=(path,rule)=>{throw Object.assign(Error('웹툰의 대상·동작·결과 구성을 확인해 주세요.'),{status:400,validationIssue:{path,rule}});};
 const text=(x,n)=>typeof x==='string'&&x.trim()&&x.length<=n;
@@ -33,13 +34,14 @@ export function webtoonPlan(v){
  if(!layers.some(l=>['move','flow','scale'].includes(l.motion)))bad('webtoon.layers','at least one move, flow or scale layer');
  return {artPrompt:v.artPrompt.trim(),answer:v.answer.trim(),layers};
 }
-export function webtoonScenes(scenes){
+export function webtoonScenes(scenes,brief){
  if(scenes.length<2)bad('scenes','at least 2 scenes');
- if(scenes[0].duration!==6)bad('scenes[0].duration','opening must be exactly 6 seconds');
+ if(!fullBlender(brief)&&scenes[0].duration!==6)bad('scenes[0].duration','opening must be exactly 6 seconds');
  scenes.forEach((s,i)=>{if(s.kind!=='video')bad(`scenes[${i}].kind`,'video required for webtoon/hybrid');if(!s.webtoon&&!s.hybrid?.authored)bad(`scenes[${i}].webtoon`,'webtoon plan required');});
  scenes.forEach(s=>s.hybrid?.authored?authoredSpec(s.hybrid.authored,s):webtoonPlan(s.webtoon));
 }
 export function webtoonGuide(brief){
+ if(fullBlender(brief))return fullBlenderGuide(brief);
  if(!webtoon(brief))return '';
  return `웹툰 혼합 제작: 첫 장면은 정확히 6초인 Higgsfield 영상, ${isHybrid(brief)?'나머지는 장면 목적에 따라 웹툰 원화, 전체 화면 모션, 코드 3D 구조도를 조합합니다.':'나머지는 독창적인 웹툰 원화와 데이터 기반 동작 도해입니다.'} 모든 kind는 video, 최소 2장면입니다. 섬세한 잉크 선·회화적 질감, 따뜻한 앰버 조명과 청록/남색 배경 대비를 유지합니다. 인물/대상의 정체성을 visualStyle와 각 prompt에서 유지하세요.
 모든 장면에 webtoon:{artPrompt,answer,layers}를 추가하세요. artPrompt(1~1600자)는 자막 없는 독창적 웹툰 원화의 공간·대상·구도 설명, answer(1~160자)는 이 장면에서 보여줄 인과적 발견(검토용, 읽지 않음)입니다. 단순 그림 확대가 아니라 같은 대상의 상태가 변해야 합니다.

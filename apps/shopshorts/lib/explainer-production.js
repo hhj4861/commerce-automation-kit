@@ -1,3 +1,4 @@
+import {fullBlender} from '../public/full-blender.js';
 import {reviewResearchAnswer,validateAnswerPlan,researchIncomplete} from './research-answer.js';
 import {webtoon,KYLE} from './webtoon-plan.js';
 import {VOICE_PROFILES} from '../public/voice-recommendation.js';
@@ -11,8 +12,8 @@ export function productionOptions(input) {
   const narrationSpeed=input.narrationSpeed??(input.format==='short'?(webtoon(input)?1.1:1.15):1);
   const voiceId=input.voiceId??(webtoon(input)?KYLE:'n2fbxG88jqAoaVPUy3IG'),captionPosition=input.captionPosition??(webtoon(input)?'bottom':'middle');
   if(![1,1.1,1.15,1.25].includes(narrationSpeed)||!VOICE_PROFILES.some(v=>v.id===voiceId&&v.id!=='none')||!['middle','bottom'].includes(captionPosition))invalid();
-  if(webtoon(input)&&(!Number.isInteger(input.maxCredits??54)||(input.maxCredits??54)<1||(input.maxCredits??54)>1000))invalid();
-  return {...(webtoon(input)?{maxCredits:input.maxCredits??54}:{}),workflow:EXPLAINER_WORKFLOW,narrationSpeed,voiceId,captionPosition,mediaProvider:input.productionStyle==='animation'?'animation':'higgsfield'};
+  if(webtoon(input)&&!fullBlender(input)&&(!Number.isInteger(input.maxCredits??54)||(input.maxCredits??54)<1||(input.maxCredits??54)>1000))invalid();
+  return {...(webtoon(input)&&!fullBlender(input)?{maxCredits:input.maxCredits??54}:{}),workflow:EXPLAINER_WORKFLOW,narrationSpeed,voiceId,captionPosition,mediaProvider:fullBlender(input)?'blender':input.productionStyle==='animation'?'animation':'higgsfield'};
 }
 const researchError=()=>{throw Object.assign(Error('주제를 뒷받침할 검색 근거를 확인하지 못했어요. 주제를 구체화해 다시 시도해 주세요.'),{status:502,code:'SCENARIO_RESEARCH_INVALID'});};
 export function validateResearch(value) {

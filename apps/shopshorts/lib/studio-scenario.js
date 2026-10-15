@@ -33,7 +33,7 @@ export function scenarioResult(value, input) {
   let scenes = validateScenes(value?.scenes,{stripMotion:true});
   let quality;
   if(brief.visualQuality===VISUAL_QUALITY){const directed=directScenario(scenes,brief);scenes=directed.scenes;quality=directed.visualQuality;}
-  if(webtoon(brief))webtoonScenes(scenes);
+  if(webtoon(brief))webtoonScenes(scenes,brief);
   hybridPlan({brief,scenes});
   const total = scenes.reduce((n, scene) => n + scene.duration, 0);
   if (total > (brief.format === 'short' ? 180 : 600) || Math.abs(total - brief.duration) > Math.max(2, brief.duration * .1)) fail('시나리오 길이가 목표와 맞지 않습니다. 다시 생성하세요.', 502);
