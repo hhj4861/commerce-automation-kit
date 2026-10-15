@@ -1,3 +1,4 @@
+import {fileURLToPath} from 'node:url';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createAuthoredProject} from '../lib/authored-project.js';
@@ -66,8 +67,8 @@ import {promisify} from 'node:util';
 const exec=promisify(execFile);
 test('CLI rejects a traversal project before reading/importing assets; create does not overwrite',async t=>{
  const dir=await mkdtemp(join(tmpdir(),'authored-cli-'));t.after(()=>rm(dir,{recursive:true,force:true}));const file=join(dir,'project.json'),p=make();p.id='../../outside';await writeFile(file,JSON.stringify(p));
- await assert.rejects(exec(process.execPath,['apps/shopshorts/studio-recipe-cli.mjs','--project',file,'--action','import','--assets',dir,'--voice-dir',dir,'--opening','/does-not-exist']),/안전한 프로젝트 ID/);
- await assert.rejects(exec(process.execPath,['apps/shopshorts/studio-recipe-cli.mjs','--project',file,'--action','create']),/덮어쓰지/);assert.equal(JSON.parse(await readFile(file,'utf8')).id,p.id);
+ await assert.rejects(exec(process.execPath,[fileURLToPath(new URL('../studio-recipe-cli.mjs',import.meta.url)),'--project',file,'--action','import','--assets',dir,'--voice-dir',dir,'--opening','/does-not-exist']),/안전한 프로젝트 ID/);
+ await assert.rejects(exec(process.execPath,[fileURLToPath(new URL('../studio-recipe-cli.mjs',import.meta.url)),'--project',file,'--action','create']),/덮어쓰지/);assert.equal(JSON.parse(await readFile(file,'utf8')).id,p.id);
 });
 
 test('registered captions wrap between words, including the closing sentence',()=>{

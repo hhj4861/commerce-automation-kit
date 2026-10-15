@@ -59,7 +59,7 @@ test('checked-in broker configuration isolates protected Shopshorts and Hanmadi 
     const identity = { ...claims(name), ref_protected: 'true' };
     assert.deepEqual(authorizeGithub(identity, deployed.vars).keys, [key]);
     assert.deepEqual(deployed.secrets_store_secrets.filter(b => b.binding === `SS_${key}`), [
-      { binding: `SS_${key}`, store_id: deployed.vars.STORE_ID, secret_name: `CAK_${key}` },
+      { binding: `SS_${key}`, store_id: deployed.vars.STORE_ID, secret_name: key === 'DEPLOY_CLOUDFLARE_API_TOKEN' ? 'CAK_DEPLOY_API_TOKEN' : `CAK_${key}` },
     ]);
     for (const ref_protected of [undefined, false, 'false'])
       assert.throws(() => authorizeGithub({ ...identity, ref_protected }, deployed.vars));

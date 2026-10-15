@@ -52,6 +52,12 @@ jobs:
         run: |
           node --test ops/deploy/test.mjs
           python3 -m unittest discover -s ops/deploy -p 'test_*.py'
+      - name: Install Shopshorts render test dependencies
+        if: matrix.name == 'shopshorts'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ffmpeg
+          command -v ffmpeg ffprobe
       - name: Load only this platform's credentials from Cloudflare
         if: matrix.driver != 'gcp'
         env:
