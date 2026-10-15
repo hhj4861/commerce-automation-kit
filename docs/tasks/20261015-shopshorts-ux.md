@@ -13,6 +13,6 @@
 - 검증: 관련 5개 테스트 파일 40/40 통과. 첫 확장 실행 2건은 @resvg 의존성 누락이었으며 기존 설치 node_modules를 임시 symlink해 해결했다(설치·운영 의존성 변경 없음, 검증 후 링크 제거).
 - 브라우저: 격리 fixture http://127.0.0.1:5237, 데스크톱 및 390×844 모바일 확인. 생성 양식 첫 진입 노출, 자동→내 영상 이동 시 자동+수동 전체 7건, 자동 프로젝트 대본 승인·직접 편집 링크 유지, 수동 생성 단계 진입, 모바일 전체 11개 메뉴 및 게시 문구 도구 이동, 접힌 관리 목록을 펼치면 기존 4개 자동 작업 조회를 확인. 유료 생성/운영 데이터 변경 없음. 모바일 viewport 원복.
 - Impeccable 정적 점검: 수정 UI 소스 5개에서 cramped-padding(topbar)·radial-halo(기존 미디어 포스터) 경고 2개. 기준 HEAD의 index.html에도 같은 2개가 존재. 이번 동선 개선의 신규 경고가 아니며 재테마나 억제 규칙을 추가하지 않았다. linked CSS를 원래 위치에서 읽는 현재 스캔과 임시 baseline HTML의 저대비 추가 경고는 동일 조건 결과로 비교하지 않는다.
-- 화면 캡처: 도구의 iCloud 직접 저장 EPERM, /private/tmp 임시 전달은 자동 승인 검토에서 사용자 저장 경로 지침 위반으로 차단. 우회하지 않았으며 별도 예외/생략 답변 대기. 화면 관찰 자체는 완료했지만 캡처 파일 저장은 미완료.
-- 다음: 본인 변경 커밋·push·PR 생성. main/운영 반영은 아직 안 됨. PR별 머지 승인 필요.
+- 화면 캡처: iCloud 직접 저장 EPERM 및 임시 저장 자동 승인 차단 뒤, 사용자가 이번 캡처 2개에 한해 /private/tmp 임시 저장을 명시 승인했다. creation-desktop.png·creation-mobile.png를 지정 iCloud 산출물 폴더로 복사하고 SHA256 일치 확인 후 임시 사본 2개를 제거했다. viewport 원복. 다른 임시 산출물 저장 정책은 변경하지 않았다.
+- 결과: 본인 변경 커밋·원격 작업 브랜치 push, PR #263 생성(https://github.com/hhj4861/commerce-automation-kit/pull/263). 기준 main/운영에는 미반영. 다음은 해당 PR의 명시적 머지 승인 후 통합·운영 검증이다.
 - 검증 산출물: iCloud gpt 작업/commerce-automation-kit/20261015-shopshorts-ux.
