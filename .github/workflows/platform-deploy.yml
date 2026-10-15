@@ -72,6 +72,12 @@ jobs:
           test "$(git -C .flutter-sdk rev-parse HEAD)" = "abaf9c523780a608bd46686fd5e53740a07077f8"
           (cd apps/hanmadi-flutter && "$FLUTTER_BIN" --suppress-analytics pub get --enforce-lockfile)
           node apps/hanmadi/scripts/build-flutter-web.mjs --stage
+      - name: Install Shopshorts render test dependencies
+        if: matrix.name == 'shopshorts'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ffmpeg
+          command -v ffmpeg ffprobe
       - name: Load only this platform's credentials from Cloudflare
         if: matrix.driver != 'gcp'
         env:
