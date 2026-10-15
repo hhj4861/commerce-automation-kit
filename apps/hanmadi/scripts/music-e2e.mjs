@@ -272,6 +272,7 @@ try {
     await page.getByText("음악 문맥 응답 테스트", { exact: true }).waitFor();
     assert.equal(chatCalls, 1);
     await page.unroute("**/api/study", chatFixture);
+    await page.getByRole("button", { name: "보관함", exact: true }).click();
     await page.getByRole("button", { name: "단어장", exact: true }).click();
     await page.getByText(word, { exact: true }).waitFor();
     await page.getByRole("button", { name: "내 표현", exact: true }).click();

@@ -1,6 +1,7 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { V2Navigation, LibraryNavigation } from "./v2-navigation";
 import { V2Icon as Icon } from "./v2-icon";
 import { Speaker } from "./v2-speaker";
 import { studyAudio } from "@/lib/study-audio-client";
@@ -717,27 +718,7 @@ export function V2App() {
     return () => window.removeEventListener("keydown", escape);
   }, [modal, aiFromSettings]);
   return (
-    <div className="hm hm-app" data-view={secondary ? modal : tab}>
-      <aside className="hm-brand-panel" aria-label="한마디 소개">
-        <Link className="hm-wordmark" href="/study">
-          <span className="hm-brand-mark">ㅎ</span> 한마디 <small>2.0</small>
-        </Link>
-        <div>
-          <p className="hm-design-tag">말하기와 여행을 잇는 앱</p>
-          <h2>
-            여행에서 쓴 말이
-            <br />
-            내일의 실력이 되도록.
-          </h2>
-          <p>
-            번역으로 한 번,
-            <br />
-            AI와 다시 한 번.
-            <br />
-            내가 필요했던 말부터 익혀요.
-          </p>
-        </div>
-      </aside>
+    <div className="hm hm-app hm-workspace" data-view={secondary ? modal : tab} data-authenticated={Boolean(identity && !loading)} data-onboarded={Boolean(identity && language)}>
       <div className="hm-device">
         {secondary ? (
           <header className="hm-subheader">
@@ -749,11 +730,10 @@ export function V2App() {
           </header>
         ) : (
           <header className="hm-header">
-            {(!identity || !language) && (
-              <Link className="hm-wordmark" href="/study">
-                <span className="hm-brand-mark">ㅎ</span> 한마디
-              </Link>
-            )}
+            <Link className="hm-wordmark" href="/study">
+              <span className="hm-brand-mark">ㅎ</span> 한마디
+            </Link>
+            {identity && language && <span className="hm-current-screen">{{ study: "스터디", chat: "AI 대화", translate: "번역", phrases: "보관함", words: "보관함" }[tab]}</span>}
             {identity && !loading && (
               <div className="hm-header-actions">
                 {language && (
@@ -787,6 +767,7 @@ export function V2App() {
                   </label>
                 )}
                 <button
+                  className="hm-header-ai"
                   disabled={busy}
                   onClick={() => setModal(identity ? "ai" : "login")}
                 >
@@ -952,6 +933,9 @@ export function V2App() {
             />
           ) : (
             <>
+              {(tab === "phrases" || tab === "words") && (
+                <LibraryNavigation current={tab} onNavigate={setTab} />
+              )}
               {tab === "study" && (
                 <>
                   <nav className="hm-study-modes" aria-label="학습 방식">
@@ -999,9 +983,7 @@ export function V2App() {
                       <div className="hm-study-intro">
                         <p>오늘도, 내 말이 하나씩 늘도록</p>
                         <h1>
-                          나에게 맞는
-                          <br />
-                          다음 한마디.
+                          나에게 맞는 다음 한마디.
                         </h1>
                       </div>
                       <section className="hm-course-hero">
@@ -1943,37 +1925,16 @@ export function V2App() {
           )}
         </main>
         {identity && !loading && (
-          <nav className="hm-bottom" aria-label="주요 메뉴">
-            {(
-              [
-                ["study", "book", "스터디"],
-                ["chat", "chat", "AI 대화"],
-                ["translate", "translate", "번역"],
-                ["phrases", "heart", "내 표현"],
-                ["words", "dictionary", "단어장"],
-              ] as const
-            ).map(([id, icon, label]) => (
-              <button
-                key={id}
-                disabled={busy || !language}
-                aria-current={tab === id ? "page" : undefined}
-                onClick={() => {
-                  setModal(null);
-                  setAiFromSettings(false);
-                  setTab(id);
-                  setError("");
-                  setNotice("");
-                  if (id !== "chat") {
-                    setChat([]); setMusicConversation(null);
-                    setChatInput("");
-                  }
-                }}
-              >
-                <Icon name={icon} />
-                {label}
-              </button>
-            ))}
-          </nav>
+          <V2Navigation current={tab} disabled={busy || !language} onNavigate={(id) => {
+            setModal(null);
+            setAiFromSettings(false);
+            setTab(id);
+            setError("");
+            setNotice("");
+            if (id !== "chat") {
+              setChat([]); setMusicConversation(null); setChatInput("");
+            }
+          }} />
         )}
       </div>
       {modal === "login" && (

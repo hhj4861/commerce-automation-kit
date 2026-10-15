@@ -378,7 +378,7 @@ try {
         `header overflow ${width}`,
       );
       const actionBox = await page
-        .getByRole("button", { name: "AI 설정", exact: true })
+        .getByRole("button", { name: "설정", exact: true })
         .boundingBox();
       assert(
         actionBox.x > layout.left,
@@ -1026,6 +1026,7 @@ try {
     path: resolve(screenshots, "chat.png"),
     fullPage: true,
   });
+  await page.getByRole("button", { name: "보관함", exact: true }).click();
   await page.getByRole("button", { name: "내 표현", exact: true }).click();
   const practicedResponse = page.waitForResponse(
     (r) =>
@@ -1500,7 +1501,7 @@ try {
       ),
       `overflow ${width}`,
     );
-    assert.equal(await page.locator(".hm-bottom svg").count(), 5);
+    assert.equal(await page.locator(".hm-bottom svg").count(), 4);
     assert.equal(
       await page
         .locator(".hm-course-hero")
@@ -1518,7 +1519,7 @@ try {
     assert(
       await page
         .locator(".hm-device")
-        .evaluate((el) => el.getBoundingClientRect().width <= 480),
+        .evaluate((el) => el.getBoundingClientRect().width <= innerWidth && (innerWidth < 1000 || el.getBoundingClientRect().width > 900)),
     );
     for (const label of ["레벨별", "상황별", "오늘 추천"]) {
       await page.getByRole("button", { name: label, exact: true }).click();
@@ -1661,7 +1662,7 @@ try {
     const nav = await page.locator(".hm-bottom").boundingBox();
     assert(
       header.y + header.height <= main.y + 1 &&
-        main.y + main.height <= nav.y + 1 &&
+        (width >= 1000 ? nav.x + nav.width <= main.x + 1 : main.y + main.height <= nav.y + 1) &&
         nav.y + nav.height <= height + 1,
       `settings layout ${width}x${height}`,
     );
@@ -1809,6 +1810,7 @@ try {
     .click();
   await learnerPage.getByText(phrases.ja.text, { exact: true }).waitFor();
   await learnerPage.reload();
+  await learnerPage.getByRole("button", { name: "보관함", exact: true }).click();
   await learnerPage
     .getByRole("button", { name: "내 표현", exact: true })
     .click();
