@@ -52,3 +52,15 @@ CI 첫 실행(38693562574)은 shallow SHA checkout에 릴리스 태그가 없어
 66daa7b CI에서 웹 분석/테스트·실제 서버 브라우저·release와 iOS 무서명 컴파일을 확인했다. 모바일→PC 전환 캡처는 하단 탭이 사라지고 두 렌더 프레임이 지난 뒤 수행하도록 보완했으며 로컬 전체 E2E가 다시 정상 exit 0으로 통과했다.
 
 추가 배포 호환성 확인: `HANMADI_DEPLOYMENT=admin npm test`도 279개 통과했다. 관리자 배포가 공통 npm test를 실행하므로 모바일 인증 테스트 프로세스의 기본 배포 모드를 격리했다. 제품의 admin 차단은 그대로이며 해당 차단 테스트도 유지한다. 66daa7b의 Flutter 웹/Android/iOS와 기존 사용자 흐름 CI는 모두 정상 완료했다.
+
+## 최종 확인 — 2026-10-15
+
+실행 코드 기준 `1a4e8a736917952da049b8d67019f01bc99ef0c1`에서 다음 원격 검증이 모두 SUCCESS다.
+
+- Flutter 웹 release·분석·10개 테스트·실제 서버 브라우저, Android debug, iOS 무서명 release: [run 38695058532](https://github.com/hhj4861/commerce-automation-kit/actions/runs/38695058532).
+- 기존 로그인·언어·회화·관리자·음악·수집곡·단어장·진단 전체 사용자 흐름: [run 38695058608](https://github.com/hhj4861/commerce-automation-kit/actions/runs/38695058608).
+- GitOps: [run 38695058658](https://github.com/hhj4861/commerce-automation-kit/actions/runs/38695058658).
+- [PR #265](https://github.com/hhj4861/commerce-automation-kit/pull/265) 검토 준비. 변경은 작업 upstream에 커밋·푸시했고 main/운영은 변경하지 않았다. 앱 인증 운영 플래그는 활성화하지 않았다.
+- **남은 것**: 해당 PR의 사용자 머지 승인, 운영 승격 승인·배포 검증, 실제 단말의 Google 계정 로그인/마이크/앱 링크 복귀/서명 배포. 컴파일 성공을 실기기 검증 완료로 표현하지 않는다.
+
+이 최종 기록은 문서만 추가하며 위에서 검증한 실행 코드·의존성·workflow를 변경하지 않는다.
