@@ -1,3 +1,4 @@
+import { openAdminTool } from "./admin-navigation.mjs";
 // Real Next UI/API/file persistence. Only existing YouTube metadata is a fixture; no provider/LLM calls.
 import assert from 'node:assert/strict';
 import { createHmac } from 'node:crypto';
@@ -37,13 +38,51 @@ try {
   assert.equal((await context.request.post(endpoint, { headers: { Origin: base }, data: { raw: 'a'.repeat(65000) } })).status(), 413);
   const legacy = await context.request.post(base + '/api/study/admin/music', { headers: { Origin: base }, data: { action: 'collection-add', video: 'abcdefghijk', language: 'en' } }); assert.equal(legacy.status(), 200);
   page = await context.newPage(); const errors = []; page.on('pageerror', e => errors.push(e.message));
-  async function open() { await page.goto(base + '/study/admin'); await page.getByRole('button', { name: '원문·작업', exact: true }).click(); await page.getByRole('heading', { name: '원문과 처리 이력을 한곳에서' }).waitFor(); }
+  async function open() { await page.goto(base + '/study/admin'); await openAdminTool(page, '원문·작업'); await page.getByRole('heading', { name: '원문과 처리 이력을 한곳에서' }).waitFor(); }
   async function storeSource(raw) {
+    if (!(await page.getByLabel('보관할 원문', { exact: true }).isVisible())) await page.getByText('새 원문 버전 추가', { exact: true }).click();
     await page.getByLabel('보관할 원문', { exact: true }).fill(raw);
     await page.getByLabel('원문 보관·학습 이용 근거', { exact: true }).fill('Self authored local test; no external content');
     await page.getByLabel('이 원문을 보관하고 학습 자료 제작에 이용할 권한을 확인했어요.').check();
     await page.getByRole('button', { name: '새 원문 버전 저장', exact: true }).click();
   }
+  // All eight tools remain reachable while only three areas occupy primary navigation.
+  await page.goto(base + '/study/admin');
+  assert.equal(await page.getByRole('navigation', { name: '업무 영역', exact: true }).getByRole('button').count(), 3);
+  const tools = [
+    ['영상 찾기', '수업의 시작이 될 영상을 찾아보세요'], ['원문·작업', '원문과 처리 이력을 한곳에서'],
+    ['자료 만들기', '언어와 상황'], ['번역 후보', '사용자가 제공한 번역 후보'],
+    ['앱 반영 확인', 'AI가 참고할 게시 자료 확인'], ['학습 관리', '수업 자료와 처리 이력'],
+    ['음악 관리', '음악 학습 자료'], ['AI 진단', 'AI가 지금 제대로 응답하나요?'],
+  ];
+  for (const [name, heading] of tools) {
+    await openAdminTool(page, name);
+    await page.getByRole('heading', { name: heading, exact: true }).waitFor();
+    for (const width of [1440, 390, 320]) {
+      await page.setViewportSize({ width, height: 1000 });
+      assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), `${name}: overflow at ${width}`);
+    }
+  }
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await openAdminTool(page, '영상 찾기');
+  await page.screenshot({ path: resolve(dir, 'workspace-desktop.png'), fullPage: true });
+  await page.getByRole('button', { name: '검수·반영', exact: true }).focus();
+  await page.keyboard.press('Enter');
+  assert.equal(await page.getByRole('heading', { level: 1 }).innerText(), '앱 반영 확인', 'Area restores its most recent tool');
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.screenshot({ path: resolve(dir, 'workspace-mobile.png'), fullPage: true });
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.evaluate(() => { document.documentElement.style.zoom = '2'; });
+  assert(await page.evaluate(() => document.body.getBoundingClientRect().right <= innerWidth + 1), '200% zoom reflow');
+  await page.evaluate(() => { document.documentElement.style.zoom = ''; });
+  await page.goto(base + '/study/admin');
+  await page.keyboard.press('Tab');
+  assert.equal(await page.locator(':focus').innerText(), '작업 내용으로 건너뛰기');
+  await page.keyboard.press('Enter');
+  assert.equal(await page.locator(':focus').getAttribute('id'), 'admin-workspace');
+  await openAdminTool(page, '원문·작업');
+  await page.getByRole('button', { name: '첫 원본 등록', exact: true }).click();
+  assert.equal(await page.locator(':focus').getAttribute('maxlength'), '100', 'Empty state focuses source title');
   const rows = { en: ['Good morning', 'Hello my friend'], ja: ['おはようございます', '今日も一緒に学ぼう'], th: ['สวัสดีตอนเช้า', 'มาเรียนด้วยกัน'], es: ['Buenos días', 'Vamos a aprender juntos'] };
   const saved = [];
   for (const [language, lines] of Object.entries(rows)) {
@@ -85,7 +124,7 @@ try {
   assert.equal((await context.request.get(endpoint + '?id=' + english.id)).status(), 404);
   const storeText = await readFile(dataFile, 'utf8'); assert(!storeText.includes('Good morning')); assert(!storeText.includes('Wrong'));
   assert.equal(errors.length, 0, errors.join('\n')); assert(!logs.includes('Unexpected external fetch'), 'No unexpected external call');
-  await writeFile(resolve(dir, 'result.json'), JSON.stringify({ status: 'pass', layers: ['Next UI', 'real API', 'file persistence'], languages: saved, authorization: 'owner/origin checked', legacy: 'metadata import only; unchanged collection', externalModelCalls: 0, microphoneOrLearningE2E: false }, null, 2));
+  await writeFile(resolve(dir, 'result.json'), JSON.stringify({ status: 'pass', layers: ['Next UI', 'real API', 'file persistence'], languages: saved, authorization: 'owner/origin checked', navigation: '3 areas / 8 tools / 1440,390,320px / keyboard / 200% reflow', legacy: 'metadata import only; unchanged collection', externalModelCalls: 0, microphoneOrLearningE2E: false }, null, 2));
   console.log('PASS: four-language source/job UI, real API/store, failures, reload, conflict, deletion and mobile');
 } catch (error) {
   if (page) await page.screenshot({ path: resolve(dir, 'failure.png'), fullPage: true }).catch(() => {});

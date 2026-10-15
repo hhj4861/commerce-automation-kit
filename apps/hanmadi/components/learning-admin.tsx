@@ -131,7 +131,7 @@ export function LearningAdmin() {
     <section className="la" aria-label="학습 관리">
       <div className="la-heading">
         <div>
-          <h2>자료가 쌓이고, 답변이 좋아지도록.</h2>
+          <h2>수업 자료와 처리 이력</h2>
           <p>
             게시한 교재를 버전으로 묶고, 검색 결과를 확인한 뒤 앱에 적용하세요.
           </p>

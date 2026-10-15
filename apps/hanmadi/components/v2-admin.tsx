@@ -26,6 +26,22 @@ import type {
   KnowledgeEvent,
   KnowledgeMatch,
 } from "@/lib/knowledge";
+type AdminTab = "videos" | "media" | "editor" | "inbox" | "preview" | "learning" | "music" | "diagnostics";
+const adminGroups = [
+  { id: "prepare", label: "콘텐츠 준비", description: "영상 수집과 원문 정리", tabs: ["videos", "media"] },
+  { id: "review", label: "검수·반영", description: "초안 편집부터 검수·게시까지", tabs: ["editor", "inbox", "preview"] },
+  { id: "operate", label: "학습 운영", description: "수업 자료와 음악 학습 관리", tabs: ["learning", "music"] },
+] as const;
+const adminPages: Record<AdminTab, { label: string; description: string }> = {
+  videos: { label: "영상 찾기", description: "수업에 사용할 영상을 모으고, 분석 결과를 학습 초안으로 준비하세요." },
+  media: { label: "원문·작업", description: "자막과 원문을 보관하고, 정리 작업의 결과와 이력을 확인하세요." },
+  editor: { label: "자료 만들기", description: "초안을 고르고 표현을 다듬으세요. 직접 검수한 자료만 학습에 게시됩니다." },
+  inbox: { label: "번역 후보", description: "사용자가 제공에 동의한 표현을 검토하고, 적합한 후보를 교재로 가져오세요." },
+  preview: { label: "앱 반영 확인", description: "게시한 자료가 학습자의 AI 대화와 번역에 어떻게 쓰이는지 확인하세요." },
+  learning: { label: "학습 관리", description: "학습에 사용할 자료와 버전을 관리하고 처리 결과를 확인하세요." },
+  music: { label: "음악 관리", description: "영상을 수집하고 원문을 연결해, 검수한 노래를 음악 학습에 게시하세요." },
+  diagnostics: { label: "AI 진단", description: "언어별 연결 상태와 진단 이력을 확인하세요. 진단 실행은 별도 작업입니다." },
+};
 type PublicContribution = Omit<Contribution, "actor">;
 async function api(body?: unknown) {
   const res = await fetch("/api/study/admin", {
@@ -40,9 +56,9 @@ async function api(body?: unknown) {
   return d;
 }
 export function V2Admin({ appHref = "/study" }: { appHref?: string }) {
-  const [tab, setTab] = useState<
-    "videos" | "editor" | "inbox" | "preview" | "learning" | "diagnostics" | "music" | "media"
-  >("videos");
+  const [tab, setTab] = useState<AdminTab>("videos");
+  const lastTab = useRef<Record<string, AdminTab>>({ prepare: "videos", review: "editor", operate: "learning" });
+  const [dataReady, setDataReady] = useState(false);
   const [contributions, setContributions] = useState<PublicContribution[]>([]);
   const [events, setEvents] = useState<KnowledgeEvent[]>([]);
   const [candidateId, setCandidateId] = useState<string | null>(null);
@@ -75,6 +91,7 @@ export function V2Admin({ appHref = "/study" }: { appHref?: string }) {
           setSearchConfigured(d.searchConfigured);
           setContributions(d.contributions);
           setEvents(d.events);
+          setDataReady(true);
         }
       })
       .catch((e) => {
@@ -196,47 +213,55 @@ export function V2Admin({ appHref = "/study" }: { appHref?: string }) {
       setBusy(false);
     }
   }
+  const group = adminGroups.find(g => (g.tabs as readonly string[]).includes(tab));
+  const pendingCount = contributions.filter(c => c.status === "pending").length;
+  function navigate(next: AdminTab) {
+    if (busy || videoBusy) return;
+    if (group) lastTab.current[group.id] = tab;
+    const nextGroup = adminGroups.find(g => (g.tabs as readonly string[]).includes(next));
+    if (nextGroup) lastTab.current[nextGroup.id] = next;
+    setTab(next); setError(""); setNotice("");
+  }
   return (
     <div className="hm ks">
+      <a className="ks-skip" href="#admin-workspace">작업 내용으로 건너뛰기</a>
       <header className="hm-header">
         <Link className="hm-brand" href="/study/admin">
           한마디<span>콘텐츠 스튜디오</span>
         </Link>
-        <Link href={appHref}>학습 앱 열기</Link>
+        <div className="ks-header-actions"><button className="ks-diagnostics" aria-pressed={tab === "diagnostics"} disabled={busy || videoBusy} onClick={() => navigate("diagnostics")}>AI 진단</button><Link href={appHref}>학습 앱 열기</Link></div>
       </header>
-      <main className="hm-main">
-        <h1>좋은 대화를, 좋은 수업으로.</h1>
-        <p>검수한 표현이 레벨별 수업과 AI 대화에 이어집니다.</p>
-        <nav className="ks-nav" aria-label="관리자 메뉴">
-          {(
-            [
-              ["videos", "영상 찾기"],
-              ["media", "원문·작업"],
-              ["editor", "자료 만들기"],
-              [
-                "inbox",
-                `번역 후보 (${contributions.filter((c) => c.status === "pending").length})`,
-              ],
-              ["preview", "앱 반영 확인"],
-              ["learning", "학습 관리"],
-              ["music", "음악 관리"],
-              ["diagnostics", "AI 진단"],
-            ] as const
-          ).map(([id, label]) => (
-            <button
-              key={id}
-              disabled={busy || videoBusy}
-              aria-pressed={tab === id}
-              onClick={() => {
-                setTab(id);
-                setError("");
-                setNotice("");
-              }}
-            >
-              {label}
-            </button>
-          ))}
-        </nav>
+      <main className="hm-main ks-workspace">
+        <aside className="ks-sidebar" aria-label="콘텐츠 스튜디오 탐색">
+          <nav className="ks-groups" aria-label="업무 영역">
+            {adminGroups.map((item, i) => <button key={item.id} aria-label={item.label} aria-pressed={group?.id === item.id} disabled={busy || videoBusy}
+              onClick={() => navigate(lastTab.current[item.id])}>
+              <span className="ks-group-symbol" aria-hidden="true">{["▤", "✓", "♫"][i]}</span>
+              <span><strong>{item.label}</strong><small>{item.description}</small></span>
+              {item.id === "review" && dataReady && pendingCount > 0 && <span className="ks-count" aria-label={`번역 후보 ${pendingCount}개`}>{pendingCount}</span>}
+            </button>)}
+          </nav>
+          <section className="ks-workload" aria-label="저장된 학습 자료 현황">
+            <h2>저장된 학습 자료</h2>
+            {dataReady ? <dl>
+              <div><dt>초안</dt><dd>{drafts.filter(d => d.status === "draft").length}</dd></div>
+              <div><dt>게시됨</dt><dd>{drafts.filter(d => d.status === "published").length}</dd></div>
+              <div><dt>번역 검토 대기</dt><dd>{pendingCount}</dd></div>
+            </dl> : <p>{loading ? "현황 확인 중…" : "현황을 불러오지 못했어요."}</p>}
+            <p>원문·음악 자료는 각 작업 화면에서 확인해요.</p>
+          </section>
+        </aside>
+        <div className="ks-content" id="admin-workspace" tabIndex={-1}>
+          <header className="ks-page-heading">
+            <p>{group?.label ?? "운영 도구"}</p>
+            <h1>{adminPages[tab].label}</h1>
+            <p>{adminPages[tab].description}</p>
+          </header>
+          {group && <nav className="ks-nav" aria-label="관리자 메뉴">
+            {group.tabs.map(id => <button key={id} disabled={busy || videoBusy} aria-pressed={tab === id} onClick={() => navigate(id)}>
+              {adminPages[id].label}{id === "inbox" && dataReady && pendingCount > 0 ? ` (${pendingCount})` : ""}
+            </button>)}
+          </nav>}
         {loading && <p role="status">자료를 불러오는 중이에요.</p>}
         {tab === "learning" && <LearningAdmin />}
         {tab === "music" && <MusicAdmin />}
@@ -697,6 +722,7 @@ export function V2Admin({ appHref = "/study" }: { appHref?: string }) {
             </aside>
           </div>
         </fieldset>
+      </div>
       </main>
     </div>
   );

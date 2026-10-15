@@ -1,3 +1,4 @@
+import { openAdminTool } from "./admin-navigation.mjs";
 import assert from 'node:assert/strict';
 import { createHmac } from 'node:crypto';
 import { createServer } from 'node:http';
@@ -64,7 +65,7 @@ try {
   await post(learner, '/api/study', { action: 'assess', language: 'ja', answers: [0, 0, 0], confidence: 1, minutes: 5 });
   assert.equal((await learner.request.post(base + adminPath, { headers: { Origin: base }, data: { action: 'generate' } })).status(), 403);
   page = await owner.newPage(); const errors = []; page.on('pageerror', e => errors.push(e.message));
-  await page.goto(base + '/study/admin'); await page.getByRole('button', { name: '음악 관리', exact: true }).click();
+  await page.goto(base + '/study/admin'); await openAdminTool(page, '음악 관리');
   await page.getByLabel('곡 제목', { exact: true }).fill('테스트 아침 노래');
   await page.getByLabel('아티스트', { exact: true }).fill('Hanmadi original fixture');
   await page.getByLabel('공식 YouTube 영상 링크 또는 ID').fill('https://youtu.be/' + videoId); // routing fixture only; no Pretender lyrics/audio are fetched
