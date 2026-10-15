@@ -22,3 +22,8 @@ docs/out/
 # Meta paid-reach PoC 실행 상태(광고 객체 ID/성과 스냅샷)
 *.paid-reach-state.json
 *.paid-reach-state.json.tmp
+
+# Bundled Impeccable font catalogue is source, not application runtime data.
+!.agents/skills/impeccable/scripts/data/
+!.agents/skills/impeccable/scripts/data/font-index.json
+!.agents/skills/impeccable/scripts/data/font-index-failures.json
