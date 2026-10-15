@@ -466,7 +466,7 @@ class CodexAuthTests(unittest.TestCase):
         self.assertFalse(self.home.exists())
         self.run.reset_mock(side_effect=True)
         with patch.dict(os.environ, {'SECRET_WRITE_TOKEN': ''}):
-            with self.assertRaisesRegex(RuntimeError, 'CARD_NEWS_SECRET_WRITE_TOKEN'):
+            with self.assertRaisesRegex(RuntimeError, 'CARD_NEWS_SECRET_WRITE_TOKEN or ATOMWORKS_READ_TOKEN'):
                 codex_auth.restore()
         self.run.assert_not_called()
 

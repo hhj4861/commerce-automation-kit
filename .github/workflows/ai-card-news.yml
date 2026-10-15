@@ -100,8 +100,10 @@ jobs:
         id: codex_auth
         env:
           CODEX_AUTH_JSON: ${{ secrets.CARD_NEWS_CODEX_AUTH_JSON }}
-          SECRET_WRITE_TOKEN: ${{ secrets.CARD_NEWS_SECRET_WRITE_TOKEN }}
-          GH_TOKEN: ${{ secrets.CARD_NEWS_SECRET_WRITE_TOKEN }} # proves secret write access before Codex runs
+          # Secret-write token: a dedicated CARD_NEWS_SECRET_WRITE_TOKEN if registered, otherwise the
+          # operator-chosen shared fine-grained PAT ATOMWORKS_READ_TOKEN (needs Secrets: Read and write here).
+          SECRET_WRITE_TOKEN: ${{ secrets.CARD_NEWS_SECRET_WRITE_TOKEN || secrets.ATOMWORKS_READ_TOKEN }}
+          GH_TOKEN: ${{ secrets.CARD_NEWS_SECRET_WRITE_TOKEN || secrets.ATOMWORKS_READ_TOKEN }} # proves secret write access before Codex runs
         run: python codex_auth.py restore
       - name: Generate and deliver
         id: deliver
@@ -118,7 +120,7 @@ jobs:
         id: persist
         if: always() && steps.codex_auth.outcome == 'success'
         env:
-          GH_TOKEN: ${{ secrets.CARD_NEWS_SECRET_WRITE_TOKEN }}
+          GH_TOKEN: ${{ secrets.CARD_NEWS_SECRET_WRITE_TOKEN || secrets.ATOMWORKS_READ_TOKEN }}
         run: python codex_auth.py persist
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()

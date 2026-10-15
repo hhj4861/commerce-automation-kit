@@ -71,13 +71,14 @@ def paths():
 def restore():
     require_trusted_actions()
     if not os.environ.get("SECRET_WRITE_TOKEN", "").strip():
-        raise RuntimeError("CARD_NEWS_SECRET_WRITE_TOKEN is required to save a refreshed login")
+        raise RuntimeError("A secret-write token (CARD_NEWS_SECRET_WRITE_TOKEN or ATOMWORKS_READ_TOKEN) "
+                           "is required to save a refreshed login")
     raw = validate_auth(os.environ.get("CODEX_AUTH_JSON", ""))
     # Prove the token can write the secret before Codex may rotate the login: rewriting the
     # identical value is harmless, while discovering a bad token after a refresh loses the login.
     if not save_secret(raw):
-        raise RuntimeError("CARD_NEWS_SECRET_WRITE_TOKEN cannot write repository secrets; "
-                           "check its expiry and the Secrets: Read and write permission")
+        raise RuntimeError("The secret-write token cannot write repository secrets; check its expiry, that it "
+                           "includes this repository and the Secrets: Read and write permission")
     home, auth, baseline = paths()
     home.mkdir(mode=0o700, exist_ok=False)
     auth.touch(mode=0o600)

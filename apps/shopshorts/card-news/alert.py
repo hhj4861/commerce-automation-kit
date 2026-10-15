@@ -45,7 +45,8 @@ def delivered_today(now):
 
 
 PERSIST_BODY = ("Codex 로그인 갱신 내용을 저장하지 못했습니다. 다음 실행이 인증 오류로 실패할 수 있습니다. "
-                "CARD_NEWS_SECRET_WRITE_TOKEN의 만료일과 Secrets 쓰기 권한을 먼저 확인하고, "
+                "시크릿 쓰기 토큰(CARD_NEWS_SECRET_WRITE_TOKEN 또는 ATOMWORKS_READ_TOKEN)의 만료일, 저장소 선택, "
+                "Secrets 쓰기 권한을 먼저 확인하고, "
                 "codex login으로 카드뉴스 전용 로그인을 다시 만들어 CARD_NEWS_CODEX_AUTH_JSON에 등록해 주세요.")
 
 

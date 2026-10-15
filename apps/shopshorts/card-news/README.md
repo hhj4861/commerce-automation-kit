@@ -55,7 +55,7 @@
 | 이름 | 내용 | 필수 |
 |---|---|---|
 | `CARD_NEWS_CODEX_AUTH_JSON` | 카드뉴스 전용 ChatGPT 로그인의 `auth.json` 전체 | 예 |
-| `CARD_NEWS_SECRET_WRITE_TOKEN` | 갱신된 로그인을 위 시크릿에 다시 저장하는 GitHub 토큰 | 예 |
+| `CARD_NEWS_SECRET_WRITE_TOKEN` | 갱신된 로그인을 위 시크릿에 다시 저장하는 GitHub 토큰 | 아니오. 없으면 `ATOMWORKS_READ_TOKEN`을 쓴다 |
 | `CARD_NEWS_TELEGRAM_BOT_TOKEN` | wp-auto-blog `TELEGRAM_BOT_TOKEN`과 같은 봇 토큰 | 예 |
 | `CARD_NEWS_TELEGRAM_CHAT_ID` | wp-auto-blog `TELEGRAM_CHAT_ID`와 같은 채팅 ID | 예 |
 
@@ -75,6 +75,9 @@
 2. **갱신 저장 토큰.** GitHub → Settings → Developer settings → Personal access tokens → Fine-grained tokens.
    저장소는 `hhj4861/commerce-automation-kit` 하나만, 권한은 Repository permissions의 Secrets: Read and write만 준다.
    만료일을 정하고 만료 전에 교체한다. `gh secret set CARD_NEWS_SECRET_WRITE_TOKEN -R hhj4861/commerce-automation-kit`로 등록한다.
+   **현재 운영 결정(2026-10-15):** 전용 토큰 대신 기존 fine-grained 토큰 `atomworks-ci-read`(시크릿 `ATOMWORKS_READ_TOKEN`)에
+   이 저장소와 Secrets: Read and write 권한을 더해 함께 쓴다. `CARD_NEWS_SECRET_WRITE_TOKEN`이 등록돼 있으면 그쪽을 먼저 쓴다.
+   같은 토큰을 드라마 CI도 쓰므로 그 토큰이 새면 이 저장소 시크릿도 바뀔 수 있다. 토큰을 교체하거나 권한을 줄일 때 카드뉴스도 함께 확인한다.
    이 토큰은 로그인 복원 단계와 종료 후 저장 단계에만 넘기고 Codex나 발송 단계에는 넘기지 않는다. 복원 단계는
    Codex 실행 전에 같은 로그인을 시크릿에 다시 써서 토큰의 쓰기 권한을 매번 확인한다. 저장은 일시 오류에 대비해 3회까지 시도한다.
 3. **텔레그램.** 지금 카드를 받는 봇을 그대로 쓴다. @BotFather → `/mybots` → 봇 선택 → API Token에서 토큰을 본다.
@@ -170,10 +173,11 @@ gh variable set CARD_NEWS_SCHEDULE --body on -R hhj4861/commerce-automation-kit
   워크플로를 다시 켠다. 두 쪽을 동시에 발송 상태로 두지 않는다.
 - **Codex 인증 오류**(`refresh_token_reused`, `refresh_token_expired`, `auth_file_invalid`, `unauthorized` 등):
   위 발급 방법 1로 새 로그인을 만들어 `CARD_NEWS_CODEX_AUTH_JSON`을 다시 등록하고 실행한다. 같은 오류가 며칠 간격으로
-  반복되면 갱신 저장이 실패하고 있는 것이니 `CARD_NEWS_SECRET_WRITE_TOKEN`의 만료와 권한부터 확인한다. `usage_limit`이면
+  반복되면 갱신 저장이 실패하고 있는 것이니 시크릿 쓰기 토큰의 만료와 권한부터 확인한다. `usage_limit`이면
   구독 한도가 풀린 뒤, `network_or_service`면 잠시 뒤 다시 실행한다.
 - **로그인 복원 단계 실패**("cannot write repository secrets"): 갱신 저장 토큰이 만료됐거나 Secrets 쓰기 권한이 없다.
-  토큰을 새로 만들어 `CARD_NEWS_SECRET_WRITE_TOKEN`을 다시 등록한다. 이때 로그인은 아직 갱신되지 않았으므로 그대로 쓸 수 있다.
+  토큰에 이 저장소와 Secrets: Read and write가 있는지 확인하거나, 전용 토큰을 만들어 `CARD_NEWS_SECRET_WRITE_TOKEN`으로 등록한다.
+  이때 로그인은 아직 갱신되지 않았으므로 그대로 쓸 수 있다.
 - 경보: `alert.py`가 같은 채팅에 텍스트 경보 1건을 보낸다(실행 링크 포함, 비밀값 없음). 표준 라이브러리만 쓰므로
   설치·테스트 단계가 실패해도 동작한다.
   - 발송 실패는 live 모드에서만 알린다. 앨범이 이미 나간 뒤 기록 단계만 실패했으면 "다시 보내지 말라"는 문구로,
