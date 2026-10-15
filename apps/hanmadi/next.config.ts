@@ -3,6 +3,7 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 
 const nextConfig: NextConfig = {
+  async rewrites() { return [{ source: "/app", destination: "/app/index.html" }]; },
   /*
    * 전 라우트 동적 렌더(ƒ). app/layout.tsx가 세션 쿠키를 읽어 튜터 전용 내비를
    * 게이팅하므로 루트 레이아웃부터 동적이다 — 의도한 트레이드오프다.

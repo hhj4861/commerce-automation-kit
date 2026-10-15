@@ -44,6 +44,8 @@ export function isOpenPath(pathname: string): boolean {
     pathname === "/" ||
     pathname === "/api/deployment" ||
     pathname === "/privacy" ||
+    pathname === "/app" ||
+    pathname.startsWith("/app/") ||
     pathname === "/study" ||
     pathname.startsWith("/study/") ||
     pathname === "/api/study" ||

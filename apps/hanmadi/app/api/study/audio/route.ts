@@ -1,3 +1,4 @@
+import { assertStudyClientOrigin } from "@/lib/study-client-origin";
 import { createStudySpeechResponses } from "@/lib/study-audio-response";
 import { sceneLessonPlans } from "@/lib/v2-scene-lessons";
 import { createLiteLLMClient } from "@cak/litellm-client";
@@ -5,7 +6,6 @@ import { studyIdentity } from "@/lib/learner-auth";
 import { audioConfig, synthesizeSpeech } from "@/lib/conversation-audio";
 import { ConversationError } from "@/lib/conversation";
 import {
-  assertConversationOrigin,
   conversationFailure,
   conversationJson,
   readConversationJson,
@@ -24,7 +24,7 @@ const lessonTexts = new Set(Object.values(sceneLessonPlans).flatMap(plans => pla
 )));
 export async function POST(req: Request) {
   try {
-    assertConversationOrigin(req);
+    await assertStudyClientOrigin(req);
     const { actor } = await studyIdentity();
     if (req.headers.get("content-type")?.startsWith("multipart/form-data")) {
       const bytes = await readLimitedBody(req, 3_000_000);

@@ -1,0 +1,80 @@
+name: Hanmadi Flutter web and native
+on:
+  pull_request:
+    paths: ['apps/hanmadi-flutter/**', 'apps/hanmadi/lib/mobile-auth*', 'apps/hanmadi/lib/study-client-origin*', 'apps/hanmadi/app/api/study/**', 'apps/hanmadi/scripts/*flutter*', '.github/workflows/hanmadi-flutter.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  client:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: web
+          - os: ubuntu-latest
+            target: android
+          - os: macos-latest
+            target: ios
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: flutter/flutter
+          ref: abaf9c523780a608bd46686fd5e53740a07077f8
+          path: .flutter-sdk
+          persist-credentials: false
+      - name: Flutter SDK
+        run: |
+          echo "$GITHUB_WORKSPACE/.flutter-sdk/bin" >> "$GITHUB_PATH"
+          .flutter-sdk/bin/flutter --suppress-analytics --version
+      - uses: actions/setup-java@v4
+        if: matrix.target == 'android'
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Resolve locked packages
+        working-directory: apps/hanmadi-flutter
+        run: flutter --suppress-analytics pub get --enforce-lockfile
+      - name: Analyze and test
+        if: matrix.target == 'web'
+        working-directory: apps/hanmadi-flutter
+        run: |
+          flutter --suppress-analytics analyze
+          flutter --suppress-analytics test
+      - name: Web release
+        if: matrix.target == 'web'
+        working-directory: apps/hanmadi-flutter
+        run: flutter --suppress-analytics build web --base-href /app/ --output "$RUNNER_TEMP/hanmadi-web"
+      - uses: actions/setup-node@v4
+        if: matrix.target == 'web'
+        with:
+          node-version: '22'
+      - name: Real server and browser flow
+        if: matrix.target == 'web'
+        working-directory: apps/hanmadi
+        env:
+          HANMADI_E2E_ARTIFACTS: ${{ runner.temp }}/hanmadi-flutter-e2e
+        run: |
+          mkdir -p public/app
+          cp -R "$RUNNER_TEMP/hanmadi-web/." public/app/
+          npm ci --workspaces=false
+          npx playwright install --with-deps chromium
+          npm run test:flutter-client
+      - name: Android debug build
+        if: matrix.target == 'android'
+        working-directory: apps/hanmadi-flutter
+        run: flutter --suppress-analytics build apk --debug
+      - name: iOS compile without signing
+        if: matrix.target == 'ios'
+        working-directory: apps/hanmadi-flutter
+        run: flutter --suppress-analytics build ios --release --no-codesign
+      - uses: actions/upload-artifact@v4
+        if: matrix.target == 'web'
+        with:
+          name: hanmadi-flutter-web
+          path: ${{ runner.temp }}/hanmadi-web
+          retention-days: 5
