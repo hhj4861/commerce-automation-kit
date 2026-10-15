@@ -1,3 +1,4 @@
+import { openAdminTool } from "./admin-navigation.mjs";
 import assert from "node:assert/strict";
 import { resolve } from "node:path";
 
@@ -131,7 +132,7 @@ export async function verifyLearning({
   }
   const sourceIds = sources.map((d) => d.id);
   await page.goto(base + "/study/admin");
-  await page.getByRole("button", { name: "학습 관리", exact: true }).click();
+  await openAdminTool(page, "학습 관리");
   await page
     .getByRole("heading", { name: "1. 자료 버전 만들기", exact: true })
     .waitFor();

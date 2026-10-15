@@ -18,7 +18,7 @@ export function MediaAdmin() {
   const [list, setList] = useState<Data>({}), [detail, setDetail] = useState<Data>({});
   const [selected, setSelected] = useState(""), [busy, setBusy] = useState(false), [error, setError] = useState(""), [notice, setNotice] = useState("");
   const [title, setTitle] = useState(""), [video, setVideo] = useState(""), [language, setLanguage] = useState<StudyLanguage>("ja"), [purpose, setPurpose] = useState("study");
-  const pending = useRef(false), selection = useRef(0);
+  const pending = useRef(false), selection = useRef(0), registration = useRef<HTMLDetailsElement>(null);
   useEffect(() => { const controller = new AbortController(); void api(undefined, undefined, controller.signal).then(setList).catch(e => { if (!controller.signal.aborted) setError(e.message); }); return () => controller.abort(); }, []);
   async function choose(id: string) {
     const epoch = ++selection.current; setSelected(id); setDetail({}); setError("");
@@ -39,12 +39,11 @@ export function MediaAdmin() {
       return false;
     } finally { pending.current = false; setBusy(false); }
   }
-  return <section aria-label="공통 원문·작업 관리">
-    <h2>원문과 처리 이력을 한곳에서</h2>
-    <p>사용 허용된 자막·원문을 버전별로 보관해요. 여기서 정리를 마쳐도 수업·음악 자료가 자동 생성되거나 게시되지는 않아요.</p>
+  return <section className="ma" aria-label="공통 원문·작업 관리">
+    <div className="ma-heading"><div><h2>원문과 처리 이력을 한곳에서</h2>
+    <p>사용 허용된 자막·원문을 버전별로 보관해요. 여기서 정리를 마쳐도 수업·음악 자료가 자동 생성되거나 게시되지는 않아요.</p></div><button disabled={busy} onClick={() => { void api().then(setList).then(() => { if (selected) return choose(selected); }).catch(e => setError(e.message)); }}>원문 목록 새로고침</button></div>
     {error && <p role="alert" className="hm-alert">{error}</p>}{notice && <p role="status" className="hm-notice">{notice}</p>}
-    <button disabled={busy} onClick={() => { void api().then(setList).then(() => { if (selected) return choose(selected); }).catch(e => setError(e.message)); }}>원문 목록 새로고침</button>
-    <details className="hm-panel"><summary>새 원본 등록</summary><form onSubmit={e => { e.preventDefault(); void work({ action: "collect", title, video, language, purposes: purpose === "both" ? ["study", "music"] : [purpose] }, "원본을 등록했어요. 원문을 연결해 주세요."); }}>
+    <details ref={registration} className="hm-panel ma-register"><summary>새 원본 등록</summary><form onSubmit={e => { e.preventDefault(); void work({ action: "collect", title, video, language, purposes: purpose === "both" ? ["study", "music"] : [purpose] }, "원본을 등록했어요. 원문을 연결해 주세요."); }}>
       <fieldset disabled={busy} className="music-fields"><label>원본 제목<input required maxLength={100} value={title} onChange={e => setTitle(e.target.value)} /></label>
         <label>YouTube 링크 또는 ID<input required value={video} onChange={e => setVideo(e.target.value)} /></label>
         <label>원문 언어<select aria-label="원문 언어" value={language} onChange={e => setLanguage(e.target.value as StudyLanguage)}>{Object.entries(studyLanguages).map(([id, l]) => <option key={id} value={id}>{l.name}</option>)}</select></label>
@@ -52,15 +51,24 @@ export function MediaAdmin() {
         <small>직접 입력한 제목·언어예요. 이 등록은 영상 내용·자막·재생 권한의 검증이 아니에요.</small><button type="submit">원본 등록</button>
       </fieldset></form></details>
     {!!list.legacyMusic?.length && <details className="hm-panel"><summary>기존 음악 수집함 연결</summary><p>영상 정보만 연결해요. 기존 자막을 새 저장소로 복사하거나 수집함을 바꾸지 않아요.</p>{list.legacyMusic.map(item => <p key={item.id}>{item.title} · {studyLanguages[item.language].name} <button disabled={busy} onClick={() => void work({ action: "import-music", legacyId: item.id }, "기존 영상 정보를 연결했어요. 원문 보관·이용 근거를 확인해 등록해 주세요.")}>영상 정보 연결</button></p>)}</details>}
-    <h3>등록한 원본</h3>{!list.sources ? <p role="status">목록을 불러오는 중이에요.</p> : !list.sources.length ? <p>등록된 공통 원문이 없어요.</p> : <ul>{list.sources.map(source => <li key={source.id}>
-      <button disabled={busy} aria-pressed={selected === source.id} onClick={() => void choose(source.id)}>{source.title} · {studyLanguages[source.language].name}</button>
-      <span> · {source.originalCount}개 버전 · {source.job ? statuses[source.job.status] : "원문 필요"}</span>
-    </li>)}</ul>}
-    {selected && !detail.source && <p role="status">선택한 원문을 불러오는 중이에요.</p>}
+    <div className="ma-workspace">
+    <aside className="ma-library" aria-label="등록한 원본 목록"><h3>등록한 원본</h3>
+      {!!list.sources?.length && <label className="ma-source-select">원본 선택<select value={selected} onChange={e => void choose(e.target.value)} disabled={busy}>
+        <option value="" disabled>원본을 선택하세요</option>{list.sources.map(source => <option key={source.id} value={source.id}>{source.title} · {source.job ? statuses[source.job.status] : "원문 필요"}</option>)}
+      </select></label>}
+      {!list.sources ? <p role="status">{error ? "목록 새로고침으로 다시 불러와 주세요." : "목록을 불러오는 중이에요."}</p> : !list.sources.length ? <div className="ma-empty"><p>등록된 공통 원문이 없어요.</p><small>영상 정보를 등록한 뒤 자막이나 원문을 연결하세요.</small><button disabled={busy} onClick={() => { if (registration.current) { registration.current.open = true; registration.current.querySelector("input")?.focus(); } }}>첫 원본 등록</button></div> : <ul>{list.sources.map(source => <li key={source.id}>
+        <button disabled={busy} aria-label={`${source.title} · ${studyLanguages[source.language].name}`} aria-describedby={`media-status-${source.id}`} aria-pressed={selected === source.id} onClick={() => void choose(source.id)}><strong>{source.title} · {studyLanguages[source.language].name}</strong>
+          <span>{source.originalCount}개 버전</span><span className="ma-status" id={`media-status-${source.id}`} data-status={source.job?.status ?? "empty"}>{source.job ? statuses[source.job.status] : "원문 필요"}</span>
+        </button>
+      </li>)}</ul>}
+    </aside>
+    <div className="ma-detail">
+    {!selected && <div className="ma-placeholder"><h3>선택한 원문을 이곳에서 관리해요</h3><p>원본을 선택하면 보관한 버전과 처리 결과를 함께 볼 수 있어요.</p><ol><li>영상 정보 등록</li><li>원문 버전 보관</li><li>줄·시간 정리와 결과 확인</li></ol></div>}
+    {selected && !detail.source && <p role="status">{error ? "목록에서 원문을 다시 선택해 주세요." : "선택한 원문을 불러오는 중이에요."}</p>}
     {detail.source && <section className="hm-panel" aria-label="선택한 원문">
       <h3>{detail.source.title}</h3><p>용도: {detail.source.purposes.map(p => p === "music" ? "음악" : "스터디").join(" · ")} · 원문 버전 {detail.source.revision}</p>
-      <OriginalEditor key={`${detail.source.id}:${detail.source.revision}`} source={detail.source} busy={busy} save={body => work(body, "원문 버전과 처리 작업을 저장했어요. ‘정리·재개’로 줄과 시간을 확인해 주세요.")} />
-      <h4>처리 작업</h4>{!detail.jobs?.length && <p>원문을 등록하면 처리 작업이 생겨요.</p>}{detail.jobs?.slice().reverse().map(job => <article key={job.id} aria-label={`원문 버전 ${job.sourceRevision} 작업`}>
+      <details className="ma-new-version" key={detail.source.id} open={detail.source.originals.length === 0}><summary>새 원문 버전 추가</summary><OriginalEditor key={`${detail.source.id}:${detail.source.revision}`} source={detail.source} busy={busy} save={body => work(body, "원문 버전과 처리 작업을 저장했어요. ‘정리·재개’로 줄과 시간을 확인해 주세요.")} /></details>
+      <h4>처리 작업</h4>{!detail.jobs?.length && <p>원문을 등록하면 처리 작업이 생겨요.</p>}{detail.jobs?.slice().reverse().map(job => <article className="ma-job" data-status={job.status} key={job.id} aria-label={`원문 버전 ${job.sourceRevision} 작업`}>
         <h5>버전 {job.sourceRevision} · {statuses[job.status]}</h5><p>{stages[job.stage]} · 시도 {job.attempts.length}/5</p>
         {job.error && <p>{job.error.message}</p>}
         {job.status === "running" && <p>진행 중 작업은 중복 실행하지 않아요. 연결이 끊긴 작업은 20초 뒤 정리·재개할 수 있어요.</p>}
@@ -72,8 +80,9 @@ export function MediaAdmin() {
         <details><summary>시도 이력</summary><ul>{job.attempts.map((attempt, i) => <li key={i}>{new Date(attempt.startedAt).toLocaleString()} · {attempt.outcome ? outcomes[attempt.outcome] : "진행 중"}</li>)}</ul></details>
       </article>)}
       <details><summary>보관한 원문 버전</summary>{detail.source.originals.slice().reverse().map(original => <section key={original.version}><h5>버전 {original.version}</h5><p>이용 근거: {original.rights}</p><pre style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>{original.raw}</pre></section>)}</details>
-      <button disabled={busy} onClick={() => { if (window.confirm("이 공통 원본의 모든 원문 버전과 처리 이력을 삭제할까요? 기존 음악 수집함·게시 자료는 유지돼요.")) void work({ action: "delete", id: detail.source!.id, revision: detail.source!.revision }, "공통 원문과 작업 이력을 삭제했어요."); }}>공통 원문·작업 삭제</button>
+      <button className="ma-delete" disabled={busy} onClick={() => { if (window.confirm("이 공통 원본의 모든 원문 버전과 처리 이력을 삭제할까요? 기존 음악 수집함·게시 자료는 유지돼요.")) void work({ action: "delete", id: detail.source!.id, revision: detail.source!.revision }, "공통 원문과 작업 이력을 삭제했어요."); }}>공통 원문·작업 삭제</button>
     </section>}
+    </div></div>
   </section>;
 }
 function OriginalEditor({ source, busy, save }: { source: NonNullable<Data["source"]>; busy: boolean; save: (body: Record<string, unknown>) => Promise<boolean> }) {

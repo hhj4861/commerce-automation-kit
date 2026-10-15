@@ -4,11 +4,8 @@ import 'audio_service.dart';
 import 'models.dart';
 import 'study_model.dart';
 
-const brand = Color(0xff5261ce),
-    ink = Color(0xff272b38),
-    muted = Color(0xff686d7c),
-    paper = Color(0xfffafaf9),
-    soft = Color(0xfff0f1fc);
+export 'theme.dart';
+import 'theme.dart';
 
 class Sheet extends StatelessWidget {
   final Widget child;
@@ -18,12 +15,15 @@ class Sheet extends StatelessWidget {
     super.key,
     required this.child,
     this.color,
-    this.padding = const EdgeInsets.all(22),
+    this.padding = const EdgeInsets.all(20),
   });
   @override
   Widget build(BuildContext context) => Material(
     color: color ?? Colors.white,
-    borderRadius: BorderRadius.circular(22),
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(24),
+      side: const BorderSide(color: outline, width: 0.7),
+    ),
     child: Padding(padding: padding, child: child),
   );
 }
@@ -37,7 +37,7 @@ class PageBody extends StatelessWidget {
     child: ConstrainedBox(
       constraints: const BoxConstraints(maxWidth: 860),
       child: ListView(
-        padding: const EdgeInsets.fromLTRB(22, 24, 22, 30),
+        padding: const EdgeInsets.fromLTRB(20, 18, 20, 28),
         children: children,
       ),
     ),
@@ -49,20 +49,13 @@ class Heading extends StatelessWidget {
   const Heading(this.title, this.subtitle, {super.key});
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(bottom: 26),
+    padding: const EdgeInsets.only(bottom: 22),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          title,
-          style: const TextStyle(
-            fontSize: 27,
-            fontWeight: FontWeight.w600,
-            height: 1.35,
-          ),
-        ),
-        const SizedBox(height: 10),
-        Text(subtitle, style: const TextStyle(color: muted, height: 1.6)),
+        Text(title, style: Theme.of(context).textTheme.headlineSmall),
+        const SizedBox(height: 8),
+        Text(subtitle, style: Theme.of(context).textTheme.bodySmall),
       ],
     ),
   );
@@ -79,7 +72,7 @@ class Primary extends StatelessWidget {
     style: FilledButton.styleFrom(
       minimumSize: const Size(0, 50),
       padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
     ),
     child: Row(
       mainAxisSize: MainAxisSize.min,
@@ -109,19 +102,25 @@ class PhraseView extends StatelessWidget {
       SelectableText(
         phrase.text,
         style: TextStyle(
-          fontSize: compact ? 21 : 27,
-          height: 1.6,
+          fontFamily: 'NotoSansKR',
+          fontFamilyFallback: uiFallback,
+          letterSpacing: 0,
+          fontSize: compact ? 20 : 25,
+          height: 1.55,
           fontWeight: FontWeight.w500,
         ),
       ),
       const SizedBox(height: 10),
       Text(
         phrase.reading,
-        style: const TextStyle(color: brand, fontSize: 14, height: 1.6),
+        style: const TextStyle(color: brand, fontSize: 14, height: 1.55),
       ),
       if (reveal) ...[
         const SizedBox(height: 12),
-        Text(phrase.meaning, style: const TextStyle(color: muted, height: 1.7)),
+        Text(
+          phrase.meaning,
+          style: const TextStyle(color: muted, height: 1.55),
+        ),
       ],
     ],
   );
@@ -213,6 +212,193 @@ class MicButton extends StatelessWidget {
       icon: Icon(
         audio.recording ? Icons.stop_rounded : Icons.mic_none_rounded,
         color: audio.recording ? Colors.red : brand,
+      ),
+    ),
+  );
+}
+
+/// A small, anchored picker. Long lists scroll inside the menu, never the page.
+class AppSelect<T> extends StatelessWidget {
+  final String label;
+  final T value;
+  final Map<T, String> choices;
+  final ValueChanged<T>? onChanged;
+  final bool compact;
+  const AppSelect({
+    super.key,
+    required this.label,
+    required this.value,
+    required this.choices,
+    required this.onChanged,
+    this.compact = false,
+  });
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, box) {
+      final view = MediaQuery.sizeOf(context);
+      final available = (view.width - 32).clamp(0.0, 320.0);
+      final width = compact
+          ? available.clamp(0.0, 236.0)
+          : box.maxWidth.clamp(0.0, available);
+      final menuHeight = (view.height * .38).clamp(0.0, 280.0);
+      final selected = choices[value] ?? '';
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (!compact) ...[
+            Text(label, style: Theme.of(context).textTheme.bodySmall),
+            const SizedBox(height: 7),
+          ],
+          PopupMenuButton<T>(
+            key: ValueKey('select-$label'),
+            tooltip: '$label 선택',
+            requestFocus: true,
+            useRootNavigator: true,
+            clipBehavior: Clip.antiAlias,
+            onOpened: Tooltip.dismissAllToolTips,
+            enabled: onChanged != null && choices.isNotEmpty,
+            position: PopupMenuPosition.under,
+            offset: const Offset(0, 6),
+            constraints: BoxConstraints(
+              minWidth: width,
+              maxWidth: width,
+              maxHeight: menuHeight,
+            ),
+            color: Colors.white,
+            surfaceTintColor: Colors.transparent,
+            elevation: 8,
+            shadowColor: brand.withValues(alpha: .14),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+              side: const BorderSide(color: outline),
+            ),
+            menuPadding: const EdgeInsets.all(6),
+            popUpAnimationStyle: AnimationStyle(
+              duration: MediaQuery.disableAnimationsOf(context)
+                  ? Duration.zero
+                  : const Duration(milliseconds: 160),
+            ),
+            onSelected: onChanged,
+            itemBuilder: (_) => choices.entries
+                .map(
+                  (e) => PopupMenuItem<T>(
+                    value: e.key,
+                    height: 52,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 10,
+                      ),
+                      decoration: BoxDecoration(
+                        color: e.key == value ? soft : Colors.transparent,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              e.value,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: uiLabel.copyWith(
+                                color: e.key == value ? brand : ink,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          if (e.key == value)
+                            const Icon(
+                              Icons.check_rounded,
+                              size: 18,
+                              color: brand,
+                            )
+                          else
+                            const SizedBox(width: 18),
+                        ],
+                      ),
+                    ),
+                  ),
+                )
+                .toList(),
+            child: Opacity(
+              opacity: onChanged == null ? .55 : 1,
+              child: Container(
+                constraints: const BoxConstraints(minHeight: 48),
+                padding: EdgeInsets.symmetric(
+                  horizontal: compact ? 12 : 15,
+                  vertical: 11,
+                ),
+                decoration: BoxDecoration(
+                  color: compact ? soft : Colors.white,
+                  borderRadius: BorderRadius.circular(compact ? 20 : 17),
+                  border: Border.all(
+                    color: compact ? Colors.transparent : outline,
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: compact ? MainAxisSize.min : MainAxisSize.max,
+                  children: [
+                    if (compact) ...[
+                      const Icon(
+                        Icons.language_rounded,
+                        size: 17,
+                        color: brand,
+                      ),
+                      const SizedBox(width: 6),
+                    ],
+                    if (compact)
+                      Text(selected, style: uiLabel.copyWith(color: brand))
+                    else
+                      Expanded(
+                        child: Text(
+                          selected,
+                          overflow: TextOverflow.ellipsis,
+                          style: uiLabel.copyWith(color: ink),
+                        ),
+                      ),
+                    const SizedBox(width: 6),
+                    const Icon(
+                      Icons.expand_more_rounded,
+                      size: 18,
+                      color: brand,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      );
+    },
+  );
+}
+
+class BrandMark extends StatelessWidget {
+  const BrandMark({super.key});
+  @override
+  Widget build(BuildContext context) => ExcludeSemantics(
+    child: Container(
+      width: 33,
+      height: 33,
+      alignment: Alignment.center,
+      decoration: const BoxDecoration(
+        color: soft,
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(13),
+          topRight: Radius.circular(13),
+          bottomRight: Radius.circular(13),
+          bottomLeft: Radius.circular(4),
+        ),
+      ),
+      child: const Text(
+        '한',
+        style: TextStyle(
+          fontFamily: 'Jua',
+          fontSize: 21,
+          color: brand,
+          height: 1,
+        ),
       ),
     ),
   );
