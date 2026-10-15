@@ -41,3 +41,9 @@ GitHub에는 기존 `CAK_SECRETS_URL` 변수만 사용하며 장기 토큰을 Gi
 - 운영 적용: 승인된 변경을 머지한 뒤 기존 운영 Worker 코드와 다른 바인딩·변수를 보존하면서 배포 바인딩만 추가한다. 공용 브로커 전체를 다른 소스로 덮어쓰지 않는다.
 - 검증: `deploy/shopshorts`의 기존 승인된 SHA를 대상으로 Actions 시크릿 조회와 실제 Pages 배포 성공, Pages production SHA/URL을 확인한다. 수동 Wrangler 배포로 성공을 대체하지 않는다.
 - 현재 단계: 이름 매핑 준비. 운영 연결/Actions 검증 결과는 실제 실행 뒤 기록한다.
+
+### 시크릿 연결 후 실검증 — 2026-10-15
+
+PR #268(`d7578ef`)의 이름 매핑은 승인·머지됐으며 운영 브로커에 적용했다. 코드 etag와 기존 바인딩 36개를 보존했고 배포 바인딩 1개만 추가했다. GitHub Actions [38705722600](https://github.com/hhj4861/commerce-automation-kit/actions/runs/38705722600)의 시크릿 조회는 성공했다. 이후 전체 앱 테스트가 FFmpeg/FFprobe 미설치 및 workspace cwd에 의존한 CLI 경로 때문에 19건 실패하여 Pages 배포 전 중단됐다.
+
+배포용 Ubuntu 실행기에 FFmpeg를 설치하고, CLI 검사는 현재 폴더 대신 테스트 파일 위치로 실행 파일을 찾는다. PR에서도 같은 Node 22/Ubuntu 전체 앱 검사를 수행한다. 토큰의 실제 Pages 배포 권한과 전체 자동 배포 완료는 후속 성공 실행에서 확인해야 한다.
