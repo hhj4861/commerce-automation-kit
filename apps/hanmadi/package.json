@@ -26,6 +26,7 @@
     "test:music-audio-live": "node --import tsx scripts/music-audio-live-check.mjs",
     "test:music-collection": "node --import tsx scripts/music-collection-e2e.mjs",
     "test:owned-music": "node --import tsx scripts/owned-music-e2e.mjs",
+    "test:navigation": "node scripts/navigation-e2e.mjs",
     "test:word-study": "node --import tsx --test lib/word-study.test.ts && node --import tsx scripts/word-study-e2e.mjs"
   },
   "dependencies": {

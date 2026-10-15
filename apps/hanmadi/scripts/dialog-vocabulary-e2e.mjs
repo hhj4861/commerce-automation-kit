@@ -69,8 +69,8 @@ try {
   async function openLesson() { await page.getByRole("button", { name: "오늘 연습 시작", exact: true }).click(); await dialogs.first().getByText("문장 1 / 10", { exact: true }).waitFor(); }
   for (const viewport of [{ width: 320, height: 568 }, { width: 390, height: 844 }, { width: 844, height: 390 }]) {
     await page.setViewportSize(viewport);
-    await page.getByRole("button", { name: "단어장", exact: true }).waitFor();
-    assert.equal(await page.locator(".hm-bottom button").count(), 5);
+    await page.getByRole("button", { name: "보관함", exact: true }).waitFor();
+    assert.equal(await page.locator(".hm-bottom button").count(), 4);
     assert(await page.locator(".hm-bottom").evaluate(el => el.scrollWidth <= el.clientWidth));
     for (const b of await page.locator(".hm-bottom button").all()) { const box = await b.boundingBox(); assert(box.width >= 44 && box.height >= 44); }
     await openLesson();
@@ -223,6 +223,7 @@ try {
   fail = false; await dialogs.last().getByRole("button", { name: "다시 시도", exact: true }).click();
   await dialogs.last().getByText("문맥 속 단어 뜻", { exact: true }).waitFor();
   await page.keyboard.press("Escape"); await page.keyboard.press("Escape");
+  await page.getByRole("button", { name: "보관함", exact: true }).click();
   await page.getByRole("button", { name: "단어장", exact: true }).click();
   await page.getByRole("heading", { name: /나의 단어장/ }).waitFor();
   assert.equal(await page.locator(".hm-word-card").count(), 1, "selected language only");
@@ -242,7 +243,8 @@ try {
   await page.getByRole("button", { name: "전체 1", exact: true }).click();
   await page.screenshot({ path: resolve(dir, "wordbook.png") });
   assert.equal(calls, callsBeforeBrowse, "browsing, searching and review do not call LLM");
-  await page.reload(); await page.getByRole("button", { name: "단어장", exact: true }).click();
+  await page.reload(); await page.getByRole("button", { name: "보관함", exact: true }).click();
+  await page.getByRole("button", { name: "단어장", exact: true }).click();
   await page.getByRole("button", { name: "오늘 복습 0", exact: true }).waitFor();
   assert.equal(await page.locator(".hm-word-card").count(), 1);
   await page.getByRole("button", { name: /단어장에서 삭제$/ }).click();
