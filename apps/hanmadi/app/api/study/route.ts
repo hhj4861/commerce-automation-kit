@@ -1,3 +1,4 @@
+import { assertStudyClientOrigin } from "@/lib/study-client-origin";
 import { assertDefaultModel } from "@/lib/model-connections";
 import { musicUnits } from "@/lib/v2-music";
 import { StudyTiming } from "@/lib/study-timing";
@@ -5,7 +6,6 @@ import { alignMeaning, lookupVocabulary } from "@/lib/vocabulary";
 import { lessonPhrases } from "@/lib/v2-lesson";
 import { studyIdentity } from "@/lib/learner-auth";
 import {
-  assertConversationOrigin,
   conversationJson,
   conversationFailure,
   readConversationJson,
@@ -58,7 +58,7 @@ export async function POST(req: Request) {
   const started = performance.now();
   let timing: StudyTiming | undefined;
   try {
-    assertConversationOrigin(req);
+    await assertStudyClientOrigin(req);
     const { actor } = await studyIdentity();
     const b = (await readConversationJson(req)) as Record<string, unknown>;
     if (!b || typeof b.action !== "string")

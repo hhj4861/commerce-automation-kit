@@ -4,7 +4,8 @@ import {
   randomUUID,
   timingSafeEqual,
 } from "node:crypto";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
+import { mobileSession } from "./mobile-auth";
 import { getAuthSecret } from "./auth";
 import { getConversationTutor } from "./conversation-access";
 import { ConversationError } from "./conversation";
@@ -57,7 +58,9 @@ export async function learnerSession(): Promise<{
   }
 }
 export async function studyIdentity() {
-  const learner = await learnerSession();
+  const authorization = (await headers()).get("authorization");
+  const learner = authorization ? await mobileSession(authorization) : await learnerSession();
+  if (authorization && !learner) throw new ConversationError(401, "앱 로그인이 만료됐어요. 다시 로그인해 주세요.");
   if (learner)
     return {
       actor: createHash("sha256").update(`learner:${learner.id}`).digest("hex"),

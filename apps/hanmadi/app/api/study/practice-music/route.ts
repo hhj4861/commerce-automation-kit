@@ -1,6 +1,7 @@
+import { assertStudyClientOrigin } from "@/lib/study-client-origin";
 import { learningMusic } from "@/lib/owned-music-store";
 import { studyIdentity } from "@/lib/learner-auth";
-import { assertConversationOrigin, conversationJson, conversationFailure, readConversationJson } from "@/lib/conversation-http";
+import { conversationJson, conversationFailure, readConversationJson } from "@/lib/conversation-http";
 import { readStudy, changeStudy, saveExpression } from "@/lib/v2-store";
 import { practiceSongs, songProgress, parseSongAction, updateSongProgress, songLearningPhrase } from "@/lib/original-music";
 export const runtime = "nodejs";
@@ -16,7 +17,7 @@ export async function GET() {
 }
 export async function POST(req: Request) {
   try {
-    assertConversationOrigin(req);
+    await assertStudyClientOrigin(req);
     const { actor } = await studyIdentity();
     const { song, input } = parseSongAction(await readConversationJson(req), [...practiceSongs, ...await learningMusic()]);
     if (input.action === "save-word" || input.action === "save-expression") {
