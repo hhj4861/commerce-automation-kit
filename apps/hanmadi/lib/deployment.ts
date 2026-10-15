@@ -15,6 +15,7 @@ export function adminPath(
     pathname === "/api/study/admin" ||
     pathname === "/api/study/admin/learning" ||
     pathname === "/api/study/admin/music" ||
+    pathname === "/api/study/admin/media" ||
     pathname === "/api/study/admin/videos" ||
     pathname === "/api/study/admin/diagnostics"
   )

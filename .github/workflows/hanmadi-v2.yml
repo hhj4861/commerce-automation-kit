@@ -49,6 +49,9 @@ jobs:
       - run: npm run test:music
         env:
           HANMADI_E2E_ARTIFACTS: ${{ runner.temp }}/hanmadi-music
+      - run: npm run test:media-foundation
+        env:
+          HANMADI_E2E_ARTIFACTS: ${{ runner.temp }}/hanmadi-media-foundation
       - run: npm run test:music-collection
         env:
           HANMADI_E2E_ARTIFACTS: ${{ runner.temp }}/hanmadi-music-collection
@@ -75,6 +78,9 @@ jobs:
             ${{ runner.temp }}/hanmadi-vocabulary/result.json
             ${{ runner.temp }}/hanmadi-music/*.png
             ${{ runner.temp }}/hanmadi-music/result.json
+            ${{ runner.temp }}/hanmadi-media-foundation/*.png
+            ${{ runner.temp }}/hanmadi-media-foundation/result.json
+            ${{ runner.temp }}/hanmadi-media-foundation/server.log
             ${{ runner.temp }}/hanmadi-music-collection/*.png
             ${{ runner.temp }}/hanmadi-music-collection/result.json
             ${{ runner.temp }}/hanmadi-music-collection/server.log
