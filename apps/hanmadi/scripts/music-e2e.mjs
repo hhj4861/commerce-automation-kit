@@ -311,7 +311,7 @@ try {
     await page.getByRole("heading", { name: "한 곡을 내 한마디로!", exact: true }).waitFor();
     if (song.language === "ja") {
       await page.getByRole("button", { name: "Pretender · 공식 영상", exact: true }).click();
-      await page.getByRole("button", { name: "한마디 연습곡", exact: true }).click();
+      await page.getByRole("button", { name: "학습 가능한 곡", exact: true }).click();
       await page.getByRole("heading", { name: "한 곡을 내 한마디로!", exact: true }).waitFor();
     }
     await page.getByRole("button", { name: "다시 복습하기", exact: true }).click();

@@ -6,7 +6,9 @@ import { Speaker } from "./v2-speaker";
 import { studyAudio } from "@/lib/study-audio-client";
 import { Dialog } from "./v2-dialog";
 import { Wordbook } from "./v2-wordbook";
+import { WordStudy } from "./v2-word-study";
 import { Vocabulary } from "./v2-vocabulary";
+import { musicStudyHref, type MusicStudyTarget } from "@/lib/music-study-link";
 import { MusicStudy } from "./v2-original-music";
 import { V2Lesson } from "./v2-lesson";
 import { lessonPlan } from "@/lib/v2-lesson";
@@ -216,7 +218,7 @@ function PhraseCard({
     </article>
   );
 }
-function Login({ onDone }: { onDone: () => void }) {
+function Login({ onDone, from = "/study" }: { onDone: () => void; from?: string }) {
   const [signup, setSignup] = useState(false),
     [name, setName] = useState(""),
     [password, setPassword] = useState(""),
@@ -287,7 +289,7 @@ function Login({ onDone }: { onDone: () => void }) {
         학습 계정에는 학생·콘텐츠 관리 권한이 없어요. 아이디로 가입했다면
         비밀번호를 안전하게 보관해 주세요. 비밀번호 재설정은 아직 지원하지 않아요.
       </p>
-      <Link href="/login?from=%2Fstudy">기존 튜터·관리자 로그인 →</Link>
+      <Link href={`/login?from=${encodeURIComponent(from)}`}>기존 튜터·관리자 로그인 →</Link>
     </form>
   );
 }
@@ -454,13 +456,13 @@ async function loadSnapshot(
   if (!res.ok) throw new Error(data.error || "기록을 불러오지 못했어요.");
   return data;
 }
-export function V2App() {
+export function V2App({ initialMusic }: { initialMusic?: MusicStudyTarget } = {}) {
   const [identity, setIdentity] = useState<Identity | null>(null),
     [state, setState] = useState<StudyState>(emptyStudy),
     [extra, setExtra] = useState<Unit[]>([]),
-    [language, setLanguage] = useState<StudyLanguage | null>(null),
+    [language, setLanguage] = useState<StudyLanguage | null>(initialMusic?.language ?? null),
     [tab, setTab] = useState<Tab>("study"),
-    [section, setSection] = useState("today"),
+    [section, setSection] = useState(initialMusic ? "music" : "today"),
     [levelFilter, setLevelFilter] = useState(1),
     [scene, setScene] = useState("smalltalk"),
     [category, setCategory] = useState("전체"),
@@ -515,9 +517,10 @@ export function V2App() {
       setIdentity(data?.identity ?? null);
       setState(data?.state ?? emptyStudy());
       setExtra(data?.units ?? []);
-      if (data?.state.language) setLanguage(data.state.language);
+      if (initialMusic) setLanguage(initialMusic.language);
+      else if (data?.state.language) setLanguage(data.state.language);
     },
-    [],
+    [initialMusic],
   );
   const refresh = useCallback(async () => {
     try {
@@ -575,7 +578,7 @@ export function V2App() {
   async function chooseLanguage(value: StudyLanguage) {
     if (operation.current) return;
     const previousLanguage = language;
-    setSection("today");
+    setSection(current => current === "music" ? "music" : "today");
     setLanguage(value);
     try {
       localStorage.setItem("hanmadi:v2:language", value);
@@ -838,7 +841,7 @@ export function V2App() {
                 로그인하고 나에게 맞는 말하기 연습을 시작하세요. 학습 기록과
                 음성을 함께 이용할 수 있어요.
               </p>
-              <Login
+              <Login from={initialMusic ? musicStudyHref("/study", initialMusic) : "/study"}
                 onDone={() => {
                   setModal(null);
                   void refresh();
@@ -940,7 +943,7 @@ export function V2App() {
                 ))}
               </div>
             </>
-          ) : identity && !profile && tab === "study" ? (
+          ) : identity && !profile && tab === "study" && section !== "music" ? (
             <Assessment
               key={language}
               language={language}
@@ -953,12 +956,17 @@ export function V2App() {
             <>
               {tab === "study" && (
                 <>
-                  <nav className="hm-segments" aria-label="학습 보기">
+                  <nav className="hm-study-modes" aria-label="학습 방식">
+                    {[["today", "회화", "chat"], ["vocabulary", "단어", "dictionary"], ["music", "음악", "music"]].map(([id, label, icon]) => (
+                      <button key={id} aria-pressed={id === "today" ? !["vocabulary", "music"].includes(section) : section === id}
+                        onClick={() => { setSection(id); setSceneDetail(false); }}><Icon name={icon} />{label}</button>
+                    ))}
+                  </nav>
+                  {!["vocabulary", "music"].includes(section) && <nav className="hm-segments" aria-label="회화 학습 보기">
                     {[
                       ["today", "오늘 추천"],
                       ["levels", "레벨별"],
                       ["scenes", "상황별"],
-                      ["music", "음악"],
                     ].map(([id, label]) => (
                       <button
                         key={id}
@@ -972,7 +980,7 @@ export function V2App() {
                         {label}
                       </button>
                     ))}
-                  </nav>
+                  </nav>}
                   {!identity && (
                     <div className="hm-guest">
                       <button onClick={() => setModal("login")}>
@@ -980,8 +988,10 @@ export function V2App() {
                       </button>
                     </div>
                   )}
+                  {section === "vocabulary" && <WordStudy key={language} language={language} expressions={state.expressions}
+                    onSaved={apply} onWordbook={() => setTab("words")} />}
                   {section === "music" && (
-                    <MusicStudy key={language} language={language} expressions={state.expressions} onSaved={apply} onConversation={prompt => {
+                    <MusicStudy key={language} language={language} initialSongId={initialMusic?.language === language ? initialMusic.id : undefined} expressions={state.expressions} onSaved={apply} onConversation={prompt => {
                       setScene("smalltalk"); setChat([]); setChatInput(prompt); setMusicConversation(prompt); setTab("chat"); setError("");
                       setNotice("음악에서 배운 표현으로 새 대화를 준비했어요. 아래 입력창을 확인하고 보내기를 눌러 주세요.");
                     }} />
@@ -1844,7 +1854,7 @@ export function V2App() {
               )}
               {tab === "words" && (
                 <Wordbook key={language} language={language} words={due.filter(isVocabulary)} busy={busy}
-                  onStudy={() => setTab("study")}
+                  onStudy={() => { setTab("study"); setSection("vocabulary"); }}
                   onRemove={id => { void run({ action: "remove-word", id }); }}
                   onReview={(id, confidence) => { void run({ action: "practice", id, confidence }); }} />
               )}
@@ -1971,7 +1981,7 @@ export function V2App() {
       {modal === "login" && (
         <Dialog title="나의 한마디 시작하기" onClose={() => setModal(null)}>
           {error && <p role="alert">{error}</p>}
-          <Login
+          <Login from={initialMusic ? musicStudyHref("/study", initialMusic) : "/study"}
             onDone={() => {
               setModal(null);
               void refresh();
