@@ -158,47 +158,7 @@ class _HanmadiAppState extends State<HanmadiApp> {
     title: '한마디',
     debugShowCheckedModeBanner: false,
     routerConfig: router,
-    theme: ThemeData(
-      useMaterial3: true,
-      scaffoldBackgroundColor: paper,
-      colorScheme: ColorScheme.fromSeed(
-        seedColor: brand,
-        primary: brand,
-        surface: paper,
-      ),
-      fontFamily: 'NotoSansKR',
-      fontFamilyFallback: const ['NotoSansThai', 'Hiragino Sans', 'sans-serif'],
-      textTheme: const TextTheme(
-        bodyMedium: TextStyle(fontSize: 15, color: ink, height: 1.5),
-        bodyLarge: TextStyle(fontSize: 16, color: ink, height: 1.6),
-      ),
-      appBarTheme: const AppBarTheme(
-        backgroundColor: paper,
-        surfaceTintColor: Colors.transparent,
-        elevation: 0,
-      ),
-      inputDecorationTheme: InputDecorationTheme(
-        filled: true,
-        fillColor: Colors.white,
-        contentPadding: const EdgeInsets.all(16),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(15),
-          borderSide: const BorderSide(color: Color(0xffe9eaf0)),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(15),
-          borderSide: const BorderSide(color: Color(0xffe9eaf0)),
-        ),
-      ),
-      navigationBarTheme: const NavigationBarThemeData(
-        backgroundColor: Colors.white,
-        indicatorColor: soft,
-        height: 72,
-        labelTextStyle: WidgetStatePropertyAll(
-          TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
-        ),
-      ),
-    ),
+    theme: hanmadiTheme(),
   );
 }
 
@@ -213,16 +173,17 @@ class _Login extends StatelessWidget {
       body: SafeArea(
         child: PageBody(
           children: [
-            const SizedBox(height: 65),
+            const SizedBox(height: 40),
             const Text(
               'hanmadi',
               style: TextStyle(
-                fontSize: 31,
+                fontFamily: 'Jua',
+                fontSize: 34,
                 color: brand,
-                fontWeight: FontWeight.w700,
+                letterSpacing: 0,
               ),
             ),
-            const SizedBox(height: 60),
+            const SizedBox(height: 38),
             const Heading(
               '한마디씩, 나답게.',
               '공부한 표현을 일상 속 대화로 이어가요.\n웹과 앱에서 같은 기록을 만날 수 있어요.',
@@ -238,7 +199,10 @@ class _Login extends StatelessWidget {
             ),
             const SizedBox(height: 15),
             if (m.error != null)
-              Text(m.error!, style: const TextStyle(color: Colors.red)),
+              Text(
+                m.error!,
+                style: const TextStyle(color: muted, fontSize: 13),
+              ),
             TextButton(onPressed: m.refresh, child: const Text('로그인 상태 다시 확인')),
           ],
         ),
@@ -299,34 +263,38 @@ class _Shell extends StatelessWidget {
                     icon: const Icon(Icons.arrow_back_rounded),
                     label: const Text('스터디로'),
                   )
-                : const Text(
-                    'hanmadi',
-                    style: TextStyle(
-                      color: brand,
-                      fontSize: 23,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-            actions: [
-              DropdownButtonHideUnderline(
-                child: DropdownButton<String>(
-                  value: m.language,
-                  onChanged: m.busy || m.loading
-                      ? null
-                      : (v) => m.changeLanguage(v!),
-                  items: languageNames.entries
-                      .map(
-                        (e) => DropdownMenuItem(
-                          value: e.key,
+                : Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const BrandMark(),
+                      if (box.maxWidth >= 360) ...[
+                        const SizedBox(width: 9),
+                        const Flexible(
                           child: Text(
-                            e.value,
-                            style: const TextStyle(fontSize: 14),
+                            'hanmadi',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontFamily: 'Jua',
+                              color: brand,
+                              fontSize: 25,
+                              height: 1.1,
+                              letterSpacing: 0,
+                            ),
                           ),
                         ),
-                      )
-                      .toList(),
-                ),
+                      ],
+                    ],
+                  ),
+            actions: [
+              AppSelect<String>(
+                label: '학습 언어',
+                value: m.language,
+                compact: true,
+                choices: languageNames,
+                onChanged: m.busy || m.loading ? null : m.changeLanguage,
               ),
+              const SizedBox(width: 4),
               IconButton(
                 tooltip: '학습 설정',
                 onPressed: m.busy ? null : () => settings(context),
@@ -448,25 +416,16 @@ class _Shell extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  '${m.name} 님의 학습',
-                  style: const TextStyle(
-                    fontSize: 23,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
+                Text('${m.name} 님의 학습', style: sectionTitle),
                 const SizedBox(height: 18),
                 if (m.profile.isNotEmpty) ...[
-                  DropdownButtonFormField<int>(
-                    initialValue: m.level,
-                    decoration: const InputDecoration(labelText: '연습 레벨'),
-                    items: List.generate(
-                      4,
-                      (i) => DropdownMenuItem(
-                        value: i + 1,
-                        child: Text('${i + 1} · ${levelNames[i]}'),
-                      ),
-                    ),
+                  AppSelect<int>(
+                    label: '연습 레벨',
+                    value: m.level,
+                    choices: {
+                      for (int i = 0; i < 4; i++)
+                        i + 1: '${i + 1} · ${levelNames[i]}',
+                    },
                     onChanged: m.busy
                         ? null
                         : (v) => m.action('level', {
