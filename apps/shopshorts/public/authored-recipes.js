@@ -1,3 +1,4 @@
+import {GATESHEAD_ID,GATESHEAD_SCENES} from './gateshead-recipe.js';
 import {typographyLines} from './video-typography.js';
 // Reviewed data and fixed renderer IDs only; never accept executable source or paths.
 export const RECIPE_ID='sapporo-hovering-v1';
@@ -117,9 +118,10 @@ export const RECIPE_SCENES=[
 export const RECIPE_RESEARCH={"sources": [{"id": "venue", "url": "https://www.sapporo-dome.co.jp/dome/hovering/", "title": "시설 공식 호버링 스테이지 설명"}, {"id": "maker", "url": "https://global.kawasaki.com/en/corp/newsroom/news/detail/ba010801.html", "title": "Kawasaki Hovering Stage delivery technical description"}], "limitations": ["단면은 작동 원리를 위한 개념도이며 실제 제작 도면이 아닙니다."], "facts": [{"claim": "120×85m,8300t,7.5cm 상승,34개 바퀴,분당4m 이동. 지붕 아닌 측면 무빙월 개방.", "sourceIds": ["venue", "maker"]}, {"claim": "공기가 하중90%를 분담한다. 질량이90%줄어드는 뜻이 아니다.", "sourceIds": ["maker"]}]};
 export function authoredSpec(value,scene){
  if(value===undefined)return undefined;
- const expected=RECIPE_SCENES.find(s=>s.id===value?.shot&&s.id!=='hook');
- if(!value||value.id!==RECIPE_ID||!expected||Object.keys(value).some(k=>!['id','shot'].includes(k))||scene.narration!==expected.narration||scene.prompt!==expected.prompt||scene.id!==expected.id)throw Object.assign(Error('검증된 건축 장면과 대본이 일치하지 않습니다. 새 내용에는 새 장면 설계가 필요합니다.'),{status:400});
- return {id:RECIPE_ID,shot:value.shot};
+ const registered=value?.id===GATESHEAD_ID?GATESHEAD_SCENES:value?.id===RECIPE_ID?RECIPE_SCENES.filter(s=>s.id!=='hook'):[];
+ const expected=registered.find(s=>s.id===value?.shot);
+ if(!value||!expected||Object.keys(value).some(k=>!['id','shot'].includes(k))||scene.narration!==expected.narration||scene.prompt!==expected.prompt||scene.id!==expected.id)throw Object.assign(Error('검증된 건축 장면과 대본이 일치하지 않습니다. 새 내용에는 새 장면 설계가 필요합니다.'),{status:400});
+ return {id:value.id,shot:value.shot};
 }
 
 // Registered narration uses complete semantic phrases, not a hard character cut.

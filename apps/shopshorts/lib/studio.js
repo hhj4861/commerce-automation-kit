@@ -125,7 +125,7 @@ export function changeProject(original, action, body) {
     const scenes = validateScenes(body.scenes,{animationStyle:animated(job.brief)});
     if (scenes.reduce((sum, s) => sum + s.duration, 0) > (job.brief.format === 'short' ? 180 : 600)) fail('장면의 전체 길이가 형식의 최대 길이를 넘었습니다.');
     if(animated(job.brief) && scenes.some(s=>s.kind!=='video'||!s.animation))fail('애니메이션 장면은 영상과 장면별 동작 구성이 필요합니다.');
-    if(webtoon(job.brief))webtoonScenes(scenes);
+    if(webtoon(job.brief))webtoonScenes(scenes,job.brief);
     hybridPlan({...job,scenes});
     const old = Object.fromEntries(job.scenes.map(s => [s.id, s]));
     for (const s of scenes) if (old[s.id]?.prompt !== s.prompt || old[s.id]?.kind !== s.kind || old[s.id]?.camera !== s.camera || old[s.id]?.shot !== s.shot || JSON.stringify(old[s.id]?.animation)!==JSON.stringify(s.animation) || JSON.stringify(old[s.id]?.hybrid)!==JSON.stringify(s.hybrid) || JSON.stringify(old[s.id]?.webtoon)!==JSON.stringify(s.webtoon) || JSON.stringify(old[s.id]?.motion)!==JSON.stringify(s.motion) || JSON.stringify(old[s.id]?.visualDirection)!==JSON.stringify(s.visualDirection) || ((animated(job.brief)||webtoon(job.brief)||s.motion)&&old[s.id]?.duration!==s.duration) || (old[s.id]?.narration !== s.narration && job.assets[s.id]?.source === 'ai')) delete job.assets[s.id];
