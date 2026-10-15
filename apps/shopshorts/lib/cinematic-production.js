@@ -25,7 +25,7 @@ export function cinematicEdit(project) {
     if(edit.voice!=='none' && (!audio || !Number.isFinite(audio.duration) || audio.duration<=0))throw Error('대본 음성이 아직 준비되지 않았어요. 영상 제작을 다시 이어가 주세요.');
     // Keep deliberate breathing room, but never silently trim a spoken ending.
     clip.outFrame=explainer(project.brief)&&audio?Math.ceil((audio.duration+.3)*FPS):Math.max(clip.outFrame, Math.ceil(((audio?.duration||0)+.2)*FPS));
-    if(scene.hybrid?.authored?.shot==='ending'&&audio)clip.outFrame=Math.max(clip.outFrame,Math.ceil((audio.duration+1.5)*FPS));
+    if(['ending','return'].includes(scene.hybrid?.authored?.shot)&&audio)clip.outFrame=Math.max(clip.outFrame,Math.ceil((audio.duration+1.5)*FPS));
     if(['webtoon','hybrid'].includes(project.brief.productionStyle)&&scene===project.scenes[0]&&project.authoredRecipe!==RECIPE_ID)clip.outFrame=Math.max(180,clip.outFrame);
     if(clip.outFrame>900)throw Error(`장면 ${scene.id}의 음성이 너무 길어요. 대본을 나누거나 줄여 주세요.`);
     edit.captions=edit.captions.flatMap(c=>c.clipId!==clip.id?[c]:c.startFrame<clip.outFrame-clip.inFrame?[{...c,endFrame:Math.min(c.endFrame,clip.outFrame-clip.inFrame)}]:[]);
@@ -49,6 +49,11 @@ export function cinematicEdit(project) {
     const header=edit.captions.find(c=>c.presentation==='modern-header-v1');if(header)header.text='8,300톤을\n공기로 띄운다?';
     const air=edit.clips.find(c=>c.sceneId==='air');
     if(air)edit.captions.push({...defaultCaption(project.brief.aspect),id:'authored-concept-label',clipId:air.id,source:'script',text:'원리 개념도 · 실제 상승 7.5cm',startFrame:0,endFrame:air.outFrame-air.inFrame,size:30,x:8,y:26,position:'top'});
+  }
+  if(project.authoredRecipe==='gateshead-tilting-v1'){
+    const header=edit.captions.find(c=>c.presentation==='modern-header-v1');if(header)header.text='다리를 끊지 않고\n배가 지나간다고?';
+    const structure=edit.clips.find(c=>c.sceneId==='structure');
+    if(structure)edit.captions.push({...defaultCaption(project.brief.aspect),id:'authored-concept-label',clipId:structure.id,source:'script',text:'원리 재현 · 실제 비율과 다를 수 있음',startFrame:0,endFrame:structure.outFrame-structure.inFrame,size:30,x:8,y:26,position:'top'});
   }
   return edit;
 }
