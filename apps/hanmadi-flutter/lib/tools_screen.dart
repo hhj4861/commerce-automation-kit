@@ -49,8 +49,11 @@ class _ChatScreenState extends State<ChatScreen> {
     if (!mounted) return;
     input.text = widget.m.chatDraft;
     setState(() {});
+    // The reply changes the list extent; use the new layout, not the previous frame.
+    await WidgetsBinding.instance.endOfFrame;
+    if (!mounted) return;
     if (scroll.hasClients) {
-      scroll.animateTo(
+      await scroll.animateTo(
         scroll.position.maxScrollExtent,
         duration: const Duration(milliseconds: 250),
         curve: Curves.easeOut,

@@ -1,11 +1,16 @@
+import 'dart:convert';
+
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
+import 'package:hanmadi/tools_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hanmadi/api.dart';
 import 'package:hanmadi/app.dart';
 import 'package:hanmadi/study_model.dart';
 
-StudyModel fixture() =>
-    StudyModel(StudyApi(base: Uri.parse('https://test.example')))
+StudyModel fixture([StudyApi? api]) =>
+    StudyModel(api ?? StudyApi(base: Uri.parse('https://test.example')))
       ..loading = false
       ..loggedIn = true
       ..name = '학습자'
@@ -69,6 +74,52 @@ StudyModel fixture() =>
         },
       };
 void main() {
+  testWidgets('a new AI reply is brought into view after layout', (t) async {
+    t.view.physicalSize = const Size(390, 700);
+    t.view.devicePixelRatio = 1;
+    addTearDown(t.view.resetPhysicalSize);
+    addTearDown(t.view.resetDevicePixelRatio);
+    final api = StudyApi(
+      base: Uri.parse('https://test.example'),
+      client: MockClient(
+        (_) async => http.Response(
+          jsonEncode({
+            'reply': {
+              'text': List.filled(24, 'こんにちは。').join(),
+              'reading': '콘니치와',
+              'meaning': '안녕하세요.',
+            },
+          }),
+          200,
+          headers: {'content-type': 'application/json; charset=utf-8'},
+        ),
+      ),
+    );
+    final m = fixture(api);
+    await t.pumpWidget(HanmadiApp(model: m, initialize: false));
+    await t.pumpAndSettle();
+    await t.tap(find.text('AI 대화').last);
+    await t.pumpAndSettle();
+    await t.enterText(find.byKey(const Key('chat-input')), 'こんにちは');
+    await t.pump();
+    await t.tap(find.byKey(const Key('chat-send')));
+    await t.pumpAndSettle();
+    await t.pump(const Duration(milliseconds: 300));
+    await t.pumpAndSettle();
+    final list = find
+        .descendant(
+          of: find.byType(ChatScreen),
+          matching: find.byType(Scrollable),
+        )
+        .first;
+    expect(m.chat.length, 2);
+    final position = t.state<ScrollableState>(list).position;
+    expect(position.maxScrollExtent, greaterThan(0));
+    expect(position.pixels, closeTo(position.maxScrollExtent, 1));
+    await t.pumpWidget(const SizedBox.shrink());
+    api.close();
+  });
+
   for (final width in [320.0, 390.0, 1440.0]) {
     testWidgets('navigation fits width $width and preserves drafts', (t) async {
       t.view.physicalSize = Size(width, 900);
