@@ -17,7 +17,7 @@ export function collectContent({projects=[],jobs=[],requests=[]}={}) {
     const published = job.upload?.state === 'done' || (job.status === 'published' && !job.upload && !!job.publishRef);
     const attention = ['failed','error'].includes(job.upload?.state) || job.finalize?.state === 'error' || job.status === 'rejected';
     const label = attention ? '확인 필요' : published ? '업로드 완료' : ['requested','uploading'].includes(job.upload?.state) ? '업로드 진행 중' : jobLabels[job.status] || '제작 중';
-    items.push({key:`job:${job.brief.id}`,id:job.brief.id,source:'job',mode:'auto',title:job.script?.title || job.brief.productName || job.brief.keyword || '제목 없는 영상',category:job.brief.category || '',format:'숏폼',updatedAt:job.updatedAt,ready,published,attention,label,action:published?'콘텐츠 보기':'확인하고 이어하기',href:`/studio/automatic?job=${encode(job.brief.id)}`});
+    items.push({key:`job:${job.brief.id}`,id:job.brief.id,source:'job',mode:'auto',title:job.script?.title || job.brief.productName || job.brief.keyword || '제목 없는 영상',category:job.brief.category || '',format:'숏폼',updatedAt:job.updatedAt,ready,published,attention,label,action:published?'내 영상 보기':'확인하고 이어하기',href:`/studio/automatic?job=${encode(job.brief.id)}`});
   }
   const jobIds = new Set(jobs.map(job => job.brief.id));
   for (const request of requests.filter(request => request.status === 'pending' && !jobIds.has(request.slug))) {
@@ -62,9 +62,14 @@ export function renderContentRows(items,options={}) {
   return items.length?items.map(item=>row(item,options)).join(''):'<div class="content-empty"><h2>표시할 콘텐츠가 없어요</h2><p>검색어나 필터를 바꾸거나 새 영상을 시작하세요.</p><a class="workspace-link" href="/studio">새 영상 만들기</a></div>';
 }
 
+// Creation mode belongs to the planner; only library URLs initialize library filters.
+export function contentFilterParams(location) {
+  return new URLSearchParams(location?.pathname?.replace(/\/+$/,'')==='/contents'?location.search:'');
+}
+
 export function createContentLibrary({fetcher=fetch,onData=()=>{},onDelete}={}) {
   let host=null,home=null,result=null,pending=null;
-  const initial=new URLSearchParams(globalThis.location?.search || '');
+  const initial=contentFilterParams(globalThis.location);
   const filters={search:initial.get('q') || '',mode:['auto','manual'].includes(initial.get('mode'))?initial.get('mode'):'all',status:['working','ready','published','attention'].includes(initial.get('status'))?initial.get('status'):'all',sort:initial.get('sort')==='oldest'?'oldest':'recent'};
   const errorMarkup=()=>result.errors.length?`<div class="content-error" role="alert"><strong>일부 콘텐츠를 불러오지 못했어요.</strong><p>${result.errors.map(esc).join('<br>')}</p><button data-content-retry>다시 불러오기</button></div>`:'';
   function paint() {
@@ -79,7 +84,7 @@ export function createContentLibrary({fetcher=fetch,onData=()=>{},onDelete}={}) 
     }
     if(home?.isConnected) {
       const unfinished=result.items.filter(item=>!item.published).slice(0,3);
-      home.innerHTML=`<div class="workspace-section-head"><h2>최근 작업 이어하기</h2><a href="/contents?status=working">콘텐츠 전체 보기</a></div>${errorMarkup()}${unfinished.length?renderContentRows(unfinished):`<div class="content-empty"><p>${result.items.length?'진행 중인 작업이 없어요. 완성한 영상은 콘텐츠에서 확인하세요.':'첫 영상을 시작하면 이곳에서 이어 만들 수 있어요.'}</p><a class="workspace-link" href="${result.items.length?'/contents':'/studio'}">${result.items.length?'콘텐츠 보기':'새 영상 만들기'}</a></div>`}`;
+      home.innerHTML=`<div class="workspace-section-head"><h2>최근 작업 이어하기</h2><a href="/contents?status=working">내 영상 전체 보기</a></div>${errorMarkup()}${unfinished.length?renderContentRows(unfinished):`<div class="content-empty"><p>${result.items.length?'진행 중인 작업이 없어요. 완성한 영상은 내 영상에서 확인하세요.':'첫 영상을 시작하면 이곳에서 이어 만들 수 있어요.'}</p><a class="workspace-link" href="${result.items.length?'/contents':'/studio'}">${result.items.length?'내 영상 보기':'새 영상 만들기'}</a></div>`}`;
       home.querySelector('[data-content-retry]')?.addEventListener('click',refresh);
     }
   }
