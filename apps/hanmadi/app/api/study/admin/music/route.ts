@@ -1,3 +1,4 @@
+import { learningAppHref } from "@/lib/deployment";
 import { cachedYoutubeSearch } from "@/lib/youtube-cache";
 import { validateYoutubeSearch } from "@/lib/youtube-search";
 import { musicYoutubeConfiguration } from "@/lib/youtube-music";
@@ -15,7 +16,7 @@ async function owner() {
   return tutor.tid ?? tutor.n;
 }
 export async function GET() {
-  try { await owner(); const [songs, collection] = await Promise.all([readMusic(), readMusicCollection()]); return conversationJson({ songs, collection, youtube: musicYoutubeConfiguration() }); }
+  try { await owner(); const [songs, collection] = await Promise.all([readMusic(), readMusicCollection()]); return conversationJson({ songs, collection, youtube: musicYoutubeConfiguration(), learningAppHref: learningAppHref() }); }
   catch (error) { return conversationFailure(error); }
 }
 export async function POST(req: Request) {
