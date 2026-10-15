@@ -18,6 +18,7 @@
 | 서버 타입/린트 | 통과 | Next route types + 로컬 TypeScript 5.9.3, 변경 파일 ESLint |
 | Flutter 웹 release | 통과 | 실제 engine compile, `/app/` base href |
 | Android debug | 통과 | ARM64 Mac 기존 Android SDK/JDK21, APK 생성 |
+| GitOps 회귀 | 39개 통과 | 기존 대상/브랜치/자격 분리 정책 보존, 두 workflow YAML 파싱 통과 |
 | Next 운영 빌드 | 통과 | 신규 app-login/catalog/client-auth 포함 |
 | 실제 API 공유 기록 | 통과 | 로컬 Next + synthetic 계정: 앱 세션 저장 → 같은 웹 계정에서 확인, 토큰 로그아웃 → 401, Origin 없는 쿠키 POST → 403 |
 | 웹 사용자 전체 흐름 | 통과 | 실제 로그인 폼 → Flutter release → 음악 진입/스터디 복귀 → AI 대화 → 번역 → 보관함, 모바일 390px/PC 1440px 화면, JS 오류 없음. AI는 local fixture |
@@ -42,6 +43,6 @@
 
 ## 남은 운영 경계
 
-PR별 사용자 승인 전 main/배포 브랜치 머지·운영 활성화를 하지 않는다. 운영 웹 전환은 Flutter SDK가 준비된 CI에서 산출물 stage 후 기존 Next/Vercel 배포 경로로 승격해야 한다. 기존 Vercel npm build만으로 Flutter가 자동 게시된다고 주장하지 않는다. iOS/실제 단말 검증과 배포 서명은 별도 확인 대상이다.
+PR별 사용자 승인 전 main/배포 브랜치 머지·운영 활성화를 하지 않는다. 승인된 deploy/hanmadi GitOps에 고정 SDK Flutter 빌드·stage를 추가하고 `.vercelignore`로 산출물 업로드/로컬 비밀 제외를 명시했다. 관리자 배포에는 이 단계를 실행하지 않는다. 이 구성은 소스 준비이며 실제 배포 성공과 구분한다. iOS/실제 단말 검증과 배포 서명은 별도 확인 대상이다.
 
 최종 브라우저 결과: `e2e/result.json` pass=true, CLI 정상 exit 0. 이전 실패 화면·로그는 실패로 보존하며 성공 캡처와 혼동하지 않는다. Flutter의 탭 전환 후 의미 구조 편집기 포커스/프레임 초기화와 읽기 전용 textbox 역할을 실제 DOM에 맞춰 검증했다.

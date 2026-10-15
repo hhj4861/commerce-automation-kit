@@ -47,8 +47,10 @@ jobs:
           flutter --suppress-analytics test
       - name: Web release
         if: matrix.target == 'web'
-        working-directory: apps/hanmadi-flutter
-        run: flutter --suppress-analytics build web --base-href /app/ --output "$RUNNER_TEMP/hanmadi-web"
+        env:
+          FLUTTER_BIN: ${{ github.workspace }}/.flutter-sdk/bin/flutter
+          HANMADI_FLUTTER_BUILD_OUTPUT: ${{ runner.temp }}/hanmadi-web
+        run: node apps/hanmadi/scripts/build-flutter-web.mjs --stage
       - uses: actions/setup-node@v4
         if: matrix.target == 'web'
         with:
@@ -59,8 +61,6 @@ jobs:
         env:
           HANMADI_E2E_ARTIFACTS: ${{ runner.temp }}/hanmadi-flutter-e2e
         run: |
-          mkdir -p public/app
-          cp -R "$RUNNER_TEMP/hanmadi-web/." public/app/
           npm ci --workspaces=false
           npx playwright install --with-deps chromium
           npm run test:flutter-client

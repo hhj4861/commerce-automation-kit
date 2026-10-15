@@ -52,6 +52,25 @@ jobs:
         run: |
           node --test ops/deploy/test.mjs
           python3 -m unittest discover -s ops/deploy -p 'test_*.py'
+      - name: Pinned Flutter SDK for the learner web client
+        if: matrix.name == 'hanmadi'
+        uses: actions/checkout@v4
+        with:
+          repository: flutter/flutter
+          ref: abaf9c523780a608bd46686fd5e53740a07077f8
+          path: .flutter-sdk
+          persist-credentials: false
+      - name: Build learner Flutter web before Vercel upload
+        if: matrix.name == 'hanmadi'
+        env:
+          FLUTTER_BIN: ${{ github.workspace }}/.flutter-sdk/bin/flutter
+          HANMADI_FLUTTER_BUILD_OUTPUT: ${{ runner.temp }}/hanmadi-flutter-web
+          CI: 'true'
+          FLUTTER_SUPPRESS_ANALYTICS: 'true'
+          DART_SUPPRESS_ANALYTICS: 'true'
+        run: |
+          (cd apps/hanmadi-flutter && "$FLUTTER_BIN" --suppress-analytics pub get --enforce-lockfile)
+          node apps/hanmadi/scripts/build-flutter-web.mjs --stage
       - name: Load only this platform's credentials from Cloudflare
         if: matrix.driver != 'gcp'
         env:

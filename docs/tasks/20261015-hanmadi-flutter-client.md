@@ -29,3 +29,5 @@
 - 작은 화면 넘침, 화면 갱신, 컨트롤러 덮어쓰기, 일본어 폰트 누락을 보완. Noto 글꼴/OFL 동봉.
 - 실제 로그인 폼부터 Flutter 음악 복귀·AI 대화·번역·보관함까지 E2E 통과(정상 exit 0, result.json pass=true). iOS 로컬 도구 없음은 확인됐으며 macOS CI 무서명 컴파일을 준비했다. 실제 단말·운영 배포는 아직 아니다.
 - 다음: 최종 E2E/실제 스크린샷 확인 → 본인 변경 커밋/작업 브랜치 push/PR → CI 확인. 새 PR 머지 승인은 별도다.
+
+- GitOps 보완: deploy/hanmadi에만 고정 SDK 빌드/stage → 기존 Vercel 원격 빌드, 명시적 `.vercelignore`로 산출물 포함/비밀 제외. 관리자 불변. 기존 GitOps 테스트 39개/YAML 파싱 통과. 초기 구현 커밋 7c9b2e3은 작업 upstream에 푸시 완료.
