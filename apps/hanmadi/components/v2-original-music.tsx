@@ -10,33 +10,44 @@ import { LicensedMusicStudy } from "./v2-music";
 import { pretender } from "@/lib/v2-music";
 
 type Catalog = { songs: PracticeSong[]; progress: Record<string, SongProgress> };
-export function MusicStudy({ language, expressions, onSaved, onConversation }: { language: StudyLanguage; expressions: Expression[]; onSaved: (state: StudyState) => void; onConversation: (prompt: string) => void }) {
+export function MusicStudy({ language, initialSongId, expressions, onSaved, onConversation }: { language: StudyLanguage; initialSongId?: string; expressions: Expression[]; onSaved: (state: StudyState) => void; onConversation: (prompt: string) => void }) {
   const [catalog, setCatalog] = useState<Catalog | null>(null);
   const [error, setError] = useState("");
   const [attempt, setAttempt] = useState(0);
   const [commercial, setCommercial] = useState(false);
-  const [selected, setSelected] = useState("");
+  const [selected, setSelected] = useState(initialSongId ?? "");
+  const [refreshing, setRefreshing] = useState(false);
   useEffect(() => {
     const controller = new AbortController();
     void fetch("/api/study/practice-music", { cache: "no-store", signal: AbortSignal.any([controller.signal, AbortSignal.timeout(15000)]) })
       .then(async response => {
         const data = await response.json();
         if (!response.ok) throw new Error(data.error ?? "연습곡을 불러오지 못했어요.");
-        if (!controller.signal.aborted) setCatalog(data);
-      }).catch(e => { if (!controller.signal.aborted) setError(e instanceof Error ? e.message : "연습곡을 불러오지 못했어요."); });
+        if (!controller.signal.aborted) {
+          setCatalog(data);
+          const songs: PracticeSong[] = data.songs;
+          setSelected(current => current || songs.find(s => s.language === language && s.managed)?.id || songs.find(s => s.language === language)?.id || "");
+        }
+      }).catch(e => { if (!controller.signal.aborted) setError(e instanceof Error ? e.message : "연습곡을 불러오지 못했어요."); })
+      .finally(() => { if (!controller.signal.aborted) setRefreshing(false); });
     return () => controller.abort();
-  }, [attempt]);
-  const available = catalog?.songs.filter(song => song.language === language) ?? [];
-  const song = commercial ? available.find(song => song.videoId === pretender.videoId) : available.find(song => song.id === selected) ?? available[0];
+  }, [attempt, language]);
+  const available = (catalog?.songs.filter(song => song.language === language) ?? []).sort((a, b) => Number(!!b.managed) - Number(!!a.managed));
+  const song = commercial ? available.find(song => song.videoId === pretender.videoId) : (selected ? available.find(song => song.id === selected) : available[0]);
   return <section className="hm-original-music" aria-label={`${studyLanguages[language].name} 음악 학습`}>
+    <div className="hm-row"><p>등록된 곡의 원곡·자막으로 듣기, 단어, 회화와 복습을 이어가요.</p><button disabled={refreshing} onClick={() => { setRefreshing(true); setError(""); setAttempt(v => v + 1); }}>{refreshing ? "목록 확인 중…" : "곡 목록 새로고침"}</button></div>
     {language === "ja" && <div className="hm-row hm-music-source" role="group" aria-label="음악 선택">
-      <button aria-pressed={!commercial} onClick={() => setCommercial(false)}>한마디 연습곡</button>
+      <button aria-pressed={!commercial} onClick={() => setCommercial(false)}>학습 가능한 곡</button>
       <button aria-pressed={commercial} onClick={() => setCommercial(true)}>Pretender · 공식 영상</button>
     </div>}
     {commercial && !song ? <LicensedMusicStudy /> : <>
       {!catalog && !error && <p role="status">연습곡을 불러오고 있어요…</p>}
       {error && <div role="alert"><p>{error}</p><button onClick={() => { setError(""); setAttempt(attempt + 1); }}>다시 불러오기</button></div>}
-      {available.length > 1 && <label>학습할 곡<select aria-label="학습할 곡" value={song?.id ?? ""} onChange={e => { setSelected(e.target.value); setCommercial(false); }}>{available.map(s => <option key={s.id} value={s.id}>{s.title} · {s.managed ? s.subtitle : "한마디 연습곡"}</option>)}</select></label>}
+      {catalog && !song && !commercial && <p role="status">선택한 곡은 아직 게시되지 않았거나 게시가 내려갔어요. 목록에서 다른 곡을 고르거나 목록을 새로고침해 주세요.</p>}
+      {!!available.length && <label>학습할 곡<select aria-label="학습할 곡" value={song?.id ?? ""} onChange={e => { setSelected(e.target.value); setCommercial(false); }}>
+        {!song && <option value="" disabled>학습할 곡을 선택해 주세요</option>}
+        {[true, false].map(managed => <optgroup key={String(managed)} label={managed ? "등록된 음악" : "한마디 연습곡"}>{available.filter(s => !!s.managed === managed).map(s => <option key={s.id} value={s.id}>{s.title} · {s.managed ? s.subtitle : "한마디 연습곡"}</option>)}</optgroup>)}
+      </select></label>}
       {song && catalog && <SongPractice key={`${song.id}:${song.revision}`} song={song} initial={catalog.progress[song.id]} expressions={expressions} onConversation={onConversation} onSaved={onSaved} onProgress={progress =>
         setCatalog(previous => previous ? { ...previous, progress: { ...previous.progress, [song.id]: progress } } : previous)} />}
     </>}
