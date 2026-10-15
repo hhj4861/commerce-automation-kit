@@ -49,18 +49,49 @@ def validate_auth(raw):
     return raw
 
 
+# Fixed categories only: gh output may include URLs or request details, never printed raw.
+GH_FAILURES = (
+    ("bad_credentials", ("bad credentials", "http 401")),
+    ("token_lacks_secrets_permission", ("resource not accessible by personal access token",
+                                        "resource not accessible by integration")),
+    ("repository_not_selected", ("http 404", "not found")),
+    ("forbidden", ("http 403",)),
+    ("rate_limited", ("rate limit", "http 429")),
+    ("github_unavailable", ("http 500", "http 502", "http 503", "http 504", "connection reset",
+                            "connection refused", "i/o timeout", "tls handshake")),
+)
+PERMANENT = {"bad_credentials", "token_lacks_secrets_permission", "repository_not_selected", "forbidden", "gh_unavailable"}
+
+
+def gh_failure_reason(stderr):
+    text = stderr.lower() if isinstance(stderr, str) else ""
+    stage = "public_key" if "public key" in text else "set_secret"
+    for reason, needles in GH_FAILURES:
+        if any(needle in text for needle in needles):
+            return f"{reason}@{stage}"
+    return f"unclassified@{stage}"
+
+
 def save_secret(raw, attempts=3, pauses=(5, 15)):
-    """Write the login to the repository secret; retry transient GitHub failures."""
+    """Write the login to the repository secret. Returns (ok, reason); retries only transient failures."""
+    reason = "not_attempted"
     for attempt in range(attempts):
         try:
             subprocess.run(["gh", "secret", "set", SECRET, "--repo", os.environ["GITHUB_REPOSITORY"]],
                            input=raw, text=True, check=True, stdout=subprocess.DEVNULL,
-                           stderr=subprocess.DEVNULL, timeout=60)
-            return True
-        except (subprocess.CalledProcessError, subprocess.TimeoutExpired, OSError):
-            if attempt + 1 < attempts:
-                time.sleep(pauses[min(attempt, len(pauses) - 1)])
-    return False
+                           stderr=subprocess.PIPE, timeout=60)
+            return True, None
+        except subprocess.CalledProcessError as exc:
+            reason = gh_failure_reason(exc.stderr)
+        except subprocess.TimeoutExpired:
+            reason = "timeout"
+        except OSError:
+            reason = "gh_unavailable"
+        if reason.split("@")[0] in PERMANENT:
+            break
+        if attempt + 1 < attempts:
+            time.sleep(pauses[min(attempt, len(pauses) - 1)])
+    return False, reason
 
 
 def paths():
@@ -76,9 +107,10 @@ def restore():
     raw = validate_auth(os.environ.get("CODEX_AUTH_JSON", ""))
     # Prove the token can write the secret before Codex may rotate the login: rewriting the
     # identical value is harmless, while discovering a bad token after a refresh loses the login.
-    if not save_secret(raw):
-        raise RuntimeError("The secret-write token cannot write repository secrets; check its expiry, that it "
-                           "includes this repository and the Secrets: Read and write permission")
+    saved, reason = save_secret(raw)
+    if not saved:
+        raise RuntimeError(f"The secret-write token cannot write repository secrets (reason={reason}); check its "
+                           "expiry, that it includes this repository and the Secrets: Read and write permission")
     home, auth, baseline = paths()
     home.mkdir(mode=0o700, exist_ok=False)
     auth.touch(mode=0o600)
@@ -104,8 +136,10 @@ def persist():
             print("Codex login unchanged; secret update skipped")
             return
         require_trusted_actions()
-        if not save_secret(raw):
-            raise RuntimeError("Refreshed Codex login could not be saved; the next run may need a new login")
+        saved, reason = save_secret(raw)
+        if not saved:
+            raise RuntimeError(f"Refreshed Codex login could not be saved (reason={reason}); "
+                               "the next run may need a new login")
         print("Refreshed Codex login saved to the secret")
     finally:
         if home.exists():
