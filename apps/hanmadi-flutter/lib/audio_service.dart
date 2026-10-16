@@ -54,10 +54,12 @@ class AudioService extends ChangeNotifier {
     update();
   }
 
-  Future<void> speak(String text, String language) async {
+  Future<void> speak(String text, String language, {double rate = 1}) async {
     await stop();
     final generation = _generation;
     final bytes = await api.speech(text, language);
+    if (_disposed || generation != _generation) return;
+    await _player.setPlaybackRate(rate);
     if (_disposed || generation != _generation) return;
     await _player.play(BytesSource(bytes.bytes, mimeType: bytes.mimeType));
     playing = true;
@@ -66,6 +68,7 @@ class AudioService extends ChangeNotifier {
 
   Future<void> segment(String path, num start, num end) async {
     await stop();
+    await _player.setPlaybackRate(1);
     await _player.play(
       UrlSource(api.url(path).toString()),
       position: Duration(milliseconds: (start * 1000).round()),
