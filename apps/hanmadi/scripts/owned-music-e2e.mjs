@@ -1,3 +1,4 @@
+import { prepareSource, musicReview } from "./content-flow-helpers.mjs";
 import { openAdminTool } from "./admin-navigation.mjs";
 import assert from 'node:assert/strict';
 import { createHmac } from 'node:crypto';
@@ -65,12 +66,8 @@ try {
   await post(learner, '/api/study', { action: 'assess', language: 'ja', answers: [0, 0, 0], confidence: 1, minutes: 5 });
   assert.equal((await learner.request.post(base + adminPath, { headers: { Origin: base }, data: { action: 'generate' } })).status(), 403);
   page = await owner.newPage(); const errors = []; page.on('pageerror', e => errors.push(e.message));
-  await page.goto(base + '/study/admin'); await openAdminTool(page, '음악 관리');
-  await page.getByLabel('곡 제목', { exact: true }).fill('테스트 아침 노래');
-  await page.getByLabel('아티스트', { exact: true }).fill('Hanmadi original fixture');
-  await page.getByLabel('공식 YouTube 영상 링크 또는 ID').fill('https://youtu.be/' + videoId); // routing fixture only; no Pretender lyrics/audio are fetched
-  await page.getByLabel('가사·자막 파일 연결 (선택)').setInputFiles({ name: 'morning.vtt', mimeType: 'text/vtt', buffer: Buffer.from(subtitle) });
-  await page.getByLabel('학습에 사용할 원문').waitFor();
+  await page.goto(base + '/study/admin'); await prepareSource(page, { title: '테스트 아침 노래', video: videoId, language: 'ja', source: subtitle, beforeSave: async () => {
+  await page.getByLabel('원문 파일 연결', { exact: true }).setInputFiles({ name: 'morning.vtt', mimeType: 'text/vtt', buffer: Buffer.from(subtitle) });
   await page.getByText('가사 시간 맞추기', { exact: true }).click();
   await page.getByRole('button', { name: '원문에서 줄 불러오기', exact: true }).click();
   assert.equal(await page.getByLabel('1번 줄 시작 (초)', { exact: true }).inputValue(), '0');
@@ -79,10 +76,10 @@ try {
   await page.getByRole('alert').filter({ hasText: '겹치지 않는' }).waitFor();
   await page.getByLabel('1번 줄 끝 (초)', { exact: true }).fill('6');
   await page.getByRole('button', { name: '시간을 원문에 적용', exact: true }).click();
-  assert.match(await page.getByLabel('학습에 사용할 원문').inputValue(), /00:00:06.000/);
-  await page.getByLabel('사용권 근거', { exact: true }).fill('직접 작성한 테스트 원문. AI 처리 및 가사·번역·발음 음성·개인 학습 저장 재사용 권한 보유.');
-  await page.getByRole('checkbox', { name: /원문을 AI에 제공/ }).check();
-  await page.getByRole('button', { name: '원문 등록', exact: true }).click();
+  assert.match(await page.getByLabel('보관할 원문').inputValue(), /00:00:06.000/);
+  }});
+  assert.equal(generations, 0, 'preparation never generates music');
+  await musicReview(page, 'Hanmadi original fixture');
   await page.getByRole('heading', { name: '테스트 아침 노래', exact: true }).waitFor();
   let registered = (await (await owner.request.get(base + adminPath)).json()).songs[0];
   assert.equal(registered.status, 'draft'); assert.equal((await (await learner.request.get(base + learnerPath)).json()).songs.length, 4);
@@ -98,6 +95,7 @@ try {
   for (const width of [320, 390, 1024]) { await page.setViewportSize({ width, height: 844 }); assert(await page.locator('.music-admin').evaluate(el => el.scrollWidth <= el.clientWidth + 1)); }
   await page.screenshot({ path: resolve(dir, 'admin-review.png'), fullPage: true });
   await page.getByRole('button', { name: '선택한 2개 구간 앱에 게시', exact: true }).click();
+  await openAdminTool(page, '음악 관리');
   await page.getByRole('button', { name: '앱에서 게시 내리기', exact: true }).waitFor();
   const catalog = (await (await learner.request.get(base + learnerPath)).json()).songs;
   const song = catalog.find(s => s.managed); assert.equal(song.lines.length, 2); assert.equal(song.source, undefined); assert.equal(song.rights, undefined);
@@ -215,6 +213,7 @@ try {
   const another = await browser.newContext(); await post(another, '/api/study/account', { action: 'signup', name: 'anothermusicfixture', password: 'fixture-password-only-123' });
   const other = await (await another.request.get(base + learnerPath)).json(); assert.deepEqual(other.progress[song.id].practiced, []); assert.equal(other.progress[song.id].wordsReviewed, undefined);
   await page.getByRole('button', { name: '앱에서 게시 내리기', exact: true }).click();
+  await openAdminTool(page, '음악 검수');
   await page.getByRole('button', { name: '선택한 2개 구간 앱에 게시', exact: true }).waitFor();
   assert.equal((await (await learner.request.get(base + learnerPath)).json()).songs.length, 4);
   assert.equal((await learner.request.post(base + learnerPath, { headers: { Origin: base }, data: { action: 'save-word', trackId: song.id, revision: song.revision, index: 0 } })).status(), 400);

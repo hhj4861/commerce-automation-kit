@@ -113,3 +113,17 @@ test("version quota rejects without data loss and stale delete cannot remove a n
   const current = await readMedia(f.body.id, f.db) as MediaDetail;
   assert.equal(current.source.originals.length, 8); assert.equal(current.source.originals[0].raw, raw);
 });
+
+test("one collected video adds another purpose without duplicating or replacing saved originals", async () => {
+  const f = fixture();
+  const collected = await collectMedia({ ...input, purposes: ["study"] }, f.db);
+  const saved = await saveMediaOriginal({ id: collected.source.id, revision: 0, raw, rights: "Self authored practice source", confirmed: true, requestId: "purpose-original" }, "owner", f.db);
+  const music = await collectMedia({ ...input, title: "Do not overwrite", purposes: ["music"] }, f.db);
+  assert.deepEqual(music.source.purposes, ["music", "study"]);
+  assert.deepEqual(music.source.originals, saved.source.originals);
+  assert.deepEqual(music.jobs, saved.jobs);
+  assert.equal(music.source.title, input.title);
+  assert.equal(music.source.revision, 1);
+  await assert.rejects(collectMedia({ ...input, language: "ja" }, f.db), /다른 원문 언어/);
+  assert.equal((await readMedia(undefined, f.db) as { sources: unknown[] }).sources.length, 1);
+});

@@ -32,7 +32,7 @@ export function MusicTimingEditor({ source, videoId, onApply }: { source: string
         try { const next = timedSource(rows.map(r => ({ text: r.text, startSeconds: r.start === "" ? undefined : Number(r.start), endSeconds: r.end === "" ? undefined : Number(r.end) }))); player.current?.pause(); onApply(next); }
         catch (e) { setError(e instanceof Error ? e.message : "시간을 확인해 주세요."); }
       }}>시간을 원문에 적용</button>
-      <p>적용 후 ‘원문 등록’ 또는 ‘수정한 원문 저장’을 눌러야 보관돼요. 다시 생성·검수한 구간이 학습 앱에 반영돼요.</p>
+      <p>적용 후 ‘새 원문 버전 저장’을 눌러야 보관돼요. 다시 생성·검수한 구간이 학습 앱에 반영돼요.</p>
     </>}
     {error && <p role="alert">{error}</p>}
   </details>;

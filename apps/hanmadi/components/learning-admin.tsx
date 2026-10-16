@@ -197,8 +197,8 @@ export function LearningAdmin() {
               </p>
               {!data.published.length ? (
                 <p className="la-empty">
-                  아직 게시한 교재가 없어요. ‘자료 만들기’에서 원문으로 초안을
-                  만들고 검수 후 게시해 주세요.
+                  아직 게시한 교재가 없어요. ‘콘텐츠 준비’에서 영상을 모으고,
+                  ‘검수·반영’에서 수업을 검수한 뒤 게시해 주세요.
                 </p>
               ) : (
                 <>
