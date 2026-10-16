@@ -19,6 +19,8 @@ on:
     paths:
       - apps/shopshorts/card-news/**
       - packages/shorts-publish/**
+      - packages/tts-narration/**
+      - packages/contracts/src/tts-narration.ts
       - apps/credential-broker/**
       - .github/workflows/ai-card-news-reels.yml
 
@@ -51,14 +53,16 @@ jobs:
           sudo apt-get install -y ffmpeg fonts-noto-cjk
           python -m pip install --require-hashes -r apps/shopshorts/card-news/build-requirements.txt
           python -m pip install --require-hashes --no-build-isolation -r apps/shopshorts/card-news/requirements.txt
-      - run: npm ci --ignore-scripts --workspace @cak/shorts-publish --workspace @cak/credential-broker --include-workspace-root
+      - run: npm ci --ignore-scripts --workspace @cak/shorts-publish --workspace @cak/tts-narration --workspace @cak/credential-broker --include-workspace-root
       - name: Card-news, reels, upload and credential trust-boundary tests
         run: |
           cd apps/shopshorts/card-news
-          python -m unittest -v test_main test_reels
+          python -m unittest -v test_main test_discovery test_narration test_reels
           cd ../../..
           npm test -w @cak/shorts-publish
           npm run typecheck -w @cak/shorts-publish
+          npm test -w @cak/tts-narration
+          npm run typecheck -w @cak/tts-narration
           node --test apps/credential-broker/test/broker.test.mjs apps/credential-broker/test/client.test.mjs
 
   reels:

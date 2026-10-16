@@ -24,6 +24,7 @@ export interface NarrationOpts {
   fetchFn?: typeof fetch;
   sleep?: (ms: number) => Promise<void>;
   maxAttempts?: number;
+  timestamps?: boolean;
 }
 
 const SAFE_RETRY_CODES = new Set(['ENOTFOUND', 'EAI_AGAIN', 'ECONNREFUSED', 'EHOSTUNREACH', 'ENETUNREACH', 'UND_ERR_CONNECT_TIMEOUT']);
@@ -50,7 +51,7 @@ export async function synthesizeNarration(o: NarrationOpts): Promise<NarrationCl
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     try {
       res = await fetchFn(
-        `${ENDPOINT}/${policy.voiceId}?output_format=${encodeURIComponent(format)}`,
+        `${ENDPOINT}/${policy.voiceId}${o.timestamps ? '/with-timestamps' : ''}?output_format=${encodeURIComponent(format)}`,
         {
           method: 'POST',
           headers: { 'xi-api-key': o.apiKey, 'Content-Type': 'application/json' },
@@ -82,7 +83,22 @@ export async function synthesizeNarration(o: NarrationOpts): Promise<NarrationCl
     throw new Error(`ElevenLabs HTTP ${res.status}: ${detail.slice(0, 300)}`);
   }
   let buf: Buffer;
-  try { buf = Buffer.from(await res.arrayBuffer()); }
+  let alignment: NarrationClip['alignment'];
+  try {
+    if (o.timestamps) {
+      const data = await res.json() as { audio_base64?: string; alignment?: NarrationClip['alignment'] };
+      alignment = data.alignment;
+      if (!data.audio_base64 || !alignment || alignment.characters.join('') !== text
+          || alignment.character_start_times_seconds.length !== alignment.characters.length
+          || alignment.character_end_times_seconds.length !== alignment.characters.length
+          || alignment.character_start_times_seconds.some((v, i) => !Number.isFinite(v) || v < 0 || v > alignment!.character_end_times_seconds[i]!
+            || (i > 0 && v < alignment!.character_start_times_seconds[i-1]!))
+          || alignment.character_end_times_seconds.some((v, i) => !Number.isFinite(v) || (i > 0 && v < alignment!.character_end_times_seconds[i-1]!))) {
+        throw new Error('Invalid character timing response');
+      }
+      buf = Buffer.from(data.audio_base64, 'base64');
+    } else buf = Buffer.from(await res.arrayBuffer());
+  }
   catch (e) { throw new Error(`ElevenLabs 오디오 수신 실패(자동 재시도 안 함): ${e instanceof Error ? e.message : String(e)}`); }
   if (buf.length === 0) throw new Error('ElevenLabs 응답이 비어있음(오디오 없음)');
   await writeFile(o.outPath, buf);
@@ -93,5 +109,6 @@ export async function synthesizeNarration(o: NarrationOpts): Promise<NarrationCl
     voiceId: policy.voiceId,
     modelId: policy.modelId,
     createdAt: new Date().toISOString(),
+    ...(alignment ? { alignment } : {}),
   };
 }

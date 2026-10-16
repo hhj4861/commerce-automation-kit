@@ -99,6 +99,11 @@ class ReelsTests(unittest.TestCase):
                 reels.public_url({'status': 'completed', 'results': {'instagram': result}})
         self.assertIsNone(reels.public_url({'status': 'processing', 'results': []}))
 
+    def test_discovery_publication_cannot_silently_fall_back_to_mute(self):
+        with patch.object(reels, 'cli') as api, self.assertRaisesRegex(ValueError, 'reviewed narration'):
+            reels.publish({'content_mode':'discovery'}, self.out/'reel.mp4', self.out)
+        api.assert_not_called()
+
     def test_claimed_retry_polls_without_upload(self):
         plan = reels.prepare(self.source, self.out)
         env = {'GITHUB_REF': 'refs/heads/main', 'UPLOAD_POST_USER': 'u', 'UPLOAD_POST_API_KEY': 'fixture',

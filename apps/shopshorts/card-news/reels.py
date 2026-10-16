@@ -72,7 +72,7 @@ def fetch_source(run_id, folder):
     # Never extract arbitrary ZIP entries, symlinks, credentials or delivery message IDs.
     with zipfile.ZipFile(io.BytesIO(archive.content)) as z:
         for member in z.infolist():
-            if member.filename not in ('status.json', 'news.json', 'stories.json') and not re.fullmatch(r'stories/story_[0-9]{2}\.png', member.filename):
+            if member.filename not in ('status.json', 'news.json', 'stories.json', 'script-review.json') and not re.fullmatch(r'stories/story_[0-9]{2}(?:_step_[123])?\.png', member.filename):
                 continue
             if member.file_size > 12_000_000:
                 raise ValueError('Oversized source artifact entry')
@@ -107,7 +107,8 @@ def prepare(folder, out):
     sources = {x['url']: x for x in news['items']}
     edits = {x['url']: x for x in news['edits']}
     plan = []
-    caption = [f'오늘의 AI 기술 브리핑 | {date}', '']
+    discovery = any(x.get('content_kind') for x in news['items'])
+    caption = [f'오늘 발견한 AI 도구와 활용법 | {date}' if discovery else f'오늘의 AI 기술 브리핑 | {date}', '']
     seen = set()
     for i, slide in enumerate(slides):
         name = slide.get('file', '')
@@ -119,6 +120,8 @@ def prepare(folder, out):
         with Image.open(image) as im:
             if im.size != (1080, 1920) or im.format != 'PNG':
                 raise ValueError('Invalid slide dimensions or encoding')
+        if slide.get('image_sha256') and hashlib.sha256(image.read_bytes()).hexdigest() != slide['image_sha256']:
+            raise ValueError('Card artwork does not match the reviewed source')
         seconds = 3.0
         if i not in (0, len(slides)-1):
             url = slide.get('url')
@@ -127,18 +130,42 @@ def prepare(folder, out):
             seen.add(url)
             edit = edits[url]
             # Count all visible explanation, including the "why" field absent from narration.
-            text = ' '.join(edit[k] for k in ('headline', 'summary', 'why'))
+            text = ' '.join(edit[k] for k in (('headline', 'summary', 'use_case', 'action') if discovery else ('headline', 'summary', 'why')))
             seconds = max(8.0, len(text) / 6.0)
-            if seconds > 32:
+            if seconds > (60 if discovery else 32):
                 raise ValueError('Card too dense: revise content rather than accelerate or cut text')
             caption.extend([f'{i}. {edit["headline"]}', url, ''])
-        plan.append({'file': str(image.resolve()), 'seconds': round(seconds, 2)})
-    caption.extend(['공식 발표를 AI로 요약했습니다. 적용 전 원문과 호환성을 확인하세요.',
-                    '#AI뉴스 #개발자 #인공지능 #개발도구'])
+            if discovery:
+                caption.extend([sources[url]['evidence_label'], sources[url]['date_basis'], ''])
+                metric = sources[url].get('popularity')
+                if metric:
+                    caption.extend([f"관심 지표 조회: {metric['observed_at']}",
+                        '집계: GitHub의 진행 중 주간 신규 별 (KST 오늘·최근 7일 집계와 다름)',
+                        '비교 후보: ' + ', '.join(metric['scope']), '저장소 관심 지표이며 설치 수가 아닙니다.', ''])
+        row = {'file': str(image.resolve()), 'seconds': round(seconds, 2)}
+        if slide.get('stages'):
+            if len(slide['stages']) != 3:
+                raise ValueError('Expected three example stages')
+            row['stages'] = []
+            for j,stage in enumerate(slide['stages']):
+                name = f'stories/story_{i+1:02d}_step_{j+1}.png'
+                path = folder/name
+                if (stage.get('file') != name or path.is_symlink() or not path.resolve().is_relative_to(folder.resolve())
+                        or hashlib.sha256(path.read_bytes()).hexdigest() != stage.get('image_sha256')):
+                    raise ValueError('Example artwork source mismatch')
+                with Image.open(path) as im:
+                    if im.size != (1080,1920) or im.format != 'PNG':
+                        raise ValueError('Invalid example artwork')
+                row['stages'].append({'file':str(path.resolve()),'start':round(j*seconds/3,3)})
+        plan.append(row)
+    caption.extend(['공식 문서·저장소를 바탕으로 소개했습니다. 활용 예시는 제안이며 실사용 결과가 아닙니다.' if discovery
+                    else '공식 발표를 AI로 요약했습니다. 적용 전 원문과 호환성을 확인하세요.',
+                    '#AI플러그인 #AI에이전트 #오픈소스' if discovery else '#AI뉴스 #개발자 #인공지능 #개발도구'])
     caption = '\n'.join(caption)
     if len(caption) > 2200 or sum(x['seconds'] for x in plan) > 180:
         raise ValueError('Reel caption or duration exceeds the supported limit')
     value = {'date': date, 'source_status': status['status'], 'slides': plan,
+             'content_mode': 'discovery' if discovery else 'releases',
              'seconds': round(sum(x['seconds'] for x in plan), 2), 'caption': caption}
     write_json(out / 'reel-plan.json', value)
     (out / 'caption.txt').write_text(caption, encoding='utf-8')
@@ -150,17 +177,37 @@ def render(plan, out):
         return "'" + value.replace("'", "'\\''") + "'"
     lines = ['ffconcat version 1.0']
     for slide in plan['slides']:
-        lines.extend([f"file {quoted(slide['file'])}", f"duration {slide['seconds']}"])
-    lines.append(f"file {quoted(plan['slides'][-1]['file'])}")
+        frames = slide.get('stages') or [{'file':slide['file'],'start':0}]
+        for i,frame in enumerate(frames):
+            end = frames[i+1]['start'] if i+1<len(frames) else slide['seconds']
+            duration = end-frame['start']
+            if duration <= 0:raise ValueError('Example stage timing invalid')
+            lines.extend([f"file {quoted(frame['file'])}",f"duration {duration}"])
+    last = (plan['slides'][-1].get('stages') or [plan['slides'][-1]])[-1]['file']
+    lines.append(f"file {quoted(last)}")
     listing = out / 'slides.ffconcat'
     listing.write_text('\n'.join(lines) + '\n')
     target = out / 'reel.mp4'
+    audio = ['-i', plan['audio_file']] if plan.get('narrated') else ['-f', 'lavfi', '-i', 'anullsrc=r=48000:cl=stereo']
+    video_filter = 'fps=30,format=yuv420p'
+    complex_filter = None
+    if plan.get('narrated'):
+        # Shared studio SVG artwork preserves the exact bundled font, rounded background and size.
+        cues = json.loads(Path(plan['captions_file']).read_text())
+        parts = [f'[0:v]{video_filter}[v0]']
+        for i,cue in enumerate(cues):
+            name = Path(cue['file']).name
+            if not re.fullmatch(r'caption-[0-9]{3}\.png', name):
+                raise ValueError('Invalid caption artwork path')
+            parts.append(f"movie=filename='{name}'[c{i}]")
+            parts.append(f"[v{i}][c{i}]overlay=x=(W-w)/2:y=H*0.80-h/2:enable='gte(t,{cue['start']})*lt(t,{cue['end']})'[v{i+1}]")
+        complex_filter = ['-filter_complex_threads', '1', '-filter_complex', ';'.join(parts), '-map', f'[v{len(cues)}]', '-map', '1:a']
     command = ['ffmpeg', '-hide_banner', '-loglevel', 'error', '-y', '-f', 'concat', '-safe', '0',
-        '-i', str(listing), '-f', 'lavfi', '-i', 'anullsrc=r=48000:cl=stereo',
-        '-t', str(plan['seconds']), '-vf', 'fps=30,format=yuv420p', '-c:v', 'libx264',
+        '-i', str(listing), *audio,
+        '-t', str(plan['seconds']), *(complex_filter or ['-vf', video_filter]), '-c:v', 'libx264',
         '-preset', 'fast', '-crf', '21', '-c:a', 'aac', '-b:a', '128k',
         '-movflags', '+faststart', '-threads', '2', str(target)]
-    result = subprocess.run(command, capture_output=True, timeout=600)
+    result = subprocess.run(command, cwd=out, capture_output=True, timeout=600)
     if result.returncode:
         raise RuntimeError('FFmpeg render failed')
     probe = subprocess.run(['ffprobe', '-v', 'error', '-select_streams', 'v:0',
@@ -249,6 +296,8 @@ def ledger(kind, key, create=False):
 
 
 def publish(plan, video, out):
+    if plan.get('content_mode') == 'discovery' and not plan.get('narrated'):
+        raise ValueError('Discovery publishing requires reviewed narration and synchronized subtitles')
     if os.getenv('GITHUB_REF') != 'refs/heads/main' or plan['source_status'] != 'delivered':
         raise ValueError('Public publishing requires main and a confirmed Telegram delivery')
     user = os.getenv('CARD_NEWS_UPLOAD_POST_USER') or os.getenv('UPLOAD_POST_USER', '')
@@ -302,6 +351,7 @@ def main():
     parser.add_argument('--source-dir', type=Path)
     parser.add_argument('--out', type=Path, required=True)
     parser.add_argument('--execute', action='store_true')
+    parser.add_argument('--narrate', action='store_true', help='Reviewed Korean TTS and synchronized subtitles; paid provider usage')
     parser.add_argument('--notify', action='store_true')
     args = parser.parse_args()
     args.out = args.out.resolve()
@@ -323,12 +373,16 @@ def main():
     if args.source_run:
         plan.update(source_run=str(args.source_run), source_sha=source_sha)
         write_json(args.out / 'reel-plan.json', plan)
+    if args.narrate:
+        from narration import synthesize
+        synthesize(plan, source, args.out, ROOT)
+        write_json(args.out/'reel-plan.json', plan)
     video = render(plan, args.out)
     if args.execute:
         publish(plan, video, args.out)
     else:
         write_json(args.out / 'reels-status.json', {'status': 'rendered', 'date': plan['date'],
-                                                  'seconds': plan['seconds']})
+                                                  'seconds': plan['seconds'], 'narrated': bool(plan.get('narrated'))})
         print(f'Rendered {plan["seconds"]}s, 1080x1920; no upload')
 
 
