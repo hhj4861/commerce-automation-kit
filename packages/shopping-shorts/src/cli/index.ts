@@ -22,7 +22,7 @@ import { lintScript } from '../core/lint.js';
 import { rankScripts } from '../core/score.js';
 import { hasDisclosure, overlaySpecFor, withDisclosure } from '../core/disclosure.js';
 import { estimateShort } from '../core/estimate.js';
-import { buildAssembleArgs, buildSyncedAssembleArgs, chunkTimings, cuesFromBeats, splitSubtitleChunks, type SyncedSegment } from '../core/ffargs.js';
+import { audioPadCapSec, buildAssembleArgs, buildSyncedAssembleArgs, chunkTimings, cuesFromBeats, splitSubtitleChunks, type AssembleOpts, type SyncedSegment } from '../core/ffargs.js';
 import { probe, probeAudioDuration, runFfmpegOrThrow } from '../adapters/ffmpeg.js';
 import { jobFileSchema, toJob } from '../adapters/schemas.js';
 import type { ShoppingShortsBrief, ShortsScript } from '@cak/contracts';
@@ -235,8 +235,22 @@ async function main(): Promise<void> {
         ...(music !== undefined ? { music: resolvePath(music) } : {}),
       };
       const font = optStr(o, 'font');
-      const args = buildAssembleArgs(spec, outPath, font !== undefined ? { fontFile: font } : {});
-      log.info('assemble.start', { clips: clips.length, out: outPath });
+      const assembleOpts: AssembleOpts = font !== undefined ? { fontFile: font } : {};
+      // 오디오 패딩 상한 = 클립 실측 길이 합 기준(audioPadCapSec). 오디오가 있을 때만 probe 한다.
+      // probe 가 안 되는 클립(스트림 길이 없는 컨테이너 등)이면 상한 없이(pts 재매김만) 진행 — 경고로 남긴다.
+      if (spec.narrationAudio !== undefined || spec.music !== undefined) {
+        try {
+          let videoSec = 0;
+          for (const clip of clips) videoSec += (await probe(clip)).durationSec;
+          assembleOpts.padCapSec = audioPadCapSec(videoSec, clips.length);
+        } catch (err) {
+          log.warn('assemble.pad-cap.unavailable', {
+            reason: err instanceof Error ? err.message : String(err),
+          });
+        }
+      }
+      const args = buildAssembleArgs(spec, outPath, assembleOpts);
+      log.info('assemble.start', { clips: clips.length, out: outPath, padCapSec: assembleOpts.padCapSec ?? null });
       await runFfmpegOrThrow(args);
       const probed = await probe(outPath);
       out({ ok: true, out: outPath, probe: probed, lintWarnings: report.findings });

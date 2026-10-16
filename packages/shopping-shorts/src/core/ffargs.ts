@@ -27,6 +27,42 @@ export interface AssembleOpts {
   captionFontSize?: number;
   /** BGM 볼륨(내레이션 존재 시 더킹 수준, 기본 0.22) */
   musicVolume?: number;
+  /**
+   * 오디오 패딩 상한(초) — `audioPadCapSec(클립 실측 길이 합, 클립 수)` 로 만든다.
+   * 출력 길이를 정하지 않는다(그건 -shortest = 영상 끝). 없으면 상한 없는 패딩(audioPadTail 참고).
+   */
+  padCapSec?: number;
+}
+
+/**
+ * 오디오 패딩 상한(초) = 영상 기준 길이 + 1 s + 조각(클립·세그먼트) 수/15 s.
+ * 실제 영상은 조각마다 fps 30 프레임 올림(trim·tpad·fps)이 쌓여 기준 길이보다 조금 길다
+ * (실측: 기준 17.65 s → 영상 17.733 s). 상한이 영상보다 짧으면 -shortest 가 출력을
+ * 조용히 짧게 자르므로, 조각당 2 프레임(1/15 s) + 1 s 여유를 둔다.
+ */
+export function audioPadCapSec(videoSec: number, pieces: number): number {
+  return videoSec + 1 + pieces / 15;
+}
+
+/**
+ * 오디오 그래프 끝(`…[aout]` 앞) 패딩 꼬리 — 오디오가 영상보다 짧아도 -shortest 가 영상을
+ * 자르지 않게 패딩한다(오디오가 길면 지금처럼 영상 길이에서 잘림).
+ * - `asetpts=N/SR/TB`: 오디오 pts 를 표본 수로 다시 매긴다. 그래프 출구에 pts 없는(NOPTS) 프레임이
+ *   섞이면(관측 — amix 출력으로 추정) 옵션 없는 apad 가 그 뒤 패딩 프레임에 쓰레기 pts(≈ -2.09e14 s)를 붙인다.
+ * - `apad=whole_dur=<상한>`: 패딩을 상한에서 끝낸다(유한). 무한 패딩 + -shortest 는 위 pts 와
+ *   만나면 ffmpeg 의 shortest 대기열이 오디오만 쌓다 한도(131072)에서 ENOSPC(exit 228)로 끝나
+ *   잘린 mp4 를 남긴다. 8.0.1 은 간헐 — 짧은 사례(3 s) 측정 1~10%(모양·부하에 따라, 다중 트랙+BGM 이
+ *   가장 잦고 BGM 없는 모양은 0 건 관측). ubuntu 6.1.1 은 옵션 없는 apad 꼴이 매번 실패했고, 이 꼴의
+ *   6.1.1 효과는 아직 미확인(같은 그래프의 apad=whole_dur 단독은 6.1.1 CI 통과) — 근거: 2026-10-16
+ *   apad-shortest 조사.
+ * 상한이 없으면(capSec 생략) pts 재매김만 하고 패딩은 무한으로 둔다.
+ */
+export function audioPadTail(capSec?: number): string {
+  if (capSec === undefined) return 'asetpts=N/SR/TB,apad';
+  if (!Number.isFinite(capSec) || capSec <= 0) {
+    throw new Error(`오디오 패딩 상한이 올바르지 않음: ${capSec}`);
+  }
+  return `asetpts=N/SR/TB,apad=whole_dur=${capSec.toFixed(3)}`;
 }
 
 /** 자막 한 줄의 drawtext 필터(릴스/쇼츠 하단 UI 세이프존 위 y=h-560). */
@@ -56,7 +92,8 @@ function disclosureFilter(fontFile: string, text: string = DISCLOSURE_OVERLAY_TE
  * 조립 ffmpeg 인자.
  * - 클립: 커버 스케일(비율 유지 확대) 후 중앙 크롭 → fps 30 통일 → concat
  * - 오디오: 내레이션 1.0 + BGM(더킹 볼륨) amix / 한쪽만 있으면 단독 / 없으면 무음성
- * - -shortest: 오디오가 길어도 영상 길이에서 끝냄
+ * - -shortest: 오디오가 길어도 영상 길이에서 끝냄. 오디오가 짧으면 끝 패딩(audioPadTail —
+ *   opts.padCapSec 가 있으면 그 상한까지만)으로 영상 길이를 지킨다
  */
 export function buildAssembleArgs(
   spec: ShoppingShortsAssembleSpec,
@@ -103,19 +140,22 @@ export function buildAssembleArgs(
   const videoLabel = overlays.length > 0 ? '[vo]' : '[vc]';
   if (overlays.length > 0) parts.push(`[vc]${overlays.join(',')}[vo]`);
 
-  // 오디오 그래프 — 끝에 apad: 오디오가 영상보다 짧아도 -shortest 가 영상을 자르지 않게
-  // (apad 로 무한 패딩 → shortest = 영상 길이. 오디오가 길면 영상 길이에서 잘림 — 의도대로)
+  // 오디오 그래프 — 끝 패딩: 오디오가 영상보다 짧아도 -shortest 가 영상을 자르지 않게
+  // (패딩 → shortest = 영상 길이. 오디오가 길면 영상 길이에서 잘림 — 의도대로).
+  // 패딩은 pts 재매김 + 상한(opts.padCapSec, CLI 가 클립을 probe 해 넘김) — audioPadTail 참고.
+  // 오디오가 있을 때만 계산한다 — 무음 조립은 padCapSec 를 보지 않는다(0·NaN 이어도 던지지 않음).
+  const padTail = hasNarration || hasMusic ? audioPadTail(opts.padCapSec) : '';
   let audioLabel: string | null = null;
   if (hasNarration && hasMusic) {
     parts.push(`[${narIdx}:a]volume=1.0[an]`);
     parts.push(`[${musIdx}:a]volume=${musicVol}[am]`);
-    parts.push(`[an][am]amix=inputs=2:duration=longest:dropout_transition=2,apad[aout]`);
+    parts.push(`[an][am]amix=inputs=2:duration=longest:dropout_transition=2,${padTail}[aout]`);
     audioLabel = '[aout]';
   } else if (hasNarration) {
-    parts.push(`[${narIdx}:a]volume=1.0,apad[aout]`);
+    parts.push(`[${narIdx}:a]volume=1.0,${padTail}[aout]`);
     audioLabel = '[aout]';
   } else if (hasMusic) {
-    parts.push(`[${musIdx}:a]volume=0.9,apad[aout]`);
+    parts.push(`[${musIdx}:a]volume=0.9,${padTail}[aout]`);
     audioLabel = '[aout]';
   }
 
@@ -338,12 +378,15 @@ export function buildSyncedAssembleArgs(
     parts.push(`[${musIdx}:a]volume=${musicVol},atrim=0:${total.toFixed(3)}[mus]`);
     audioLabels.push('[mus]');
   }
+  // 끝 패딩(pts 재매김 + 상한) — 오디오가 짧으면 영상 끝까지 무음, 길이는 -shortest(영상 끝)가 정한다.
+  // 상한 = 타임라인 total + 여유(audioPadCapSec) — 세그먼트별 프레임 올림으로 영상이 total 보다 길다.
+  const padTail = audioPadTail(audioPadCapSec(total, segments.length));
   let audioLabel: string | null = null;
   if (audioLabels.length === 1) {
-    parts.push(`${audioLabels[0]}apad[aout]`);
+    parts.push(`${audioLabels[0]}${padTail}[aout]`);
     audioLabel = '[aout]';
   } else if (audioLabels.length > 1) {
-    parts.push(`${audioLabels.join('')}amix=inputs=${audioLabels.length}:duration=longest:normalize=0,apad[aout]`);
+    parts.push(`${audioLabels.join('')}amix=inputs=${audioLabels.length}:duration=longest:normalize=0,${padTail}[aout]`);
     audioLabel = '[aout]';
   }
 
