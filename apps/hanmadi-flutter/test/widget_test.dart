@@ -89,6 +89,12 @@ void main() {
     for (final label in ['스터디', 'AI 대화', '번역', '보관함']) {
       await t.tap(find.text(label).last);
       await t.pumpAndSettle();
+      if (label == '스터디') {
+        expect(find.byType(Heading), findsNothing);
+        expect(find.text('처음 만난 사람에게'), findsOneWidget);
+        expect(t.takeException(), isNull);
+        continue;
+      }
       final heading = t.widget<Text>(
         find
             .descendant(
@@ -160,7 +166,7 @@ void main() {
       final m = fixture();
       await t.pumpWidget(HanmadiApp(model: m, initialize: false));
       await t.pumpAndSettle();
-      expect(find.text('오늘도, 한마디 가까이'), findsOneWidget);
+      expect(find.text('처음 만난 사람에게'), findsOneWidget);
       await t.tap(find.text('AI 대화').last);
       await t.pumpAndSettle();
       await t.enterText(find.byKey(const Key('chat-input')), 'こんにちは');
@@ -204,7 +210,7 @@ void main() {
     await t.pumpAndSettle();
     expect(m.studyMode, 'words');
     expect(m.musicSteps['morning'], 2);
-    expect(find.text('아는 단어가, 쓰는 단어로'), findsOneWidget);
+    expect(find.text('연습할 단어가 아직 없어요. 번역이나 대화에서 단어를 저장해 보세요.'), findsOneWidget);
 
     await t.pumpWidget(const SizedBox.shrink());
     m.api.close();
