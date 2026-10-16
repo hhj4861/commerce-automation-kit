@@ -96,3 +96,9 @@ describe('describeUpload', () => {
     expect(values(d.fields, 'cover_image')).toEqual(['@/x/thumb.jpg']);
   });
 });
+
+
+it('Instagram receives the explicit AI disclosure', () => {
+  const fields = buildUploadTextFields({platforms:['instagram'],title:'AI news',aiDisclosed:true}, 'u');
+  expect(fields).toContainEqual({name:'is_ai_generated',value:'true'});
+});

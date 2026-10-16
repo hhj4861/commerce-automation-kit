@@ -1,0 +1,130 @@
+name: AI Card News (Instagram Reels)
+
+on:
+  workflow_run:
+    workflows: ["AI Card News (Telegram)"]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      source_run:
+        description: Successful main card-news run ID (also used for safe recovery)
+        type: string
+        required: true
+      dry_run:
+        description: Render only; never publish
+        type: boolean
+        default: true
+  pull_request:
+    paths:
+      - apps/shopshorts/card-news/**
+      - packages/shorts-publish/**
+      - apps/credential-broker/**
+      - .github/workflows/ai-card-news-reels.yml
+
+permissions: {}
+concurrency:
+  group: ai-card-news-reels-${{ github.event_name == 'pull_request' && github.ref || 'publish' }}
+  cancel-in-progress: false
+  queue: max
+
+jobs:
+  test:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Install render tools and hash-pinned Python dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y ffmpeg fonts-noto-cjk
+          python -m pip install --require-hashes -r apps/shopshorts/card-news/build-requirements.txt
+          python -m pip install --require-hashes --no-build-isolation -r apps/shopshorts/card-news/requirements.txt
+      - run: npm ci --ignore-scripts --workspace @cak/shorts-publish --workspace @cak/credential-broker --include-workspace-root
+      - name: Card-news, reels, upload and credential trust-boundary tests
+        run: |
+          cd apps/shopshorts/card-news
+          python -m unittest -v test_main test_reels
+          cd ../../..
+          npm test -w @cak/shorts-publish
+          npm run typecheck -w @cak/shorts-publish
+          node --test apps/credential-broker/test/broker.test.mjs apps/credential-broker/test/client.test.mjs
+
+  reels:
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      contains(fromJSON('["render","live"]'), vars.CARD_NEWS_REELS_MODE) &&
+      (github.event_name == 'workflow_dispatch' ||
+       (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' &&
+        github.event.workflow_run.head_repository.full_name == github.repository &&
+        contains(fromJSON('["schedule","workflow_dispatch"]'), github.event.workflow_run.event)))
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write # independent ai-reel-claimed / ai-reel-sent ledger tags
+      actions: read # only read an explicitly validated source artifact
+      id-token: write # broker grants only Upload-Post credentials to this workflow
+    env:
+      SOURCE_RUN: ${{ inputs.source_run || github.event.workflow_run.id }}
+      EXECUTE: ${{ vars.CARD_NEWS_REELS_MODE == 'live' && !inputs.dry_run && '1' || '0' }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12'
+      - name: Install render tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y ffmpeg
+          python -m pip install --require-hashes -r apps/shopshorts/card-news/build-requirements.txt
+          python -m pip install --require-hashes --no-build-isolation -r apps/shopshorts/card-news/requirements.txt
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        if: env.EXECUTE == '1'
+        with:
+          node-version: '22'
+      - if: env.EXECUTE == '1'
+        run: npm ci --ignore-scripts --workspace @cak/shorts-publish --include-workspace-root
+      - name: Load only upload credentials from Cloudflare
+        if: env.EXECUTE == '1'
+        env:
+          CAK_SECRETS_URL: ${{ vars.CAK_SECRETS_URL }}
+        run: node apps/credential-broker/github-client.mjs
+      - name: Set isolated render output
+        run: echo "REEL_OUT=$RUNNER_TEMP/card-news-reels" >> "$GITHUB_ENV"
+      - name: Validate source, render and optionally publish
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          CARD_NEWS_UPLOAD_POST_USER: ${{ vars.CARD_NEWS_UPLOAD_POST_USER }}
+          CARD_NEWS_INSTAGRAM_ACCOUNT_ID: ${{ vars.CARD_NEWS_INSTAGRAM_ACCOUNT_ID }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          extra=()
+          if [[ "$EXECUTE" == 1 ]]; then extra+=(--execute); fi
+          python apps/shopshorts/card-news/reels.py --source-run "$SOURCE_RUN" --out "$REEL_OUT" "${extra[@]}"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: card-news-reel-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ env.REEL_OUT }}/
+          retention-days: 14
+      - name: Report public URL or failure to operator
+        if: always() && env.EXECUTE == '1'
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.CARD_NEWS_TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.CARD_NEWS_TELEGRAM_CHAT_ID }}
+          JOB_STATUS: ${{ job.status }}
+        run: python apps/shopshorts/card-news/reels.py --notify --out "$REEL_OUT"

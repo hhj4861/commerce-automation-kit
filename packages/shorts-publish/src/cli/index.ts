@@ -24,7 +24,7 @@ import type { PublishTarget, ShortsMode } from '@cak/contracts';
 import { buildShortsArgs, type ShortsRenderOpts } from '../core/ffargs.js';
 import { describeUpload } from '../core/upload.js';
 import { probe, runFfmpegOrThrow } from '../adapters/ffmpeg.js';
-import { uploadShort, pollStatus } from '../adapters/upload-post.js';
+import { uploadShort, pollStatus, listProfiles } from '../adapters/upload-post.js';
 import { shortsModeSchema, shortsPlatformSchema, youtubePrivacySchema } from '../adapters/schemas.js';
 import { createLogger } from '../obs/logger.js';
 
@@ -196,12 +196,20 @@ async function main(): Promise<void> {
       if (!result.ok) process.exit(1);
       break;
     }
+    case 'profiles': {
+      const apiKey = process.env.UPLOAD_POST_API_KEY;
+      if (!apiKey) throw new UsageError('UPLOAD_POST_API_KEY required');
+      const result = await listProfiles(apiKey);
+      out(result);
+      if (!result.ok) process.exit(1);
+      break;
+    }
     case 'upload': {
       // 이미 9:16 으로 완성된 영상(예: shopping-shorts 동기 조립본)을 렌더 없이 업로드.
       const o = parse(rest, {
         video: STR, user: STR, title: STR, platforms: STR, desc: STR, tags: STR,
         thumbnail: STR, 'yt-privacy': STR, 'tiktok-privacy': STR, 'no-ai-disclose': BOOL,
-        'dry-run': BOOL,
+        'dry-run': BOOL, 'request-id': STR, 'idempotency-key': STR,
       });
       const target = buildTarget(o);
       const video = resolvePath(reqStr(o, 'video'));
@@ -220,7 +228,10 @@ async function main(): Promise<void> {
         out({ ok: true, upload: 'skipped', why, request: describeUpload(target, user ?? '(미설정)', video, thumbPath) });
         break;
       }
-      const result = await uploadShort({ apiKey, user, video, target, ...(thumbPath ? { thumbnail: thumbPath } : {}) });
+      const requestId = optStr(o, 'request-id');
+      const idempotencyKey = optStr(o, 'idempotency-key');
+      const result = await uploadShort({ apiKey, user, video, target, ...(thumbPath ? { thumbnail: thumbPath } : {}),
+        ...(requestId ? { requestId } : {}), ...(idempotencyKey ? { idempotencyKey } : {}) });
       out(result);
       if (result.status === 0) process.exit(75); // 네트워크 순단 = 일시적
       if (!result.ok) process.exit(1);
