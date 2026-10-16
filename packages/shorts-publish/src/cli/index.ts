@@ -197,9 +197,10 @@ async function main(): Promise<void> {
       break;
     }
     case 'profiles': {
+      const o = parse(rest, { user: STR });
       const apiKey = process.env.UPLOAD_POST_API_KEY;
       if (!apiKey) throw new UsageError('UPLOAD_POST_API_KEY required');
-      const result = await listProfiles(apiKey);
+      const result = await listProfiles(apiKey, optStr(o, 'user'));
       out(result);
       if (!result.ok) process.exit(1);
       break;

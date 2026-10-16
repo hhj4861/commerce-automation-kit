@@ -1,6 +1,7 @@
 import { getConversationTutor } from "@/lib/conversation-access";
 import { ConversationError } from "@/lib/conversation";
 import { assertConversationOrigin, conversationFailure, conversationJson, readConversationJson } from "@/lib/conversation-http";
+import { musicYoutubeConfiguration } from "@/lib/youtube-music";
 import { readMusicCollection } from "@/lib/music-collection";
 import { collectMedia, saveMediaOriginal, readMedia, runMediaJob, cancelMediaJob, deleteMediaSource } from "@/lib/media-store";
 export const runtime = "nodejs";
@@ -15,7 +16,7 @@ export async function GET(req: Request) {
     await owner(); const id = new URL(req.url).searchParams.get("id");
     if (id) return conversationJson(await readMedia(id));
     const [data, legacy] = await Promise.all([readMedia(), readMusicCollection()]);
-    return conversationJson({ ...data, legacyMusic: legacy.map(item => ({ id: item.id, title: item.video.title, videoId: item.video.id, language: item.language })) });
+    return conversationJson({ ...data, youtube: musicYoutubeConfiguration(), legacyMusic: legacy.map(item => ({ id: item.id, title: item.video.title, videoId: item.video.id, language: item.language })) });
   } catch (error) { return conversationFailure(error); }
 }
 export async function POST(req: Request) {

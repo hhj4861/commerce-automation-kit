@@ -1,3 +1,4 @@
+import { musicYoutubeConfiguration } from "@/lib/youtube-music";
 import { cachedYoutubeSearch } from "@/lib/youtube-cache";
 import { createHash } from "node:crypto";
 import { getConversationTutor } from "@/lib/conversation-access";
@@ -44,6 +45,7 @@ export async function GET() {
       ),
       events: knowledge.events,
       searchConfigured: !!process.env.YOUTUBE_API_KEY,
+      captionImportConfigured: musicYoutubeConfiguration().captions,
     });
   } catch (e) {
     return conversationFailure(e);

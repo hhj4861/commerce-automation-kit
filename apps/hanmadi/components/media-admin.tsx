@@ -5,7 +5,7 @@ import { MusicTimingEditor } from "./music-timing-editor";
 import { studyLanguages, type StudyLanguage } from "@/lib/v2";
 import type { MediaDetail, MediaSummary, MediaPurpose } from "@/lib/media-source";
 
-type Data = Partial<MediaDetail> & { sources?: MediaSummary[]; legacyMusic?: { id: string; title: string; language: StudyLanguage }[] };
+type Data = Partial<MediaDetail> & { youtube?: { search: boolean; captions: boolean }; sources?: MediaSummary[]; legacyMusic?: { id: string; title: string; language: StudyLanguage }[] };
 async function api(body?: Record<string, unknown>, id?: string, signal?: AbortSignal): Promise<Data> {
   const response = await fetch("/api/study/admin/media" + (id ? `?id=${encodeURIComponent(id)}` : ""), {
     method: body ? "POST" : "GET", cache: "no-store", headers: body ? { "Content-Type": "application/json" } : {},
@@ -70,7 +70,7 @@ export function MediaAdmin({ initialId, initialRaw = "", onOpenLegacy, onReview 
     {detail.source && <section className="hm-panel" aria-label="선택한 원문">
       <h3>{detail.source.title}</h3><p>용도: {detail.source.purposes.map(p => p === "music" ? "음악" : "스터디").join(" · ")} · 원문 버전 {detail.source.revision}</p>
       <div className="hm-row">{(["study", "music"] as const).filter(purpose => !detail.source!.purposes.includes(purpose)).map(purpose => <button key={purpose} disabled={busy} onClick={() => void work({ action: "collect", video: detail.source!.videoId, title: detail.source!.title, language: detail.source!.language, purposes: [...detail.source!.purposes, purpose] }, "학습 용도를 추가했어요. 원문과 처리 이력은 유지돼요.")}>{purpose === "music" ? "음악 학습 용도 추가" : "회화 수업 용도 추가"}</button>)}</div>
-      <details className="ma-new-version" key={detail.source.id} open={detail.source.originals.length === 0}><summary>새 원문 버전 추가</summary><OriginalEditor key={`${detail.source.id}:${detail.source.revision}`} source={detail.source} initialRaw={initialRaw} busy={busy} save={body => work(body, "원문 버전과 처리 작업을 저장했어요. ‘정리·재개’로 줄과 시간을 확인해 주세요.")} /></details>
+      <details className="ma-new-version" key={detail.source.id} open={detail.source.originals.length === 0}><summary>새 원문 버전 추가</summary><OriginalEditor captionImportConfigured={list.youtube?.captions ?? null} key={`${detail.source.id}:${detail.source.revision}`} source={detail.source} initialRaw={initialRaw} busy={busy} save={body => work(body, "원문 버전과 처리 작업을 저장했어요. ‘정리·재개’로 줄과 시간을 확인해 주세요.")} /></details>
       {onReview && <div className="ks-next-stage"><p>다음 단계 · 검수·반영</p>{detail.source.purposes.map(purpose => <button key={purpose} disabled={busy || (purpose === "music" && !detail.jobs?.some(j => j.sourceRevision === detail.source!.revision && j.status === "ready"))} onClick={() => onReview(detail as MediaDetail, purpose)}>{purpose === "music" ? "음악 자료 만들기로" : "회화 자료 만들기로"}</button>)}<small>음악은 최신 원문 정리 완료가 필요해요. 회화는 영상 분석 또는 정리한 원문을 사용할 수 있어요.</small></div>}
       <h4>처리 작업</h4>{!detail.jobs?.length && <p>원문을 등록하면 처리 작업이 생겨요.</p>}{detail.jobs?.slice().reverse().map(job => <article className="ma-job" data-status={job.status} key={job.id} aria-label={`원문 버전 ${job.sourceRevision} 작업`}>
         <h5>버전 {job.sourceRevision} · {statuses[job.status]}</h5><p>{stages[job.stage]} · 시도 {job.attempts.length}/5</p>
@@ -89,10 +89,10 @@ export function MediaAdmin({ initialId, initialRaw = "", onOpenLegacy, onReview 
     </div></div>
   </section>;
 }
-function OriginalEditor({ source, initialRaw, busy, save }: { initialRaw: string; source: NonNullable<Data["source"]>; busy: boolean; save: (body: Record<string, unknown>) => Promise<boolean> }) {
+function OriginalEditor({ source, initialRaw, busy, save, captionImportConfigured }: { captionImportConfigured: boolean | null; initialRaw: string; source: NonNullable<Data["source"]>; busy: boolean; save: (body: Record<string, unknown>) => Promise<boolean> }) {
   const [raw, setRaw] = useState(initialRaw), [rights, setRights] = useState(""), [confirmed, setConfirmed] = useState(false);
   const [fileError, setFileError] = useState(""), [reading, setReading] = useState(false);
-  const request = useRef(""), fileEpoch = useRef(0);
+  const request = useRef(""), fileEpoch = useRef(0), fileInput = useRef<HTMLInputElement>(null);
   function updateRaw(value: string) { fileEpoch.current++; setRaw(value); request.current = ""; }
   async function upload(file?: File) {
     const epoch = ++fileEpoch.current;
@@ -114,9 +114,9 @@ function OriginalEditor({ source, initialRaw, busy, save }: { initialRaw: string
   }}>
     <fieldset disabled={busy || reading} className="music-fields">
       <p>원문은 소유자 전용 저장소에 보관해요. 최대 8개 버전이며 아래 삭제로 모두 제거할 수 있어요. 모델 재학습에는 자동 제공하지 않아요.</p>
-      <MediaCaptionImport source={source} disabled={busy || reading} onImport={value => { if (!raw || window.confirm("작성 중인 원문을 가져온 자막으로 바꿀까요?")) updateRaw(value); }} />
+      <MediaCaptionImport configured={captionImportConfigured} onUseFile={() => { fileInput.current?.scrollIntoView({ block: "center", behavior: "instant" }); fileInput.current?.focus(); }} source={source} disabled={busy || reading} onImport={value => { if (!raw || window.confirm("작성 중인 원문을 가져온 자막으로 바꿀까요?")) updateRaw(value); }} />
       {fileError && <p role="alert">{fileError}</p>}
-      <label>원문 파일 연결<input type="file" accept=".txt,.srt,.vtt,.lrc,text/plain" onChange={e => void upload(e.target.files?.[0])} /></label>
+      <label>원문 파일 연결<input ref={fileInput} type="file" accept=".txt,.srt,.vtt,.lrc,text/plain" onChange={e => void upload(e.target.files?.[0])} /></label>
       <label>보관할 원문<textarea aria-label="보관할 원문" required rows={7} maxLength={12000} value={raw} onChange={e => updateRaw(e.target.value)} placeholder="2~100줄의 TXT 또는 SRT·VTT·LRC를 붙여 넣어 주세요." /></label>
       <small>12,000자 · 한 줄 250자 이하. 시간이 없는 원문도읽기용으로 보관할 수 있어요. 원문을 수정하면 새 버전의 작업을 만들어요.</small>
       {source.purposes.includes("music") && <MusicTimingEditor key={source.id} source={raw} videoId={source.videoId} onApply={updateRaw} />}

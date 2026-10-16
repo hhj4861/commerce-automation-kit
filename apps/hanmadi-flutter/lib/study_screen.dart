@@ -5,6 +5,7 @@ import 'study_model.dart';
 import 'audio_service.dart';
 import 'models.dart';
 import 'widgets.dart';
+import 'study_widgets.dart';
 
 class StudyTabs extends StatelessWidget {
   final StudyModel m;
@@ -12,12 +13,10 @@ class StudyTabs extends StatelessWidget {
   const StudyTabs({super.key, required this.m, this.inMusic = false});
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(bottom: 22),
+    padding: const EdgeInsets.only(bottom: 20),
     child: Container(
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: soft,
-        borderRadius: BorderRadius.circular(19),
+      decoration: const BoxDecoration(
+        border: Border(bottom: BorderSide(color: outline, width: .7)),
       ),
       child: Row(
         children: [
@@ -27,25 +26,22 @@ class StudyTabs extends StatelessWidget {
             'music': '음악',
           }.entries)
             Expanded(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 3),
+              child: Semantics(
+                selected: inMusic
+                    ? entry.key == 'music'
+                    : m.studyMode == entry.key,
                 child: TextButton(
                   style: TextButton.styleFrom(
-                    backgroundColor:
-                        (inMusic
-                            ? entry.key == 'music'
-                            : m.studyMode == entry.key)
-                        ? Colors.white
-                        : Colors.transparent,
                     foregroundColor:
                         (inMusic
                             ? entry.key == 'music'
                             : m.studyMode == entry.key)
                         ? brand
                         : muted,
-                    minimumSize: const Size(0, 46),
+                    minimumSize: const Size(0, 52),
+                    padding: EdgeInsets.zero,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(13),
+                      borderRadius: BorderRadius.circular(10),
                     ),
                   ),
                   onPressed: m.busy
@@ -56,9 +52,33 @@ class StudyTabs extends StatelessWidget {
                           m.changed();
                           if (inMusic) context.go('/study');
                         },
-                  child: Text(
-                    entry.value,
-                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 13),
+                        child: Text(
+                          entry.value,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ),
+                      Container(
+                        height: 3,
+                        margin: const EdgeInsets.symmetric(horizontal: 12),
+                        decoration: BoxDecoration(
+                          color:
+                              (inMusic
+                                  ? entry.key == 'music'
+                                  : m.studyMode == entry.key)
+                              ? brand
+                              : Colors.transparent,
+                          borderRadius: BorderRadius.circular(3),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -69,10 +89,19 @@ class StudyTabs extends StatelessWidget {
   );
 }
 
-class StudyScreen extends StatelessWidget {
+class StudyScreen extends StatefulWidget {
   final StudyModel m;
   final AudioService audio;
   const StudyScreen({super.key, required this.m, required this.audio});
+  @override
+  State<StudyScreen> createState() => _StudyScreenState();
+}
+
+class _StudyScreenState extends State<StudyScreen> {
+  StudyModel get m => widget.m;
+  AudioService get audio => widget.audio;
+  String? wordPackId;
+
   @override
   Widget build(BuildContext context) {
     final lessons = m.units
@@ -82,18 +111,6 @@ class StudyScreen extends StatelessWidget {
     final selected = lessons.isNotEmpty ? lessons : allLessons;
     return PageBody(
       children: [
-        Heading(
-          m.studyMode == 'words'
-              ? '아는 단어가, 쓰는 단어로'
-              : m.studyMode == 'music'
-              ? '좋아하는 리듬으로 배우기'
-              : '오늘도, 한마디 가까이',
-          m.studyMode == 'words'
-              ? '뜻을 떠올리고 문장 속에서 익혀요.'
-              : m.studyMode == 'music'
-              ? '한 줄을 듣고, 단어를 익히고, 대화로 이어가요.'
-              : '외운 말이 나의 말이 되는 작은 연습.',
-        ),
         StudyTabs(m: m),
         if (m.profile.isEmpty)
           Sheet(
@@ -119,24 +136,14 @@ class StudyScreen extends StatelessWidget {
             ),
           ),
         if (m.profile.isNotEmpty && m.studyMode == 'conversation') ...[
-          Row(
-            children: [
-              const Text('오늘의 회화', style: sectionTitle),
-              const Spacer(),
-              Text(
-                '레벨 ${m.level}',
-                style: const TextStyle(color: muted, fontSize: 13),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          AppSelect<String>(
+          StudyControlRow<String>(
             label: '어떤 상황을 연습할까요?',
             value: m.scene,
             choices: {
               for (final scene in objects(m.catalog['scenes']))
                 scene['id'] as String: scene['title'] as String,
             },
+            detail: '레벨 ${m.level}',
             onChanged: m.busy
                 ? null
                 : (v) {
@@ -144,107 +151,79 @@ class StudyScreen extends StatelessWidget {
                     m.changed();
                   },
           ),
-          const SizedBox(height: 18),
           if (selected.isEmpty)
             const Sheet(child: Text('자료를 불러오지 못했어요. 다시 불러와 주세요.')),
           for (final unit in selected.take(4))
             Padding(
-              padding: const EdgeInsets.only(bottom: 16),
-              child: Sheet(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      unit.source == 'admin'
-                          ? '검수된 학습 자료'
-                          : unit.source == 'music'
-                          ? '노래에서 대화로'
-                          : '나의 일상 회화',
-                      style: const TextStyle(color: brand, fontSize: 12),
-                    ),
-                    const SizedBox(height: 12),
-                    Text(unit.title, style: sectionTitle),
-                    const SizedBox(height: 18),
-                    PhraseView(unit.phrases.first, compact: true),
-                    const SizedBox(height: 22),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: [
-                        Primary(
-                          '회화 연습하기',
-                          onPressed: () => context.go(
-                            '/study/lesson/${Uri.encodeComponent(unit.id)}',
+              padding: const EdgeInsets.only(bottom: 22),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  LearningSurface(
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Semantics(
+                              header: true,
+                              child: Text(unit.title, style: sectionTitle),
+                            ),
                           ),
-                        ),
-                        ListenButton(
+                          const SizedBox(width: 8),
+                          StudyArtwork(scene: unit.scene),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+                      if (unit.phrases.isNotEmpty) ...[
+                        StudyPhrase(
                           phrase: unit.phrases.first,
                           model: m,
                           audio: audio,
                         ),
-                      ],
-                    ),
-                    if (object(m.profile['completedLessons'])[unit.id] != null)
-                      const Padding(
-                        padding: EdgeInsets.only(top: 12),
-                        child: Text(
-                          '✓ 학습 완료 · 다시 연습할 수 있어요',
-                          style: TextStyle(color: brand, fontSize: 12),
+                        const SizedBox(height: 8),
+                        Center(
+                          child: ListenButton(
+                            phrase: unit.phrases.first,
+                            model: m,
+                            audio: audio,
+                            rate: .8,
+                          ),
                         ),
-                      ),
-                  ],
-                ),
-              ),
-            ),
-          const SizedBox(height: 12),
-          Sheet(
-            color: soft,
-            child: Row(
-              children: [
-                const Icon(Icons.auto_awesome_outlined, color: brand),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '복습할 표현 ${m.due}개',
-                        style: const TextStyle(fontWeight: FontWeight.w600),
-                      ),
-                      const Text(
-                        '나의 표현을 다시 꺼내 볼까요?',
-                        style: TextStyle(color: muted, fontSize: 13),
-                      ),
+                      ] else
+                        const Text('이 자료에는 연습할 문장이 없어요.'),
+                      if (object(m.profile['completedLessons'])[unit.id] !=
+                          null)
+                        const Padding(
+                          padding: EdgeInsets.only(top: 8),
+                          child: Text(
+                            '✓ 학습 완료',
+                            style: TextStyle(color: brand, fontSize: 12),
+                          ),
+                        ),
                     ],
                   ),
-                ),
-                IconButton(
-                  tooltip: '보관함에서 복습',
-                  onPressed: () => context.go('/library'),
-                  icon: const Icon(Icons.arrow_forward_rounded),
-                ),
-              ],
+                  const SizedBox(height: 12),
+                  Primary(
+                    '회화 연습하기',
+                    icon: Icons.chat_bubble_outline_rounded,
+                    onPressed: unit.phrases.isEmpty
+                        ? null
+                        : () => context.go(
+                            '/study/lesson/${Uri.encodeComponent(unit.id)}',
+                          ),
+                  ),
+                ],
+              ),
             ),
+          SavedStudyLink(due: m.due),
+        ],
+        if (m.studyMode == 'words')
+          _WordStudy(
+            m: m,
+            audio: audio,
+            selectedId: wordPackId,
+            onSelected: (v) => setState(() => wordPackId = v),
           ),
-        ],
-        if (m.studyMode == 'words') ...[
-          if (m.words.isNotEmpty)
-            _Pack(
-              m: m,
-              audio: audio,
-              title: '내 단어장 복습',
-              description: '직접 저장한 단어 ${m.words.length}개',
-              words: m.words,
-            ),
-          for (final pack in objects(m.catalog['wordPacks']))
-            _Pack(
-              m: m,
-              audio: audio,
-              title: pack['title'],
-              description: pack['description'],
-              words: objects(pack['words']),
-            ),
-        ],
         if (m.studyMode == 'music') ...[
           for (final song in m.songs)
             Padding(
@@ -328,32 +307,117 @@ class StudyScreen extends StatelessWidget {
   }
 }
 
-class _Pack extends StatelessWidget {
+class _WordStudy extends StatelessWidget {
   final StudyModel m;
   final AudioService audio;
-  final String title, description;
-  final List<Json> words;
-  const _Pack({
+  final String? selectedId;
+  final ValueChanged<String> onSelected;
+  const _WordStudy({
     required this.m,
     required this.audio,
-    required this.title,
-    required this.description,
-    required this.words,
+    required this.selectedId,
+    required this.onSelected,
   });
+
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(bottom: 16),
-    child: Sheet(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(title, style: sectionTitle),
-          const SizedBox(height: 8),
-          Text(description, style: const TextStyle(color: muted)),
-          const SizedBox(height: 18),
+  Widget build(BuildContext context) {
+    final packs = [
+      ...objects(m.catalog['wordPacks']),
+      if (m.words.isNotEmpty)
+        {'id': 'saved', 'title': '내 단어장', 'words': m.words},
+    ];
+    if (packs.isEmpty) {
+      return const Sheet(child: Text('연습할 단어가 아직 없어요. 번역이나 대화에서 단어를 저장해 보세요.'));
+    }
+    final pack = packs.firstWhere(
+      (p) => p['id'] == selectedId,
+      orElse: () => packs.first,
+    );
+    final words = objects(pack['words']);
+    final word = words.isEmpty ? const <String, dynamic>{} : words.first;
+    final phrase = Phrase.fromJson(word);
+    final example = object(word['example']);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        StudyControlRow<String>(
+          label: '단어 묶음',
+          value: pack['id'] as String,
+          choices: {
+            for (final p in packs) p['id'] as String: p['title'] as String,
+          },
+          detail: '${words.length}개 단어',
+          onChanged: m.busy ? null : onSelected,
+        ),
+        if (words.isNotEmpty) ...[
+          LearningSurface(
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          SelectableText(
+                            phrase.text,
+                            style: const TextStyle(
+                              fontFamily: 'NotoSansKR',
+                              fontFamilyFallback: uiFallback,
+                              letterSpacing: 0,
+                              fontSize: 32,
+                              height: 1.4,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          if (phrase.reading.isNotEmpty) ...[
+                            const SizedBox(height: 8),
+                            Text(
+                              phrase.reading,
+                              style: const TextStyle(
+                                color: muted,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ],
+                          const SizedBox(height: 12),
+                          Text(
+                            phrase.meaning,
+                            style: const TextStyle(fontSize: 19),
+                          ),
+                          ListenButton(
+                            phrase: phrase,
+                            model: m,
+                            audio: audio,
+                            iconOnly: true,
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    StudyArtwork(
+                      scene: pack['id'] as String?,
+                      meaning: phrase.meaning,
+                      size: 88,
+                    ),
+                  ],
+                ),
+              ),
+              if (example.isNotEmpty)
+                StudyPhrase(
+                  phrase: Phrase.fromJson(example),
+                  model: m,
+                  audio: audio,
+                ),
+            ],
+          ),
+          const SizedBox(height: 12),
           Primary(
-            '${words.length}개 단어 연습',
-            onPressed: words.isEmpty
+            '단어 연습하기',
+            icon: Icons.style_outlined,
+            onPressed: m.busy
                 ? null
                 : () => showModalBottomSheet(
                     context: context,
@@ -363,10 +427,13 @@ class _Pack extends StatelessWidget {
                         WordPractice(m: m, audio: audio, words: words),
                   ),
           ),
-        ],
-      ),
-    ),
-  );
+        ] else
+          const Sheet(child: Text('이 묶음에는 연습할 단어가 없어요. 다른 묶음을 골라 주세요.')),
+        const SizedBox(height: 12),
+        const SavedStudyLink(words: true),
+      ],
+    );
+  }
 }
 
 class WordPractice extends StatefulWidget {

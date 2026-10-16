@@ -41,6 +41,7 @@ function searchError(error: unknown) {
 
 export function YoutubeVideoSearch({
   configured,
+  captionImportConfigured,
   disabled,
   onBusyChange,
   onCollect,
@@ -49,6 +50,7 @@ export function YoutubeVideoSearch({
   onCollect: (videos: YoutubeVideo[], language: StudyLanguage, purposes: MediaPurpose[]) => Promise<void>;
   onOpenSources?: () => void;
   configured: boolean;
+  captionImportConfigured: boolean | null;
   disabled: boolean;
   onBusyChange: (busy: boolean) => void;
 }) {
@@ -236,6 +238,11 @@ export function YoutubeVideoSearch({
           </div>
           <span className="vs-service">YouTube 검색</span>
         </div>
+        <aside className="hm-notice" aria-label="자막 준비 상태">
+          <strong>{captionImportConfigured === null ? "자막 연결 상태 확인 중" : captionImportConfigured ? "연결 채널의 영상만 자막 가져오기를 시도할 수 있어요" : "현재는 자막 파일로 준비할 수 있어요"}</strong>
+          <p>{captionImportConfigured === null ? "확인 전에는 YouTube 자막 가져오기를 실행하지 않아요." : captionImportConfigured ? "자막용 채널 정보가 설정돼 있지만, 영상별 가져오기 권한은 아직 확인되지 않았어요. 공개 자막이 보여도 가져오지 못할 수 있어요." : "자막 가져오기용 YouTube 채널이 연결되지 않았어요. TXT·SRT·VTT·LRC 원문을 준비할 수 있는 영상을 선택하세요. 영상만 담아도 자막은 자동으로 확보되지 않아요."}</p>
+          <p>검색 결과는 공개 영상이며 ‘자막 가져오기 가능’ 목록이 아니에요. 파일 등록과 원문 보관은 ‘원문·작업’에서 이어갑니다.</p>
+        </aside>
         <form
           className="vs-search"
           onSubmit={(e) => {
@@ -463,6 +470,7 @@ export function YoutubeVideoSearch({
                       <span className="vs-link-hint">YouTube에서 보기 ↗</span>
                     </a>
                     <p>{video.channel || "채널 정보 없음"}</p>
+                    <p className="hm-muted">{captionImportConfigured === true ? "자막 가져오기 권한 미확인 · 파일로도 준비 가능" : captionImportConfigured === false ? "자막 파일 준비 필요 · 자동 가져오기 불가" : "자막 연결 상태 확인 중"}</p>
                     {checked && (
                       <span className="vs-selected-label">
                         자료 준비 목록에 담았어요
@@ -495,7 +503,7 @@ export function YoutubeVideoSearch({
         </div>
       </section>
       <section id="video-preparation" className="hm-panel" aria-label="영상 수집 설정">
-        <h2>선택한 영상 {selected.length}개</h2><p>영상 정보만 저장하며 AI 생성·평가·게시는 실행하지 않아요.</p>
+        <h2>선택한 영상 {selected.length}개</h2><p>영상 정보만 저장하며 자막은 자동으로 확보하지 않아요. AI 생성·평가·게시도 실행하지 않아요.</p>
         <fieldset disabled={busy || disabled} className="music-fields">
           <label>수집 언어<select value={collectionLanguage} onChange={e => setCollectionLanguage(e.target.value as StudyLanguage)}>{Object.entries(studyLanguages).map(([id, item]) => <option key={id} value={id}>{item.name}</option>)}</select></label>
           <label>수집 용도<select value={purpose} onChange={e => setPurpose(e.target.value)}><option value="study">회화 수업</option><option value="music">음악 학습</option><option value="both">회화 수업과 음악 학습</option></select></label>

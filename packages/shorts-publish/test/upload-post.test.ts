@@ -7,11 +7,23 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 vi.mock('node:fs', () => ({ openAsBlob: async () => new Blob(['x']) }));
 
 import type { PublishTarget } from '@cak/contracts';
-import { uploadShort, pollStatus } from '../src/adapters/upload-post.js';
+import { uploadShort, pollStatus, listProfiles } from '../src/adapters/upload-post.js';
 
 const target: PublishTarget = { platforms: ['youtube'], title: 'T', aiDisclosed: true };
 
 afterEach(() => vi.unstubAllGlobals());
+
+it('reads the selected profile with its opaque destination ID, preserving list mode', async () => {
+  const body = { success: true, profile: { username: 'u/name', social_accounts: {
+    instagram: { username: '123', handle: 'test_account', reauth_required: false },
+  } } };
+  const fetcher = vi.fn(async (_url: string, _options: RequestInit) => new Response(JSON.stringify(body)));
+  vi.stubGlobal('fetch', fetcher);
+  expect((await listProfiles('k', 'u/name')).body).toEqual(body);
+  expect(fetcher.mock.calls[0]?.[0]).toBe('https://api.upload-post.com/api/uploadposts/users/u%2Fname');
+  await listProfiles('k');
+  expect(fetcher.mock.calls[1]?.[0]).toBe('https://api.upload-post.com/api/uploadposts/users');
+});
 
 describe('uploadShort', () => {
   it('네트워크 순단 → status 0 + failures(투명화, silent drop 아님)', async () => {

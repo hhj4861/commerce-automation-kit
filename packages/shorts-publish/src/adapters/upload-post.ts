@@ -114,8 +114,10 @@ function summarize(body: unknown): string {
 }
 
 /** Read-only connection check before public publishing. Never modifies OAuth connections. */
-export async function listProfiles(apiKey: string): Promise<StatusResult> {
-  const res = await fetch('https://api.upload-post.com/api/uploadposts/users', {
+export async function listProfiles(apiKey: string, user?: string): Promise<StatusResult> {
+  // The list response can omit social account IDs; the single-profile endpoint returns them.
+  const suffix = user === undefined ? '' : `/${encodeURIComponent(user)}`;
+  const res = await fetch(`https://api.upload-post.com/api/uploadposts/users${suffix}`, {
     headers: { Authorization: `Apikey ${apiKey}` }, signal: AbortSignal.timeout(30000),
   });
   return { ok: res.ok, status: res.status, body: await readBody(res) };
