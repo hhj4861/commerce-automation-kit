@@ -2,8 +2,9 @@
 
 사용자 `머지하고 배포해줘` 승인으로 PR #283을 main에 머지하고 중앙 인증 Worker를 배포했다.
 릴스 workflow는 운영 main에 등록됐고 실제 원격 영상 생성이 성공했다. 사용자는 후속 `응 그걸로 해줘`로
-`@ttangkong_pom` 게시를 승인했다. 현재 연결 만료로 `CARD_NEWS_REELS_MODE=render`를 유지한다.
-Instagram 게시·자동 업로드 활성화·재연결 후 계정 ID/잔여 할당량 검증은 미완료다.
+`@ttangkong_pom` 게시를 승인했다. 사용자 재연결 완료 후 `reauth_required=false`를 확인했다.
+목록 API의 계정 ID 누락을 수정하는 PR #285 머지 전까지 `CARD_NEWS_REELS_MODE=render`를 유지한다.
+Instagram 게시·자동 업로드 활성화·잔여 할당량 검증은 미완료다.
 
 ## 실제 적용
 
@@ -14,7 +15,7 @@ Instagram 게시·자동 업로드 활성화·재연결 후 계정 ID/잔여 할
 - 최종 운영 버전: `c85cdaf8-de98-4e2c-b667-e4ffd595f84d`.
 - 직전 운영 버전(복구 기준): `20b02c1b-f68c-43ee-8882-a456d129df20`.
 - 실제 Worker 다운로드 원문에서 새 `ai-card-news-reels.yml` 정책 존재 확인.
-- 게시 모드: `CARD_NEWS_REELS_MODE=render`. Instagram 계정 ID·업로드 프로필 override는 설정하지 않았다.
+- 게시 모드: `CARD_NEWS_REELS_MODE=render`. 승인한 Instagram 고유 ID `38317492141183625`와 프로필 override `commerce_account`를 GitHub 변수에 설정했다.
 - 기존 텔레그램: `CARD_NEWS_SCHEDULE=on`, 전환일 `2026-10-16` 유지.
 
 ## 검증
@@ -42,9 +43,9 @@ Instagram 게시·자동 업로드 활성화·재연결 후 계정 ID/잔여 할
 ## 남은 단계
 
 1. 사용자 계정 지정 완료: `@ttangkong_pom`, Upload-Post 프로필 `commerce_account`.
-2. 공식 `GET /api/uploadposts/users` 실조회: 해당 프로필 Instagram handle 일치, `reauth_required=true`, 고유 username ID 미반환. `/me`는 HTTP 200, Default 플랜. 기존 다른 프로필은 변경하지 않았다.
-3. 공식 `generate-jwt`로 기존 `commerce_account` 연결 페이지를 생성하고 로컬 기본 브라우저에 열었다. 로그인 링크·인증 값은 출력하거나 파일/문서에 저장하지 않았다. 사용자가 Instagram 재연결을 마칠 때까지 공개 게시·live 전환은 진행하지 않는다.
-4. 재연결 후 현재 고유 ID·할당량을 확인하고 ID를 고정한 뒤 첫 공개 게시 검증 → 실제 공개 URL 확인 → `live` 일일 자동 게시를 활성화한다.
+2. 공식 `generate-jwt` 연결 화면에서 사용자가 재연결 완료. `/users` 및 `/users/commerce_account` 실조회로 handle 일치, `reauth_required=false` 확인. `/me`는 HTTP 200, Default 플랜이나 사용량 필드를 반환하지 않아 잔여 할당량은 미확인이다.
+3. 실제 목록 API는 ID를 누락하고 단일 프로필 API는 고유 ID를 반환한다. 계정 ID 검증을 완화하지 않고 단일 프로필 조회를 쓰도록 수정: https://github.com/hhj4861/commerce-automation-kit/pull/285 (브랜치 commit `a13e1d9`). Python 63개, shorts-publish 45개, 타입 검사 및 수정 CLI의 실제 ID 대조 통과.
+4. PR #285 명시 머지 승인 대기. 머지 후 첫 공개 게시 검증 → 실제 공개 URL 확인 → `live` 일일 자동 게시를 활성화한다. 아직 공개 업로드는 시도하지 않았다.
 
 이 문서는 현재 프로젝트 docs에 저장한 배포 기록이다. 공개 Instagram 게시물은 아직 없으며,
 원격 render 성공을 업로드 인증 또는 실제 게시 성공으로 간주하지 않는다.
