@@ -1,3 +1,4 @@
+import { saveSource, musicReview } from "./content-flow-helpers.mjs";
 import { openAdminTool } from "./admin-navigation.mjs";
 // Local integration: real Next routes/store/UI; official YouTube HTTP responses are fixtures.
 import assert from 'node:assert/strict';
@@ -38,7 +39,7 @@ const provider = createServer(async (req, res) => {
   }
   if (u.pathname === '/token') return res.end(JSON.stringify({ access_token: 'fixture-access' }));
   if (u.pathname === '/youtube/v3/search') {
-    searches++; assert.equal(u.searchParams.get('videoCategoryId'), '10'); assert.equal(u.searchParams.get('videoEmbeddable'), 'true');
+    searches++; assert([null, '10'].includes(u.searchParams.get('videoCategoryId'))); if (u.searchParams.get('videoCategoryId') === '10') assert.equal(u.searchParams.get('videoEmbeddable'), 'true');
     const more = u.searchParams.has('pageToken');
     return res.end(JSON.stringify({ items: [{ id: { videoId: more ? secondId : id }, snippet: { title: more ? 'Second original song' : 'Morning original song', channelTitle: 'Hanmadi fixture' } }], ...(!more ? { nextPageToken: 'PAGE2' } : {}) }));
   }
@@ -82,30 +83,48 @@ try {
     getAvailablePlaybackRates(){return [1];}setPlaybackRate(){}getPlaybackRate(){return 1;}seekTo(){}getCurrentTime(){return 0;}getPlayerState(){return 2;}playVideo(){}pauseVideo(){}destroy(){this.frame.remove();}
   }};window.onYouTubeIframeAPIReady();` }));
   page = await owner.newPage(); const errors = []; page.on('pageerror', e => errors.push(e.message));
-  await page.goto(base + '/study/admin'); await openAdminTool(page, '음악 관리');
-  await page.getByLabel('수집할 학습 언어').selectOption('en'); await page.getByLabel('노래·아티스트 검색').fill('Morning');
-  await page.getByRole('button', { name: '음악 영상 검색', exact: true }).click();
-  await page.getByRole('button', { name: '수집함에 담기', exact: true }).click();
+  await page.goto(base + '/study/admin'); await openAdminTool(page, '영상 찾기');
+  await page.getByLabel('검색어', { exact: true }).fill('Morning');
+  await page.getByRole('button', { name: '영상 검색', exact: true }).click();
+  await page.getByRole('checkbox', { name: 'Morning original song 선택', exact: true }).check();
+  await page.getByLabel('수집 언어').selectOption('en'); await page.getByLabel('수집 용도').selectOption('both');
+  await page.getByRole('button', { name: '공통 준비함에 담기', exact: true }).click();
+  await page.getByRole('heading', { name: '원문·작업', exact: true, level: 1 }).waitFor();
+  const common = await (await owner.request.get(base + '/api/study/admin/media')).json();
+  assert.equal(common.sources.length, 1); assert.deepEqual(common.sources[0].purposes, ['music', 'study']);
+  assert.equal(generations, 0); assert.equal(evaluations, 0);
+  await page.getByText('YouTube 자막 가져오기', { exact: true }).click();
+  await page.getByRole('button', { name: 'YouTube 자막 확인', exact: true }).click();
+  await page.getByRole('alert').filter({ hasText: '권한이 없어요' }).waitFor();
+  assert.equal(await page.getByLabel('보관할 원문', { exact: true }).inputValue(), '');
+  denied = false;
+  await page.getByRole('button', { name: 'YouTube 자막 확인', exact: true }).click();
+  await page.getByRole('button', { name: '선택한 자막 가져오기', exact: true }).click();
+  await page.waitForFunction(() => document.querySelector('textarea')?.value.includes('Good morning'));
+  assert.equal(await page.getByLabel('보관할 원문', { exact: true }).inputValue(), subtitle);
+  assert.equal((await (await owner.request.get(base + '/api/study/admin/media')).json()).sources[0].originalCount, 0, 'caption preview is not saved without consent');
+  denied = true;
+  // Historical caption integration remains accessible from preparation; metadata/caption providers are real routes with HTTP fixtures.
+  const legacyPost = async data => { const r = await owner.request.post(endpoint, { headers: { Origin: base }, data }); assert(r.ok(), await r.text()); return r.json(); };
+  await legacyPost({ action: 'collection-add', video: id, language: 'en' });
+  const next = await legacyPost({ action: 'collection-search', query: 'Morning', language: 'en', pageToken: 'PAGE2' });
+  assert.equal(next.videos[0].id, secondId); assert.equal(searches, 2);
+  await legacyPost({ action: 'collection-add', video: 'https://youtu.be/' + secondId, language: 'en' });
+  await openAdminTool(page, '기존 음악 수집함');
   let card = page.getByRole('article', { name: 'Morning original song 수집 정보', exact: true });
   await card.waitFor();
   await card.getByRole('button', { name: '원곡 미리보기', exact: true }).click();
   await card.getByRole('button', { name: '앱에서 원곡 듣기', exact: true }).click();
   await card.locator('iframe').waitFor(); assert.match(await card.locator('iframe').getAttribute('src'), /youtube-nocookie.com\/embed\/abcdefghijk/);
   await card.getByRole('button', { name: '미리보기 닫기', exact: true }).click(); assert.equal(await card.locator('iframe').count(), 0);
- assert(await page.getByRole('button', { name: '수집됨', exact: true }).isDisabled());
-  await page.getByRole('button', { name: '검색 결과 더 보기', exact: true }).click();
-  await page.getByRole('link', { name: 'Second original song ↗', exact: true }).waitFor(); assert.equal(searches, 2);
-  await page.getByLabel('수집할 YouTube 주소').fill('https://youtu.be/' + secondId);
-  await page.getByRole('button', { name: '주소로 수집', exact: true }).click();
-  await page.getByRole('article', { name: 'Second original song 수집 정보', exact: true }).waitFor();
-  await card.getByText('자막 연결', { exact: true }).click();
+  await card.locator('summary').filter({ hasText: /^자막 연결/ }).click();
   await card.getByRole('button', { name: 'YouTube 자막 확인', exact: true }).click();
   await page.getByRole('alert').filter({ hasText: '권한이 없어요' }).waitFor();
   assert.equal((await (await owner.request.get(endpoint)).json()).collection.length, 2);
   denied = false; await card.getByRole('button', { name: 'YouTube 자막 확인', exact: true }).click();
   await card.getByRole('button', { name: '선택한 자막 가져오기', exact: true }).click();
   await card.getByText('자막 확보 · 학습 등록 전', { exact: true }).waitFor(); assert.equal(downloads, 1);
-  await page.reload(); await openAdminTool(page, '음악 관리');
+  await page.reload(); await openAdminTool(page, '기존 음악 수집함');
   card = page.getByRole('article', { name: 'Morning original song 수집 정보', exact: true }); await card.waitFor();
   assert.equal((await (await owner.request.get(endpoint)).json()).collection.find(v => v.video.id === id).source, subtitle);
   await card.getByText('자막 연결 · YouTube에서 확보', { exact: true }).click();
@@ -115,13 +134,13 @@ try {
   await card.getByRole('button', { name: '자막 보관', exact: true }).click();
   await card.getByText('자막 연결 · 파일·직접 등록', { exact: true }).waitFor();
   await card.getByRole('button', { name: '이 자막으로 학습 원문 등록', exact: true }).click();
-  assert.equal(await page.getByLabel('곡 제목', { exact: true }).inputValue(), 'Morning original song');
-  assert.match(await page.getByLabel('학습에 사용할 원문').inputValue(), /Good evening/);
-  assert.equal(await page.getByLabel('아티스트', { exact: true }).inputValue(), '');
-  await page.getByLabel('아티스트', { exact: true }).fill('Hanmadi fixture');
-  await page.getByLabel('사용권 근거', { exact: true }).fill('Original fixture, permission for AI processing and learning reuse.');
-  await page.getByRole('checkbox', { name: /원문을 AI에 제공/ }).check();
-  await page.getByRole('button', { name: '원문 등록', exact: true }).click();
+  await page.getByLabel('보관할 원문', { exact: true }).waitFor();
+  assert.match(await page.getByLabel('보관할 원문').inputValue(), /Good evening/);
+  await saveSource(page, subtitle.replace('Good morning', 'Good evening'));
+  assert.equal(generations, 0, 'source saving and normalization have no model calls');
+  await musicReview(page);
+  await openAdminTool(page, '기존 음악 수집함');
+  card = page.getByRole('article', { name: 'Morning original song 수집 정보', exact: true });
   await card.getByText('학습 원문 등록됨 · 자료 생성 필요', { exact: true }).waitFor();
   const state = await (await owner.request.get(endpoint)).json(); assert.equal(state.songs.length, 1); assert.equal(state.songs[0].status, 'draft');
   const stale = await owner.request.post(endpoint, { headers: { Origin: base }, data: { action: 'collection-source', id: 'en:' + id, revision: 1, source: 'wrong\ntext' } }); assert.equal(stale.status(), 409);
@@ -144,15 +163,17 @@ try {
   await learnerPage.getByText('선택한 곡은 아직 게시되지 않았거나 게시가 내려갔어요.', { exact: false }).waitFor();
   assert.equal(new URL(learnerPage.url()).pathname, learningPath, 'login retains the chosen song');
   assert.equal(await learnerPage.locator('.hm-song-practice').count(), 0, 'unpublished deep links never substitute a different song');
+  await openAdminTool(page, '음악 검수');
   const musicCard = page.getByRole('article', { name: 'Morning original song 관리', exact: true });
   await musicCard.getByRole('button', { name: 'AI 자료 만들기', exact: true }).click();
   const publish = musicCard.getByRole('button', { name: '선택한 2개 구간 앱에 게시', exact: true });
   await publish.waitFor(); assert(await publish.isDisabled());
-  await card.getByText('학습 자료 검수·게시 대기', { exact: true }).waitFor();
+  await musicCard.getByRole('button', { name: '선택한 2개 구간 앱에 게시', exact: true }).waitFor();
   assert.equal((await (await learner.request.get(base + learnerPath)).json()).songs.filter(s => s.managed).length, 0);
   await musicCard.getByRole('checkbox', { name: /선택한 가사·단어·회화/ }).check(); await publish.click();
-  await card.getByText('앱에서 학습 가능', { exact: true }).waitFor();
-  assert.equal(await card.getByRole('link', { name: '앱에서 이 곡 학습 ↗', exact: true }).getAttribute('href'), learningPath);
+  await openAdminTool(page, '음악 관리');
+  await musicCard.getByRole('button', { name: '앱에서 게시 내리기', exact: true }).waitFor();
+  assert.equal(await musicCard.getByRole('link', { name: '앱에서 이 곡 학습 ↗', exact: true }).getAttribute('href'), learningPath);
   await learnerPage.route('https://www.youtube-nocookie.com/**', r => r.fulfill({ contentType: 'text/html', body: '<title>Official player fixture</title>' }));
   await learnerPage.route('https://www.youtube.com/iframe_api', r => r.fulfill({ contentType: 'application/javascript', body: `window.YT={Player:class {
     constructor(frame,options){this.frame=frame;this.events=options.events;this.time=0;this.state=2;window.musicVideo=this;setTimeout(()=>options.events.onReady(),0);}
@@ -212,10 +233,13 @@ try {
   assert.equal(await learnerPage.getByRole('combobox', { name: '학습할 곡', exact: true }).inputValue(), registered.id, 'published songs are selected before original practice songs');
   await learnerPage.getByRole('heading', { name: '한 곡을 내 한마디로!', exact: true }).waitFor();
   page.on('dialog', d => d.accept());
+  await openAdminTool(page, '기존 음악 수집함');
   await card.getByRole('button', { name: '수집함에서 지우기', exact: true }).click(); await card.waitFor({ state: 'detached' });
   const remaining = await (await owner.request.get(endpoint)).json(); assert.equal(remaining.collection.length, 4); assert.equal(remaining.songs.length, 4);
   assert((await (await learner.request.get(base + learnerPath)).json()).songs.some(s => s.id === registered.id), 'collection removal preserves published study');
+  await openAdminTool(page, '음악 관리');
   await musicCard.getByRole('button', { name: '앱에서 게시 내리기', exact: true }).click();
+  await openAdminTool(page, '음악 검수');
   await musicCard.getByRole('button', { name: '선택한 2개 구간 앱에 게시', exact: true }).waitFor();
   await learnerPage.getByRole('button', { name: '곡 목록 새로고침', exact: true }).click();
   await learnerPage.getByText('선택한 곡은 아직 게시되지 않았거나 게시가 내려갔어요.', { exact: false }).waitFor();

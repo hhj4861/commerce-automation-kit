@@ -179,8 +179,15 @@ export async function verifyYoutubeSearch({
   await page.route("**/api/study/admin", searchHandler);
   await page.route("**/api/study/admin/videos", analysisHandler);
   try {
-    const query = page.getByLabel("검색어", { exact: true }),
+    const query = page.getByLabel("검색어", { exact: true });
+    let queue = page.getByRole("region", { name: "영상 수집 설정" });
+    async function sendToReview(items) {
+      await page.getByRole("button", { name: "공통 준비함에 담기", exact: true }).click();
+      await openAdminTool(page, "자료 만들기");
+      const sources = page.getByRole("region", { name: "준비한 콘텐츠", exact: true });
+      for (const video of items) await sources.getByRole("listitem").filter({ has: page.getByText(video.title, { exact: true }) }).getByRole("button", { name: "이 자료로 회화 준비", exact: true }).click();
       queue = page.getByRole("complementary", { name: "자료 준비 목록" });
+    }
     assert.equal(await page.locator(".vs-search select").count(), 0);
     await query.fill("카페 회화");
     await query.press("Enter");
@@ -195,7 +202,7 @@ export async function verifyYoutubeSearch({
       })
       .click();
     await page.waitForFunction(
-      () => document.querySelectorAll(".vs-batch-queue > li").length === 10,
+      () => document.querySelectorAll("#video-preparation li").length === 10,
     );
     assert.equal(searchCalls, 2);
     assert(
@@ -215,6 +222,7 @@ export async function verifyYoutubeSearch({
       0,
       "no manual source inputs",
     );
+    await sendToReview(videos.slice(0, 10));
     await queue.getByLabel("학습 언어", { exact: true }).selectOption("ja");
     await queue
       .getByLabel("자료에 사용할 상황", { exact: true })
@@ -286,13 +294,16 @@ export async function verifyYoutubeSearch({
     await page.getByText("저장 당시 JEV·교차 검수 보기", { exact: true }).click();
     assert.match(await page.locator("details").filter({ hasText: "저장 당시 JEV·교차 검수 보기" }).innerText(), /평가 분류: 근거·내용 불확실/);
     assert(await page.getByRole("button", { name: "검수 완료 · 학습에 게시", exact: true }).isDisabled());
-    await page.getByRole("button", { name: "새 초안", exact: true }).click();
-    await openAdminTool(page, "영상 찾기");
     assert.deepEqual(errors, []);
     await queue.getByRole("button", { name: "전체 해제", exact: true }).click();
+    await page.getByRole("button", { name: "새 초안", exact: true }).click();
+    await openAdminTool(page, "영상 찾기");
     // Reproduce the user's single unsupported video, then a network-unknown outcome.
     await query.fill("카페 회화"); await query.press("Enter");
     await page.locator(`.vs-video input`).nth(4).check();
+    await sendToReview([videos[4]]);
+    await queue.getByLabel("학습 언어", { exact: true }).selectOption("ja");
+    await queue.getByLabel("자료에 사용할 상황", { exact: true }).selectOption("cafe");
     await queue.getByRole("button", { name: "전체 분석·자료 만들기 (1개)", exact: true }).click();
     await queue.getByText("저장된 초안이 없어요", { exact: true }).waitFor();
     assert.equal(await queue.getByRole("button", { name: /전체 분석|다시 시도|남은 영상 분석/ }).count(), 0);
@@ -306,7 +317,11 @@ export async function verifyYoutubeSearch({
     await queue.screenshot({ path: resolve(screenshots, "video-blocked-result-390.png") });
     await queue.getByRole("button", { name: "분석 불가 영상 빼기 (1개)", exact: true }).click();
     assert.equal(await queue.locator("li").count(), 0);
+    await openAdminTool(page, "영상 찾기");
     await page.locator(".vs-video input").first().check();
+    await sendToReview([videos[0]]);
+    await queue.getByLabel("학습 언어", { exact: true }).selectOption("ja");
+    await queue.getByLabel("자료에 사용할 상황", { exact: true }).selectOption("cafe");
     unknown = true;
     await queue.getByRole("button", { name: "전체 분석·자료 만들기 (1개)", exact: true }).click();
     await queue.getByText("학습 가치 평가 중", { exact: true }).waitFor();

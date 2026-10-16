@@ -141,3 +141,20 @@ test('Pages takes central credentials and fails closed if required bindings are 
   assert.deepEqual((await result.json()).record.value,value);
   await assert.rejects(readSecrets(config,['HIGGSFIELD_TOKEN']));
  });
+
+
+test('reels completion event receives only upload credentials and no other workflow gains workflow_run access', () => {
+  const c = { ...claims('ai-card-news-reels.yml'), event_name: 'workflow_run' };
+  assert.deepEqual(authorizeGithub(c, {}).keys, ['UPLOAD_POST_API_KEY', 'UPLOAD_POST_USER']);
+  assert.throws(() => authorizeGithub({ ...claims(), event_name: 'workflow_run' }, {}));
+  assert.throws(() => authorizeGithub({ ...c, event_name: 'pull_request' }, {}));
+  assert.throws(() => authorizeGithub({ ...c, repository_id: 'attacker' }, {}));
+});
+
+
+test('reels credentials stay main-only even if another runtime ref is allowlisted', () => {
+  const ref = 'refs/heads/feature';
+  const identity = {...claims('ai-card-news-reels.yml'), ref, sub:`${SUBJECT_PREFIX}:ref:${ref}`,
+    workflow_ref:`${REPOSITORY}/.github/workflows/ai-card-news-reels.yml@${ref}`};
+  assert.throws(() => authorizeGithub(identity, {GITHUB_ALLOWED_REFS:ref}));
+});

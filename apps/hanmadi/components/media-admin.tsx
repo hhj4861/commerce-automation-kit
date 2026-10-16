@@ -1,7 +1,9 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import { MediaCaptionImport } from "./media-caption-import";
+import { MusicTimingEditor } from "./music-timing-editor";
 import { studyLanguages, type StudyLanguage } from "@/lib/v2";
-import type { MediaDetail, MediaSummary } from "@/lib/media-source";
+import type { MediaDetail, MediaSummary, MediaPurpose } from "@/lib/media-source";
 
 type Data = Partial<MediaDetail> & { sources?: MediaSummary[]; legacyMusic?: { id: string; title: string; language: StudyLanguage }[] };
 async function api(body?: Record<string, unknown>, id?: string, signal?: AbortSignal): Promise<Data> {
@@ -14,12 +16,12 @@ async function api(body?: Record<string, unknown>, id?: string, signal?: AbortSi
 const statuses = { queued: "처리 대기", running: "처리 중", ready: "원문 정리 완료", failed: "처리 실패 · 재개 가능", cancelled: "작업 취소됨" };
 const outcomes = { ready: "완료", failed: "실패", interrupted: "연결 중단", cancelled: "취소" };
 const stages = { validate: "원문 확인", normalize: "줄·시간 정리", ready: "정리 완료" };
-export function MediaAdmin() {
+export function MediaAdmin({ initialId, initialRaw = "", onOpenLegacy, onReview }: { initialId?: string; initialRaw?: string; onOpenLegacy?: () => void; onReview?: (detail: MediaDetail, purpose: MediaPurpose) => void }) {
   const [list, setList] = useState<Data>({}), [detail, setDetail] = useState<Data>({});
   const [selected, setSelected] = useState(""), [busy, setBusy] = useState(false), [error, setError] = useState(""), [notice, setNotice] = useState("");
   const [title, setTitle] = useState(""), [video, setVideo] = useState(""), [language, setLanguage] = useState<StudyLanguage>("ja"), [purpose, setPurpose] = useState("study");
   const pending = useRef(false), selection = useRef(0), registration = useRef<HTMLDetailsElement>(null);
-  useEffect(() => { const controller = new AbortController(); void api(undefined, undefined, controller.signal).then(setList).catch(e => { if (!controller.signal.aborted) setError(e.message); }); return () => controller.abort(); }, []);
+  useEffect(() => { const controller = new AbortController(); void api(undefined, undefined, controller.signal).then(async data => { setList(data); if (initialId) { const selected = await api(undefined, initialId, controller.signal); setSelected(initialId); setDetail(selected); } }).catch(e => { if (!controller.signal.aborted) setError(e.message); }); return () => controller.abort(); }, [initialId]);
   async function choose(id: string) {
     const epoch = ++selection.current; setSelected(id); setDetail({}); setError("");
     try { const data = await api(undefined, id); if (epoch === selection.current) setDetail(data); }
@@ -41,7 +43,7 @@ export function MediaAdmin() {
   }
   return <section className="ma" aria-label="공통 원문·작업 관리">
     <div className="ma-heading"><div><h2>원문과 처리 이력을 한곳에서</h2>
-    <p>사용 허용된 자막·원문을 버전별로 보관해요. 여기서 정리를 마쳐도 수업·음악 자료가 자동 생성되거나 게시되지는 않아요.</p></div><button disabled={busy} onClick={() => { void api().then(setList).then(() => { if (selected) return choose(selected); }).catch(e => setError(e.message)); }}>원문 목록 새로고침</button></div>
+    <p>사용 허용된 자막·원문을 버전별로 보관해요. 정리한 원문은 ‘검수·반영’으로 넘겨 회화·음악 자료를 만들어요. 게시는 검수 후 따로 확인해요.</p></div><button disabled={busy} onClick={() => { void api().then(setList).then(() => { if (selected) return choose(selected); }).catch(e => setError(e.message)); }}>원문 목록 새로고침</button>{onOpenLegacy && <button disabled={busy} onClick={onOpenLegacy}>기존 음악 수집함</button>}</div>
     {error && <p role="alert" className="hm-alert">{error}</p>}{notice && <p role="status" className="hm-notice">{notice}</p>}
     <details ref={registration} className="hm-panel ma-register"><summary>새 원본 등록</summary><form onSubmit={e => { e.preventDefault(); void work({ action: "collect", title, video, language, purposes: purpose === "both" ? ["study", "music"] : [purpose] }, "원본을 등록했어요. 원문을 연결해 주세요."); }}>
       <fieldset disabled={busy} className="music-fields"><label>원본 제목<input required maxLength={100} value={title} onChange={e => setTitle(e.target.value)} /></label>
@@ -67,7 +69,9 @@ export function MediaAdmin() {
     {selected && !detail.source && <p role="status">{error ? "목록에서 원문을 다시 선택해 주세요." : "선택한 원문을 불러오는 중이에요."}</p>}
     {detail.source && <section className="hm-panel" aria-label="선택한 원문">
       <h3>{detail.source.title}</h3><p>용도: {detail.source.purposes.map(p => p === "music" ? "음악" : "스터디").join(" · ")} · 원문 버전 {detail.source.revision}</p>
-      <details className="ma-new-version" key={detail.source.id} open={detail.source.originals.length === 0}><summary>새 원문 버전 추가</summary><OriginalEditor key={`${detail.source.id}:${detail.source.revision}`} source={detail.source} busy={busy} save={body => work(body, "원문 버전과 처리 작업을 저장했어요. ‘정리·재개’로 줄과 시간을 확인해 주세요.")} /></details>
+      <div className="hm-row">{(["study", "music"] as const).filter(purpose => !detail.source!.purposes.includes(purpose)).map(purpose => <button key={purpose} disabled={busy} onClick={() => void work({ action: "collect", video: detail.source!.videoId, title: detail.source!.title, language: detail.source!.language, purposes: [...detail.source!.purposes, purpose] }, "학습 용도를 추가했어요. 원문과 처리 이력은 유지돼요.")}>{purpose === "music" ? "음악 학습 용도 추가" : "회화 수업 용도 추가"}</button>)}</div>
+      <details className="ma-new-version" key={detail.source.id} open={detail.source.originals.length === 0}><summary>새 원문 버전 추가</summary><OriginalEditor key={`${detail.source.id}:${detail.source.revision}`} source={detail.source} initialRaw={initialRaw} busy={busy} save={body => work(body, "원문 버전과 처리 작업을 저장했어요. ‘정리·재개’로 줄과 시간을 확인해 주세요.")} /></details>
+      {onReview && <div className="ks-next-stage"><p>다음 단계 · 검수·반영</p>{detail.source.purposes.map(purpose => <button key={purpose} disabled={busy || (purpose === "music" && !detail.jobs?.some(j => j.sourceRevision === detail.source!.revision && j.status === "ready"))} onClick={() => onReview(detail as MediaDetail, purpose)}>{purpose === "music" ? "음악 자료 만들기로" : "회화 자료 만들기로"}</button>)}<small>음악은 최신 원문 정리 완료가 필요해요. 회화는 영상 분석 또는 정리한 원문을 사용할 수 있어요.</small></div>}
       <h4>처리 작업</h4>{!detail.jobs?.length && <p>원문을 등록하면 처리 작업이 생겨요.</p>}{detail.jobs?.slice().reverse().map(job => <article className="ma-job" data-status={job.status} key={job.id} aria-label={`원문 버전 ${job.sourceRevision} 작업`}>
         <h5>버전 {job.sourceRevision} · {statuses[job.status]}</h5><p>{stages[job.stage]} · 시도 {job.attempts.length}/5</p>
         {job.error && <p>{job.error.message}</p>}
@@ -85,13 +89,37 @@ export function MediaAdmin() {
     </div></div>
   </section>;
 }
-function OriginalEditor({ source, busy, save }: { source: NonNullable<Data["source"]>; busy: boolean; save: (body: Record<string, unknown>) => Promise<boolean> }) {
-  const [raw, setRaw] = useState(""), [rights, setRights] = useState(""), [confirmed, setConfirmed] = useState(false);
-  const request = useRef("");
-  return <form onSubmit={e => { e.preventDefault(); request.current ||= crypto.randomUUID(); void save({ action: "save-source", id: source.id, revision: source.revision, raw, rights, confirmed, requestId: request.current }); }}>
-    <fieldset disabled={busy} className="music-fields"><p>원문은 소유자 전용 저장소에 보관해요. 최대 8개 버전이며 아래 삭제로 모두 제거할 수 있어요. 모델 재학습에는 자동 제공하지 않아요.</p>
-      <label>보관할 원문<textarea required rows={7} maxLength={12000} value={raw} onChange={e => { setRaw(e.target.value); request.current = ""; }} placeholder="2~100줄의 TXT 또는 SRT·VTT·LRC를 붙여 넣어 주세요." /></label>
-      <small>12,000자 · 한 줄 250자 이하. 시간이 없는 원문도 읽기용으로 보관할 수 있어요. 원문을 수정하면 새 버전의 작업을 만들어요.</small>
+function OriginalEditor({ source, initialRaw, busy, save }: { initialRaw: string; source: NonNullable<Data["source"]>; busy: boolean; save: (body: Record<string, unknown>) => Promise<boolean> }) {
+  const [raw, setRaw] = useState(initialRaw), [rights, setRights] = useState(""), [confirmed, setConfirmed] = useState(false);
+  const [fileError, setFileError] = useState(""), [reading, setReading] = useState(false);
+  const request = useRef(""), fileEpoch = useRef(0);
+  function updateRaw(value: string) { fileEpoch.current++; setRaw(value); request.current = ""; }
+  async function upload(file?: File) {
+    const epoch = ++fileEpoch.current;
+    setFileError("");
+    if (!file) return;
+    if (file.size > 64000 || !/\.(txt|srt|vtt|lrc)$/i.test(file.name)) { setFileError("64KB 이하 TXT·SRT·VTT·LRC 파일을 선택해 주세요."); return; }
+    setReading(true);
+    try {
+      const text = await file.text();
+      if (epoch === fileEpoch.current) { setRaw(text); request.current = ""; }
+    } catch { setFileError("원문 파일을 읽지 못했어요."); }
+    finally { setReading(false); }
+  }
+  return <form onSubmit={e => {
+    e.preventDefault();
+    if (reading) return;
+    request.current ||= crypto.randomUUID();
+    void save({ action: "save-source", id: source.id, revision: source.revision, raw, rights, confirmed, requestId: request.current });
+  }}>
+    <fieldset disabled={busy || reading} className="music-fields">
+      <p>원문은 소유자 전용 저장소에 보관해요. 최대 8개 버전이며 아래 삭제로 모두 제거할 수 있어요. 모델 재학습에는 자동 제공하지 않아요.</p>
+      <MediaCaptionImport source={source} disabled={busy || reading} onImport={value => { if (!raw || window.confirm("작성 중인 원문을 가져온 자막으로 바꿀까요?")) updateRaw(value); }} />
+      {fileError && <p role="alert">{fileError}</p>}
+      <label>원문 파일 연결<input type="file" accept=".txt,.srt,.vtt,.lrc,text/plain" onChange={e => void upload(e.target.files?.[0])} /></label>
+      <label>보관할 원문<textarea aria-label="보관할 원문" required rows={7} maxLength={12000} value={raw} onChange={e => updateRaw(e.target.value)} placeholder="2~100줄의 TXT 또는 SRT·VTT·LRC를 붙여 넣어 주세요." /></label>
+      <small>12,000자 · 한 줄 250자 이하. 시간이 없는 원문도읽기용으로 보관할 수 있어요. 원문을 수정하면 새 버전의 작업을 만들어요.</small>
+      {source.purposes.includes("music") && <MusicTimingEditor key={source.id} source={raw} videoId={source.videoId} onApply={updateRaw} />}
       <label>원문 보관·학습 이용 근거<input required minLength={10} maxLength={800} value={rights} onChange={e => { setRights(e.target.value); request.current = ""; }} placeholder="자체 제작, 이용 허락과 허용 범위 등" /></label>
       <label style={{ display: "flex", alignItems: "flex-start", gap: 8 }}><input style={{ width: "auto", marginTop: 4, flexShrink: 0 }} type="checkbox" checked={confirmed} onChange={e => setConfirmed(e.target.checked)} />이 원문을 보관하고 학습 자료 제작에 이용할 권한을 확인했어요.</label>
       <button disabled={!confirmed} type="submit">새 원문 버전 저장</button>

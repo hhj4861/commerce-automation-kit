@@ -48,12 +48,13 @@ try {
   }
   // All eight tools remain reachable while only three areas occupy primary navigation.
   await page.goto(base + '/study/admin');
+  await page.getByRole('navigation', { name: '업무 영역', exact: true }).waitFor();
   assert.equal(await page.getByRole('navigation', { name: '업무 영역', exact: true }).getByRole('button').count(), 3);
   const tools = [
-    ['영상 찾기', '수업의 시작이 될 영상을 찾아보세요'], ['원문·작업', '원문과 처리 이력을 한곳에서'],
+    ['영상 찾기', '학습의 시작이 될 영상을 모으세요'], ['원문·작업', '원문과 처리 이력을 한곳에서'],
     ['자료 만들기', '언어와 상황'], ['번역 후보', '사용자가 제공한 번역 후보'],
     ['앱 반영 확인', 'AI가 참고할 게시 자료 확인'], ['학습 관리', '수업 자료와 처리 이력'],
-    ['음악 관리', '음악 학습 자료'], ['AI 진단', 'AI가 지금 제대로 응답하나요?'],
+    ['음악 관리', '앱에 반영된 음악'], ['음악 검수', '음악 자료 생성·검수'], ['게시 수업', '앱에 반영된 수업'], ['AI 진단', 'AI가 지금 제대로 응답하나요?'],
   ];
   for (const [name, heading] of tools) {
     await openAdminTool(page, name);
@@ -68,7 +69,7 @@ try {
   await page.screenshot({ path: resolve(dir, 'workspace-desktop.png'), fullPage: true });
   await page.getByRole('button', { name: '검수·반영', exact: true }).focus();
   await page.keyboard.press('Enter');
-  assert.equal(await page.getByRole('heading', { level: 1 }).innerText(), '앱 반영 확인', 'Area restores its most recent tool');
+  assert.equal(await page.getByRole('heading', { level: 1 }).innerText(), '음악 검수', 'Area restores its most recent tool');
   await page.setViewportSize({ width: 390, height: 844 });
   await page.screenshot({ path: resolve(dir, 'workspace-mobile.png'), fullPage: true });
   await page.setViewportSize({ width: 1440, height: 1000 });

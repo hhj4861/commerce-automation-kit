@@ -1,6 +1,12 @@
 "use client";
 import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
+import { ContentSourceQueue, mediaRequest } from "./content-source-queue";
+import { VideoPreparationQueue } from "./video-preparation-queue";
+import type { MediaDetail, MediaPurpose } from "@/lib/media-source";
+import type { MusicCollectedVideo } from "@/lib/music-collection";
+import type { OwnedMusic } from "@/lib/owned-music";
+import type { YoutubeVideo } from "@/lib/youtube-search";
 import { YoutubeVideoSearch } from "./youtube-video-search";
 import dynamic from "next/dynamic";
 const MediaAdmin = dynamic(() => import("./media-admin").then(m => m.MediaAdmin), { loading: () => <p role="status">원문·작업 관리를 불러오는 중이에요.</p> });
@@ -26,20 +32,23 @@ import type {
   KnowledgeEvent,
   KnowledgeMatch,
 } from "@/lib/knowledge";
-type AdminTab = "videos" | "media" | "editor" | "inbox" | "preview" | "learning" | "music" | "diagnostics";
+type AdminTab = "videos" | "media" | "editor" | "inbox" | "preview" | "learning" | "music" | "musicReview" | "legacyMusic" | "published" | "diagnostics";
 const adminGroups = [
-  { id: "prepare", label: "콘텐츠 준비", description: "영상 수집과 원문 정리", tabs: ["videos", "media"] },
-  { id: "review", label: "검수·반영", description: "초안 편집부터 검수·게시까지", tabs: ["editor", "inbox", "preview"] },
-  { id: "operate", label: "학습 운영", description: "수업 자료와 음악 학습 관리", tabs: ["learning", "music"] },
+  { id: "prepare", label: "콘텐츠 준비", description: "영상 수집과 원문 정리", tabs: ["videos", "media", "inbox"] },
+  { id: "review", label: "검수·반영", description: "초안 편집부터 검수·게시까지", tabs: ["editor", "musicReview", "learning"] },
+  { id: "operate", label: "학습 운영", description: "앱에 게시된 자료와 적용 상태 관리", tabs: ["published", "music", "preview"] },
 ] as const;
 const adminPages: Record<AdminTab, { label: string; description: string }> = {
-  videos: { label: "영상 찾기", description: "수업에 사용할 영상을 모으고, 분석 결과를 학습 초안으로 준비하세요." },
+  videos: { label: "영상 찾기", description: "회화·음악 모두 YouTube 영상에서 시작하세요. 용도를 선택해 공통 준비함에 담습니다." },
   media: { label: "원문·작업", description: "자막과 원문을 보관하고, 정리 작업의 결과와 이력을 확인하세요." },
-  editor: { label: "자료 만들기", description: "초안을 고르고 표현을 다듬으세요. 직접 검수한 자료만 학습에 게시됩니다." },
+  editor: { label: "회화 검수", description: "초안을 고르고 표현을 다듬으세요. 직접 검수한 자료만 학습에 게시됩니다." },
   inbox: { label: "번역 후보", description: "사용자가 제공에 동의한 표현을 검토하고, 적합한 후보를 교재로 가져오세요." },
   preview: { label: "앱 반영 확인", description: "게시한 자료가 학습자의 AI 대화와 번역에 어떻게 쓰이는지 확인하세요." },
-  learning: { label: "학습 관리", description: "학습에 사용할 자료와 버전을 관리하고 처리 결과를 확인하세요." },
-  music: { label: "음악 관리", description: "영상을 수집하고 원문을 연결해, 검수한 노래를 음악 학습에 게시하세요." },
+  learning: { label: "검색·모델 적용", description: "게시된 교재로 검색·모델 적용 후보를 만들고 평가·검수한 뒤 적용하세요." },
+  music: { label: "음악 관리", description: "앱에 게시된 곡과 학습 구간을 확인하고, 필요한 경우 게시를 내리세요." },
+  musicReview: { label: "음악 검수", description: "준비한 원문으로 음악 자료를 생성하고 검수한 구간만 게시하세요." },
+  legacyMusic: { label: "기존 음악 수집함", description: "이전에 수집한 영상·자막을 확인해 콘텐츠 준비로 연결하세요. 새 영상은 ‘영상 찾기’에서 수집하세요." },
+  published: { label: "게시 수업", description: "현재 앱에 반영된 회화 수업을 확인하고 수정이 필요하면 검수 단계로 이동하세요." },
   diagnostics: { label: "AI 진단", description: "언어별 연결 상태와 진단 이력을 확인하세요. 진단 실행은 별도 작업입니다." },
 };
 type PublicContribution = Omit<Contribution, "actor">;
@@ -57,7 +66,12 @@ async function api(body?: unknown) {
 }
 export function V2Admin({ appHref = "/study" }: { appHref?: string }) {
   const [tab, setTab] = useState<AdminTab>("videos");
-  const lastTab = useRef<Record<string, AdminTab>>({ prepare: "videos", review: "editor", operate: "learning" });
+  const lastTab = useRef<Record<string, AdminTab>>({ prepare: "videos", review: "editor", operate: "published" });
+  const [musicBusy, setMusicBusy] = useState(false);
+  const [mediaRaw, setMediaRaw] = useState("");
+  const [mediaId, setMediaId] = useState<string | undefined>();
+  const [reviewSource, setReviewSource] = useState<MediaDetail | undefined>();
+  const [videoSources, setVideoSources] = useState<YoutubeVideo[]>([]);
   const [dataReady, setDataReady] = useState(false);
   const [contributions, setContributions] = useState<PublicContribution[]>([]);
   const [events, setEvents] = useState<KnowledgeEvent[]>([]);
@@ -166,13 +180,7 @@ export function V2Admin({ appHref = "/study" }: { appHref?: string }) {
   }
   function reviewVideo(draft: ContentDraft) {
     if (
-      (title ||
-        sourceUrl ||
-        rights ||
-        transcript ||
-        units.length ||
-        current ||
-        candidateId) &&
+      (units.length || current || candidateId) &&
       !window.confirm(
         "생성한 자료를 검수할까요? 편집 화면의 미저장 내용은 사라져요. 저장한 초안은 유지됩니다.",
       )
@@ -213,12 +221,37 @@ export function V2Admin({ appHref = "/study" }: { appHref?: string }) {
       setBusy(false);
     }
   }
-  const group = adminGroups.find(g => (g.tabs as readonly string[]).includes(tab));
+  function useSource(detail: MediaDetail, purpose: MediaPurpose) {
+    if (busy || videoBusy || musicBusy) return;
+    const source = detail.source, original = source.originals.at(-1);
+    if (purpose === "study" && original && original.rights.length > 500) { setError("회화 자료의 이용 근거는 500자까지 전달할 수 있어요. 콘텐츠 준비에서 근거를 확인해 새 버전으로 정리해 주세요."); return; }
+    setReviewSource(detail); setError("");
+    if (purpose === "music") { navigate("musicReview"); return; }
+    const ready = detail.jobs.find(j => j.sourceRevision === source.revision && j.status === "ready");
+    setCurrent(null); setCandidateId(null); setUnits([]); setReviewed(false); setConfirmed(false);
+    setLanguage(source.language); setTitle(source.title); setSourceUrl(`https://www.youtube.com/watch?v=${source.videoId}`);
+    setRights(original?.rights ?? ""); setTranscript(ready ? original?.raw ?? "" : "");
+    setVideoSources(previous => ready ? [] : [...previous.filter(v => v.id !== source.videoId), { id: source.videoId, title: source.title, url: `https://www.youtube.com/watch?v=${source.videoId}`, channel: "", thumbnail: null }].slice(-10));
+    navigate("editor");
+  }
+  async function prepareMusic(song?: OwnedMusic, legacy?: MusicCollectedVideo) {
+    if (!song && !legacy) { navigate("videos"); return; }
+    try {
+      const data = await mediaRequest({ action: "collect", video: song?.videoId ?? legacy!.video.id, title: song?.title ?? legacy!.video.title.slice(0, 100), language: song?.language ?? legacy!.language, purposes: ["music"] });
+      setMediaId(data.source.id); setMediaRaw(song?.source ?? legacy?.source ?? ""); navigate("media");
+    } catch (e) { setError(e instanceof Error ? e.message : "기존 원문을 준비함에 연결하지 못했어요."); }
+  }
+  async function collectVideos(videos: YoutubeVideo[], language: StudyLanguage, purposes: MediaPurpose[]) {
+    let first: string | undefined;
+    for (const video of videos) { const data = await mediaRequest({ action: "collect", video: video.id, title: video.title.slice(0, 100), language, purposes }); first ??= data.source.id; }
+    setMediaRaw(""); setMediaId(first); setTab("media");
+  }
+  const group = adminGroups.find(g => (g.tabs as readonly string[]).includes(tab)) ?? (tab === "legacyMusic" ? adminGroups[0] : undefined);
   const pendingCount = contributions.filter(c => c.status === "pending").length;
   function navigate(next: AdminTab) {
-    if (busy || videoBusy) return;
+    if (busy || videoBusy || musicBusy) return;
     if (group) lastTab.current[group.id] = tab;
-    const nextGroup = adminGroups.find(g => (g.tabs as readonly string[]).includes(next));
+    const nextGroup = adminGroups.find(g => (g.tabs as readonly string[]).includes(next)) ?? (next === "legacyMusic" ? adminGroups[0] : undefined);
     if (nextGroup) lastTab.current[nextGroup.id] = next;
     setTab(next); setError(""); setNotice("");
   }
@@ -229,12 +262,12 @@ export function V2Admin({ appHref = "/study" }: { appHref?: string }) {
         <Link className="hm-brand" href="/study/admin">
           한마디<span>콘텐츠 스튜디오</span>
         </Link>
-        <div className="ks-header-actions"><button className="ks-diagnostics" aria-pressed={tab === "diagnostics"} disabled={busy || videoBusy} onClick={() => navigate("diagnostics")}>AI 진단</button><Link href={appHref}>학습 앱 열기</Link></div>
+        <div className="ks-header-actions"><button className="ks-diagnostics" aria-pressed={tab === "diagnostics"} disabled={busy || videoBusy || musicBusy} onClick={() => navigate("diagnostics")}>AI 진단</button><Link href={appHref}>학습 앱 열기</Link></div>
       </header>
       <main className="hm-main ks-workspace">
         <aside className="ks-sidebar" aria-label="콘텐츠 스튜디오 탐색">
           <nav className="ks-groups" aria-label="업무 영역">
-            {adminGroups.map((item, i) => <button key={item.id} aria-label={item.label} aria-pressed={group?.id === item.id} disabled={busy || videoBusy}
+            {adminGroups.map((item, i) => <button key={item.id} aria-label={item.label} aria-pressed={group?.id === item.id} disabled={busy || videoBusy || musicBusy}
               onClick={() => navigate(lastTab.current[item.id])}>
               <span className="ks-group-symbol" aria-hidden="true">{["▤", "✓", "♫"][i]}</span>
               <span><strong>{item.label}</strong><small>{item.description}</small></span>
@@ -258,14 +291,17 @@ export function V2Admin({ appHref = "/study" }: { appHref?: string }) {
             <p>{adminPages[tab].description}</p>
           </header>
           {group && <nav className="ks-nav" aria-label="관리자 메뉴">
-            {group.tabs.map(id => <button key={id} disabled={busy || videoBusy} aria-pressed={tab === id} onClick={() => navigate(id)}>
+            {group.tabs.map(id => <button key={id} disabled={busy || videoBusy || musicBusy} aria-pressed={tab === id} onClick={() => navigate(id)}>
               {adminPages[id].label}{id === "inbox" && dataReady && pendingCount > 0 ? ` (${pendingCount})` : ""}
             </button>)}
           </nav>}
         {loading && <p role="status">자료를 불러오는 중이에요.</p>}
         {tab === "learning" && <LearningAdmin />}
-        {tab === "music" && <MusicAdmin />}
-        {tab === "media" && <MediaAdmin />}
+        {tab === "music" && <MusicAdmin stage="published" onPrepare={song => void prepareMusic(song)} onReview={() => navigate("musicReview")} />}
+        {tab === "musicReview" && <><ContentSourceQueue purpose="music" disabled={busy || musicBusy} onSelect={useSource} onPrepare={() => navigate("media")} /><MusicAdmin key={reviewSource ? `${reviewSource.source.id}:${reviewSource.source.revision}` : "music-review"} stage="review" prepared={reviewSource?.source.purposes.includes("music") ? reviewSource : undefined} onBusyChange={setMusicBusy} onPrepare={song => void prepareMusic(song)} /></>}
+        {tab === "legacyMusic" && <MusicAdmin stage="legacy" onLegacyUse={item => void prepareMusic(undefined, item)} onPrepare={() => navigate("media")} />}
+        {tab === "published" && <section className="hm-panel"><h2>앱에 반영된 수업</h2><p>게시된 자료만 표시해요. 수정과 재게시는 검수·반영에서 진행합니다.</p>{!drafts.some(d => d.status === "published") && <p>게시된 수업이 없어요.</p>}<ul>{drafts.filter(d => d.status === "published").map(d => <li key={d.id}><strong>{d.title}</strong><p>{studyLanguages[d.language].name} · 레벨 {d.level} · {d.units.length}개 표현</p><button onClick={() => { edit(d); navigate("editor"); }}>검수·수정으로 이동</button></li>)}</ul><button onClick={() => navigate("editor")}>미게시 수업 검수하기</button></section>}
+        {tab === "media" && <MediaAdmin key={mediaId ?? "all-sources"} initialId={mediaId} initialRaw={mediaRaw} onOpenLegacy={() => navigate("legacyMusic")} onReview={useSource} />}
         {tab === "diagnostics" && <DiagnosticsAdmin />}
         {error && (
           <p className="hm-alert" role="alert">
@@ -279,19 +315,14 @@ export function V2Admin({ appHref = "/study" }: { appHref?: string }) {
         )}
         <div hidden={tab !== "videos"}>
           <YoutubeVideoSearch
+            onCollect={collectVideos}
+            onOpenSources={() => navigate("media")}
             configured={searchConfigured}
             disabled={busy || loading}
-            onCreated={(draft) =>
-              setDrafts((previous) => [
-                ...previous.filter((d) => d.id !== draft.id),
-                draft,
-              ])
-            }
-            onReview={reviewVideo}
-            onOpenLibrary={() => void openLibrary()}
             onBusyChange={setVideoBusy}
           />
         </div>
+        {tab === "editor" && <><ContentSourceQueue purpose="study" disabled={busy || videoBusy || musicBusy} onSelect={useSource} onPrepare={() => navigate("videos")} />{videoSources.length > 0 && <VideoPreparationQueue videos={videoSources} disabled={busy} onRemove={id => setVideoSources(items => items.filter(v => v.id !== id))} onClear={() => setVideoSources([])} onCreated={draft => setDrafts(items => [...items.filter(d => d.id !== draft.id), draft])} onReview={reviewVideo} onOpenLibrary={() => void openLibrary()} onBusyChange={setVideoBusy} />}</>}
         {tab === "inbox" && (
           <section className="hm-panel">
             <h2>사용자가 제공한 번역 후보</h2>
@@ -382,6 +413,7 @@ export function V2Admin({ appHref = "/study" }: { appHref?: string }) {
                     setTranscript("");
                     setSourceUrl("");
                     setRights("");
+                    navigate("videos");
                     setReviewed(false);
                     setConfirmed(false);
                     setCandidateId(null);
@@ -510,6 +542,7 @@ export function V2Admin({ appHref = "/study" }: { appHref?: string }) {
                 <label>
                   참고 영상 주소 (선택)
                   <input
+                    readOnly
                     type="url"
                     value={sourceUrl}
                     onChange={(e) => {
@@ -522,6 +555,8 @@ export function V2Admin({ appHref = "/study" }: { appHref?: string }) {
                 <label>
                   원문 사용권 근거
                   <textarea
+                    aria-label="원문 사용권 근거"
+                    readOnly
                     value={rights}
                     maxLength={500}
                     onChange={(e) => {
@@ -536,6 +571,8 @@ export function V2Admin({ appHref = "/study" }: { appHref?: string }) {
                   <label>
                     직접 제공받은 텍스트·SRT·VTT 원문
                     <textarea
+                    aria-label="직접 제공받은 텍스트·SRT·VTT 원문"
+                    readOnly
                       className="hm-transcript"
                       value={transcript}
                       onChange={(e) => {
@@ -568,8 +605,7 @@ export function V2Admin({ appHref = "/study" }: { appHref?: string }) {
                   {busy ? "처리 중…" : "AI로 학습 초안 만들기"}
                 </button>
                 <p className="hm-muted">
-                  원문은 초안 생성에만 전달하고 보관하지 않아요. 출처 주소만으로
-                  사용권이 확인되는 것은 아니에요.
+                  콘텐츠 준비의 보관된 원문을 사용해요. 원문 수정은 콘텐츠 준비에서 진행하고, 출처와 사용권을 확인한 뒤 생성하세요.
                 </p>
               </details>
               <section className="hm-panel">

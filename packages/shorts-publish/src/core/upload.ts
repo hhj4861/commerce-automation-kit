@@ -50,6 +50,7 @@ export function buildUploadTextFields(target: PublishTarget, user: string): Uplo
     if (target.description !== undefined && target.description.length > 0) {
       fields.push({ name: 'instagram_title', value: `${target.title}\n\n${target.description}` });
     }
+    fields.push({ name: 'is_ai_generated', value: target.aiDisclosed ? 'true' : 'false' });
     fields.push({ name: 'media_type', value: 'REELS' });
     fields.push({ name: 'share_to_feed', value: 'true' });
   }

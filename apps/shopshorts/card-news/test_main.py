@@ -459,8 +459,8 @@ class CodexAuthTests(unittest.TestCase):
         self.assertEqual(self.github_env.read_text(), f'CARD_NEWS_CODEX_HOME={self.home}\n')
 
     def test_restore_stops_before_codex_when_token_cannot_write(self):
-        self.run.side_effect = subprocess.CalledProcessError(1, ['gh'])
-        with self.assertRaisesRegex(RuntimeError, 'cannot write repository secrets'):
+        self.run.side_effect = subprocess.CalledProcessError(1, ['gh'], stderr='failed to set secret: HTTP 502 Bad Gateway')
+        with self.assertRaisesRegex(RuntimeError, r'cannot write repository secrets \(reason=github_unavailable@set_secret\)'):
             codex_auth.restore()
         self.assertEqual(self.run.call_count, 3)
         self.assertFalse(self.home.exists())
@@ -484,6 +484,30 @@ class CodexAuthTests(unittest.TestCase):
             codex_auth.restore()
         self.assertTrue((self.home / 'auth.json').exists())
 
+    def test_gh_failures_are_classified_without_details_and_permanent_ones_not_retried(self):
+        url = 'https://api.github.com/repos/hhj4861/commerce-automation-kit/actions/secrets/public-key'
+        cases = {
+            f'failed to fetch public key: HTTP 403: Resource not accessible by personal access token ({url})':
+                'token_lacks_secrets_permission@public_key',
+            f'failed to fetch public key: HTTP 404: Not Found ({url})': 'repository_not_selected@public_key',
+            'HTTP 401: Bad credentials (https://api.github.com/graphql)': 'bad_credentials@set_secret',
+            'failed to set secret "X": HTTP 403: Must have admin rights to Repository.': 'forbidden@set_secret',
+            'something unexpected': 'unclassified@set_secret',
+        }
+        for stderr, reason in cases.items():
+            self.assertEqual(codex_auth.gh_failure_reason(stderr), reason)
+        self.run.side_effect = subprocess.CalledProcessError(1, ['gh'], stderr=next(iter(cases)))
+        with self.assertRaises(RuntimeError) as raised:
+            codex_auth.restore()
+        self.assertEqual(self.run.call_count, 1)
+        self.assertIn('reason=token_lacks_secrets_permission@public_key', str(raised.exception))
+        self.assertNotIn('api.github.com', str(raised.exception))
+        self.run.reset_mock(side_effect=True)
+        self.run.side_effect = OSError('gh')
+        with self.assertRaisesRegex(RuntimeError, 'reason=gh_unavailable'):
+            codex_auth.restore()
+        self.assertEqual(self.run.call_count, 1)
+
     def test_persist_skips_unchanged_and_always_cleans_up(self):
         codex_auth.restore()
         self.run.reset_mock()
@@ -506,7 +530,7 @@ class CodexAuthTests(unittest.TestCase):
         codex_auth.restore()
         (self.home / 'auth.json').write_text(self.LOGIN.replace('r1', 'r2'))
         self.run.reset_mock()
-        self.run.side_effect = subprocess.CalledProcessError(1, ['gh'], 'r2')
+        self.run.side_effect = subprocess.CalledProcessError(1, ['gh'], 'r2', stderr='HTTP 503: Service Unavailable')
         with self.assertRaisesRegex(RuntimeError, 'could not be saved') as raised:
             codex_auth.persist()
         self.assertEqual(self.run.call_count, 3)

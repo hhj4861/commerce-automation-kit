@@ -19,6 +19,9 @@ export interface UploadOpts {
   target: PublishTarget;
   /** 커버 이미지(선택) */
   thumbnail?: string;
+  /** Stable caller identity for safe async recovery. */
+  requestId?: string;
+  idempotencyKey?: string;
 }
 
 /** 완성된 세로 영상 1개를 여러 플랫폼에 동시 업로드. */
@@ -31,6 +34,12 @@ export async function uploadShort(opts: UploadOpts): Promise<PublishResult> {
   const form = new FormData();
   form.append('video', await openAsBlob(video), basename(video));
   for (const f of buildUploadTextFields(target, user)) form.append(f.name, f.value);
+  if (opts.requestId) {
+    form.append('request_id', opts.requestId);
+    form.append('async_upload', 'true');
+  }
+  const headers: Record<string, string> = { Authorization: `Apikey ${apiKey}` };
+  if (opts.idempotencyKey) headers['Idempotency-Key'] = opts.idempotencyKey;
   if (thumbnail !== undefined) {
     const tb = await openAsBlob(thumbnail);
     form.append('thumbnail', tb, basename(thumbnail));
@@ -41,8 +50,9 @@ export async function uploadShort(opts: UploadOpts): Promise<PublishResult> {
   try {
     res = await fetch(UPLOAD_ENDPOINT, {
       method: 'POST',
-      headers: { Authorization: `Apikey ${apiKey}` },
+      headers,
       body: form,
+      signal: AbortSignal.timeout(120000),
     });
   } catch (e) {
     // 네트워크 순단은 투명화(호출측이 재시도 판단)
@@ -68,7 +78,7 @@ export async function pollStatus(apiKey: string, requestId: string): Promise<Sta
   const url = `${UPLOAD_STATUS_ENDPOINT}?request_id=${encodeURIComponent(requestId)}`;
   let res: Response;
   try {
-    res = await fetch(url, { headers: { Authorization: `Apikey ${apiKey}` } });
+    res = await fetch(url, { headers: { Authorization: `Apikey ${apiKey}` }, signal: AbortSignal.timeout(30000) });
   } catch (e) {
     // uploadShort 와 동일하게 네트워크 순단은 status 0 으로 투명화(호출측이 exit 75 로 재시도 판단)
     return { ok: false, status: 0, body: `fetch 실패: ${e instanceof Error ? e.message : String(e)}` };
@@ -101,4 +111,12 @@ function summarize(body: unknown): string {
   } catch {
     return '(응답 파싱 불가)';
   }
+}
+
+/** Read-only connection check before public publishing. Never modifies OAuth connections. */
+export async function listProfiles(apiKey: string): Promise<StatusResult> {
+  const res = await fetch('https://api.upload-post.com/api/uploadposts/users', {
+    headers: { Authorization: `Apikey ${apiKey}` }, signal: AbortSignal.timeout(30000),
+  });
+  return { ok: res.ok, status: res.status, body: await readBody(res) };
 }
