@@ -1,3 +1,4 @@
+import { prepareSource } from "./content-flow-helpers.mjs";
 import { openAdminTool } from "./admin-navigation.mjs";
 import assert from "node:assert/strict";
 import { createServer } from "node:http";
@@ -1380,17 +1381,10 @@ try {
   await adminPage.goto(base + "/study/admin");
   await openAdminTool(adminPage, "자료 만들기");
   await adminPage
-    .getByRole("heading", { name: "자료 만들기", exact: true, level: 1 })
+    .getByRole("heading", { name: "회화 검수", exact: true, level: 1 })
     .waitFor();
-  await adminPage
-    .getByLabel("수업 제목", { exact: true })
-    .fill("브라우저에서 만든 스몰토크");
-  await adminPage
-    .getByLabel("원문 사용권 근거", { exact: true })
-    .fill(source.rights);
-  await adminPage
-    .getByLabel("직접 제공받은 텍스트·SRT·VTT 원문", { exact: true })
-    .fill(source.transcript);
+  await prepareSource(adminPage, { title: '브라우저에서 만든 스몰토크', video: 'source00001', language: 'ja', purpose: 'study', source: source.transcript + '\n자체 제작한 두 번째 연습 문장입니다.', rights: source.rights });
+  await adminPage.getByRole('button', { name: '회화 자료 만들기로', exact: true }).click();
   await adminPage
     .getByLabel(
       "이 원문을 AI로 처리하고 학습 표현으로 재사용할 권한을 확인했어요.",

@@ -15,8 +15,8 @@ async function api(body: Record<string, unknown>) {
   return data;
 }
 type Work = (body: Record<string, unknown>, message: string) => Promise<Awaited<ReturnType<typeof api>> | undefined>;
-export function MusicVideoCollection({ items, youtube, songs, learningHref, disabled, onReload, onUse }: {
-  learningHref: string; items: MusicCollectedVideo[] | null; youtube: { search: boolean; captions: boolean }; songs: OwnedMusic[]; disabled: boolean;
+export function MusicVideoCollection({ items, youtube, songs, learningHref, disabled, onReload, onUse, hideSearch = false }: {
+  hideSearch?: boolean; learningHref: string; items: MusicCollectedVideo[] | null; youtube: { search: boolean; captions: boolean }; songs: OwnedMusic[]; disabled: boolean;
   onReload: () => Promise<void>; onUse: (item: MusicCollectedVideo) => void;
 }) {
   const [query, setQuery] = useState(""), [language, setLanguage] = useState<StudyLanguage>("ja"), [captionOnly, setCaptionOnly] = useState(false);
@@ -42,7 +42,7 @@ export function MusicVideoCollection({ items, youtube, songs, learningHref, disa
     <div className="la-heading"><div><span className="ks-tag">1 · 영상과 자막 준비</span><h3>YouTube 음악 수집함</h3><p>곡이나 아티스트로 찾아 먼저 담아 두세요. 원곡은 공식 영상으로 듣고, 자막을 연결하면 학습 자료로 만들 수 있어요.</p></div></div>
     {error && <p className="hm-alert" role="alert">{error}</p>}
     {notice && <p className="hm-notice" role="status">{notice}</p>}
-    <fieldset disabled={blocked || !items} className="music-fields">
+    {!hideSearch && <fieldset disabled={blocked || !items} className="music-fields">
       <label>수집할 학습 언어<select value={language} onChange={e => { setLanguage(e.target.value as StudyLanguage); setResults(null); }}>{Object.entries(studyLanguages).map(([id, l]) => <option value={id} key={id}>{l.name}</option>)}</select></label>
       <form className="music-search" onSubmit={e => { e.preventDefault(); void search(); }}>
         <label>노래·아티스트 검색<input required maxLength={100} value={query} onChange={e => { setQuery(e.target.value); setResults(null); }} placeholder="예: Official髭男dism Pretender" /></label>
@@ -65,7 +65,7 @@ export function MusicVideoCollection({ items, youtube, songs, learningHref, disa
         </article>)}
         {results.nextPageToken && <button type="button" onClick={() => void search(true)}>검색 결과 더 보기</button>}
       </div>}
-    </fieldset>
+    </fieldset>}
     <h4>수집한 영상 {items?.length ?? 0}/100</h4>
     {!items ? <p role="status">수집함을 불러오고 있어요…</p> : !items.length ? <p className="la-empty">아직 수집한 영상이 없어요. 검색하거나 영상 주소를 넣어 시작해 보세요.</p> : <div className="music-catalog">{items.slice().reverse().map(item => <CollectedVideo key={`${item.id}:${item.revision}`} item={item} disabled={blocked} canImport={youtube.captions}
       song={songs.find(s => s.videoId === item.video.id && s.language === item.language)} learningHref={learningHref} onUse={() => onUse(item)} work={work} />)}</div>}

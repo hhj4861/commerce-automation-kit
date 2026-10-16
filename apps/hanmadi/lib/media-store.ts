@@ -55,7 +55,11 @@ export async function collectMedia(body: Record<string, unknown>, db: MediaDB = 
   const input = mediaRegistration(body), now = Date.now();
   return change(db, state => {
     const existing = state.sources.find(s => s.id === input.id);
-    if (existing) return detail(state, existing.id); // Canonical video identity; never overwrite an existing registration.
+    if (existing) {
+      if (existing.language !== input.language) throw new ConversationError(409, "이미 다른 원문 언어로 등록한 영상이에요. 원문·작업에서 기존 정보를 확인해 주세요.");
+      existing.purposes = [...new Set([...existing.purposes, ...input.purposes])].sort();
+      return detail(state, existing.id); // Add a use without replacing the source title, original, version or history.
+    }
     if (state.sources.length >= 50) throw new ConversationError(409, "최대 50개 원본을 보관할 수 있어요.");
     const source: MediaSource = { ...input, origin: legacyId ? "music-collection" : "manual", ...(legacyId ? { legacyId } : {}),
       revision: 0, createdAt: now, originals: [] };

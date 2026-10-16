@@ -4,8 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { VIDEO_SELECTION_LIMIT } from "@/lib/video-policy";
 import type { YoutubeSearchPage, YoutubeVideo } from "@/lib/youtube-search";
-import type { ContentDraft } from "@/lib/knowledge";
-import { VideoPreparationQueue } from "./video-preparation-queue";
+import { studyLanguages, type StudyLanguage } from "@/lib/v2";
+import type { MediaPurpose } from "@/lib/media-source";
 
 type Search = { query: string };
 type LoadedPage = YoutubeSearchPage & {
@@ -42,18 +42,18 @@ function searchError(error: unknown) {
 export function YoutubeVideoSearch({
   configured,
   disabled,
-  onCreated,
-  onReview,
-  onOpenLibrary,
   onBusyChange,
+  onCollect,
+  onOpenSources,
 }: {
+  onCollect: (videos: YoutubeVideo[], language: StudyLanguage, purposes: MediaPurpose[]) => Promise<void>;
+  onOpenSources?: () => void;
   configured: boolean;
   disabled: boolean;
-  onCreated: (draft: ContentDraft) => void;
-  onReview: (draft: ContentDraft) => void;
-  onOpenLibrary: () => void;
   onBusyChange: (busy: boolean) => void;
 }) {
+  const [collectionLanguage, setCollectionLanguage] = useState<StudyLanguage>("ja");
+  const [purpose, setPurpose] = useState("study");
   const [query, setQuery] = useState("");
   const [pages, setPages] = useState<LoadedPage[]>([]);
   const [pageIndex, setPageIndex] = useState(0);
@@ -229,10 +229,9 @@ export function YoutubeVideoSearch({
       <section className="vs-library" aria-label="YouTube 영상 검색">
         <div className="vs-intro">
           <div>
-            <h2>수업의 시작이 될 영상을 찾아보세요</h2>
+            <h2>학습의 시작이 될 영상을 모으세요</h2>
             <p>
-              관심 있는 영상을 고르면 AI가 분석하고 학습 가치가 있는 자료를
-              찾아요.
+              회화 수업과 음악 학습 모두 여기서 시작해요. 영상을 담고 용도를 정한 뒤 검수 단계로 이어가세요.
             </p>
           </div>
           <span className="vs-service">YouTube 검색</span>
@@ -264,14 +263,12 @@ export function YoutubeVideoSearch({
             {searchBusy ? "검색 중…" : "영상 검색"}
           </button>
           <p className="vs-search-help">
-            한 페이지에 최대 5개씩 표시해요. 학습 언어와 상황은 영상을 담은 뒤
-            자료 준비 목록에서 설정해요.
+            한 페이지에 최대 5개씩 표시해요. 담은 영상은 공통 준비함에 저장돼요. AI 분석과 게시는 검수·반영에서 실행해요.
           </p>
         </form>
         {!configured && !disabled && (
           <p className="vs-message">
-            영상 검색을 준비 중이에요. ‘자료 만들기’에서 출처 주소와 원문을 직접
-            입력할 수 있어요.
+            영상 검색을 준비 중이에요. ‘원문·작업’에서 영상 주소와 원문을 직접 등록할 수 있어요.
           </p>
         )}
         {error && (
@@ -497,25 +494,20 @@ export function YoutubeVideoSearch({
           )}
         </div>
       </section>
-      <VideoPreparationQueue
-        videos={selected}
-        disabled={disabled || searchBusy}
-        onRemove={(id) => {
-          setBulkStatus("");
-          setSelected((previous) => previous.filter((v) => v.id !== id));
-        }}
-        onClear={() => {
-          setSelected([]);
-          setBulkStatus("");
-        }}
-        onCreated={onCreated}
-        onReview={onReview}
-        onOpenLibrary={onOpenLibrary}
-        onBusyChange={(value) => {
-          setBatchBusy(value);
-          onBusyChange(value);
-        }}
-      />
+      <section id="video-preparation" className="hm-panel" aria-label="영상 수집 설정">
+        <h2>선택한 영상 {selected.length}개</h2><p>영상 정보만 저장하며 AI 생성·평가·게시는 실행하지 않아요.</p>
+        <fieldset disabled={busy || disabled} className="music-fields">
+          <label>수집 언어<select value={collectionLanguage} onChange={e => setCollectionLanguage(e.target.value as StudyLanguage)}>{Object.entries(studyLanguages).map(([id, item]) => <option key={id} value={id}>{item.name}</option>)}</select></label>
+          <label>수집 용도<select value={purpose} onChange={e => setPurpose(e.target.value)}><option value="study">회화 수업</option><option value="music">음악 학습</option><option value="both">회화 수업과 음악 학습</option></select></label>
+          <ul>{selected.map(video => <li key={video.id}>{video.title} <button type="button" aria-label={`${video.title} 선택 해제`} onClick={() => setSelected(items => items.filter(v => v.id !== video.id))}>선택 해제</button></li>)}</ul>
+          <div className="hm-row"><button disabled={!selected.length} type="button" onClick={async () => {
+            setBatchBusy(true); onBusyChange(true); setError("");
+            try { await onCollect(selected, collectionLanguage, purpose === "both" ? ["study", "music"] : [purpose as MediaPurpose]); setSelected([]); }
+            catch (e) { setError(e instanceof Error ? e.message : "저장 결과를 확인하지 못했어요. 준비함에서 확인한 뒤 다시 시도해 주세요."); }
+            finally { setBatchBusy(false); onBusyChange(false); }
+          }}>{batchBusy ? "저장 중…" : "공통 준비함에 담기"}</button><button type="button" onClick={onOpenSources}>YouTube 주소·원문으로 등록</button></div>
+        </fieldset>
+      </section>
     </div>
   );
 }
