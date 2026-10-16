@@ -84,13 +84,17 @@ try {
   }};window.onYouTubeIframeAPIReady();` }));
   page = await owner.newPage(); const errors = []; page.on('pageerror', e => errors.push(e.message));
   await page.goto(base + '/study/admin'); await openAdminTool(page, '영상 찾기');
+  await page.getByText('연결 채널의 영상만 자막 가져오기를 시도할 수 있어요', { exact: true }).waitFor();
+  assert.equal((await (await owner.request.get(base + '/api/study/admin')).json()).captionImportConfigured, true);
   await page.getByLabel('검색어', { exact: true }).fill('Morning');
   await page.getByRole('button', { name: '영상 검색', exact: true }).click();
+  await page.getByText('자막 가져오기 권한 미확인 · 파일로도 준비 가능', { exact: true }).waitFor();
   await page.getByRole('checkbox', { name: 'Morning original song 선택', exact: true }).check();
   await page.getByLabel('수집 언어').selectOption('en'); await page.getByLabel('수집 용도').selectOption('both');
   await page.getByRole('button', { name: '공통 준비함에 담기', exact: true }).click();
   await page.getByRole('heading', { name: '원문·작업', exact: true, level: 1 }).waitFor();
   const common = await (await owner.request.get(base + '/api/study/admin/media')).json();
+  assert.equal(common.youtube.captions, true);
   assert.equal(common.sources.length, 1); assert.deepEqual(common.sources[0].purposes, ['music', 'study']);
   assert.equal(generations, 0); assert.equal(evaluations, 0);
   await page.getByText('YouTube 자막 가져오기', { exact: true }).click();

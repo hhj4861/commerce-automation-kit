@@ -72,6 +72,7 @@ export function V2Admin({ appHref = "/study" }: { appHref?: string }) {
   const [mediaId, setMediaId] = useState<string | undefined>();
   const [reviewSource, setReviewSource] = useState<MediaDetail | undefined>();
   const [videoSources, setVideoSources] = useState<YoutubeVideo[]>([]);
+  const [captionImportConfigured, setCaptionImportConfigured] = useState<boolean | null>(null);
   const [dataReady, setDataReady] = useState(false);
   const [contributions, setContributions] = useState<PublicContribution[]>([]);
   const [events, setEvents] = useState<KnowledgeEvent[]>([]);
@@ -103,6 +104,7 @@ export function V2Admin({ appHref = "/study" }: { appHref?: string }) {
         if (active) {
           setDrafts(d.drafts);
           setSearchConfigured(d.searchConfigured);
+          setCaptionImportConfigured(d.captionImportConfigured === true);
           setContributions(d.contributions);
           setEvents(d.events);
           setDataReady(true);
@@ -318,6 +320,7 @@ export function V2Admin({ appHref = "/study" }: { appHref?: string }) {
             onCollect={collectVideos}
             onOpenSources={() => navigate("media")}
             configured={searchConfigured}
+            captionImportConfigured={captionImportConfigured}
             disabled={busy || loading}
             onBusyChange={setVideoBusy}
           />
