@@ -138,11 +138,15 @@ class ListenButton extends StatefulWidget {
   final Phrase phrase;
   final StudyModel model;
   final AudioService audio;
+  final bool iconOnly;
+  final double rate;
   const ListenButton({
     super.key,
     required this.phrase,
     required this.model,
     required this.audio,
+    this.iconOnly = false,
+    this.rate = 1,
   });
   @override
   State<ListenButton> createState() => _ListenButtonState();
@@ -150,25 +154,52 @@ class ListenButton extends StatefulWidget {
 
 class _ListenButtonState extends State<ListenButton> {
   bool loading = false;
+  Future<void> play() async {
+    setState(() => loading = true);
+    await sound(
+      widget.model,
+      () => widget.audio.speak(
+        widget.phrase.text,
+        widget.model.language,
+        rate: widget.rate,
+      ),
+    );
+    if (mounted) setState(() => loading = false);
+  }
+
   @override
-  Widget build(BuildContext context) => TextButton.icon(
-    onPressed: loading
-        ? null
-        : () async {
-            setState(() => loading = true);
-            await sound(
-              widget.model,
-              () =>
-                  widget.audio.speak(widget.phrase.text, widget.model.language),
-            );
-            if (mounted) setState(() => loading = false);
-          },
-    icon: Icon(
-      loading ? Icons.hourglass_empty_rounded : Icons.volume_up_outlined,
-      size: 20,
-    ),
-    label: Text(loading ? '소리 준비 중' : '듣기'),
-  );
+  Widget build(BuildContext context) {
+    final label = loading
+        ? '소리 준비 중'
+        : widget.rate < 1
+        ? '천천히 듣기'
+        : '듣기';
+    final icon = Icon(
+      loading
+          ? Icons.hourglass_empty_rounded
+          : widget.rate < 1
+          ? Icons.headphones_outlined
+          : Icons.volume_up_outlined,
+      size: 21,
+    );
+    if (widget.iconOnly) {
+      return IconButton(
+        tooltip: label,
+        onPressed: loading ? null : play,
+        style: IconButton.styleFrom(
+          foregroundColor: brand,
+          backgroundColor: soft,
+          minimumSize: const Size(48, 48),
+        ),
+        icon: icon,
+      );
+    }
+    return TextButton.icon(
+      onPressed: loading ? null : play,
+      icon: icon,
+      label: Text(label),
+    );
+  }
 }
 
 class MicButton extends StatelessWidget {
@@ -224,6 +255,7 @@ class AppSelect<T> extends StatelessWidget {
   final Map<T, String> choices;
   final ValueChanged<T>? onChanged;
   final bool compact;
+  final IconData? leadingIcon;
   const AppSelect({
     super.key,
     required this.label,
@@ -231,6 +263,7 @@ class AppSelect<T> extends StatelessWidget {
     required this.choices,
     required this.onChanged,
     this.compact = false,
+    this.leadingIcon = Icons.language_rounded,
   });
   @override
   Widget build(BuildContext context) => LayoutBuilder(
@@ -252,6 +285,7 @@ class AppSelect<T> extends StatelessWidget {
           ],
           PopupMenuButton<T>(
             key: ValueKey('select-$label'),
+            borderRadius: BorderRadius.circular(compact ? 20 : 17),
             tooltip: '$label 선택',
             requestFocus: true,
             useRootNavigator: true,
@@ -339,16 +373,19 @@ class AppSelect<T> extends StatelessWidget {
                 child: Row(
                   mainAxisSize: compact ? MainAxisSize.min : MainAxisSize.max,
                   children: [
-                    if (compact) ...[
-                      const Icon(
-                        Icons.language_rounded,
-                        size: 17,
-                        color: brand,
-                      ),
+                    if (compact && leadingIcon != null) ...[
+                      Icon(leadingIcon, size: 17, color: brand),
                       const SizedBox(width: 6),
                     ],
                     if (compact)
-                      Text(selected, style: uiLabel.copyWith(color: brand))
+                      Flexible(
+                        child: Text(
+                          selected,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: uiLabel.copyWith(color: brand),
+                        ),
+                      )
                     else
                       Expanded(
                         child: Text(

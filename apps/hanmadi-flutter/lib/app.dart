@@ -367,10 +367,6 @@ class _Shell extends StatelessWidget {
                                   ),
                                 ),
                               const Spacer(),
-                              const Text(
-                                '나만의 속도로, 한마디씩.',
-                                style: TextStyle(color: muted, fontSize: 12),
-                              ),
                             ],
                           ),
                         ),
