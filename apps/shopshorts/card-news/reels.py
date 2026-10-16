@@ -191,7 +191,8 @@ def cli(*args):
 
 
 def destination(profiles, user, account_id):
-    for profile in profiles.get('profiles', []):
+    candidates = [profiles['profile']] if isinstance(profiles.get('profile'), dict) else profiles.get('profiles', [])
+    for profile in candidates:
         if profile.get('username') == user:
             account = profile.get('social_accounts', {}).get('instagram')
             if not isinstance(account, dict) or account.get('reauth_required'):
@@ -254,7 +255,7 @@ def publish(plan, video, out):
     account = os.getenv('CARD_NEWS_INSTAGRAM_ACCOUNT_ID', '')
     if not user or not account or not os.getenv('UPLOAD_POST_API_KEY'):
         raise ValueError('Upload-Post credentials and pinned Instagram account ID are required')
-    handle = destination(cli('profiles'), user, account)
+    handle = destination(cli('profiles', '--user', user), user, account)
     key = plan['date'] + '-' + hashlib.sha256(account.encode()).hexdigest()[:12]
     request_id = str(uuid.uuid5(uuid.NAMESPACE_URL, f'{REPOSITORY}/instagram/{key}'))
     sent = ledger('sent', key)

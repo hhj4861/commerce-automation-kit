@@ -79,7 +79,11 @@ class ReelsTests(unittest.TestCase):
         data = {'profiles': [{'username': 'u', 'social_accounts': {'instagram':
             {'username': '123', 'handle': 'test_account'}}}]}
         self.assertEqual(reels.destination(data, 'u', '123'), 'test_account')
+        self.assertEqual(reels.destination({'profile': data['profiles'][0]}, 'u', '123'), 'test_account')
         with self.assertRaises(ValueError):reels.destination(data, 'u', 'wrong')
+        with self.assertRaises(ValueError):reels.destination({'profile': data['profiles'][0]}, 'other', '123')
+        missing_id = {'profile': {'username': 'u', 'social_accounts': {'instagram': {'handle': 'test_account'}}}}
+        with self.assertRaises(ValueError):reels.destination(missing_id, 'u', '123')
         data['profiles'][0]['social_accounts']['instagram']['reauth_required'] = True
         with self.assertRaises(ValueError):reels.destination(data, 'u', '123')
 
@@ -105,7 +109,7 @@ class ReelsTests(unittest.TestCase):
              patch.object(reels, 'poll', return_value='https://www.instagram.com/reel/existing/'):
             result = reels.publish(plan, self.out/'reel.mp4', self.out)
         self.assertEqual(result['status'], 'published')
-        self.assertEqual(cli.call_args_list[0].args, ('profiles',))
+        self.assertEqual(cli.call_args_list[0].args, ('profiles', '--user', 'u'))
         self.assertEqual(cli.call_count, 1)
         self.assertEqual(ledger.call_args_list[-1].args[0], 'sent')
 
