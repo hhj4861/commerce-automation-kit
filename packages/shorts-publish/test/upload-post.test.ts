@@ -59,3 +59,16 @@ describe('pollStatus', () => {
     expect(s.body).toEqual({ status: 'done' });
   });
 });
+
+
+it('passes the stable request id and idempotency key, without retrying POST', async () => {
+  const fetcher = vi.fn(async (_url: unknown, _options: RequestInit) => new Response(JSON.stringify({request_id: 'stable-id'})));
+  vi.stubGlobal('fetch', fetcher);
+  await uploadShort({apiKey:'k', user:'u', video:'/x.mp4', target,
+    requestId:'stable-id', idempotencyKey:'stable-key'});
+  expect(fetcher).toHaveBeenCalledTimes(1);
+  const options = fetcher.mock.calls[0]![1] as unknown as RequestInit;
+  expect(options.headers).toMatchObject({'Idempotency-Key':'stable-key'});
+  expect((options.body as FormData).get('request_id')).toBe('stable-id');
+  expect((options.body as FormData).get('async_upload')).toBe('true');
+});

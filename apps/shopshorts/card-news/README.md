@@ -214,3 +214,49 @@ python -m unittest -v test_main   # Linux는 fonts-noto-cjk 필요
 sgmllib3k는 sdist만 있어 빌드가 필요하다. 그래서 setuptools도 해시로 고정해 먼저 설치하고 빌드 격리를 끈다.
 
 Secret 값, 텔레그램 요청 URL, 응답 원문은 로그에 남기지 않는다. 설정 누락은 이름만 출력한다.
+
+
+## Instagram Reels 자동 발행 (2026-10-16 구현 브랜치)
+
+운영 적용은 `feat/card-news-instagram-reels` PR 머지와 broker 배포 후 별도로 확인한다.
+기존 텔레그램 발송은 그대로이며 `.github/workflows/ai-card-news-reels.yml`이 성공한 텔레그램 실행 뒤에 따로 실행된다.
+발송 완료된 원본 artifact만 사용하고, 무뉴스/동일 날짜 skip 실행에는 릴스를 만들지 않는다.
+
+- `reels.py`는 기존 `stories.json`/PNG를 1080×1920 H.264/AAC MP4로 조립한다. 추가 LLM·유료 TTS·음악 생성은 없다.
+  첫 버전은 무음 카드 슬라이드쇼다. 화면의 제목·요약·필요성 전체를 읽을 시간(초당 6자 기준, 뉴스당 최소 8초)을 준다.
+  지나치게 긴 카드는 가속·문장 삭제 대신 실패한다. 표지·끝장은 각각 3초다.
+- 원문 URL과 AI 요약 고지는 캡션에 넣고 Instagram `is_ai_generated=true`를 전달한다.
+- 업로드는 기존 `@cak/shorts-publish` CLI를 호출한다. atom 간 직접 import, 브라우저 업로드 자동화, 비공식 API를 쓰지 않는다.
+- 실제 업로드 직전에 Upload-Post의 현재 Instagram 연결 ID를 설정된 계정 ID와 대조한다. 핸들이 같아도 ID가 다르면 거부한다.
+- 별도 `ai-reel-claimed/<날짜>-<계정해시>`·`ai-reel-sent/...` 태그와 고정 request/idempotency ID를 사용한다.
+  claimed 상태에서 재실행하면 새 POST 대신 상태 조회만 한다. 실패·불확실 상태에서 claim을 자동 삭제하지 않는다.
+  HTTP 200만으로 게시 성공을 선언하지 않고 Instagram 플랫폼 성공과 실제 공개 URL을 모두 확인한다.
+- 게시 완료/실패는 운영자의 기존 텔레그램 개인 채팅에 알린다. 성공 알림은 공개 릴스 URL을 포함한다.
+- 이 경로는 운영자가 지정한 **AI 기술 뉴스**의 일일 발행 자동화다. 광고·쇼핑쇼츠 스튜디오의 사람 게이트를 바꾸지 않는다.
+
+### 준비와 활성화
+
+1. Upload-Post에서 사용할 Instagram 계정을 연결한다. 기존 프로필은 `commerce_account`였으나 현재 연결은 다시 확인해야 한다.
+   `npm run --silent cli -w @cak/shorts-publish -- profiles`의 Instagram `username`은 계정 고유 ID, `handle`은 공개 계정명이다.
+2. 중앙 broker의 `ai-card-news-reels.yml` 정책을 배포한다. 이 workflow만 `UPLOAD_POST_API_KEY`·`UPLOAD_POST_USER`를 받으며,
+   `workflow_run` 권한은 이 경로에만 추가한다. GitHub에 장기 키를 새로 복사하지 않는다.
+3. 저장소 변수 `CARD_NEWS_REELS_MODE=render`로 먼저 영상만 생성한다. `workflow_dispatch`의 `source_run`에 성공한
+   `AI Card News (Telegram)` 실행 ID를 넣는다. `dry_run=true`가 기본값이다.
+4. 생성 MP4와 대상 계정을 확인한 뒤 `CARD_NEWS_INSTAGRAM_ACCOUNT_ID=<Instagram username ID>`를 설정한다.
+   다른 Upload-Post 프로필을 쓰려면 `CARD_NEWS_UPLOAD_POST_USER`로 중앙 기본 프로필을 덮어쓴다(다른 앱 연결은 변경하지 않는다).
+   `CARD_NEWS_REELS_MODE=live`로 바꾸면 다음 성공한 일일 카드뉴스 뒤 자동 게시된다. 첫 수동 게시만 `dry_run=false`로 실행한다.
+5. 게시 URL·텔레그램 알림·claimed/sent 태그를 확인한다. 멈추려면 `CARD_NEWS_REELS_MODE`를 지우거나 `render`로 바꾼다.
+   원래 카드뉴스의 오전 07:47 KST 예약을 따르며 릴스는 카드뉴스 작업 완료 뒤 시작하므로 정확한 게시 시각은 고정하지 않는다.
+
+로컬 미리보기(공개 업로드 없음):
+
+```sh
+python apps/shopshorts/card-news/reels.py --source-run <성공한-main-실행-ID> --out '<iCloud 작업 루트>/<작업>/preview'
+# 또는 이미 받은 공개 뉴스 산출물을 --source-dir <폴더>로 지정한다.
+```
+
+로컬 렌더·테스트 임시는 전역 iCloud 작업 루트에 둔다. GitHub 호스티드 러너에서는 iCloud 볼륨에 접근할 수 없으므로
+기존 카드뉴스와 같은 원격 일회성 러너의 `RUNNER_TEMP`를 사용하고 14일 artifact로 보관한다. 인증정보는 포함하지 않는다.
+
+공식 스펙 확인(2026-10-16): [업로드·AI 표기·멱등 키](https://docs.upload-post.com/api/upload-video/),
+[상태 조회](https://docs.upload-post.com/api/upload-status/), [프로필·연결 ID](https://docs.upload-post.com/api/user-profiles/).

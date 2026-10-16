@@ -9,6 +9,8 @@ export const KEYWORD_KEYS = [
   'TELEGRAM_CHAT_ID', 'SHOPSHORTS_CLOUD_URL', 'SHOPSHORTS_TOKEN',
 ];
 export const GITHUB_KEYS = [...KEYWORD_KEYS, 'ELEVENLABS_API_KEY'];
+export const REELS_KEYS = ['UPLOAD_POST_API_KEY', 'UPLOAD_POST_USER'];
+export const GITHUB_READ_KEYS = [...GITHUB_KEYS, ...REELS_KEYS];
 export const REPLAY_DEPLOYMENT_KEY = 'REPLAY_DEPLOY_VERCEL_TOKEN';
 export const HANMADI_ADMIN_DEPLOYMENT_KEY = 'HANMADI_ADMIN_DEPLOY_VERCEL_TOKEN';
 export const DEPLOYMENT_KEYS = ['DEPLOY_CLOUDFLARE_API_TOKEN', 'DEPLOY_VERCEL_TOKEN', REPLAY_DEPLOYMENT_KEY, HANMADI_ADMIN_DEPLOYMENT_KEY];
@@ -40,6 +42,7 @@ export const WORKFLOW_KEYS = {
   'keyword-intel-sync.yml': KEYWORD_KEYS,
   'tts-remote.yml': ['ELEVENLABS_API_KEY'],
   'music-remote.yml': ['ELEVENLABS_API_KEY'],
+  'ai-card-news-reels.yml': REELS_KEYS,
 };
 
 export function authorizeGithub(claims, env) {
@@ -86,12 +89,14 @@ export function authorizeGithub(claims, env) {
   const refs = (env.GITHUB_ALLOWED_REFS || 'refs/heads/main').split(',');
   if (claims.repository !== REPOSITORY || claims.repository_id !== '1310729493' ||
       claims.repository_owner_id !== '71001056' || !refs.includes(claims.ref) ||
-      !['schedule', 'workflow_dispatch'].includes(claims.event_name) ||
+      !(['schedule', 'workflow_dispatch'].includes(claims.event_name) ||
+        (claims.event_name === 'workflow_run' && claims.workflow_ref === `${REPOSITORY}/.github/workflows/ai-card-news-reels.yml@${claims.ref}`)) ||
       claims.sub !== `${SUBJECT_PREFIX}:ref:${claims.ref}` ||
       claims.runner_environment !== 'github-hosted') throw new Error('unauthorized');
   // Ref and path are signed by GitHub; no pull_request, fork, environment or tag subjects.
   const file = Object.keys(WORKFLOW_KEYS).find(name =>
     claims.workflow_ref === `${REPOSITORY}/.github/workflows/${name}@${claims.ref}`);
+  if (file === 'ai-card-news-reels.yml' && claims.ref !== 'refs/heads/main') throw new Error('unauthorized');
   if (!file || (claims.job_workflow_ref && claims.job_workflow_ref !== claims.workflow_ref)) throw new Error('unauthorized');
   return { file, keys: WORKFLOW_KEYS[file] };
 }

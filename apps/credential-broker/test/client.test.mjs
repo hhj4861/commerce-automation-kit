@@ -20,3 +20,12 @@ test('GitHub masks values before safe multiline export; disallows response key i
     await assert.rejects(run({ ...env, CAK_SECRETS_URL: 'http://broker.example' }, fetcher));
   } finally { console.log = original; await rm(dir, { recursive: true, force: true }); }
 });
+
+
+test('upload workflow client accepts broker-scoped upload keys', async () => {
+  const env = {CAK_SECRETS_URL:'https://broker.example', CAK_SECRETS_ACTION:'verify',
+    ACTIONS_ID_TOKEN_REQUEST_URL:'https://test.actions.githubusercontent.com/token', ACTIONS_ID_TOKEN_REQUEST_TOKEN:'fixture'};
+  const fetcher = async url => new Response(JSON.stringify(String(url).includes('actions.githubusercontent.com')
+    ? {value:'fixture-oidc'} : {values:{UPLOAD_POST_API_KEY:'fixture-key',UPLOAD_POST_USER:'fixture-profile'}}));
+  await run(env, fetcher);
+});
