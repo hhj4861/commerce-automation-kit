@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import 'models.dart';
 import 'study_model.dart';
@@ -9,17 +10,23 @@ import 'study_screen.dart';
 class LibraryScreen extends StatefulWidget {
   final StudyModel m;
   final AudioService audio;
-  const LibraryScreen({super.key, required this.m, required this.audio});
+  final bool vocabulary;
+  const LibraryScreen({
+    super.key,
+    required this.m,
+    required this.audio,
+    this.vocabulary = false,
+  });
   @override
   State<LibraryScreen> createState() => _LibraryScreenState();
 }
 
 class _LibraryScreenState extends State<LibraryScreen> {
-  bool vocabulary = false;
   String query = '';
   @override
   Widget build(BuildContext context) {
-    final m = widget.m, all = vocabulary ? m.words : m.expressions;
+    final m = widget.m, vocabulary = widget.vocabulary;
+    final all = vocabulary ? m.words : m.expressions;
     final entries = all
         .where(
           (e) => '${e['text']} ${e['meaning']}'.toLowerCase().contains(
@@ -29,7 +36,6 @@ class _LibraryScreenState extends State<LibraryScreen> {
         .toList();
     return PageBody(
       children: [
-        const Heading('다시 꺼내 쓰는 나의 말', '대화와 번역, 음악에서 만난 표현을 한곳에.'),
         SegmentedButton<bool>(
           segments: [
             ButtonSegment(
@@ -39,7 +45,8 @@ class _LibraryScreenState extends State<LibraryScreen> {
             ButtonSegment(value: true, label: Text('단어장 ${m.words.length}')),
           ],
           selected: {vocabulary},
-          onSelectionChanged: (s) => setState(() => vocabulary = s.first),
+          onSelectionChanged: (s) =>
+              context.go(s.first ? '/library?tab=words' : '/library'),
           showSelectedIcon: false,
         ),
         const SizedBox(height: 22),
@@ -145,7 +152,11 @@ class _LibraryScreenState extends State<LibraryScreen> {
                       ),
                     ],
                   ),
-                  PhraseView(Phrase.fromJson(e), compact: true),
+                  PhraseView(
+                    Phrase.fromJson(e),
+                    compact: true,
+                    language: m.language,
+                  ),
                   const SizedBox(height: 10),
                   Wrap(
                     spacing: 8,

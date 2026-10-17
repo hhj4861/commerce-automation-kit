@@ -121,9 +121,13 @@ class _HanmadiAppState extends State<HanmadiApp> {
               routes: [
                 GoRoute(
                   path: '/library',
-                  builder: (_, _) => ListenableBuilder(
+                  builder: (_, route) => ListenableBuilder(
                     listenable: m,
-                    builder: (_, _) => LibraryScreen(m: m, audio: audio),
+                    builder: (_, _) => LibraryScreen(
+                      m: m,
+                      audio: audio,
+                      vocabulary: route.uri.queryParameters['tab'] == 'words',
+                    ),
                   ),
                 ),
               ],
@@ -235,7 +239,7 @@ class _Shell extends StatelessWidget {
   void back(BuildContext c) {
     sound(m, audio.stop);
     if (audio.recording) sound(m, audio.cancelRecording);
-    if (music) m.studyMode = m.lastStudyMode;
+    if (music) m.studyMode = 'music';
     c.go('/study');
   }
 
@@ -261,7 +265,7 @@ class _Shell extends StatelessWidget {
                     key: const Key('study-back'),
                     onPressed: () => back(context),
                     icon: const Icon(Icons.arrow_back_rounded),
-                    label: const Text('스터디로'),
+                    label: Text(music ? '음악 목록으로' : '스터디로'),
                   )
                 : Row(
                     mainAxisSize: MainAxisSize.min,

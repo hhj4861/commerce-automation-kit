@@ -361,8 +361,9 @@ class _WordStudy extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          SelectableText(
+                          LearningText(
                             phrase.text,
+                            language: m.language,
                             style: const TextStyle(
                               fontFamily: 'NotoSansKR',
                               fontFamilyFallback: uiFallback,
@@ -490,7 +491,7 @@ class _WordPracticeState extends State<WordPractice> {
                 ],
               ),
               const SizedBox(height: 20),
-              PhraseView(phrase, reveal: correct),
+              PhraseView(phrase, reveal: correct, language: widget.m.language),
               ListenButton(
                 phrase: phrase,
                 model: widget.m,
@@ -526,6 +527,7 @@ class _WordPracticeState extends State<WordPractice> {
                 PhraseView(
                   Phrase.fromJson(object(word['example'])),
                   compact: true,
+                  language: widget.m.language,
                 ),
               ],
               const SizedBox(height: 16),
@@ -620,7 +622,7 @@ class _LessonScreenState extends State<LessonScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              PhraseView(phrase, reveal: reveal),
+              PhraseView(phrase, reveal: reveal, language: widget.m.language),
               const SizedBox(height: 14),
               Wrap(
                 spacing: 10,
