@@ -21,13 +21,13 @@
 ## 검증
 
 - 전체 단위 291개 통과. 추가 회귀는 원문 없음·미완료·오래된 완료 버전이 준비 완료로 승격되지 않음을 검사한다.
-- 변경 lint, Next 타입 생성·전체 타입 검사 통과. production build 통과.
+- 변경 lint, Next 타입 생성·전체 타입 검사 통과. production build 통과. 마지막 타입 재검사는 sandbox에서 incremental 캐시 쓰기가 거부돼 `tsc --noEmit --incremental false`로 동일 타입 검사를 수행해 통과했다.
 - 원문 E2E: 네 언어 원문·처리·실패 복구·충돌·모바일·권한 경계, 최신 원문 상태 필터, 다른 언어의 준비 완료 배제, 메뉴 이동 시 미저장 입력 보존을 확인했다.
 - 최종 원문 E2E 앱 단언과 결과 JSON은 pass였지만 로컬 Chrome 종료가 지연돼 본인 테스트 프로세스를 종료했다(exit 143). 이 실행을 전체 프로세스 정상 통과로 보고하지 않는다. CI의 브라우저 실행·정상 종료 확인이 남아 있다.
-- 음악 전체 E2E의 선행 실행은 정상 종료하며 통과했다. 최종 코드 재실행 중이다. 외부 YouTube/player/LLM/JEV 응답은 fixture이고 실제 Next UI·API·격리 저장소를 사용한다.
+- 최종 코드의 음악 전체 E2E도 정상 종료하며 통과했다(`music-final/result.json`: passed=true, searches=2, downloads=1, errors=[]). 외부 YouTube/player/LLM/JEV 응답은 fixture이고 실제 Next UI·API·격리 저장소를 사용한다.
 - 초기 추가 단위 테스트의 DB 인자·jobs 응답 필드 오류는 수정 후 통과했다. 추가 원본 선택 단언에서 접근성 이름을 찾지 못한 부분도 명시적 이름으로 보완했다.
 - 산출물: 사용자 지정 iCloud `gpt 작업/commerce-automation-kit/20261017-content-preparation-ux/`. `verified/media/result.json`은 앱 단언 결과이며 종료 상태의 예외는 위와 같다.
 
 ## 현재 결과와 다음 행동
 
-구현·로컬 검증 후 작업 브랜치에 커밋·push하고 PR CI를 확인한다. 최종 음악 회귀와 CI 결과를 이 문서에 갱신한다. 실제 외부 자막 확보 및 운영의 새 곡 학습 성공은 여전히 별도 실자료 검증이 필요하다.
+구현과 로컬 검증을 마치고 작업 브랜치에 커밋·push했다. PR: https://github.com/hhj4861/commerce-automation-kit/pull/294 . 최종 CI 상태와 실행 증거는 이 PR의 Checks에서 확인한다. 원문 E2E의 로컬 종료 지연은 위 기록을 유지하며 CI의 정상 종료 증거와 구분한다. 머지·운영 배포는 하지 않았다. 실제 외부 자막 확보 및 운영의 새 곡 학습 성공은 여전히 별도 실자료 검증이 필요하다.
