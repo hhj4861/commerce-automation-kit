@@ -65,7 +65,7 @@
 
 ## 기존 자동 E2E와 이번 감사의 차이
 
-[배포 검증 기록](20261017-hanmadi-caption-preflight-production.md)과 [기능 검증 기록](20261016-hanmadi-caption-preflight.md)에 단위 290개, lint·타입·build, 원문/음악 fixture E2E 및 CI 결과가 있다. 관리자 런타임이 일치하는 기존 증거이며 이번 감사에서 해당 전체 검사를 재실행한 것은 아니다.
+[배포 검증 기록](20261017-hanmadi-caption-preflight-production.md)과 [기능 검증 기록](https://github.com/hhj4861/commerce-automation-kit/blob/7b91a3e047e9b475120b9b21f7f10f1e17cfbd36/docs/qa/20261016-hanmadi-caption-preflight.md)에 단위 290개, lint·타입·build, 원문/음악 fixture E2E 및 CI 결과가 있다. 관리자 런타임이 일치하는 기존 증거이며 이번 감사에서 해당 전체 검사를 재실행한 것은 아니다.
 
 기존 fixture E2E는 파일 등록·원문 정리·오류 복구·검수·게시·학습 흐름을 시험한다. 실제 외부 자막 공급의 성공이나 임의 공개 곡의 확보 가능성을 입증하지 않는다. 이번에는 실제 운영 자료·검색 결과를 이용해 그 간극을 확인했다.
 
