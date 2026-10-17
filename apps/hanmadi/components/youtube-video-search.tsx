@@ -5,6 +5,8 @@ import Image from "next/image";
 import { VIDEO_SELECTION_LIMIT } from "@/lib/video-policy";
 import type { YoutubeSearchPage, YoutubeVideo } from "@/lib/youtube-search";
 import { studyLanguages, type StudyLanguage } from "@/lib/v2";
+import { mediaPreparation } from "@/lib/media-preparation";
+import type { MediaSummary } from "@/lib/media-source";
 import type { MediaPurpose } from "@/lib/media-source";
 
 type Search = { query: string };
@@ -41,6 +43,7 @@ function searchError(error: unknown) {
 
 export function YoutubeVideoSearch({
   configured,
+  active,
   captionImportConfigured,
   disabled,
   onBusyChange,
@@ -50,10 +53,25 @@ export function YoutubeVideoSearch({
   onCollect: (videos: YoutubeVideo[], language: StudyLanguage, purposes: MediaPurpose[]) => Promise<void>;
   onOpenSources?: () => void;
   configured: boolean;
+  active?: boolean;
   captionImportConfigured: boolean | null;
   disabled: boolean;
   onBusyChange: (busy: boolean) => void;
 }) {
+  const [sources, setSources] = useState<MediaSummary[] | null>(null);
+  const [sourceError, setSourceError] = useState("");
+  const [preparationFilter, setPreparationFilter] = useState("all");
+  const [acquisition, setAcquisition] = useState("");
+  useEffect(() => {
+    if (active === false) return;
+    const controller = new AbortController();
+    void fetch("/api/study/admin/media", { cache: "no-store", signal: AbortSignal.any([controller.signal, AbortSignal.timeout(35000)]) }).then(async response => {
+      const data = await response.json();
+      if (!response.ok || !Array.isArray(data.sources)) throw new Error("준비 상태를 확인하지 못했어요.");
+      if (!controller.signal.aborted) { setSources(data.sources); setSourceError(""); }
+    }).catch(() => { if (!controller.signal.aborted) { setSources(null); setSourceError("준비 상태를 확인하지 못했어요. 원문·작업에서 새로고침해 주세요."); } });
+    return () => controller.abort();
+  }, [active]);
   const [collectionLanguage, setCollectionLanguage] = useState<StudyLanguage>("ja");
   const [purpose, setPurpose] = useState("study");
   const [query, setQuery] = useState("");
@@ -76,9 +94,10 @@ export function YoutubeVideoSearch({
   } | null>(null);
   const page = pages[pageIndex];
   const selectedIds = new Set(selected.map((v) => v.id));
-  const selectedHere =
-    page?.videos.filter((v) => selectedIds.has(v.id)).length ?? 0;
-  const allHere = !!page?.videos.length && selectedHere === page.videos.length;
+  function preparation(video: YoutubeVideo) { return mediaPreparation(sources?.find(source => source.videoId === video.id && source.language === collectionLanguage)); }
+  const visibleVideos = page?.videos.filter(video => preparationFilter === "all" || (sources !== null && preparation(video).ready)) ?? [];
+  const selectedHere = visibleVideos.filter(v => selectedIds.has(v.id)).length;
+  const allHere = !!visibleVideos.length && selectedHere === visibleVideos.length;
   const searchVideos = [
     ...new Map(pages.flatMap((p) => p.videos).map((v) => [v.id, v])).values(),
   ];
@@ -182,7 +201,7 @@ export function YoutubeVideoSearch({
       }
       setBulkStatus(
         token
-          ? `준비 목록 ${ids.size}/${VIDEO_SELECTION_LIMIT}개. 안전한 일괄 분석을 위해 추가 선택을 멈췄어요.`
+          ? `준비 목록 ${ids.size}/${VIDEO_SELECTION_LIMIT}개. 준비 목록 한도에 도달해 추가 선택을 멈췄어요.`
           : `모든 페이지 확인 완료 · 준비 목록 ${ids.size}개를 담았어요.`,
       );
     } catch (e) {
@@ -210,10 +229,10 @@ export function YoutubeVideoSearch({
     setBulkStatus("");
     setSelected((previous) =>
       allHere
-        ? previous.filter((v) => !page.videos.some((item) => item.id === v.id))
+        ? previous.filter((v) => !visibleVideos.some((item) => item.id === v.id))
         : [
             ...previous,
-            ...page.videos.filter((v) => !selectedIds.has(v.id)),
+            ...visibleVideos.filter((v) => !selectedIds.has(v.id)),
           ].slice(0, VIDEO_SELECTION_LIMIT),
     );
   }
@@ -332,12 +351,12 @@ export function YoutubeVideoSearch({
               기준 · 1시간 재사용
             </p>
           )}
-          {page && (searchVideos.length > 0 || page.nextPageToken) && (
+          {preparationFilter === "all" && page && (searchVideos.length > 0 || page.nextPageToken) && (
             <div className="vs-all-pages">
               <div>
                 <strong>페이지를 넘기지 않고 한 번에</strong>
                 <p>
-                  페이지를 넘겨 최대 10개까지 담아요. 한 번에 3개씩 분석해요.
+                  페이지를 넘겨 최대 10개까지 선택해요. 영상 정보만 저장하며 분석은 검수·반영에서 시작해요.
                 </p>
               </div>
               {selectingAll ? (
@@ -370,7 +389,7 @@ export function YoutubeVideoSearch({
               )}
             </div>
           )}
-          {page && page.videos.length > 0 && (
+          {page && visibleVideos.length > 0 && (
             <div className="vs-selection-bar">
               <label>
                 <input
@@ -387,7 +406,7 @@ export function YoutubeVideoSearch({
                 이 페이지 모두 선택
               </label>
               <span>
-                {selectedHere}/{page.videos.length}개 선택
+                {selectedHere}/{visibleVideos.length}개 선택
               </span>
               {selected.length > 0 && (
                 <a className="vs-tray-jump" href="#video-preparation">
@@ -419,8 +438,13 @@ export function YoutubeVideoSearch({
               </p>
             </div>
           )}
+          <div className="vs-preparation-filter"><label>검색 결과 범위<select aria-label="검색 결과 범위" value={preparationFilter} onChange={e => setPreparationFilter(e.target.value)} disabled={busy || disabled}><option value="all">전체 영상 · 원문 확보 대기 포함</option><option value="ready">이 페이지의 원문 준비 완료만</option></select></label>
+          <p className="hm-muted">준비 완료는 선택한 수집 언어로 저장한 최신 원문이 정리된 상태예요. 공개 자막 유무·채널 연결만으로 판정하지 않아요.</p>
+          {sourceError && <p role="alert">{sourceError}</p>}
+          {preparationFilter === "ready" && page && !visibleVideos.length && <p role="status">{sourceError ? "준비 상태를 확인할 수 없어 준비 완료 영상을 표시하지 않아요." : sources === null ? "원문 준비 상태를 확인하는 중이에요." : "이 페이지에 원문 준비가 완료된 영상이 없어요. 전체 영상에서 후보를 찾고 원문을 연결하세요."}</p>}
+          </div>
           <ul className="vs-video-list">
-            {page?.videos.map((video) => {
+            {visibleVideos.map((video) => {
               const checked = selectedIds.has(video.id);
               return (
                 <li
@@ -470,6 +494,7 @@ export function YoutubeVideoSearch({
                       <span className="vs-link-hint">YouTube에서 보기 ↗</span>
                     </a>
                     <p>{video.channel || "채널 정보 없음"}</p>
+                    <p><strong>{sources === null ? "원문 준비 상태 미확인" : preparation(video).label}</strong></p>
                     <p className="hm-muted">{captionImportConfigured === true ? "자막 가져오기 권한 미확인 · 파일로도 준비 가능" : captionImportConfigured === false ? "자막 파일 준비 필요 · 자동 가져오기 불가" : "자막 연결 상태 확인 중"}</p>
                     {checked && (
                       <span className="vs-selected-label">
@@ -505,12 +530,14 @@ export function YoutubeVideoSearch({
       <section id="video-preparation" className="hm-panel" aria-label="영상 수집 설정">
         <h2>선택한 영상 {selected.length}개</h2><p>영상 정보만 저장하며 자막은 자동으로 확보하지 않아요. AI 생성·평가·게시도 실행하지 않아요.</p>
         <fieldset disabled={busy || disabled} className="music-fields">
+          <label>원문 확보 방법<select aria-label="원문 확보 방법" value={acquisition} onChange={e => setAcquisition(e.target.value)} required><option value="">확보 방법을 먼저 선택하세요</option><option value="file">이용 가능한 원문 파일을 연결할게요</option><option value="channel" disabled={captionImportConfigured !== true}>연결 채널에서 가져오기 권한을 확인할게요</option><option value="ready" disabled={!selected.length || sources === null || selected.some(video => !preparation(video).ready)}>이미 준비 완료된 원문을 사용할게요</option></select></label>
+          <p>파일은 원문·작업에서 연결하고 이용 근거를 확인해요. 채널 연결이 있어도 영상별 권한 확인 전에는 확보 대기예요.</p>
           <label>수집 언어<select value={collectionLanguage} onChange={e => setCollectionLanguage(e.target.value as StudyLanguage)}>{Object.entries(studyLanguages).map(([id, item]) => <option key={id} value={id}>{item.name}</option>)}</select></label>
           <label>수집 용도<select value={purpose} onChange={e => setPurpose(e.target.value)}><option value="study">회화 수업</option><option value="music">음악 학습</option><option value="both">회화 수업과 음악 학습</option></select></label>
           <ul>{selected.map(video => <li key={video.id}>{video.title} <button type="button" aria-label={`${video.title} 선택 해제`} onClick={() => setSelected(items => items.filter(v => v.id !== video.id))}>선택 해제</button></li>)}</ul>
-          <div className="hm-row"><button disabled={!selected.length} type="button" onClick={async () => {
+          <div className="hm-row"><button disabled={!selected.length || !acquisition || (acquisition === "channel" && captionImportConfigured !== true) || (acquisition === "ready" && (sources === null || selected.some(video => !preparation(video).ready)))} type="button" onClick={async () => {
             setBatchBusy(true); onBusyChange(true); setError("");
-            try { await onCollect(selected, collectionLanguage, purpose === "both" ? ["study", "music"] : [purpose as MediaPurpose]); setSelected([]); }
+            try { await onCollect(selected, collectionLanguage, purpose === "both" ? ["study", "music"] : [purpose as MediaPurpose]); setSelected([]); setAcquisition(""); }
             catch (e) { setError(e instanceof Error ? e.message : "저장 결과를 확인하지 못했어요. 준비함에서 확인한 뒤 다시 시도해 주세요."); }
             finally { setBatchBusy(false); onBusyChange(false); }
           }}>{batchBusy ? "저장 중…" : "공통 준비함에 담기"}</button><button type="button" onClick={onOpenSources}>YouTube 주소·원문으로 등록</button></div>
