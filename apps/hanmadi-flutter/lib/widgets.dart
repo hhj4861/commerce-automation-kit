@@ -85,22 +85,42 @@ class Primary extends StatelessWidget {
   );
 }
 
+/// Keeps selection/copy while exposing the original once as readable text.
+class LearningText extends StatelessWidget {
+  final String text;
+  final String? language;
+  final TextStyle? style;
+  const LearningText(this.text, {super.key, this.language, this.style});
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    container: true,
+    label: text,
+    localeForSubtree: language == null ? null : Locale(language!),
+    excludeSemantics: true,
+    child: SelectableText(text, style: style),
+  );
+}
+
 class PhraseView extends StatelessWidget {
   final Phrase phrase;
   final bool reveal;
   final bool compact;
+  final String? language;
   const PhraseView(
     this.phrase, {
     super.key,
     this.reveal = true,
     this.compact = false,
+    this.language,
   });
   @override
   Widget build(BuildContext context) => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      SelectableText(
+      LearningText(
         phrase.text,
+        language: language,
         style: TextStyle(
           fontFamily: 'NotoSansKR',
           fontFamilyFallback: uiFallback,
