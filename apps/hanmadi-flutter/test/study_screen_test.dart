@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hanmadi/audio_service.dart';
+import 'package:hanmadi/models.dart';
 import 'package:hanmadi/study_model.dart';
 import 'package:hanmadi/study_screen.dart';
 import 'package:hanmadi/study_widgets.dart';
@@ -101,6 +102,44 @@ void main() {
       m.api.close();
     });
   }
+
+  testWidgets('original text is readable once in semantics with its language', (
+    t,
+  ) async {
+    final semantics = t.ensureSemantics();
+    final m = fixture();
+    final audio = TestAudio(m.api);
+    await t.pumpWidget(screen(m, audio));
+    await t.pumpAndSettle();
+    final original = find.bySemanticsLabel('こんにちは。');
+    expect(original, findsOneWidget);
+    final data = t.getSemantics(original).getSemanticsData();
+    expect(data.label, 'こんにちは。');
+    expect(data.locale, const Locale('ja'));
+    await t.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: PhraseView(
+            const Phrase('こんにちは。', '콘니치와', '숨긴 뜻'),
+            reveal: false,
+            language: 'ja',
+          ),
+        ),
+      ),
+    );
+    await t.pumpAndSettle();
+    expect(find.bySemanticsLabel('こんにちは。'), findsOneWidget);
+    expect(find.bySemanticsLabel(RegExp('숨긴 뜻')), findsNothing);
+    expect(
+      find.byType(SelectableText),
+      findsOneWidget,
+      reason: 'Selection and copy remain available',
+    );
+    await t.pumpWidget(const SizedBox.shrink());
+    semantics.dispose();
+    audio.dispose();
+    m.api.close();
+  });
 
   testWidgets('word pack choice changes preview and survives study tabs', (
     t,

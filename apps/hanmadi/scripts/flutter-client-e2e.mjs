@@ -50,6 +50,7 @@ try{
  await page.goto(base+'/study/app-login');await page.getByLabel('아이디',{exact:true}).fill(user);await page.getByLabel('비밀번호',{exact:true}).fill('synthetic-password-only-123');await page.getByRole('button',{name:'로그인',exact:true}).click();
  await page.waitForURL(url=>url.pathname==='/app'||url.pathname==='/app/');await page.getByRole('button',{name:'회화 연습하기',exact:true}).first().waitFor({timeout:60000});
  assert.equal(await page.getByText('오늘도, 한마디 가까이',{exact:true}).count(),0);
+ await page.getByText('韓国から旅行に来ました。',{exact:true}).waitFor();
  await page.mouse.move(385,8);await page.waitForTimeout(200);await page.screenshot({animations:'disabled',caret:'hide',timeout:60000,path:resolve(dir,'mobile-study.png')});
  await page.getByRole('button',{name:/어떤 상황을 연습할까요.*선택/}).click();
  await page.getByRole('menuitem').first().waitFor();await page.waitForTimeout(220);await page.screenshot({animations:'disabled',caret:'hide',timeout:60000,path:resolve(dir,'mobile-scene-picker.png')});
@@ -65,6 +66,16 @@ try{
  await page.getByText('단어 연습 · 2/5',{exact:true}).waitFor();
  await page.getByRole('button',{name:'연습 닫기',exact:true}).click();
  assert((await api('/api/study')).state.expressions.some(e=>e.meaning==='커피'),'word practice saves through real API');
+ await page.getByRole('button',{name:'내 단어장',exact:true}).click();
+ await page.waitForURL(url=>url.hash==='#/library?tab=words');
+ await page.getByRole('button',{name:'단어장 복습하기',exact:true}).waitFor();
+ await page.screenshot({animations:'disabled',caret:'hide',timeout:60000,path:resolve(dir,'mobile-direct-vocabulary.png')});
+ await page.getByRole('tab',{name:/스터디/}).click();
+ await page.getByRole('button',{name:'회화',exact:true}).click();
+ await page.getByRole('button',{name:/^나의 표현(?: [0-9]+)?$/}).click();
+ await page.waitForURL(url=>url.hash==='#/library');
+ assert.equal(await page.getByRole('button',{name:'단어장 복습하기',exact:true}).count(),0);
+ await page.getByRole('tab',{name:/스터디/}).click();
  await page.getByRole('button',{name:'회화',exact:true}).click();
  await page.getByRole('button',{name:/어떤 상황을 연습할까요.*선택/}).click();
  await page.getByRole('menuitem',{name:'카페',exact:true}).click();
@@ -76,22 +87,35 @@ try{
  await page.getByRole('button',{name:'스터디로',exact:true}).click();
  await page.getByRole('button',{name:'단어',exact:true}).click();
  await page.getByRole('button',{name:'음악',exact:true}).click();await page.getByRole('button',{name:'이어서 연습하기',exact:true}).first().click();
- await page.getByRole('button',{name:'스터디로',exact:true}).waitFor();await page.screenshot({animations:'disabled',caret:'hide',timeout:60000,path:resolve(dir,'mobile-music.png')});
- await page.getByRole('button',{name:'스터디로',exact:true}).click();await page.getByRole('tab',{name:/AI 대화/}).click();
+ await page.getByRole('button',{name:'음악 목록으로',exact:true}).waitFor();await page.screenshot({animations:'disabled',caret:'hide',timeout:60000,path:resolve(dir,'mobile-music.png')});
+ await page.getByRole('button',{name:'음악 목록으로',exact:true}).click();
+ await page.getByRole('button',{name:'이어서 연습하기',exact:true}).waitFor();
+ assert.equal(await page.getByRole('button',{name:'회화 연습하기',exact:true}).count(),0);
+ await page.getByRole('tab',{name:/AI 대화/}).click();
+ await page.setViewportSize({width:320,height:568});
+ await page.getByRole('checkbox',{name:'오늘의 기분 말하기',exact:true}).or(page.getByRole('button',{name:'오늘의 기분 말하기',exact:true})).waitFor();
+ await page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));
+ const composerBox=await page.locator('textarea[data-semantics-role="text-field"]').boundingBox();
+ for(const label of ['인사부터 연습할래요','오늘의 기분 말하기']) {
+  const box=await page.getByRole('checkbox',{name:label,exact:true}).or(page.getByRole('button',{name:label,exact:true})).boundingBox();
+  assert(box && composerBox && box.y>=0 && box.y+box.height<composerBox.y,'starter action stays above composer');
+ }
+ await page.screenshot({animations:'disabled',caret:'hide',timeout:60000,path:resolve(dir,'mobile-chat-small.png')});
+ await page.setViewportSize({width:390,height:844});
  const input=page.locator('textarea[data-semantics-role="text-field"]');
  await page.waitForTimeout(400); // Flutter branch transition may replace the semantic editor.
  await input.focus();await page.waitForFunction(()=>document.activeElement===document.querySelector('textarea[data-semantics-role="text-field"]'));
  await page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));await input.fill('こんにちは');await page.waitForTimeout(100);
  assert.equal(await input.inputValue(),'こんにちは');
- await page.getByRole('button',{name:/메시지 보내기/}).click();await page.getByRole('textbox',{name:/안녕하세요[.]/}).waitFor({timeout:30000});
+ await page.getByRole('button',{name:/메시지 보내기/}).click();await page.getByText('こんにちは。',{exact:true}).waitFor({timeout:30000});
  await page.screenshot({animations:'disabled',caret:'hide',timeout:60000,path:resolve(dir,'mobile-chat.png')});await page.getByRole('tab',{name:/번역/}).click();await page.screenshot({animations:'disabled',caret:'hide',timeout:60000,path:resolve(dir,'mobile-translation.png')});
  await page.waitForTimeout(400);const translationInput=page.locator('textarea[data-semantics-role="text-field"]');await translationInput.focus();await page.waitForFunction(()=>document.activeElement===document.querySelector('textarea[data-semantics-role="text-field"]'));await page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));await translationInput.fill('안녕하세요');await page.waitForTimeout(100);
- await page.getByRole('button',{name:'번역하기',exact:true}).click();await page.getByRole('textbox',{name:/이렇게 전해 보세요/}).waitFor({timeout:30000});
- await page.getByRole('tab',{name:/보관함/}).click();await page.getByText(/다시 꺼내 쓰는 나의 말/).waitFor();await page.screenshot({animations:'disabled',caret:'hide',timeout:60000,path:resolve(dir,'mobile-library.png')});
+ await page.getByRole('button',{name:'번역하기',exact:true}).click();await page.getByText('こんにちは。',{exact:true}).waitFor({timeout:30000});
+ await page.getByRole('tab',{name:/보관함/}).click();await page.getByRole('button',{name:/내 표현 [0-9]+/}).waitFor();await page.screenshot({animations:'disabled',caret:'hide',timeout:60000,path:resolve(dir,'mobile-library.png')});
  await page.setViewportSize({width:1440,height:1000});await page.getByRole('tablist').waitFor({state:'hidden'});await page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));await page.screenshot({animations:'disabled',caret:'hide',timeout:60000,path:resolve(dir,'desktop-library.png')});assert.deepEqual(errors,[]);
- await writeFile(resolve(dir,'result.json'),JSON.stringify({pass:true,ai:'local fixture only',production:false,checks:['PKCE','shared storage','revocation','Origin','catalog','bounded pickers','focused Escape','outside dismiss','level selection','word preview','word practice/save','conversation entry','music return','chat','translation','library']},null,2));
+ await writeFile(resolve(dir,'result.json'),JSON.stringify({pass:true,ai:'local fixture only',production:false,checks:['PKCE','shared storage','revocation','Origin','catalog','bounded pickers','focused Escape','outside dismiss','level selection','word preview','word practice/save','conversation entry','music return','chat','translation','library','original semantics','vocabulary direct entry','music catalog return','short phone starter actions']},null,2));
  console.log('PASS real API auth/save/revoke/Origin and Flutter music return/chat/translation/library');
-}catch(e){ if(page){await page.screenshot({animations:'disabled',caret:'hide',timeout:60000,path:resolve(dir,'failure.png')}).catch(()=>{});await writeFile(resolve(dir,'failure-dom.txt'),await page.locator('body').ariaSnapshot().catch(()=>''));await writeFile(resolve(dir,'failure.html'),await page.content());}throw e;
+}catch(e){ console.error('E2E failed:',e); if(page){await page.screenshot({animations:'disabled',caret:'hide',timeout:60000,path:resolve(dir,'failure.png')}).catch(()=>{});await writeFile(resolve(dir,'failure-dom.txt'),await page.locator('body').ariaSnapshot().catch(()=>''));await writeFile(resolve(dir,'failure.html'),await page.content());}throw e;
 }finally{
- await browser?.close();app.kill('SIGTERM');await new Promise(r=>{if(app.exitCode!==null)r();else{app.once('exit',r);setTimeout(r,5000)}});await new Promise(r=>mock.close(r));await writeFile(resolve(dir,'server.log'),logs);
+ await browser?.close();app.kill('SIGTERM');await new Promise(r=>{if(app.exitCode!==null)r();else{app.once('exit',r);setTimeout(r,5000)}});mock.closeAllConnections();await new Promise(r=>mock.close(r));await writeFile(resolve(dir,'server.log'),logs);
 }
