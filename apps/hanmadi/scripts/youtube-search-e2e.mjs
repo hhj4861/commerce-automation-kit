@@ -182,6 +182,7 @@ export async function verifyYoutubeSearch({
     const query = page.getByLabel("검색어", { exact: true });
     let queue = page.getByRole("region", { name: "영상 수집 설정" });
     async function sendToReview(items) {
+      await page.getByLabel("원문 확보 방법", { exact: true }).selectOption("file");
       await page.getByRole("button", { name: "공통 준비함에 담기", exact: true }).click();
       await openAdminTool(page, "자료 만들기");
       const sources = page.getByRole("region", { name: "준비한 콘텐츠", exact: true });

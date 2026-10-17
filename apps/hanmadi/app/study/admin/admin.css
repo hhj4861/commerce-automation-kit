@@ -1353,3 +1353,7 @@
 .ks .ks-next-stage { border-left: 3px solid #3157d5; padding: 12px 16px; margin: 20px 0; }
 .ks .ks-next-stage button { margin: 4px 8px 8px 0; }
 .ks .ks-next-stage small { display: block; }
+
+.ks .vs-preparation-filter { display: grid; gap: 8px; padding: 20px clamp(16px, 2.5vw, 28px); }
+.ks .vs-preparation-filter label { display: grid; gap: 8px; font-size: 12px; }
+.ks .vs-preparation-filter p { margin: 0; }
