@@ -67,7 +67,7 @@ if(mode==='review'){
   const file=arg('--voice-input');if(!file)throw Error('Reviewed website voice export required');
   const {scenePhrases}=await mod('apps/shopshorts/studio-alignment.mjs');
   const request=join(root,'website-import-input.json');await writeFile(request,JSON.stringify({sourceHash:hash,voiceId:story.brief.voiceId,scenes:story.scenes.map(s=>({...s,phrases:scenePhrases({brief:story.brief},s)}))}));
-  console.log(await command(process.env.SHOPSHORTS_ALIGNMENT_PYTHON||'python3',[join(here,'import-voice.py'),'--audio',resolve(file),'--input',request,'--out',root,'--aligner',join(runtime,'apps/shopshorts/renderers/align-narration.py'),'--cache',process.env.SHOPSHORTS_WHISPER_CACHE||join(root,'whisper-models')],process.env,600000));
+  console.log(await command(process.env.SHOPSHORTS_ALIGNMENT_PYTHON||'python3',[join(here,'import-voice.py'),'--audio',resolve(file),'--source-speed',arg('--source-speed','1'),'--input',request,'--out',root,'--aligner',join(runtime,'apps/shopshorts/renderers/align-narration.py'),'--cache',process.env.SHOPSHORTS_WHISPER_CACHE||join(root,'whisper-models')],process.env,600000));
  }else if(mode==='compose'){
   const tl=JSON.parse(await readFile(join(root,'timeline.json'),'utf8'));if(tl.sourceHash!==hash||tl.beats.length!==story.scenes.length)throw Error('Timeline mismatch');
   const {defaultCaption}=await mod('apps/shopshorts/public/video-typography.js');

@@ -3,10 +3,12 @@ import argparse, json, math, hashlib, importlib.util, subprocess
 from pathlib import Path
 p=argparse.ArgumentParser()
 for k in ['audio','input','out','aligner','cache']:p.add_argument('--'+k,required=True)
-a=p.parse_args();root=Path(a.out);request=json.loads(Path(a.input).read_text())
+p.add_argument('--source-speed',type=float,default=1.0)
+a=p.parse_args();assert .7<=a.source_speed<=1.2,'Invalid source speed';root=Path(a.out);request=json.loads(Path(a.input).read_text())
+target_speed=1.1;tempo_factor=target_speed/a.source_speed
 source=Path(a.audio);source_hash=hashlib.sha256(source.read_bytes()).hexdigest()
 full=root/'website-narration-1.1.mp3'
-subprocess.run(['ffmpeg','-v','error','-y','-i',str(source),'-af','atempo=1.1','-c:a','libmp3lame','-b:a','192k',str(full)],check=True)
+subprocess.run(['ffmpeg','-v','error','-y','-i',str(source),'-af',f'atempo={tempo_factor:.12g}','-c:a','libmp3lame','-b:a','192k',str(full)],check=True)
 probe=lambda f:float(subprocess.check_output(['ffprobe','-v','error','-show_entries','format=duration','-of','default=nw=1:nk=1',str(f)]))
 duration=probe(full)
 import whisper,torch
@@ -25,7 +27,7 @@ ends=[];n=0
 for s in request['scenes']:
  n+=len(s['phrases']);ends.append(n)
 bounds=[0]+[(aligned['phrases'][n-1]['end']+aligned['phrases'][n]['start'])/2 for n in ends[:-1]]+[duration]
-timeline={'sourceHash':request['sourceHash'],'voice':request['voiceId'],'speed':1.1,'voiceSource':'ElevenLabs official website export','sourceAudioHash':source_hash,'beats':[]}
+timeline={'sourceHash':request['sourceHash'],'voice':request['voiceId'],'speed':target_speed,'sourceSpeed':a.source_speed,'appliedTempo':tempo_factor,'voiceSource':'ElevenLabs official website export','sourceAudioHash':source_hash,'beats':[]}
 for i,s in enumerate(request['scenes']):
  start,end=bounds[i:i+2];audio=root/(s['id']+'.mp3')
  subprocess.run(['ffmpeg','-v','error','-y','-ss',str(start),'-t',str(end-start),'-i',str(full),'-c:a','libmp3lame','-b:a','192k',str(audio)],check=True)
