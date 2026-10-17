@@ -3,7 +3,7 @@ import { useRef, useState } from "react";
 import { formatCueTime, parseMusicSource, timedSource } from "@/lib/music-source";
 import { MusicPlayback, type MusicPlaybackHandle } from "./music-playback";
 
-export function MusicTimingEditor({ source, videoId, onApply }: { source: string; videoId: string; onApply: (source: string) => void }) {
+export function MusicTimingEditor({ source, videoId, onApply, active = true }: { active?: boolean; source: string; videoId: string; onApply: (source: string) => void }) {
   const [rows, setRows] = useState<{ text: string; start: string; end: string }[]>([]);
   const [error, setError] = useState("");
   const [time, setTime] = useState(0);
@@ -17,7 +17,7 @@ export function MusicTimingEditor({ source, videoId, onApply }: { source: string
     <p>원문을 불러온 뒤 영상을 듣고 줄마다 시작·끝을 찍으세요. 시간은 초 단위로 직접 고칠 수도 있어요.</p>
     <button type="button" onClick={load}>원문에서 줄 불러오기</button>
     {rows.length > 0 && <>
-      {/^[\w-]{11}$/.test(videoId) && <MusicPlayback ref={player} videoId={videoId} title="시간 편집" onTime={setTime} />}
+      {active && /^[\w-]{11}$/.test(videoId) && <MusicPlayback ref={player} videoId={videoId} title="시간 편집" onTime={setTime} />}
       <p>현재 재생 위치 <output aria-label="현재 재생 위치">{formatCueTime(time)}</output></p>
       <ol className="hm-timing-lines">{rows.map((row, i) => <li key={i}>
         <p>{i + 1}. {row.text}</p><div className="hm-timing-inputs">

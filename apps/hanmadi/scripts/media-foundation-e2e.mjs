@@ -140,9 +140,15 @@ try {
   await page.getByText('새 원문 버전 추가', { exact: true }).click();
   await page.getByLabel('보관할 원문', { exact: true }).fill('Unsaved self authored line one\nUnsaved self authored line two');
   await page.getByLabel('원문 보관·학습 이용 근거', { exact: true }).fill('Self authored unsaved verification');
+  await page.getByText('가사 시간 맞추기', { exact: true }).click();
+  await page.getByRole('button', { name: '원문에서 줄 불러오기', exact: true }).click();
+  assert.equal(await page.locator('.hm-timing-lines li').count(), 2);
+  assert.equal(await page.locator('.hm-timing .hm-playback').count(), 1);
   await openAdminTool(page, '영상 찾기');
+  assert.equal(await page.locator('.hm-timing .hm-playback').count(), 0, 'Hidden timing editor must release its media player');
   await openAdminTool(page, '원문·작업');
   await page.getByRole('heading', { name: 'Source en', exact: true }).waitFor();
+  assert.equal(await page.locator('.hm-timing-lines li').count(), 2, 'Timing edits remain while the player is remounted');
   assert.match(await page.getByLabel('보관할 원문', { exact: true }).inputValue(), /Unsaved self authored/);
   assert.equal(await page.getByLabel('원문 보관·학습 이용 근거', { exact: true }).inputValue(), 'Self authored unsaved verification');
   assert.equal((await (await context.request.get(endpoint + '?id=' + english.id)).json()).source.revision, 2, 'Menu switching never persists an unsaved draft');
