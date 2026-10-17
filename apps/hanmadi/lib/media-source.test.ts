@@ -1,4 +1,5 @@
 import test from "node:test";
+import { mediaPreparation } from "./media-preparation";
 import assert from "node:assert/strict";
 import { mediaRegistration, normalizeOriginal, type MediaDetail } from "./media-source";
 import { collectMedia, saveMediaOriginal, readMedia, runMediaJob, cancelMediaJob, deleteMediaSource } from "./media-store";
@@ -126,4 +127,18 @@ test("one collected video adds another purpose without duplicating or replacing 
   assert.equal(music.source.revision, 1);
   await assert.rejects(collectMedia({ ...input, language: "ja" }, f.db), /다른 원문 언어/);
   assert.equal((await readMedia(undefined, f.db) as { sources: unknown[] }).sources.length, 1);
+});
+
+test("readiness excludes missing originals, unfinished work and stale ready revisions", async () => {
+  const { db, saved, deps, body } = await setup();
+  const summary = async () => { const data = await readMedia(undefined, db); assert("sources" in data); return data.sources[0]; };
+  assert.equal(mediaPreparation().ready, false);
+  assert.equal(mediaPreparation(await summary()).label, "원문 정리 필요");
+  await runMediaJob(saved.jobs[0].id, deps);
+  const ready = await summary();
+  assert.equal(mediaPreparation(ready).ready, true);
+  assert.equal(mediaPreparation({ ...ready, originalCount: 0 }).ready, false);
+  assert.equal(mediaPreparation({ ...ready, revision: ready.revision + 1 }).ready, false);
+  await saveMediaOriginal({ ...body, revision: 1, requestId: "second-version", raw: "New line one\nNew line two" }, "owner:fixture", db);
+  assert.equal(mediaPreparation(await summary()).ready, false, "An older completed job must not promote new unprocessed text");
 });

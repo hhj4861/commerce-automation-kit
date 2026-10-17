@@ -69,6 +69,8 @@ export function V2Admin({ appHref = "/study" }: { appHref?: string }) {
   const lastTab = useRef<Record<string, AdminTab>>({ prepare: "videos", review: "editor", operate: "published" });
   const [musicBusy, setMusicBusy] = useState(false);
   const [mediaRaw, setMediaRaw] = useState("");
+  const [mediaOpened, setMediaOpened] = useState(false);
+  const [mediaLoad, setMediaLoad] = useState(0);
   const [mediaId, setMediaId] = useState<string | undefined>();
   const [reviewSource, setReviewSource] = useState<MediaDetail | undefined>();
   const [videoSources, setVideoSources] = useState<YoutubeVideo[]>([]);
@@ -240,13 +242,13 @@ export function V2Admin({ appHref = "/study" }: { appHref?: string }) {
     if (!song && !legacy) { navigate("videos"); return; }
     try {
       const data = await mediaRequest({ action: "collect", video: song?.videoId ?? legacy!.video.id, title: song?.title ?? legacy!.video.title.slice(0, 100), language: song?.language ?? legacy!.language, purposes: ["music"] });
-      setMediaId(data.source.id); setMediaRaw(song?.source ?? legacy?.source ?? ""); navigate("media");
+      setMediaLoad(value => value + 1); setMediaId(data.source.id); setMediaRaw(song?.source ?? legacy?.source ?? ""); navigate("media");
     } catch (e) { setError(e instanceof Error ? e.message : "기존 원문을 준비함에 연결하지 못했어요."); }
   }
   async function collectVideos(videos: YoutubeVideo[], language: StudyLanguage, purposes: MediaPurpose[]) {
     let first: string | undefined;
     for (const video of videos) { const data = await mediaRequest({ action: "collect", video: video.id, title: video.title.slice(0, 100), language, purposes }); first ??= data.source.id; }
-    setMediaRaw(""); setMediaId(first); setTab("media");
+    setMediaLoad(value => value + 1); setMediaRaw(""); setMediaId(first); setMediaOpened(true); setTab("media");
   }
   const group = adminGroups.find(g => (g.tabs as readonly string[]).includes(tab)) ?? (tab === "legacyMusic" ? adminGroups[0] : undefined);
   const pendingCount = contributions.filter(c => c.status === "pending").length;
@@ -255,6 +257,7 @@ export function V2Admin({ appHref = "/study" }: { appHref?: string }) {
     if (group) lastTab.current[group.id] = tab;
     const nextGroup = adminGroups.find(g => (g.tabs as readonly string[]).includes(next)) ?? (next === "legacyMusic" ? adminGroups[0] : undefined);
     if (nextGroup) lastTab.current[nextGroup.id] = next;
+    if (next === "media") setMediaOpened(true);
     setTab(next); setError(""); setNotice("");
   }
   return (
@@ -303,7 +306,7 @@ export function V2Admin({ appHref = "/study" }: { appHref?: string }) {
         {tab === "musicReview" && <><ContentSourceQueue purpose="music" disabled={busy || musicBusy} onSelect={useSource} onPrepare={() => navigate("media")} /><MusicAdmin key={reviewSource ? `${reviewSource.source.id}:${reviewSource.source.revision}` : "music-review"} stage="review" prepared={reviewSource?.source.purposes.includes("music") ? reviewSource : undefined} onBusyChange={setMusicBusy} onPrepare={song => void prepareMusic(song)} /></>}
         {tab === "legacyMusic" && <MusicAdmin stage="legacy" onLegacyUse={item => void prepareMusic(undefined, item)} onPrepare={() => navigate("media")} />}
         {tab === "published" && <section className="hm-panel"><h2>앱에 반영된 수업</h2><p>게시된 자료만 표시해요. 수정과 재게시는 검수·반영에서 진행합니다.</p>{!drafts.some(d => d.status === "published") && <p>게시된 수업이 없어요.</p>}<ul>{drafts.filter(d => d.status === "published").map(d => <li key={d.id}><strong>{d.title}</strong><p>{studyLanguages[d.language].name} · 레벨 {d.level} · {d.units.length}개 표현</p><button onClick={() => { edit(d); navigate("editor"); }}>검수·수정으로 이동</button></li>)}</ul><button onClick={() => navigate("editor")}>미게시 수업 검수하기</button></section>}
-        {tab === "media" && <MediaAdmin key={mediaId ?? "all-sources"} initialId={mediaId} initialRaw={mediaRaw} onOpenLegacy={() => navigate("legacyMusic")} onReview={useSource} />}
+        {mediaOpened && <div hidden={tab !== "media"}><MediaAdmin active={tab === "media"} key={`${mediaId ?? "all-sources"}:${mediaLoad}`} initialId={mediaId} initialRaw={mediaRaw} onOpenLegacy={() => navigate("legacyMusic")} onReview={useSource} /></div>}
         {tab === "diagnostics" && <DiagnosticsAdmin />}
         {error && (
           <p className="hm-alert" role="alert">
@@ -319,6 +322,7 @@ export function V2Admin({ appHref = "/study" }: { appHref?: string }) {
           <YoutubeVideoSearch
             onCollect={collectVideos}
             onOpenSources={() => navigate("media")}
+            active={tab === "videos"}
             configured={searchConfigured}
             captionImportConfigured={captionImportConfigured}
             disabled={busy || loading}

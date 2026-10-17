@@ -91,6 +91,8 @@ try {
   await page.getByText('자막 가져오기 권한 미확인 · 파일로도 준비 가능', { exact: true }).waitFor();
   await page.getByRole('checkbox', { name: 'Morning original song 선택', exact: true }).check();
   await page.getByLabel('수집 언어').selectOption('en'); await page.getByLabel('수집 용도').selectOption('both');
+  assert(await page.getByRole('button', { name: '공통 준비함에 담기', exact: true }).isDisabled(), 'Collection requires a declared acquisition route');
+  await page.getByLabel('원문 확보 방법', { exact: true }).selectOption('file');
   await page.getByRole('button', { name: '공통 준비함에 담기', exact: true }).click();
   await page.getByRole('heading', { name: '원문·작업', exact: true, level: 1 }).waitFor();
   const common = await (await owner.request.get(base + '/api/study/admin/media')).json();

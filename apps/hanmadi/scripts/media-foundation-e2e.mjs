@@ -37,7 +37,7 @@ try {
   assert.equal((await context.request.post(endpoint, { headers: { Origin: base }, data: { action: 'collect', video: 'https://localhost/private', title: 'bad', language: 'en', purposes: ['study'] } })).status(), 400);
   assert.equal((await context.request.post(endpoint, { headers: { Origin: base }, data: { raw: 'a'.repeat(65000) } })).status(), 413);
   const legacy = await context.request.post(base + '/api/study/admin/music', { headers: { Origin: base }, data: { action: 'collection-add', video: 'abcdefghijk', language: 'en' } }); assert.equal(legacy.status(), 200);
-  page = await context.newPage(); let captionPosts = 0; page.on('request', request => { if (request.method() === 'POST' && request.url() === base + '/api/study/admin/music') captionPosts++; }); const errors = []; page.on('pageerror', e => errors.push(e.message));
+  page = await context.newPage(); page.setDefaultTimeout(15000); let captionPosts = 0; page.on('request', request => { if (request.method() === 'POST' && request.url() === base + '/api/study/admin/music') captionPosts++; }); const errors = []; page.on('pageerror', e => errors.push(e.message));
   async function open() { await page.goto(base + '/study/admin'); await openAdminTool(page, '원문·작업'); await page.getByRole('heading', { name: '원문과 처리 이력을 한곳에서' }).waitFor(); }
   async function storeSource(raw) {
     if (!(await page.getByLabel('보관할 원문', { exact: true }).isVisible())) await page.getByText('새 원문 버전 추가', { exact: true }).click();
@@ -136,6 +136,54 @@ try {
   await page.getByRole('heading', { name: '버전 2 · 원문 정리 완료', exact: true }).waitFor();
   const restored = await (await context.request.get(endpoint + '?id=' + english.id)).json();
   assert.equal(restored.source.originals.length, 2); assert.equal(restored.jobs[0].status, 'failed'); assert.equal(restored.jobs[1].status, 'ready');
+  // Menu changes retain the selected source and client-only unsaved input.
+  await page.getByText('새 원문 버전 추가', { exact: true }).click();
+  await page.getByLabel('보관할 원문', { exact: true }).fill('Unsaved self authored line one\nUnsaved self authored line two');
+  await page.getByLabel('원문 보관·학습 이용 근거', { exact: true }).fill('Self authored unsaved verification');
+  await page.getByText('가사 시간 맞추기', { exact: true }).click();
+  await page.getByRole('button', { name: '원문에서 줄 불러오기', exact: true }).click();
+  assert.equal(await page.locator('.hm-timing-lines li').count(), 2);
+  assert.equal(await page.locator('.hm-timing .hm-playback').count(), 1);
+  await openAdminTool(page, '영상 찾기');
+  assert.equal(await page.locator('.hm-timing .hm-playback').count(), 0, 'Hidden timing editor must release its media player');
+  await openAdminTool(page, '원문·작업');
+  await page.getByRole('heading', { name: 'Source en', exact: true }).waitFor();
+  assert.equal(await page.locator('.hm-timing-lines li').count(), 2, 'Timing edits remain while the player is remounted');
+  assert.match(await page.getByLabel('보관할 원문', { exact: true }).inputValue(), /Unsaved self authored/);
+  assert.equal(await page.getByLabel('원문 보관·학습 이용 근거', { exact: true }).inputValue(), 'Self authored unsaved verification');
+  assert.equal((await (await context.request.get(endpoint + '?id=' + english.id)).json()).source.revision, 2, 'Menu switching never persists an unsaved draft');
+  await page.getByLabel('보관할 원문', { exact: true }).fill('');
+  await page.getByLabel('원문 보관·학습 이용 근거', { exact: true }).fill('');
+  await page.getByLabel('원문 준비 상태', { exact: true }).selectOption('ready');
+  assert.equal(await page.getByRole('complementary', { name: '등록한 원본 목록' }).getByRole('listitem').count(), 4);
+  await page.getByLabel('원문 준비 상태', { exact: true }).selectOption('pending');
+  assert.equal(await page.getByLabel('원본 선택', { exact: true }).inputValue(), english.id, 'Filtering retains the explicitly selected source');
+  assert.equal(await page.getByRole('complementary', { name: '등록한 원본 목록' }).getByRole('listitem').count(), 1);
+  await page.getByLabel('원문 준비 상태', { exact: true }).selectOption('all');
+  // Readiness filtering uses persisted originals/current jobs, not public caption badges.
+  await openAdminTool(page, '영상 찾기');
+  await page.getByLabel('수집 언어').selectOption('en');
+  await page.getByLabel('검색어', { exact: true }).fill('caption readiness');
+  await page.getByRole('button', { name: '영상 검색', exact: true }).click();
+  await page.locator('.vs-video-list li').waitFor();
+  assert.equal(await page.getByText('한 번에 3개씩 분석해요.', { exact: false }).count(), 0);
+  await page.getByLabel('검색 결과 범위', { exact: true }).selectOption('ready');
+  await page.getByText('이 페이지에 원문 준비가 완료된 영상이 없어요. 전체 영상에서 후보를 찾고 원문을 연결하세요.', { exact: true }).waitFor();
+  assert.equal(await page.locator('.vs-video-list li').count(), 0);
+  const pendingOriginal = await context.request.post(endpoint, { headers: { Origin: base }, data: { action: 'save-source', id: imported.id, revision: 0, raw: 'Own fixture first line\nOwn fixture second line', rights: 'Self authored verification fixture', confirmed: true, requestId: 'ready-search-fixture' } });
+  assert.equal(pendingOriginal.status(), 200);
+  const pendingData = await pendingOriginal.json();
+  assert.equal((await context.request.post(endpoint, { headers: { Origin: base }, data: { action: 'run', jobId: pendingData.jobs[0].id } })).status(), 200);
+  await openAdminTool(page, '원문·작업');
+  await openAdminTool(page, '영상 찾기');
+  await page.locator('.vs-video-list li').waitFor();
+  await page.locator('.vs-video-list').getByText('원문 준비 완료', { exact: true }).waitFor();
+  await page.getByLabel('수집 언어').selectOption('ja');
+  assert.equal(await page.locator('.vs-video-list li').count(), 0, 'Another language must not reuse a ready badge');
+  await page.getByLabel('수집 언어').selectOption('en');
+  await page.getByLabel('검색 결과 범위', { exact: true }).selectOption('all');
+  await openAdminTool(page, '원문·작업');
+  await page.getByRole('heading', { name: 'Source en', exact: true }).waitFor();
   await page.setViewportSize({ width: 390, height: 844 });
   assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), 'Mobile page should not overflow');
   await page.screenshot({ path: resolve(dir, 'mobile-restored.png'), fullPage: true });
@@ -144,9 +192,10 @@ try {
   assert.equal((await context.request.get(endpoint + '?id=' + english.id)).status(), 404);
   const storeText = await readFile(dataFile, 'utf8'); assert(!storeText.includes('Good morning')); assert(!storeText.includes('Wrong'));
   assert.equal(errors.length, 0, errors.join('\n')); assert(!logs.includes('Unexpected external fetch'), 'No unexpected external call');
-  await writeFile(resolve(dir, 'result.json'), JSON.stringify({ status: 'pass', layers: ['Next UI', 'real API', 'file persistence'], languages: saved, authorization: 'owner/origin checked', navigation: '3 areas / 8 tools / 1440,390,320px / keyboard / 200% reflow', legacy: 'metadata import only; unchanged collection', captionPreflight: { unconfigured: true, captionPosts, fileFocusAndImport: true }, externalModelCalls: 0, microphoneOrLearningE2E: false }, null, 2));
+  await writeFile(resolve(dir, 'result.json'), JSON.stringify({ status: 'pass', layers: ['Next UI', 'real API', 'file persistence'], languages: saved, authorization: 'owner/origin checked', navigation: '3 areas / 8 tools / 1440,390,320px / keyboard / 200% reflow', legacy: 'metadata import only; unchanged collection', captionPreflight: { unconfigured: true, captionPosts, fileFocusAndImport: true }, preparationUX: ['current-revision ready/pending source filters', 'search ready filter scoped to language', 'selected source and unsaved input retained between menus'], externalModelCalls: 0, microphoneOrLearningE2E: false }, null, 2));
   console.log('PASS: four-language source/job UI, real API/store, failures, reload, conflict, deletion and mobile');
 } catch (error) {
+  console.error(error);
   if (page) await page.screenshot({ path: resolve(dir, 'failure.png'), fullPage: true }).catch(() => {});
   throw error;
 } finally {
