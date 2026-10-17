@@ -147,7 +147,7 @@ class _MusicScreenState extends State<MusicScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              PhraseView(phrase, reveal: !review),
+              PhraseView(phrase, reveal: !review, language: m.language),
               const SizedBox(height: 20),
               Wrap(
                 spacing: 10,
@@ -242,7 +242,11 @@ class _MusicScreenState extends State<MusicScreen> {
                   style: TextStyle(color: brand, fontSize: 12),
                 ),
                 const SizedBox(height: 14),
-                PhraseView(word, reveal: selected == line['id']),
+                PhraseView(
+                  word,
+                  reveal: selected == line['id'],
+                  language: m.language,
+                ),
                 const SizedBox(height: 15),
                 const Text('어떤 뜻일까요?'),
                 const SizedBox(height: 8),
@@ -307,6 +311,7 @@ class _MusicScreenState extends State<MusicScreen> {
                 PhraseView(
                   Phrase.fromJson(object(lesson['question'])),
                   compact: true,
+                  language: m.language,
                 ),
                 ListenButton(
                   phrase: Phrase.fromJson(object(lesson['question'])),
@@ -318,6 +323,7 @@ class _MusicScreenState extends State<MusicScreen> {
                   PhraseView(
                     Phrase.fromJson(object(lesson['answer'])),
                     compact: true,
+                    language: m.language,
                   )
                 else
                   TextButton(
@@ -406,12 +412,12 @@ class _MusicScreenState extends State<MusicScreen> {
                   ),
                 if (selected == line['id'])
                   Primary(
-                    reviewed == lines.length ? '스터디로 돌아가기' : '다음 구간 복습',
+                    reviewed == lines.length ? '음악 목록으로' : '다음 구간 복습',
                     onPressed: m.busy
                         ? null
                         : () async {
                             if (reviewed == lines.length) {
-                              m.studyMode = m.lastStudyMode;
+                              m.studyMode = 'music';
                               context.go('/study');
                               return;
                             }

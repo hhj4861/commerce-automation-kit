@@ -75,7 +75,6 @@ class _ChatScreenState extends State<ChatScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Heading('틀려도 괜찮은 대화', '조금 천천히, 오늘 배운 말부터 꺼내 봐요.'),
                   AppSelect<String>(
                     label: '대화할 상황',
                     value: m.scene,
@@ -114,13 +113,6 @@ class _ChatScreenState extends State<ChatScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text('어떤 말부터 해 볼까요?', style: sectionTitle),
-                          const SizedBox(height: 10),
-                          const Text(
-                            '인사를 건네거나 궁금한 것을 물어보세요.\n한마디가 자연스럽게 답해 줄 거예요.',
-                            style: TextStyle(color: muted),
-                          ),
-                          const SizedBox(height: 16),
                           Wrap(
                             spacing: 8,
                             children: [
@@ -168,6 +160,7 @@ class _ChatScreenState extends State<ChatScreen> {
                                 PhraseView(
                                   Phrase.fromJson(object(msg['phrase'])),
                                   compact: true,
+                                  language: m.language,
                                 ),
                                 Wrap(
                                   spacing: 10,
@@ -240,7 +233,7 @@ class _ChatScreenState extends State<ChatScreen> {
                           maxLines: 4,
                           maxLength: 2000,
                           decoration: const InputDecoration(
-                            hintText: '편하게 한마디 해 보세요',
+                            hintText: '한마디 입력',
                             counterText: '',
                           ),
                           onChanged: (v) => setState(() => m.chatDraft = v),
@@ -269,7 +262,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   ),
                   const SizedBox(height: 8),
                   const Text(
-                    'AI 답변에 오류가 있을 수 있어요. 대화 내용은 이 화면을 벗어나도 유지돼요.',
+                    'AI 답변은 틀릴 수 있어요.',
                     style: TextStyle(color: muted, fontSize: 12),
                   ),
                 ],
@@ -325,7 +318,6 @@ class _TranslateScreenState extends State<TranslateScreen> {
     final result = m.translation;
     return PageBody(
       children: [
-        const Heading('전하고 싶은 마음 그대로', '말하거나 입력하면, 자연스러운 한마디로.'),
         Row(
           children: [
             Expanded(
@@ -405,8 +397,9 @@ class _TranslateScreenState extends State<TranslateScreen> {
                   style: TextStyle(color: brand, fontSize: 12),
                 ),
                 const SizedBox(height: 15),
-                SelectableText(
+                LearningText(
                   result['translated'],
+                  language: result['from'] == 'ko' ? m.language : 'ko',
                   style: const TextStyle(
                     fontFamily: 'NotoSansKR',
                     fontFamilyFallback: uiFallback,
