@@ -189,7 +189,10 @@ def render(plan, out):
     listing.write_text('\n'.join(lines) + '\n')
     target = out / 'reel.mp4'
     audio = ['-i', plan['audio_file']] if plan.get('narrated') else ['-f', 'lavfi', '-i', 'anullsrc=r=48000:cl=stereo']
-    video_filter = 'fps=30,format=yuv420p'
+    # PNG inputs carry RGB/full-range metadata. Convert samples and explicitly tag
+    # the encoded YUV stream; inherited GBR matrix tags break native MP4 players.
+    video_filter = ('fps=30,scale=out_color_matrix=bt709:out_range=tv,format=yuv420p,setsar=1,'
+                    'setparams=range=limited:color_primaries=bt709:color_trc=bt709:colorspace=bt709')
     complex_filter = None
     if plan.get('narrated'):
         # Shared studio SVG artwork preserves the exact bundled font, rounded background and size.
@@ -205,17 +208,24 @@ def render(plan, out):
     command = ['ffmpeg', '-hide_banner', '-loglevel', 'error', '-y', '-f', 'concat', '-safe', '0',
         '-i', str(listing), *audio,
         '-t', str(plan['seconds']), *(complex_filter or ['-vf', video_filter]), '-c:v', 'libx264',
-        '-preset', 'fast', '-crf', '21', '-c:a', 'aac', '-b:a', '128k',
+        '-preset', 'fast', '-crf', '21', '-profile:v', 'main', '-level:v', '4.1',
+        '-pix_fmt', 'yuv420p', '-color_range', 'tv', '-colorspace', 'bt709',
+        '-color_trc', 'bt709', '-color_primaries', 'bt709', '-tag:v', 'avc1',
+        '-c:a', 'aac', '-b:a', '128k',
         '-movflags', '+faststart', '-threads', '2', str(target)]
     result = subprocess.run(command, cwd=out, capture_output=True, timeout=600)
     if result.returncode:
         raise RuntimeError('FFmpeg render failed')
     probe = subprocess.run(['ffprobe', '-v', 'error', '-select_streams', 'v:0',
-        '-show_entries', 'stream=width,height:format=duration', '-of', 'json', str(target)],
+        '-show_entries', 'stream=width,height,codec_name,pix_fmt,color_range,color_space,color_transfer,color_primaries:format=duration', '-of', 'json', str(target)],
         capture_output=True, text=True, timeout=30, check=True)
     info = json.loads(probe.stdout)
     if (info['streams'][0]['width'], info['streams'][0]['height']) != (1080, 1920) or abs(float(info['format']['duration']) - plan['seconds']) > .2:
         raise RuntimeError('Rendered video failed dimensions/duration verification')
+    stream = info['streams'][0]
+    if any(stream.get(k) != v for k,v in dict(codec_name='h264', pix_fmt='yuv420p', color_range='tv',
+            color_space='bt709', color_transfer='bt709', color_primaries='bt709').items()):
+        raise RuntimeError('Rendered video failed MP4 color compatibility verification')
     return target
 
 

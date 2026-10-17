@@ -14,3 +14,12 @@
 - 인증 구분: 일반 중앙 Codex 자격의 refresh_failed로 새 자격을 복사하지 않고, 기존 native ChatGPT 로그인으로 로컬 미리보기 대본을 검토했다. 운영 전용 카드뉴스 로그인은 변경하지 않았으며 이 결과로 운영 인증 장애를 단정하지 않는다. 로컬 음성은 기존 허용된 runner 범위만 사용했다.
 - 검증: Python 카드뉴스/수집/검토/릴스 77개, TTS 16개와 타입 검사, 기존 shorts-publish 45개와 타입 검사, broker 경계 25개 통과. workflow 2개 YAML 파싱·diff whitespace 검사 통과. GitHub CI는 PR 생성 후 확인한다.
 - 다음: 본인 변경 커밋·push·PR → 사용자 영상 검토. 운영 예약 음성 권한 확대 및 새 PR 머지는 별도 승인 후 진행한다. 공개 게시 보류를 유지한다.
+
+## 2026-10-17 재생 호환성 수정
+
+- 사용자 재생 실패 제보. 원본의 전체 FFmpeg 디코딩은 성공했지만 H.264가 `yuvj420p`/full-range/GBR matrix와 알 수 없는 primaries·transfer를 상속했다. 파일 손상은 관찰되지 않았으며 비정상 색상 태그를 호환성 원인 후보로 판단했다.
+- PNG→YUV 샘플 변환과 `setparams`로 프레임 메타데이터를 함께 BT.709/limited로 지정한다. MP4 인코딩도 H.264 Main·level 4.1·avc1·yuv420p, SAR 1, faststart로 명시한다. 출력의 코덱·픽셀 형식·range/matrix/primaries/transfer 중 하나라도 다르면 렌더를 실패 처리한다.
+- 첫 수정은 인코더 옵션만으로 transfer/primaries가 유지되지 않아 실제 인코딩 테스트에서 실패했다. 프레임 setparams를 추가한 후 무음·자막 양쪽 실제 렌더와 전체 디코딩 회귀검사 통과. 전체 Python 78개 통과.
+- 내려받은 원본을 보존하며 `/Users/admin/Downloads/vedio/card-news-20261016-narrated-quicktime.mp4` 및 `card-news-20261016-previous-silent-quicktime.mp4`를 생성한다. 대본·음성 재생성이나 유료 호출 없이 영상만 호환 형식으로 변환하고 오디오는 그대로 복사한다.
+- native 검증 제한: CUA QuickTime 조회와 제한 시간 내 AppleScript 재생 상태 조회가 응답하지 않았다. Swift의 compiler/SDK 버전 불일치로 AVFoundation 검사도 실행하지 못했다. QuickTime 실제 재생 성공으로 보고하지 않는다. 수정 파일의 전체 디코딩·메타데이터 검증 결과와 사용자 확인을 구분한다.
+- 변경은 기존 PR #290 작업 브랜치에 추가하며 승인 전 main 머지·운영 배포·게시 보류는 유지한다.

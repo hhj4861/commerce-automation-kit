@@ -1,6 +1,8 @@
 import datetime as dt
 import json
 import os
+import shutil
+import subprocess
 from pathlib import Path
 import tempfile
 import unittest
@@ -35,6 +37,25 @@ class ReelsTests(unittest.TestCase):
 
     def save_stories(self):
         (self.source / 'stories.json').write_text(json.dumps(self.stories))
+
+    @unittest.skipUnless(shutil.which('ffmpeg') and shutil.which('ffprobe'), 'FFmpeg required')
+    def test_real_png_and_caption_renders_have_native_compatible_color_metadata(self):
+        audio = self.root/'voice.wav'
+        subprocess.run(['ffmpeg','-v','error','-f','lavfi','-i','anullsrc=r=48000:cl=stereo',
+            '-t','0.4',str(audio)],check=True,capture_output=True)
+        for narrated in (False, True):
+            with self.subTest(narrated=narrated):
+                out = self.root/str(narrated);out.mkdir()
+                plan = {'slides':[{'file':str(self.source/'stories/story_01.png'),'seconds':0.4}], 'seconds':0.4}
+                if narrated:
+                    caption = out/'caption-000.png'
+                    Image.new('RGBA',(240,100),(255,255,255,128)).save(caption)
+                    cues = out/'caption-cues.json'
+                    cues.write_text(json.dumps([{'file':str(caption),'start':0,'end':0.4}]))
+                    plan.update(narrated=True,audio_file=str(audio),captions_file=str(cues))
+                video = reels.render(plan,out)  # Real encoder and its post-render compatibility gate.
+                subprocess.run(['ffmpeg','-v','error','-i',str(video),'-f','null','-'],
+                    check=True,capture_output=True,timeout=30)
 
     def test_plan_preserves_full_why_and_sources(self):
         plan = reels.prepare(self.source, self.out)
