@@ -100,8 +100,9 @@ class StudyPhrase extends StatelessWidget {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SelectableText(
+        LearningText(
           phrase.text,
+          language: model.language,
           style: const TextStyle(
             fontFamily: 'NotoSansKR',
             fontFamilyFallback: uiFallback,
@@ -194,7 +195,7 @@ class SavedStudyLink extends StatelessWidget {
       borderRadius: BorderRadius.circular(16),
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
-        onTap: () => context.go('/library'),
+        onTap: () => context.go(words ? '/library?tab=words' : '/library'),
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 4),
           child: Row(
