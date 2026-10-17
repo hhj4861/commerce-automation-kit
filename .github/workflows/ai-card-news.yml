@@ -59,7 +59,7 @@ jobs:
           python -m pip install --require-hashes -r build-requirements.txt
           python -m pip install --require-hashes --no-build-isolation -r requirements.txt
       - name: Unit and layout tests
-        run: python -m unittest -v test_main
+        run: python -m unittest -v test_main test_discovery test_narration
 
   digest:
     if: >-
@@ -110,6 +110,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
           CARD_NEWS_CODEX_MODEL: ${{ vars.CARD_NEWS_CODEX_MODEL }}
+          CARD_NEWS_CONTENT_MODE: discovery
           TELEGRAM_BOT_TOKEN: ${{ secrets.CARD_NEWS_TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.CARD_NEWS_TELEGRAM_CHAT_ID }}
           CARD_NEWS_CUTOVER_DATE: ${{ vars.CARD_NEWS_CUTOVER_DATE }}

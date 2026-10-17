@@ -16,6 +16,12 @@ export interface NarrationClip {
   modelId: string;
   /** ISO 8601 */
   createdAt: string;
+  /** Optional official character timings for burned-in synchronized subtitles. */
+  alignment?: {
+    characters: string[];
+    character_start_times_seconds: number[];
+    character_end_times_seconds: number[];
+  };
 }
 
 /** 대본(비트 목록) 일괄 생성 결과 — shopping-shorts --narration 입력으로 연결. */

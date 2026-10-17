@@ -7,6 +7,22 @@ import { synthesizeNarration } from '../src/adapters/elevenlabs.js';
 const ok = (bytes = 'audio') => new Response(bytes, { status: 200 });
 
 describe('ElevenLabs 네트워크 재시도', () => {
+  it('공식 타임스탬프 응답의 원문과 정렬을 검증해 계약에 보존한다', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'tts-timing-'));
+    const text = '안녕';
+    const alignment = { characters: ['안','녕'], character_start_times_seconds:[0,.2], character_end_times_seconds:[.2,.5] };
+    const fetchFn = vi.fn().mockResolvedValue(new Response(JSON.stringify({audio_base64:Buffer.from('audio').toString('base64'),alignment})));
+    const clip = await synthesizeNarration({apiKey:'k', text, outPath:join(dir,'voice.mp3'),timestamps:true,fetchFn});
+    expect(fetchFn.mock.calls[0]?.[0]).toContain('/with-timestamps?');
+    expect(clip.alignment).toEqual(alignment);
+    expect((await readFile(clip.file)).toString()).toBe('audio');
+  });
+
+  it('타임스탬프 요청이 정렬 없는 응답을 받으면 무음으로 대체하지 않는다', async () => {
+    const fetchFn = vi.fn().mockResolvedValue(new Response(JSON.stringify({audio_base64:'YWJj'})));
+    await expect(synthesizeNarration({apiKey:'k',text:'안녕',outPath:join(tmpdir(),'never-timing.mp3'),timestamps:true,fetchFn})).rejects.toThrow('오디오 수신 실패');
+    expect(fetchFn).toHaveBeenCalledTimes(1);
+  });
   it('연결 수립 전 오류는 지수 백오프로 재시도한다', async () => {
     const dir = await mkdtemp(join(tmpdir(), 'tts-retry-'));
     const outPath = join(dir, 'voice.mp3');

@@ -1,5 +1,36 @@
 # AI 기술 카드뉴스 — 텔레그램 일일 브리핑
 
+## 발견 중심 콘텐츠와 검토용 음성 릴스 (2026-10-16 구현 브랜치)
+
+새 Telegram workflow는 `CARD_NEWS_CONTENT_MODE=discovery`를 명시한다. 코드만 기본 실행하면 기존 releases 모드를 유지한다.
+discovery는 패치 노트로 개수를 채우지 않고 최대 3건(주목 플러그인 / 공식 Agent 활용 가이드 / 최근 생성된 오픈소스)을 고른다.
+플러그인 초기 비교 후보는 `discovery.PLUGINS`의 3개 저장소다. 전체 시장 순위가 아니다.
+
+- 공식 GitHub API: 저장소/README, `stargazers/history`의 진행 중 주간 신규 별, 최근 7일 생성된 Agent 저장소 검색.
+- 공식 RSS: GitHub AI/ML의 실제 발행 시각이 있는 7일 이내 활용 가이드. HTML 페이지를 크롤링하지 않는다.
+- 주간 버킷의 시간대는 API가 보장하지 않으므로 KST 오늘/최근 7일로 바꾸지 않는다. 누적 별·신규 별·설치량을 구분한다.
+- 라이선스 미확인·기간 밖 후보는 `skipped`, API 실패는 `failures`, 조사 시각/표본은 원본 artifact에 기록한다.
+- 저장소 생성일은 최초 공개일/정식 출시일이 아니다. 문서 확인을 실사용 후기처럼 쓰지 않는다.
+- 9:16 카드에 정확한 원문 URL을 표시하고 설명란도 동일 순서로 연결한다. MP4 글자 자체가 클릭 링크가 되는 것은 아니다.
+
+새 대본은 각 카드의 필요성·작동 방식·같은 대상을 따라가는 예·결과·사용 조건을 설명한다.
+별도 Codex 요청이 focus/why/mechanism/example/payoff/pacing/visuals 및 실제 대사·화면 인용을 검토한다.
+`script-review.json`이 현재 원문/대본/화면 메타데이터의 digest와 일치하지 않거나 한 항목이라도 실패하면 유료 TTS 전에 중단한다.
+이 검토는 확률적이며 사실 확인·사람의 미리보기 검수를 대체하지 않는다.
+
+로컬 제작: `reels.py --source-dir <source> --out <new-output> --narrate`.
+기존 `@cak/tts-narration` CLI의 Yooni 음성과 공식 ElevenLabs `with-timestamps` 응답을 사용한다.
+자막은 반환된 글자 타이밍으로 정렬하고, 스튜디오의 `modern-v1` SVG·Pretendard SemiBold를 재사용한다.
+출처를 가리지 않도록 자막 중심은 화면 80% 지점에 둔다. 재생 속도를 올리거나 마지막 설명을 잘라 시간을 맞추지 않는다.
+필요 의존성: `npm ci --ignore-scripts --workspace @cak/app-shopshorts --workspace @cak/tts-narration --workspace @cak/shorts-publish --include-workspace-root`.
+
+**운영 음성 예약 통합은 미적용이다.** 자동 승인 검토가 릴스 workflow에 ELEVENLABS_API_KEY 접근을 추가하는 변경을 거부해
+broker 정책과 운영 credential loader는 그대로 유지했다. 사용자 명시 승인 후 별도 검증·머지·배포해야 한다.
+현재 `render` 모드이며 새 discovery 콘텐츠는 음성·동기화 자막 없이 공개 발행할 수 없다. 공개 게시 보류도 유지한다.
+
+공식 계약: https://docs.github.com/en/rest/activity/starring#get-repository-star-history ,
+https://elevenlabs.io/docs/api-reference/text-to-speech/convert-with-timestamps/
+
 매일 아침 AI 개발 도구의 공식 릴리스를 모아 한국어 카드(1080×1350)로 만들고 운영자 본인의
 텔레그램 채팅에 앨범으로 보낸다. 같은 내용으로 릴스·쇼츠용 9:16 슬라이드(1080×1920)도 만든다.
 
