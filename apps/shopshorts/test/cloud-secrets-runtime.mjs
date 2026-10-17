@@ -13,7 +13,7 @@ const baseline = process.argv.includes('--baseline');
 const base = new URL('../../../', import.meta.url).pathname;
 const bundled = await build({ absWorkingDir: base, entryPoints: ['apps/shopshorts/functions/_middleware.js'], bundle: true,
   write: false, format: 'esm', platform: 'browser', plugins: baseline ? [{ name: 'deployed-baseline', setup(b) {
-    b.onLoad({ filter: /cloud-secrets\.js$/ }, () => ({ contents: execFileSync('git', ['show', 'HEAD:apps/shopshorts/lib/cloud-secrets.js'], { cwd: base, encoding: 'utf8' }), loader: 'js' }));
+    b.onLoad({ filter: /cloud-secrets\.js$/ }, () => ({ contents: execFileSync('git', ['show', 'f6e2bebf21e6ea9c3ca23a549743e92db7d6b509:apps/shopshorts/lib/cloud-secrets.js'], { cwd: base, encoding: 'utf8' }), loader: 'js' }));
   } }] : [] });
 const app = `import {onRequest} from './middleware.mjs';
 export default {async fetch(request,env){

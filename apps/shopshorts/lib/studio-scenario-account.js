@@ -54,11 +54,19 @@ export async function syncScenario(store, project, call, now = Date.now()) {
   if (project.task?.runner !== 'llm-account') return project;
   const task = project.task;
   const input = { id: task.id, projectId: project.id };
-  const acknowledge = async () => {
-    try { await call(task.accountOwner, 'scenario-ack', input); } catch { /* Retry on the next read. */ }
+  const acknowledge = async saved => {
+    if (saved.task.brokerAcknowledged === true) return saved;
+    try {
+      const result = await call(task.accountOwner, 'scenario-ack', input);
+      // No job is also terminal: an older result may already have been cleared.
+      if (result?.error || !(result?.ok === true || result && Object.hasOwn(result, 'job') && result.job === null)) return saved;
+      const acknowledged = changed({ ...saved, task: { ...saved.task, brokerAcknowledged: true } });
+      // Persist per task, after receipt success. A new task/revision must not be overwritten.
+      return await store.cas(acknowledged, saved.revision) ? acknowledged : await store.get(saved.id) || saved;
+    } catch { return saved; /* Retry on the next read; never pretend acknowledgement succeeded. */ }
   };
-  const legacyFailure=task.state==='failed' && task.reviewAvailable===undefined;
-  if (!busy(project) && !legacyFailure) { await acknowledge(); return project; }
+  const legacyFailure=task.state==='failed' && task.reviewAvailable===undefined && task.brokerAcknowledged!==true;
+  if (!busy(project) && !legacyFailure) return acknowledge(project);
   let job, received=false;
   try { const status=await call(task.accountOwner, 'scenario-status', input); if(status&&!status.error&&Object.hasOwn(status,'job')){job=status.job;received=true;} }
   catch { /* Temporary broker outage must not discard a result. */ }
@@ -88,6 +96,6 @@ export async function syncScenario(store, project, call, now = Date.now()) {
   next = changed(next);
   if (!await store.cas(next, project.revision)) return await store.get(project.id) || project;
   // Only acknowledge after the project CAS succeeds; results survive a lost race.
-  if (!busy(next)) await acknowledge();
+  if (!busy(next)) return acknowledge(next);
   return next;
 }
