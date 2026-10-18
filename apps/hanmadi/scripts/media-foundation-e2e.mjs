@@ -23,9 +23,10 @@ const app = spawn(process.execPath, ['node_modules/next/dist/bin/next', 'dev', '
 const exit = once(app, 'exit'); let logs = '', browser, page;
 app.stdout.on('data', b => { logs += b; }); app.stderr.on('data', b => { logs += b; });
 try {
+  const startupDeadline = Date.now() + 90000;
   for (let i = 0; ; i++) {
-    try { if ((await fetch(base + '/api/deployment')).ok) break; } catch {}
-    if (i >= 120 || app.exitCode !== null) throw new Error('Next server did not start'); await new Promise(r => setTimeout(r, 500));
+    try { if ((await fetch(base + '/api/deployment', { signal: AbortSignal.timeout(4000) })).ok) break; } catch {}
+    if (Date.now() >= startupDeadline || i >= 120 || app.exitCode !== null) throw new Error('Next server did not start'); await new Promise(r => setTimeout(r, 500));
   }
   browser = await chromium.launch({ ...(process.env.PLAYWRIGHT_CHANNEL ? { channel: process.env.PLAYWRIGHT_CHANNEL } : {}), headless: true });
   const context = await browser.newContext({ viewport: { width: 1120, height: 1000 } });
@@ -55,6 +56,29 @@ try {
   await page.getByRole('button', { name: '영상 검색', exact: true }).click();
   await page.getByText('자막 파일 준비 필요 · 자동 가져오기 불가', { exact: true }).waitFor();
   await page.screenshot({ path: resolve(dir, 'search-captions-unavailable.png'), fullPage: true });
+  // The search route passes the plan through the real API; a fresh visit reads the same saved plan.
+  await page.getByRole('checkbox', { name: 'Own caption preflight fixture 선택', exact: true }).check();
+  await page.getByLabel('수집 언어').selectOption('en');
+  await page.getByLabel('원문 확보 방법', { exact: true }).selectOption('file');
+  await page.getByRole('button', { name: '공통 준비함에 담기', exact: true }).click();
+  await page.getByRole('heading', { name: 'Own caption preflight fixture', exact: true }).waitFor();
+  await page.getByText('저장한 방법: 원문 파일 준비', { exact: true }).waitFor();
+  assert.equal((await (await context.request.get(endpoint + '?id=youtube-abcdefghijk')).json()).source.acquisition.method, 'file');
+  await page.getByLabel('저장할 원문 확보 방법', { exact: true }).selectOption('channel');
+  await page.getByRole('button', { name: '확보 방법 저장', exact: true }).click();
+  await page.getByText('저장한 방법: 채널 연결·권한 확인', { exact: true }).waitFor();
+  await open();
+  await page.getByRole('button', { name: 'Own caption preflight fixture · 영어', exact: true }).click();
+  await page.getByText('저장한 방법: 채널 연결·권한 확인', { exact: true }).waitFor();
+  assert.equal(await page.getByLabel('저장할 원문 확보 방법', { exact: true }).inputValue(), 'channel');
+  assert(await page.getByRole('button', { name: '음악 자료 만들기로', exact: true }).count() === 0, 'Study-only source does not gain a music use from its plan');
+  const planBody = { action: 'set-acquisition', id: 'youtube-abcdefghijk', planRevision: 1, method: 'file' };
+  assert.equal((await context.request.post(endpoint, { headers: { Origin: base }, data: planBody })).status(), 409);
+  assert.equal((await context.request.post(endpoint, { headers: { Origin: 'https://wrong.test' }, data: planBody })).status(), 403);
+  const planned = await (await context.request.get(endpoint + '?id=youtube-abcdefghijk')).json();
+  assert.equal(planned.source.revision, 0); assert.equal(planned.source.originals.length, 0); assert.equal(planned.jobs.length, 0);
+  assert.equal((await context.request.post(endpoint, { headers: { Origin: base }, data: { action: 'delete', id: planned.source.id, revision: 0 } })).status(), 200);
+
   // All eight tools remain reachable while only three areas occupy primary navigation.
   await page.goto(base + '/study/admin');
   await page.getByRole('navigation', { name: '업무 영역', exact: true }).waitFor();
@@ -110,6 +134,11 @@ try {
       await page.getByLabel('원문 파일 연결', { exact: true }).setInputFiles({ name: 'own.vtt', mimeType: 'text/vtt', buffer: Buffer.from('WEBVTT\n\n00:00:01.000 --> 00:00:03.000\nGood morning\n\n00:00:04.000 --> 00:00:06.000\nHello my friend') });
       await page.waitForFunction(() => document.querySelector('textarea[aria-label="보관할 원문"]')?.value.includes('Good morning'));
       assert.equal((await (await context.request.get(endpoint)).json()).sources.find(source => source.title === 'Source en').originalCount, 0, 'File selection alone does not save a version');
+      await page.getByLabel('저장할 원문 확보 방법', { exact: true }).selectOption('file');
+      await page.getByRole('button', { name: '확보 방법 저장', exact: true }).click();
+      await page.getByText('저장한 방법: 원문 파일 준비', { exact: true }).waitFor();
+      assert.match(await page.getByLabel('보관할 원문', { exact: true }).inputValue(), /Good morning/, 'Saving a plan retains the unsaved original editor');
+
       await page.screenshot({ path: resolve(dir, 'source-captions-disabled-file-ready.png'), fullPage: true });
       await storeSource('WEBVTT\n\n00:00:03.000 --> 00:00:01.000\nWrong\n\n00:00:04.000 --> 00:00:06.000\nSecond');
       await page.getByRole('button', { name: '정리·재개', exact: true }).click();
@@ -192,7 +221,7 @@ try {
   assert.equal((await context.request.get(endpoint + '?id=' + english.id)).status(), 404);
   const storeText = await readFile(dataFile, 'utf8'); assert(!storeText.includes('Good morning')); assert(!storeText.includes('Wrong'));
   assert.equal(errors.length, 0, errors.join('\n')); assert(!logs.includes('Unexpected external fetch'), 'No unexpected external call');
-  await writeFile(resolve(dir, 'result.json'), JSON.stringify({ status: 'pass', layers: ['Next UI', 'real API', 'file persistence'], languages: saved, authorization: 'owner/origin checked', navigation: '3 areas / 8 tools / 1440,390,320px / keyboard / 200% reflow', legacy: 'metadata import only; unchanged collection', captionPreflight: { unconfigured: true, captionPosts, fileFocusAndImport: true }, preparationUX: ['current-revision ready/pending source filters', 'search ready filter scoped to language', 'selected source and unsaved input retained between menus'], externalModelCalls: 0, microphoneOrLearningE2E: false }, null, 2));
+  await writeFile(resolve(dir, 'result.json'), JSON.stringify({ status: 'pass', layers: ['Next UI', 'real API', 'file persistence'], languages: saved, authorization: 'owner/origin checked', navigation: '3 areas / 8 tools / 1440,390,320px / keyboard / 200% reflow', legacy: 'metadata import only; unchanged collection', captionPreflight: { unconfigured: true, captionPosts, fileFocusAndImport: true }, preparationUX: ['current-revision ready/pending source filters', 'search ready filter scoped to language', 'selected source and unsaved input retained between menus'], acquisitionPlans: ['search collection persisted', 'method edited and restored after fresh visit', 'stale revision and wrong origin rejected', 'plan does not create an original/job', 'unsaved original preserved while saving plan'], externalModelCalls: 0, microphoneOrLearningE2E: false }, null, 2));
   console.log('PASS: four-language source/job UI, real API/store, failures, reload, conflict, deletion and mobile');
 } catch (error) {
   console.error(error);

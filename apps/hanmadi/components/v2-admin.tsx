@@ -3,7 +3,7 @@ import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { ContentSourceQueue, mediaRequest } from "./content-source-queue";
 import { VideoPreparationQueue } from "./video-preparation-queue";
-import type { MediaDetail, MediaPurpose } from "@/lib/media-source";
+import type { MediaDetail, MediaPurpose, MediaAcquisitionMethod } from "@/lib/media-source";
 import type { MusicCollectedVideo } from "@/lib/music-collection";
 import type { OwnedMusic } from "@/lib/owned-music";
 import type { YoutubeVideo } from "@/lib/youtube-search";
@@ -245,9 +245,9 @@ export function V2Admin({ appHref = "/study" }: { appHref?: string }) {
       setMediaLoad(value => value + 1); setMediaId(data.source.id); setMediaRaw(song?.source ?? legacy?.source ?? ""); navigate("media");
     } catch (e) { setError(e instanceof Error ? e.message : "기존 원문을 준비함에 연결하지 못했어요."); }
   }
-  async function collectVideos(videos: YoutubeVideo[], language: StudyLanguage, purposes: MediaPurpose[]) {
+  async function collectVideos(videos: YoutubeVideo[], language: StudyLanguage, purposes: MediaPurpose[], acquisitionMethod?: MediaAcquisitionMethod) {
     let first: string | undefined;
-    for (const video of videos) { const data = await mediaRequest({ action: "collect", video: video.id, title: video.title.slice(0, 100), language, purposes }); first ??= data.source.id; }
+    for (const video of videos) { const data = await mediaRequest({ action: "collect", video: video.id, title: video.title.slice(0, 100), language, purposes, acquisitionMethod }); first ??= data.source.id; }
     setMediaLoad(value => value + 1); setMediaRaw(""); setMediaId(first); setMediaOpened(true); setTab("media");
   }
   const group = adminGroups.find(g => (g.tabs as readonly string[]).includes(tab)) ?? (tab === "legacyMusic" ? adminGroups[0] : undefined);

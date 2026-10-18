@@ -2,7 +2,7 @@ import test from "node:test";
 import { mediaPreparation } from "./media-preparation";
 import assert from "node:assert/strict";
 import { mediaRegistration, normalizeOriginal, type MediaDetail } from "./media-source";
-import { collectMedia, saveMediaOriginal, readMedia, runMediaJob, cancelMediaJob, deleteMediaSource } from "./media-store";
+import { collectMedia, saveMediaOriginal, readMedia, runMediaJob, cancelMediaJob, deleteMediaSource, setMediaAcquisition } from "./media-store";
 const input = { video: "https://youtu.be/abcdefghijk", title: "Own practice", language: "en", purposes: ["study", "music"] };
 const raw = "WEBVTT\n\n00:00:01.000 --> 00:00:03.000\nGood morning\n\n00:00:04.000 --> 00:00:06.000\nHello my friend";
 function fixture() {
@@ -141,4 +141,51 @@ test("readiness excludes missing originals, unfinished work and stale ready revi
   assert.equal(mediaPreparation({ ...ready, revision: ready.revision + 1 }).ready, false);
   await saveMediaOriginal({ ...body, revision: 1, requestId: "second-version", raw: "New line one\nNew line two" }, "owner:fixture", db);
   assert.equal(mediaPreparation(await summary()).ready, false, "An older completed job must not promote new unprocessed text");
+});
+
+
+test("acquisition plans persist without claiming readiness, and recollection preserves the saved plan", async () => {
+  const f = fixture();
+  const first = await collectMedia({ ...input, acquisitionMethod: "file" }, f.db);
+  assert.equal(first.source.acquisition?.method, "file");
+  assert.equal(first.source.revision, 0); assert.equal(first.jobs.length, 0);
+  const repeated = await collectMedia({ ...input, acquisitionMethod: "channel" }, f.db);
+  assert.deepEqual(repeated.source.acquisition, first.source.acquisition);
+  const list = await readMedia(undefined, f.db); assert("sources" in list);
+  assert.equal(list.sources[0].acquisition?.method, "file");
+  assert.equal(mediaPreparation(list.sources[0]).ready, false);
+  assert.match(mediaPreparation(list.sources[0]).next, /파일/);
+  await assert.rejects(collectMedia({ ...input, acquisitionMethod: "ready" }, f.db));
+});
+
+test("plan edits use an independent revision and cannot invalidate originals or processing jobs", async () => {
+  const f = await setup();
+  const plan = await setMediaAcquisition({ id: f.body.id, planRevision: 0, method: "channel" }, f.db);
+  assert.equal(plan.source.acquisition?.revision, 1);
+  assert.equal(plan.source.revision, 1); assert.deepEqual(plan.source.originals, f.saved.source.originals);
+  assert.deepEqual(plan.jobs, f.saved.jobs);
+  const before = [...f.data.values()];
+  await assert.rejects(setMediaAcquisition({ id: f.body.id, planRevision: 0, method: "file" }, f.db), /다른 창/);
+  await assert.rejects(setMediaAcquisition({ id: f.body.id, planRevision: 1, method: "ready" }, f.db));
+  assert.deepEqual([...f.data.values()], before);
+  const repeat = await setMediaAcquisition({ id: f.body.id, planRevision: 1, method: "channel" }, f.db);
+  assert.deepEqual(repeat.source.acquisition, plan.source.acquisition);
+  const complete = await runMediaJob(f.saved.jobs[0].id, f.deps) as MediaDetail;
+  assert.equal(complete.jobs[0].status, "ready");
+  const edited = await setMediaAcquisition({ id: f.body.id, planRevision: 1, method: "file" }, f.db);
+  assert.equal(edited.source.acquisition?.revision, 2);
+  assert.deepEqual(edited.jobs, complete.jobs);
+  const list = await readMedia(undefined, f.db); assert("sources" in list);
+  assert.equal(mediaPreparation(list.sources[0]).ready, true);
+});
+
+test("legacy sources remain readable and may set their first plan without replacement", async () => {
+  const f = fixture(); const legacy = await collectMedia(input, f.db);
+  assert.equal(legacy.source.acquisition, undefined);
+  const changed = await collectMedia({ ...input, acquisitionMethod: "channel" }, f.db);
+  assert.equal(changed.source.acquisition?.revision, 1);
+  assert.equal(changed.source.title, legacy.source.title); assert.equal(changed.source.revision, 0);
+  const list = await readMedia(undefined, f.db); assert("sources" in list);
+  assert.match(mediaPreparation(list.sources[0]).next, /채널 연결/);
+  assert.equal(mediaPreparation(list.sources[0]).ready, false);
 });
