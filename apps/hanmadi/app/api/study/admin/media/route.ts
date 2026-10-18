@@ -3,7 +3,7 @@ import { ConversationError } from "@/lib/conversation";
 import { assertConversationOrigin, conversationFailure, conversationJson, readConversationJson } from "@/lib/conversation-http";
 import { musicYoutubeConfiguration } from "@/lib/youtube-music";
 import { readMusicCollection } from "@/lib/music-collection";
-import { collectMedia, saveMediaOriginal, readMedia, runMediaJob, cancelMediaJob, deleteMediaSource } from "@/lib/media-store";
+import { collectMedia, saveMediaOriginal, readMedia, runMediaJob, cancelMediaJob, deleteMediaSource, setMediaAcquisition } from "@/lib/media-store";
 export const runtime = "nodejs";
 export const maxDuration = 30;
 async function owner() {
@@ -30,6 +30,7 @@ export async function POST(req: Request) {
       if (!item) throw new ConversationError(404, "음악 수집함의 영상을 선택해 주세요.");
       return conversationJson(await collectMedia({ video: item.video.id, title: item.video.title, language: item.language, purposes: ["music"] }, undefined, item.id));
     }
+    if (b.action === "set-acquisition") return conversationJson(await setMediaAcquisition(b));
     if (b.action === "save-source") return conversationJson(await saveMediaOriginal(b, actor));
     if (b.action === "run") return conversationJson(await runMediaJob(b.jobId));
     if (b.action === "cancel") return conversationJson(await cancelMediaJob(b));

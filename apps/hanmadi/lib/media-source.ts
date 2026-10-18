@@ -6,9 +6,12 @@ import { youtubeMusicId } from "./youtube-music";
 
 export const MEDIA_PARSER = "source-lines-v1";
 export type MediaPurpose = "study" | "music";
+export type MediaAcquisitionMethod = "file" | "channel";
+export type MediaAcquisition = { method: MediaAcquisitionMethod; revision: number; updatedAt: number };
+export function isMediaAcquisitionMethod(value: unknown): value is MediaAcquisitionMethod { return value === "file" || value === "channel"; }
 export type MediaOriginal = { version: number; hash: string; raw: string; rights: string; savedBy: string; savedAt: number };
 export type MediaSource = { id: string; videoId: string; title: string; language: StudyLanguage; purposes: MediaPurpose[];
-  origin: "manual" | "music-collection"; legacyId?: string; revision: number; createdAt: number; originals: MediaOriginal[] };
+  origin: "manual" | "music-collection"; legacyId?: string; acquisition?: MediaAcquisition; revision: number; createdAt: number; originals: MediaOriginal[] };
 export type MediaCue = SourceLine & { id: string };
 export type MediaJob = { id: string; sourceId: string; sourceRevision: number; inputHash: string; requestId: string;
   status: "queued" | "running" | "ready" | "failed" | "cancelled";
@@ -27,7 +30,9 @@ export function mediaRegistration(body: Record<string, unknown>) {
     !Array.isArray(body.purposes) || body.purposes.length < 1 || body.purposes.length > 2 ||
     body.purposes.some(p => p !== "study" && p !== "music") || new Set(body.purposes).size !== body.purposes.length)
     throw new ConversationError(400, "제목·원문 언어·학습 용도를 확인해 주세요.");
-  return { id: `youtube-${videoId}`, videoId, title: body.title.trim(), language: body.language,
+  if (body.acquisitionMethod !== undefined && !isMediaAcquisitionMethod(body.acquisitionMethod))
+    throw new ConversationError(400, "원문 확보 방법은 파일 준비 또는 채널 권한 확인으로 선택해 주세요.");
+  return { ...(body.acquisitionMethod !== undefined ? { acquisitionMethod: body.acquisitionMethod as MediaAcquisitionMethod } : {}), id: `youtube-${videoId}`, videoId, title: body.title.trim(), language: body.language,
     purposes: [...body.purposes].sort() as MediaPurpose[] };
 }
 export function originalInput(body: Record<string, unknown>) {
