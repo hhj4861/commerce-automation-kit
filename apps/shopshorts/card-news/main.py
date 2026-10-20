@@ -15,6 +15,7 @@ from urllib.parse import urlsplit
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import ExitStack
 import html
+import hashlib
 import shutil
 import signal
 import subprocess
@@ -29,7 +30,7 @@ from PIL import Image, ImageDraw, ImageFont
 KST = dt.timezone(dt.timedelta(hours=9))
 NOW = dt.datetime.now(KST)
 ROOT = Path(__file__).resolve().parent
-OUT = ROOT / "output"
+OUT = Path(os.getenv("CARD_NEWS_OUT", str(ROOT / "output"))).resolve()
 OUT.mkdir(parents=True, exist_ok=True)
 FONT = os.getenv("CARD_FONT", "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc")
 BOLD = os.getenv("CARD_BOLD_FONT", "/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc")
@@ -92,7 +93,7 @@ def clean(text):
 
 
 def github(method, path, **kwargs):
-    headers = {"Accept": "application/vnd.github+json"}
+    headers = {"Accept": "application/vnd.github+json", "X-GitHub-Api-Version": "2026-03-10"}
     if os.getenv("GITHUB_TOKEN"):
         headers["Authorization"] = "Bearer " + os.environ["GITHUB_TOKEN"]
     return requests.request(method, "https://api.github.com/" + path,
@@ -184,6 +185,9 @@ def select_news(items):
 
 
 def fetch():
+    if os.getenv('CARD_NEWS_CONTENT_MODE', 'releases') == 'discovery':
+        from discovery import collect
+        return collect(github, NOW)
     with ThreadPoolExecutor(max_workers=6) as pool:
         blog = pool.submit(fetch_blog)
         results = list(pool.map(fetch_source, SOURCES)) + [blog.result()]
@@ -217,6 +221,11 @@ def validate_edits(cards, items):
                 raise ValueError(f"Editorial must be Korean: {key}")
         if card.get("importance") not in ("높음", "보통", "참고"):
             raise ValueError("Invalid importance")
+        if items[index].get('content_kind'):
+            demo = card.get('demo', {})
+            for key in ('input', 'process', 'result'):
+                if not isinstance(demo.get(key), str) or not 2 <= len(demo[key].strip()) <= 28 or not re.search('[가-힣]', demo[key]):
+                    raise ValueError('Discovery requires a concrete input/process/result example')
     return cards
 
 
@@ -238,6 +247,18 @@ PROMPT = (
     "use_case와 action은 제안으로 표현하고 호환성이나 접근조건을 확인하도록 한다. "
     "본문이 짧으면 확인되지 않은 세부 내용은 원문 확인 필요라고 명시한다. "
     "홍보 표현을 제외하고 실제 설치·업무 적용 가치와 변경 근거에 집중하라."
+    " content_kind가 있으면 버그 수정 브리핑이 아닌 도구 발견 카드다. headline은 독자가 해보고 싶은 구체적인 상황이나 질문으로 쓴다. "
+    "summary에는 도구가 무엇인지, changed에는 확인된 작동 방식, why에는 얻는 결과, use_case에는 동일 대상을 따라가는 구체적 예, "
+    "action에는 실제 필요한 계정·비용·한도·환경 조건을 쓴다. '호환성을 확인하세요' 같은 상투적 제안으로 채우지 마라. "
+    "인기는 주어진 popularity 지표의 범위/기간 안에서만 설명하고 설치 수·전체 1위로 바꾸지 마라. "
+    "저장소 생성일은 출시일이 아니고, 가이드 발행일은 기능 최초 출시일이 아니다. 문서만 확인한 것을 사용 후기처럼 쓰지 마라. "
+    "기관·프로젝트 이름과 기능을 지어내지 말고, 사용 조건을 모르면 미확인이라고 명시하라. "
+    "use_case는 '작은 기능에 적용해 보자'로 끝내지 말고 로그인 폼·목록 버튼 등 구체적 대상 하나의 입력과 확인할 결과를 설명하라. "
+    "문서에 없는 활용 예는 '예를 들어'로 제안임을 구분한다. why는 반복적인 검증 권고 대신 실제로 무엇을 얻는지 설명하라. "
+    "발견 카드에는 demo:{input,process,result}를 추가한다. 같은 대상 하나의 요청→실제 처리→확인할 결과를 각 28자 이하 한국어로 쓴다. "
+    "화면은 demo의 세 단계를 순서대로 강조하는 그림으로 보여준다. 제목은 이 예 하나가 해결하는 질문만 다룬다. "
+    "하나의 카드에서 여러 활용법을 나열하지 마라. 발견 카드의 각 본문 필드는 가능한 20~40자로 줄이되 인과·예·제약은 보존한다. "
+    "예시는 '로그인 동작 확인' 같은 추상적 단계가 아니라 '틀린 비밀번호 입력→특정 오류 문구 표시 확인', '20개 선택→표시 항목 20개 확인'처럼 쓴다. "
 )
 
 
@@ -272,7 +293,7 @@ def strip_fence(text):
     return match.group(1) if match else text
 
 
-def codex_cards(prompt, items):
+def codex_json(prompt):
     home = codex_home()
     executable = shutil.which("codex")
     if not executable:
@@ -312,7 +333,12 @@ def codex_cards(prompt, items):
         text = output.read_text(encoding="utf-8").strip() if output.is_file() else ""
     if not text:
         raise RuntimeError("Codex returned no final message")
-    return validate_edits(parse_cards(strip_fence(text)), items)
+    return json.loads(strip_fence(text))
+
+
+def codex_cards(prompt, items):
+    data = codex_json(prompt)
+    return validate_edits(data.get('cards') if isinstance(data, dict) else data, items)
 
 
 def editorial_once(items, correction=""):
@@ -452,22 +478,56 @@ def render_stories(items, edits, limit=5):
     folder = OUT / "stories"
     folder.mkdir(parents=True, exist_ok=True)
     picks = ranked(items, edits)[:limit]
+    discovery = any(item.get('content_kind') for item in items)
+    if discovery:
+        picks = list(zip(items, edits))[:3]
     total = len(picks) + 2
     slides = []
 
-    def save_story(im, index, narration, item=None):
+    def save_story(im, index, narration, item=None, **extra):
         path = folder / f"story_{index:02d}.png"
         im.save(path, format="PNG", optimize=True)
         slides.append(dict(file=f"stories/{path.name}", narration=narration,
+                           image_sha256=hashlib.sha256(path.read_bytes()).hexdigest(),
+                           **extra,
                            **({"source": item["source"], "url": item["url"]} if item else {})))
 
     im, d = story_base(1, total, "오늘의 브리핑")
-    fit(d, "오늘의 AI\n기술 브리핑", (100, 520, 880, 330), 96, bold=True)
-    fit(d, "코드를 바꾸는 업데이트", (100, 900, 880, 120), 50, ACCENT, True)
+    fit(d, "오늘 발견한\nAI 도구와 활용법" if discovery else "오늘의 AI\n기술 브리핑", (100, 520, 880, 330), 86, bold=True)
+    fit(d, "써보고 싶은 도구, 어떻게 활용할까?" if discovery else "코드를 바꾸는 업데이트", (100, 900, 880, 120), 44, ACCENT, True)
     fit(d, f"주요 뉴스 {len(picks)}건 · 공식 출처 확인", (100, 1080, 880, 120), 38, MUTED)
     save_story(im, 1, f"오늘의 AI 기술 브리핑입니다. 주요 업데이트 {len(picks)}가지를 정리했습니다.")
     for index, (item, edit) in enumerate(picks, 2):
         im, d = story_base(index, total, item["category"])
+        if item.get('content_kind'):
+            fit(d, item['source'], (100, 420, 880, 65), 30, ACCENT, True)
+            fit(d, edit['headline'], (100, 520, 880, 200), 61, bold=True)
+            fit(d, edit['summary'], (100, 735, 880, 110), 34)
+            demo = edit['demo']
+            stages = []
+            for stage in range(3):
+                frame = im.copy(); draw = ImageDraw.Draw(frame)
+                draw.text((100, 860), '활용 예시 · 요청부터 결과 확인까지', font=font(25, True), fill=ACCENT)
+                for j,key in enumerate(('input','process','result')):
+                    x = 100+j*300
+                    active = j <= stage
+                    draw.rounded_rectangle((x,915,x+275,1110),radius=22,fill='#24483F' if active else '#243147',
+                        outline=ACCENT if j == stage else '#46566C',width=3)
+                    fit(draw, ('요청','처리','확인')[j],(x+18,935,239,45),25,ACCENT,True)
+                    fit(draw,demo[key],(x+18,990,239,110),30)
+                    if j<2:draw.text((x+276,990),'→',font=font(26,True),fill=ACCENT)
+                fit(draw,edit['why'],(100,1145,880,75),30)
+                fit(draw,'사용 조건 · '+edit['action'],(100,1235,880,70),25,MUTED)
+                fit(draw,item['evidence_label'],(100,1305,880,35),22,MUTED)
+                fit(draw,item['url'],(100,1345,880,90),22,MUTED)
+                name=f'story_{index:02d}_step_{stage+1}.png'
+                path=folder/name;frame.save(path,format='PNG',optimize=True)
+                stages.append({'file':f'stories/{name}','image_sha256':hashlib.sha256(path.read_bytes()).hexdigest()})
+                if stage == 0:im = frame
+            hook = edit['headline'].rstrip('.!?。！？')
+            narration = f"{hook}? {edit['summary']} {edit['changed']} 예를 들어, {demo['input']}. {demo['process']}. {demo['result']}. {edit['why']} {edit['action']}"
+            save_story(im,index,narration,item,demo=demo,stages=stages)
+            continue
         fit(d, f"{item['source']}  /  중요도 {edit['importance']}", (100, 430, 880, 70), 32, ACCENT, True)
         fit(d, edit["headline"], (100, 530, 880, 260), 62, bold=True)
         d.text((100, 830), "핵심 요약", font=font(28, True), fill=ACCENT)
@@ -485,12 +545,46 @@ def render_stories(items, edits, limit=5):
     return [folder / Path(slide["file"]).name for slide in slides]
 
 
+def review_discovery_edits(items, edits):
+    from narration import review_script, ScriptReviewError
+    for attempt in range(2):
+        render_stories(items, edits)
+        stories = json.loads((OUT/'stories.json').read_text())
+        try:
+            review = review_script(stories, items, edits, codex_json)
+            (OUT/'script-review.json').write_text(json.dumps(review, ensure_ascii=False, indent=2), encoding='utf-8')
+            return edits
+        except ScriptReviewError as exc:
+            (OUT/f'script-review-attempt-{attempt+1}.json').write_text(json.dumps(exc.review, ensure_ascii=False, indent=2), encoding='utf-8')
+            if attempt:
+                raise
+            correction = (' 독립 검토에서 불합격했다. 원문에 맞는 구체적 입력→작동→결과를 보완하고 다시 작성하라. '
+                          + json.dumps(exc.review, ensure_ascii=False))
+            edits, _ = editorial_once(items, correction)
+    raise ValueError('Independent discovery review did not pass')
+
+
 def write_stories(items, edits):
     # The daily briefing must never fail because of the optional reel slides.
     try:
+        if any(item.get('content_kind') for item in items) and (OUT/'script-review.json').is_file():
+            from narration import validate_review, script_payload
+            stories = json.loads((OUT/'stories.json').read_text())
+            validate_review(json.loads((OUT/'script-review.json').read_text()), script_payload(stories, items, edits))
+            if not all((OUT/slide['file']).is_file() and hashlib.sha256((OUT/slide['file']).read_bytes()).hexdigest() == slide.get('image_sha256') for slide in stories['slides']):
+                raise ValueError('Reviewed card artwork changed')
+            print('Reusing independently reviewed story slides')
+            return
         paths = render_stories(items, edits)
+        if any(item.get('content_kind') for item in items):
+            from narration import review_script
+            stories = json.loads((OUT/'stories.json').read_text())
+            review = review_script(stories, items, edits, codex_json)
+            (OUT/'script-review.json').write_text(json.dumps(review, ensure_ascii=False, indent=2), encoding='utf-8')
         print(f"9:16 story slides rendered: {len(paths)}")
     except Exception as exc:
+        if hasattr(exc, 'review'):
+            (OUT/'script-review.json').write_text(json.dumps(exc.review, ensure_ascii=False, indent=2), encoding='utf-8')
         reason = str(exc) if isinstance(exc, (ValueError, RuntimeError)) else type(exc).__name__
         print(f"::warning::9:16 story render failed: {reason}")
         (OUT/"stories.json").write_text(json.dumps({"status": "failed", "reason": reason}), encoding="utf-8")
@@ -648,14 +742,17 @@ def main():
     for failure in failures:
         print(f"::warning::Source unavailable: {failure['source']} ({failure['reason']})")
     if not items:
-        print("No verified news in last 72 hours; nothing sent")
+        print("No eligible verified stories in the configured source windows; nothing sent")
         write_status("no_news", mode=mode, failures=failures, checked=fetched["checked"])
         summarize([f"mode: {mode}", "no verified news", f"source failures: {len(failures)}/{fetched['checked']}"])
         return
     edits, used = editorial(items)
+    if any(item.get('content_kind') for item in items):
+        edits = review_discovery_edits(items, edits)
     print(f"Editorial validated: {len(edits)} items provider={used}")
     (OUT/"news.json").write_text(json.dumps({"generated_at": NOW.isoformat(), "mode": mode, "provider": used,
-        "failures": failures, "items": items, "edits": edits}, ensure_ascii=False, indent=2), encoding="utf-8")
+        "failures": failures, "items": items, "edits": edits,
+        "collection": {k: v for k, v in fetched.items() if k not in ('items', 'failures')}}, ensure_ascii=False, indent=2), encoding="utf-8")
     paths = render(items, edits)
     summary = [f"mode: {mode}", f"cards: {len(paths)} from {len(items)} news", f"provider: {used}",
                f"source failures: {len(failures)}/{fetched['checked']}"]

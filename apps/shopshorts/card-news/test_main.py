@@ -123,8 +123,37 @@ class EditorialTests(unittest.TestCase):
             with self.assertRaises(ValueError): bot.editorial([item()])
             self.assertEqual(call.call_count, 2)
 
+    def test_discovery_review_failure_preserves_feedback_and_stops_after_one_revision(self):
+        from narration import ScriptReviewError
+        source = item(content_kind='PLUGIN')
+        failure = ScriptReviewError('example failed', {'cards': [{'example': {'pass': False}}]})
+        with tempfile.TemporaryDirectory() as temp, patch.object(bot, 'OUT', Path(temp)), \
+             patch.object(bot, 'render_stories') as render, \
+             patch('narration.review_script', side_effect=failure) as review, \
+             patch.object(bot, 'editorial_once', return_value=([edit()], 'codex-subscription')) as revise:
+            (Path(temp)/'stories.json').write_text('{"slides": []}')
+            with self.assertRaises(ScriptReviewError):bot.review_discovery_edits([source], [edit()])
+            self.assertEqual(review.call_count, 2)
+            revise.assert_called_once()
+            self.assertEqual(render.call_count, 2)
+            self.assertEqual(json.loads((Path(temp)/'script-review-attempt-2.json').read_text()), failure.review)
+
 
 class RenderTests(OutputDir):
+    def test_discovery_examples_render_three_distinct_source_bound_stages(self):
+        source = item(content_kind='PLUGIN', category='PLUGIN', evidence_label='관찰 3개 후보 · 주간 관심', date_basis='조회일')
+        card = dict(edit(), demo={'input':'로그인 오류 입력','process':'오류 처리 규칙 합의','result':'안내 문구 확인'})
+        bot.validate_edits([card],[source])
+        bot.render_stories([source],[card])
+        manifest = json.loads((self.out/'stories.json').read_text())
+        stages = manifest['slides'][1]['stages']
+        self.assertEqual(len(stages),3)
+        self.assertEqual(len({s['image_sha256'] for s in stages}),3)
+        self.assertEqual(manifest['slides'][1]['url'],source['url'])
+        self.assertIn('로그인 오류 입력',manifest['slides'][1]['narration'])
+        for stage in stages:
+            self.assertTrue((self.out/stage['file']).is_file())
+
     def test_wrap_long_tokens(self):
         d = ImageDraw.Draw(Image.new('RGB', (1080, 1350)))
         f = bot.font(35)

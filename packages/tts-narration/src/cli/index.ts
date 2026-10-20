@@ -35,6 +35,7 @@ async function cmdGenerate(args: string[]): Promise<void> {
       text: { type: 'string' },
       file: { type: 'string' },
       out: { type: 'string' },
+      timestamps: { type: 'boolean' },
     },
   });
   const out = values.out;
@@ -42,7 +43,7 @@ async function cmdGenerate(args: string[]): Promise<void> {
   const text = values.text ?? (values.file ? await readFile(resolve(values.file), 'utf8') : '');
   if (!text.trim()) throw new Error('--text 또는 --file 로 내레이션 텍스트를 주세요');
 
-  const clip = await synthesizeNarration({ apiKey: apiKey(), text, outPath: resolve(out) });
+  const clip = await synthesizeNarration({ apiKey: apiKey(), text, outPath: resolve(out), timestamps: values.timestamps === true });
   console.log(JSON.stringify(clip, null, 2));
 }
 
@@ -130,6 +131,11 @@ async function cmdScript(args: string[]): Promise<void> {
 async function main(): Promise<void> {
   const [cmd, ...rest] = process.argv.slice(2);
   if (cmd === 'generate') return cmdGenerate(rest);
+  if (cmd === 'policy') {
+    const { values } = parseArgs({ args: rest, options: { text: { type: 'string' } } });
+    console.log(JSON.stringify(resolvePolicy(values.text ?? '', process.env)));
+    return;
+  }
   if (cmd === 'script') return cmdScript(rest);
   console.error('사용법: tts-narration <generate|script> [옵션] — 파일 상단 주석 참조');
   process.exitCode = 1;
