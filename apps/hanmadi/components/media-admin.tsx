@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { mediaPreparation } from "@/lib/media-preparation";
+import { mediaPreparation, mediaAcquisitionLabel } from "@/lib/media-preparation";
 import { MediaCaptionImport } from "./media-caption-import";
 import { MusicTimingEditor } from "./music-timing-editor";
 import { studyLanguages, type StudyLanguage } from "@/lib/v2";
@@ -21,7 +21,7 @@ export function MediaAdmin({ active = true, initialId, initialRaw = "", onOpenLe
   const [list, setList] = useState<Data>({}), [detail, setDetail] = useState<Data>({});
   const [selected, setSelected] = useState(""), [busy, setBusy] = useState(false), [error, setError] = useState(""), [notice, setNotice] = useState("");
   const [title, setTitle] = useState(""), [video, setVideo] = useState(""), [language, setLanguage] = useState<StudyLanguage>("ja"), [purpose, setPurpose] = useState("study");
-  const [preparationFilter, setPreparationFilter] = useState("all");
+  const [preparationFilter, setPreparationFilter] = useState("all"), [acquisitionMethod, setAcquisitionMethod] = useState("");
   const sources = list.sources?.filter(source => preparationFilter === "all" || mediaPreparation(source).ready === (preparationFilter === "ready"));
   const preparation = detail.source ? mediaPreparation({ ...detail.source, originalCount: detail.source.originals.length, job: detail.jobs?.find(j => j.sourceRevision === detail.source!.revision) ?? null }) : null;
   const pending = useRef(false), selection = useRef(0), registration = useRef<HTMLDetailsElement>(null);
@@ -49,11 +49,12 @@ export function MediaAdmin({ active = true, initialId, initialRaw = "", onOpenLe
     <div className="ma-heading"><div><h2>원문과 처리 이력을 한곳에서</h2>
     <p>사용 허용된 자막·원문을 버전별로 보관해요. 정리한 원문은 ‘검수·반영’으로 넘겨 회화·음악 자료를 만들어요. 게시는 검수 후 따로 확인해요.</p></div><button disabled={busy} onClick={() => { void api().then(setList).then(() => { if (selected) return choose(selected); }).catch(e => setError(e.message)); }}>원문 목록 새로고침</button>{onOpenLegacy && <button disabled={busy} onClick={onOpenLegacy}>기존 음악 수집함</button>}</div>
     {error && <p role="alert" className="hm-alert">{error}</p>}{notice && <p role="status" className="hm-notice">{notice}</p>}
-    <details ref={registration} className="hm-panel ma-register"><summary>새 원본 등록</summary><form onSubmit={e => { e.preventDefault(); void work({ action: "collect", title, video, language, purposes: purpose === "both" ? ["study", "music"] : [purpose] }, "원본을 등록했어요. 원문을 연결해 주세요."); }}>
+    <details ref={registration} className="hm-panel ma-register"><summary>새 원본 등록</summary><form onSubmit={e => { e.preventDefault(); void work({ action: "collect", title, video, language, purposes: purpose === "both" ? ["study", "music"] : [purpose], ...(acquisitionMethod ? { acquisitionMethod } : {}) }, "원본을 등록했어요. 원문을 연결해 주세요."); }}>
       <fieldset disabled={busy} className="music-fields"><label>원본 제목<input required maxLength={100} value={title} onChange={e => setTitle(e.target.value)} /></label>
         <label>YouTube 링크 또는 ID<input required value={video} onChange={e => setVideo(e.target.value)} /></label>
         <label>원문 언어<select aria-label="원문 언어" value={language} onChange={e => setLanguage(e.target.value as StudyLanguage)}>{Object.entries(studyLanguages).map(([id, l]) => <option key={id} value={id}>{l.name}</option>)}</select></label>
         <label>학습 용도<select aria-label="학습 용도" value={purpose} onChange={e => setPurpose(e.target.value)}><option value="study">스터디</option><option value="music">음악</option><option value="both">스터디와 음악</option></select></label>
+        <label>확보 방법<select aria-label="등록 원문 확보 방법" value={acquisitionMethod} onChange={e => setAcquisitionMethod(e.target.value)}><option value="">아직 정하지 않았어요</option><option value="file">원문 파일 준비</option><option value="channel">채널 연결·권한 확인</option></select></label>
         <small>직접 입력한 제목·언어예요. 이 등록은 영상 내용·자막·재생 권한의 검증이 아니에요.</small><button type="submit">원본 등록</button>
       </fieldset></form></details>
     {!!list.legacyMusic?.length && <details className="hm-panel"><summary>기존 음악 수집함 연결</summary><p>영상 정보만 연결해요. 기존 자막을 새 저장소로 복사하거나 수집함을 바꾸지 않아요.</p>{list.legacyMusic.map(item => <p key={item.id}>{item.title} · {studyLanguages[item.language].name} <button disabled={busy} onClick={() => void work({ action: "import-music", legacyId: item.id }, "기존 영상 정보를 연결했어요. 원문 보관·이용 근거를 확인해 등록해 주세요.")}>영상 정보 연결</button></p>)}</details>}
@@ -67,7 +68,7 @@ export function MediaAdmin({ active = true, initialId, initialRaw = "", onOpenLe
       {!!list.sources?.length && !sources?.length && <p>이 상태의 원본이 없어요. 다른 상태를 선택해 주세요.</p>}
       {!list.sources ? <p role="status">{error ? "목록 새로고침으로 다시 불러와 주세요." : "목록을 불러오는 중이에요."}</p> : !list.sources.length ? <div className="ma-empty"><p>등록된 공통 원문이 없어요.</p><small>영상 정보를 등록한 뒤 자막이나 원문을 연결하세요.</small><button disabled={busy} onClick={() => { if (registration.current) { registration.current.open = true; registration.current.querySelector("input")?.focus(); } }}>첫 원본 등록</button></div> : <ul>{sources?.map(source => <li key={source.id}>
         <button disabled={busy} aria-label={`${source.title} · ${studyLanguages[source.language].name}`} aria-describedby={`media-status-${source.id}`} aria-pressed={selected === source.id} onClick={() => void choose(source.id)}><strong>{source.title} · {studyLanguages[source.language].name}</strong>
-          <span>{source.originalCount}개 버전</span><span className="ma-status" id={`media-status-${source.id}`} data-status={source.job?.status ?? "empty"}>{mediaPreparation(source).label}</span>
+          <span>{source.originalCount}개 버전 · {mediaAcquisitionLabel(source)}</span><span className="ma-status" id={`media-status-${source.id}`} data-status={source.job?.status ?? "empty"}>{mediaPreparation(source).label}</span>
         </button>
       </li>)}</ul>}
     </aside>
@@ -76,6 +77,14 @@ export function MediaAdmin({ active = true, initialId, initialRaw = "", onOpenLe
     {selected && !detail.source && <p role="status">{error ? "목록에서 원문을 다시 선택해 주세요." : "선택한 원문을 불러오는 중이에요."}</p>}
     {detail.source && <section className="hm-panel" aria-label="선택한 원문">
       <h3>{detail.source.title}</h3><p role="status"><strong>{preparation?.label}</strong> · {preparation?.next}</p><p>용도: {detail.source.purposes.map(p => p === "music" ? "음악" : "스터디").join(" · ")} · 원문 버전 {detail.source.revision}</p>
+      <form aria-label="원문 확보 계획" key={`${detail.source.id}:plan-${detail.source.acquisition?.revision ?? 0}`} onSubmit={e => {
+        e.preventDefault(); const method = new FormData(e.currentTarget).get("method");
+        void work({ action: "set-acquisition", id: detail.source!.id, planRevision: detail.source!.acquisition?.revision ?? 0, method }, "원문 확보 방법을 저장했어요. 원문·권한 확인은 별도로 진행해 주세요.");
+      }}><fieldset disabled={busy} className="music-fields"><legend>원문 확보 계획</legend>
+        <p>저장한 방법: {mediaAcquisitionLabel(detail.source)}</p>
+        <label>확보 방법<select name="method" aria-label="저장할 원문 확보 방법" defaultValue={detail.source.acquisition?.method ?? ""} required><option value="" disabled>방법을 선택하세요</option><option value="file">원문 파일 준비</option><option value="channel">채널 연결·권한 확인</option></select></label>
+        <small>선택한 방법을 원본에 보관해요. 자동 가져오기·이용 허락·원문 정리 완료를 뜻하지 않아요. 같은 영상을 다시 담아도 저장한 방법은 유지돼요.</small><button type="submit">확보 방법 저장</button>
+      </fieldset></form>
       <div className="hm-row">{(["study", "music"] as const).filter(purpose => !detail.source!.purposes.includes(purpose)).map(purpose => <button key={purpose} disabled={busy} onClick={() => void work({ action: "collect", video: detail.source!.videoId, title: detail.source!.title, language: detail.source!.language, purposes: [...detail.source!.purposes, purpose] }, "학습 용도를 추가했어요. 원문과 처리 이력은 유지돼요.")}>{purpose === "music" ? "음악 학습 용도 추가" : "회화 수업 용도 추가"}</button>)}</div>
       <details className="ma-new-version" key={detail.source.id} open={detail.source.originals.length === 0}><summary>새 원문 버전 추가</summary><OriginalEditor active={active} captionImportConfigured={list.youtube?.captions ?? null} key={`${detail.source.id}:${detail.source.revision}`} source={detail.source} initialRaw={initialRaw} busy={busy} save={body => work(body, "원문 버전과 처리 작업을 저장했어요. ‘정리·재개’로 줄과 시간을 확인해 주세요.")} /></details>
       {onReview && <div className="ks-next-stage"><p>다음 단계 · 검수·반영</p>{detail.source.purposes.map(purpose => <button key={purpose} disabled={busy || (purpose === "music" && !detail.jobs?.some(j => j.sourceRevision === detail.source!.revision && j.status === "ready"))} onClick={() => onReview(detail as MediaDetail, purpose)}>{purpose === "music" ? "음악 자료 만들기로" : "회화 자료 만들기로"}</button>)}<small>음악은 최신 원문 정리 완료가 필요해요. 회화는 영상 분석 또는 정리한 원문을 사용할 수 있어요.</small></div>}

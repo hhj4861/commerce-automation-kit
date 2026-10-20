@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { ConversationError } from "./conversation";
 import { v2Driver } from "./store";
-import { MEDIA_PARSER, mediaHash, mediaRegistration, normalizeOriginal, originalInput,
+import { MEDIA_PARSER, mediaHash, mediaRegistration, normalizeOriginal, originalInput, isMediaAcquisitionMethod,
   type MediaState, type MediaSource, type MediaOriginal, type MediaJob, type MediaSummary, type MediaDetail } from "./media-source";
 
 const KEY = "media-foundation:v1";
@@ -52,18 +52,32 @@ export async function readMedia(id?: unknown, db: MediaDB = v2Driver()) {
   return { sources };
 }
 export async function collectMedia(body: Record<string, unknown>, db: MediaDB = v2Driver(), legacyId?: string) {
-  const input = mediaRegistration(body), now = Date.now();
+  const { acquisitionMethod, ...input } = mediaRegistration(body), now = Date.now();
   return change(db, state => {
     const existing = state.sources.find(s => s.id === input.id);
     if (existing) {
       if (existing.language !== input.language) throw new ConversationError(409, "이미 다른 원문 언어로 등록한 영상이에요. 원문·작업에서 기존 정보를 확인해 주세요.");
+      // Recollection never overwrites a chosen plan. Existing legacy sources may acquire their first plan.
+      if (!existing.acquisition && acquisitionMethod) existing.acquisition = { method: acquisitionMethod, revision: 1, updatedAt: now };
       existing.purposes = [...new Set([...existing.purposes, ...input.purposes])].sort();
       return detail(state, existing.id); // Add a use without replacing the source title, original, version or history.
     }
     if (state.sources.length >= 50) throw new ConversationError(409, "최대 50개 원본을 보관할 수 있어요.");
     const source: MediaSource = { ...input, origin: legacyId ? "music-collection" : "manual", ...(legacyId ? { legacyId } : {}),
-      revision: 0, createdAt: now, originals: [] };
+      ...(acquisitionMethod ? { acquisition: { method: acquisitionMethod, revision: 1, updatedAt: now } } : {}), revision: 0, createdAt: now, originals: [] };
     state.sources.push(source); return detail(state, source.id);
+  });
+}
+// Plans describe the next acquisition step; they do not grant rights or complete a source job.
+export async function setMediaAcquisition(body: Record<string, unknown>, db: MediaDB = v2Driver()) {
+  if (!isMediaAcquisitionMethod(body.method)) throw new ConversationError(400, "원문 확보 방법을 선택해 주세요.");
+  const method = body.method;
+  return change(db, state => {
+    const source = sourceOf(state, body.id), revision = source.acquisition?.revision ?? 0;
+    if (!Number.isSafeInteger(body.planRevision) || body.planRevision !== revision)
+      throw new ConversationError(409, "다른 창에서 확보 방법을 바꿨어요. 최신 계획을 확인한 뒤 다시 저장해 주세요.");
+    if (source.acquisition?.method !== method) source.acquisition = { method, revision: revision + 1, updatedAt: Date.now() };
+    return detail(state, source.id);
   });
 }
 export async function saveMediaOriginal(body: Record<string, unknown>, actor: string, db: MediaDB = v2Driver()) {

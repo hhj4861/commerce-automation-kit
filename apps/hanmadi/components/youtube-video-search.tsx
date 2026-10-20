@@ -6,7 +6,7 @@ import { VIDEO_SELECTION_LIMIT } from "@/lib/video-policy";
 import type { YoutubeSearchPage, YoutubeVideo } from "@/lib/youtube-search";
 import { studyLanguages, type StudyLanguage } from "@/lib/v2";
 import { mediaPreparation } from "@/lib/media-preparation";
-import type { MediaSummary } from "@/lib/media-source";
+import type { MediaSummary, MediaAcquisitionMethod } from "@/lib/media-source";
 import type { MediaPurpose } from "@/lib/media-source";
 
 type Search = { query: string };
@@ -50,7 +50,7 @@ export function YoutubeVideoSearch({
   onCollect,
   onOpenSources,
 }: {
-  onCollect: (videos: YoutubeVideo[], language: StudyLanguage, purposes: MediaPurpose[]) => Promise<void>;
+  onCollect: (videos: YoutubeVideo[], language: StudyLanguage, purposes: MediaPurpose[], acquisitionMethod?: MediaAcquisitionMethod) => Promise<void>;
   onOpenSources?: () => void;
   configured: boolean;
   active?: boolean;
@@ -537,7 +537,7 @@ export function YoutubeVideoSearch({
           <ul>{selected.map(video => <li key={video.id}>{video.title} <button type="button" aria-label={`${video.title} 선택 해제`} onClick={() => setSelected(items => items.filter(v => v.id !== video.id))}>선택 해제</button></li>)}</ul>
           <div className="hm-row"><button disabled={!selected.length || !acquisition || (acquisition === "channel" && captionImportConfigured !== true) || (acquisition === "ready" && (sources === null || selected.some(video => !preparation(video).ready)))} type="button" onClick={async () => {
             setBatchBusy(true); onBusyChange(true); setError("");
-            try { await onCollect(selected, collectionLanguage, purpose === "both" ? ["study", "music"] : [purpose as MediaPurpose]); setSelected([]); setAcquisition(""); }
+            try { await onCollect(selected, collectionLanguage, purpose === "both" ? ["study", "music"] : [purpose as MediaPurpose], acquisition === "file" || acquisition === "channel" ? acquisition : undefined); setSelected([]); setAcquisition(""); }
             catch (e) { setError(e instanceof Error ? e.message : "저장 결과를 확인하지 못했어요. 준비함에서 확인한 뒤 다시 시도해 주세요."); }
             finally { setBatchBusy(false); onBusyChange(false); }
           }}>{batchBusy ? "저장 중…" : "공통 준비함에 담기"}</button><button type="button" onClick={onOpenSources}>YouTube 주소·원문으로 등록</button></div>
